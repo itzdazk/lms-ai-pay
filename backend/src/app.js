@@ -101,24 +101,28 @@ app.get('/health', (req, res) => {
 const routes = require('./routes')
 app.use(`/api/${config.API_VERSION}`, routes)
 
-// API documentation - Swagger
-if (config.NODE_ENV === 'development') {
-    const swaggerUi = require('swagger-ui-express')
-    const swaggerSpec = require('./config/swagger.config')
+// API documentation - Swagger (commented out until swagger.config.js is created)
+// if (config.NODE_ENV === 'development') {
+//     try {
+//         const swaggerUi = require('swagger-ui-express')
+//         const swaggerSpec = require('./config/swagger.config')
 
-    app.use(
-        '/api-docs',
-        swaggerUi.serve,
-        swaggerUi.setup(swaggerSpec, {
-            explorer: true,
-            customSiteTitle: 'E-Learning API Documentation',
-        })
-    )
+//         app.use(
+//             '/api-docs',
+//             swaggerUi.serve,
+//             swaggerUi.setup(swaggerSpec, {
+//                 explorer: true,
+//                 customSiteTitle: 'E-Learning API Documentation',
+//             })
+//         )
 
-    logger.info(
-        `📚 API Documentation available at http://localhost:${config.PORT}/api-docs`
-    )
-}
+//         logger.info(
+//             `📚 API Documentation available at http://localhost:${config.PORT}/api-docs`
+//         )
+//     } catch (error) {
+//         logger.warn('Swagger documentation not available:', error.message)
+//     }
+// }
 
 // 404 handler
 app.use(notFound)

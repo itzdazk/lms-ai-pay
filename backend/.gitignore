@@ -9,6 +9,8 @@ yarn-error.log*
 .env.local
 .env.production
 .env.test
+.env.backup
+# Keep .env.template for documentation
 
 # Logs
 logs/

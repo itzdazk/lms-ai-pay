@@ -454,3 +454,5 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
+
+

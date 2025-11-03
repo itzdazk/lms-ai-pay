@@ -84,3 +84,4 @@ router.post('/reset-password', resetPasswordValidator, authController.resetPassw
 router.get('/me', authenticate, authController.getMe);
 
 module.exports = router;
+

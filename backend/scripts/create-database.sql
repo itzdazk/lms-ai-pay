@@ -15,3 +15,5 @@ CREATE DATABASE lms_ai_pay;
 -- Show current database
 SELECT current_database();
 
+
+

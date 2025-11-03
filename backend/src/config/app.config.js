@@ -130,3 +130,5 @@ if (missingEnvVars.length > 0) {
 }
 
 module.exports = config
+
+
