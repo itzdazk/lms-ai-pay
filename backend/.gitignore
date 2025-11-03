@@ -1,16 +1,24 @@
 # Dependencies
 node_modules/
-package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment variables
 .env
+.env.local
+.env.production
+.env.test
 
 # Logs
 logs/
 *.log
-npm-debug.log*
 
-# OS files
+# Uploads
+uploads/
+temp/
+
+# OS
 .DS_Store
 Thumbs.db
 
@@ -19,17 +27,21 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+*~
 
 # Build
 dist/
 build/
 
-# Uploads
-uploads/
-!uploads/.gitkeep
+# Testing
+coverage/
+.nyc_output/
 
 # Prisma
-# Note: prisma/migrations/ SHOULD be committed
-# Only ignore migration lock and generated files
-.prisma/
+prisma/migrations/*_migration.sql
 
+# Misc
+.cache/
+*.pid
+*.seed
+*.pid.lock

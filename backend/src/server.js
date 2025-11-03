@@ -1,75 +1,71 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import prisma from './utils/prisma.js';
+// src/server.js
+const app = require('./app')
+const config = require('./config/app.config')
+const logger = require('./config/logger.config')
+const { connectDB, disconnectDB } = require('./config/database.config')
 
-// Load environment variables
-dotenv.config();
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...')
+    logger.error(err.name, err.message)
+    logger.error(err.stack)
+    process.exit(1)
+})
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+// Connect to database and start server
+const startServer = async () => {
+    try {
+        // Connect to database
+        await connectDB()
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+        // Start server
+        const server = app.listen(config.PORT, () => {
+            logger.info('=================================')
+            logger.info(`🚀 Server running in ${config.NODE_ENV} mode`)
+            logger.info(`📡 Server URL: ${config.SERVER_URL}`)
+            logger.info(
+                `🔗 API Base: ${config.SERVER_URL}/api/${config.API_VERSION}`
+            )
+            logger.info(`⚡ Port: ${config.PORT}`)
+            logger.info('=================================')
+        })
 
-// Health check route
-app.get('/api/health', async (req, res) => {
-  try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ 
-      status: 'OK', 
-      message: 'Server is running',
-      database: 'connected'
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'ERROR', 
-      message: 'Server is running but database connection failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
+        // Handle unhandled promise rejections
+        process.on('unhandledRejection', (err) => {
+            logger.error('UNHANDLED REJECTION! 💥 Shutting down...')
+            logger.error(err.name, err.message)
+            logger.error(err.stack)
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'LMS AI Pay API Server',
-    version: '1.0.0',
-    endpoints: {
-      health: '/api/health'
+            server.close(async () => {
+                await disconnectDB()
+                process.exit(1)
+            })
+        })
+
+        // Handle SIGTERM
+        process.on('SIGTERM', () => {
+            logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully...')
+            server.close(async () => {
+                logger.info('💥 Process terminated!')
+                await disconnectDB()
+                process.exit(0)
+            })
+        })
+
+        // Handle SIGINT (Ctrl+C)
+        process.on('SIGINT', () => {
+            logger.info('👋 SIGINT RECEIVED. Shutting down gracefully...')
+            server.close(async () => {
+                logger.info('💥 Process terminated!')
+                await disconnectDB()
+                process.exit(0)
+            })
+        })
+    } catch (error) {
+        logger.error('Failed to start server:', error)
+        process.exit(1)
     }
-  });
-});
+}
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-// Start server
-app.listen(PORT, async () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Test database connection
-  try {
-    await prisma.$connect();
-    console.log(`✅ Database connected successfully`);
-  } catch (error) {
-    console.error(`❌ Database connection failed:`, error.message);
-    console.log(`⚠️  Please check your DATABASE_URL in .env file`);
-  }
-});
-
+// Start the server
+startServer()

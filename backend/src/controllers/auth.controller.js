@@ -1,0 +1,176 @@
+// src/controllers/auth.controller.js
+const authService = require('../services/auth.service')
+const ApiResponse = require('../utils/response.util')
+const { asyncHandler } = require('../middlewares/error.middleware')
+const config = require('../config/app.config')
+
+class AuthController {
+    /**
+     * @route   POST /api/v1/auth/register
+     * @desc    Register new user
+     * @access  Public
+     */
+    register = asyncHandler(async (req, res) => {
+        const { username, email, password, fullName, role } = req.body
+
+        const result = await authService.register({
+            username,
+            email,
+            password,
+            fullName,
+            role,
+        })
+
+        // Set refresh token in httpOnly cookie
+        res.cookie('refreshToken', result.tokens.refreshToken, {
+            httpOnly: true,
+            secure: config.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: config.COOKIE_MAX_AGE,
+        })
+
+        return ApiResponse.created(
+            res,
+            {
+                user: result.user,
+                accessToken: result.tokens.accessToken,
+            },
+            'Registration successful'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/auth/login
+     * @desc    Login user
+     * @access  Public
+     */
+    login = asyncHandler(async (req, res) => {
+        const { email, password } = req.body
+
+        const result = await authService.login(email, password)
+
+        // Set refresh token in httpOnly cookie
+        res.cookie('refreshToken', result.tokens.refreshToken, {
+            httpOnly: true,
+            secure: config.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: config.COOKIE_MAX_AGE,
+        })
+
+        return ApiResponse.success(
+            res,
+            {
+                user: result.user,
+                accessToken: result.tokens.accessToken,
+            },
+            'Login successful'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/auth/logout
+     * @desc    Logout user
+     * @access  Private
+     */
+    logout = asyncHandler(async (req, res) => {
+        // Clear refresh token cookie
+        res.clearCookie('refreshToken')
+
+        return ApiResponse.success(res, null, 'Logout successful')
+    })
+
+    /**
+     * @route   POST /api/v1/auth/refresh-token
+     * @desc    Refresh access token
+     * @access  Public
+     */
+    refreshToken = asyncHandler(async (req, res) => {
+        const refreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+        if (!refreshToken) {
+            return ApiResponse.unauthorized(res, 'Refresh token not found')
+        }
+
+        const tokens = await authService.refreshToken(refreshToken)
+
+        // Update refresh token in cookie
+        res.cookie('refreshToken', tokens.refreshToken, {
+            httpOnly: true,
+            secure: config.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: config.COOKIE_MAX_AGE,
+        })
+
+        return ApiResponse.success(
+            res,
+            {
+                accessToken: tokens.accessToken,
+            },
+            'Token refreshed successfully'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/auth/verify-email
+     * @desc    Verify email address
+     * @access  Public
+     */
+    verifyEmail = asyncHandler(async (req, res) => {
+        const { token } = req.body
+
+        await authService.verifyEmail(token)
+
+        return ApiResponse.success(res, null, 'Email verified successfully')
+    })
+
+    /**
+     * @route   POST /api/v1/auth/resend-verification
+     * @desc    Resend email verification
+     * @access  Private
+     */
+    resendVerification = asyncHandler(async (req, res) => {
+        // Implementation depends on email service
+        return ApiResponse.success(res, null, 'Verification email sent')
+    })
+
+    /**
+     * @route   POST /api/v1/auth/forgot-password
+     * @desc    Request password reset
+     * @access  Public
+     */
+    forgotPassword = asyncHandler(async (req, res) => {
+        const { email } = req.body
+
+        await authService.forgotPassword(email)
+
+        return ApiResponse.success(
+            res,
+            null,
+            'If the email exists, a password reset link has been sent'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/auth/reset-password
+     * @desc    Reset password with token
+     * @access  Public
+     */
+    resetPassword = asyncHandler(async (req, res) => {
+        const { token, password } = req.body
+
+        await authService.resetPassword(token, password)
+
+        return ApiResponse.success(res, null, 'Password reset successful')
+    })
+
+    /**
+     * @route   GET /api/v1/auth/me
+     * @desc    Get current user
+     * @access  Private
+     */
+    getMe = asyncHandler(async (req, res) => {
+        return ApiResponse.success(res, req.user, 'User retrieved successfully')
+    })
+}
+
+module.exports = new AuthController()
