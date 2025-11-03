@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+
+# Uploads
+uploads/
+!uploads/.gitkeep
+
+# Prisma
+# Note: prisma/migrations/ SHOULD be committed
+# Only ignore migration lock and generated files
+.prisma/
+
