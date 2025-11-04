@@ -1,7 +1,7 @@
 // src/utils/jwt.util.js
-const jwt = require('jsonwebtoken')
-const config = require('../config/app.config')
-const logger = require('../config/logger.config')
+import jwt from 'jsonwebtoken';
+import config from '../config/app.config.js';
+import logger from '../config/logger.config.js';
 
 class JWTUtil {
     /**
@@ -142,6 +142,6 @@ class JWTUtil {
     }
 }
 
-module.exports = JWTUtil
+export default JWTUtil;
 
 

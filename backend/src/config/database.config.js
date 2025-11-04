@@ -1,6 +1,6 @@
 // src/config/database.config.js
-const { PrismaClient } = require('@prisma/client')
-const logger = require('./logger.config')
+import { PrismaClient } from '@prisma/client';
+import logger from './logger.config.js';
 
 const prisma = new PrismaClient({
     log: [
@@ -66,10 +66,5 @@ const disconnectDB = async () => {
     }
 }
 
-module.exports = {
-    prisma,
-    connectDB,
-    disconnectDB,
-}
-
+export { prisma, connectDB, disconnectDB };
 

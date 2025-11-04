@@ -1,9 +1,9 @@
 // src/services/auth.service.js
-const { prisma } = require('../config/database.config')
-const BcryptUtil = require('../utils/bcrypt.util')
-const JWTUtil = require('../utils/jwt.util')
-const { USER_STATUS, USER_ROLES } = require('../config/constants')
-const logger = require('../config/logger.config')
+import { prisma } from '../config/database.config.js';
+import BcryptUtil from '../utils/bcrypt.util.js';
+import JWTUtil from '../utils/jwt.util.js';
+import { USER_STATUS, USER_ROLES } from '../config/constants.js';
+import logger from '../config/logger.config.js';
 
 class AuthService {
     /**
@@ -308,6 +308,4 @@ class AuthService {
     }
 }
 
-module.exports = new AuthService()
-
-
+export default new AuthService();

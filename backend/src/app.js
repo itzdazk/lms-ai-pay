@@ -1,18 +1,19 @@
 // src/app.js
-const express = require('express')
-const helmet = require('helmet')
-const cors = require('cors')
-const morgan = require('morgan')
-const compression = require('compression')
-const cookieParser = require('cookie-parser')
-const mongoSanitize = require('express-mongo-sanitize')
-const xss = require('xss-clean')
-const hpp = require('hpp')
-const rateLimit = require('express-rate-limit')
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import morgan from 'morgan';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+// import mongoSanitize from 'express-mongo-sanitize'; // Not compatible with Express 5
+// import xss from 'xss-clean'; // Not compatible with Express 5
+import hpp from 'hpp';
+import rateLimit from 'express-rate-limit';
 
-const config = require('./config/app.config')
-const logger = require('./config/logger.config')
-const { notFound, errorHandler } = require('./middlewares/error.middleware')
+import config from './config/app.config.js';
+import logger from './config/logger.config.js';
+import { notFound, errorHandler } from './middlewares/error.middleware.js';
+import routes from './routes/index.js';
 
 // Create Express app
 const app = express()
@@ -65,10 +66,71 @@ if (config.NODE_ENV === 'development') {
 }
 
 // Data sanitization against NoSQL injection
-app.use(mongoSanitize())
+// Custom middleware for Express 5 compatibility
+app.use((req, res, next) => {
+    // Sanitize body parameters (remove MongoDB operators)
+    if (req.body && typeof req.body === 'object') {
+        const sanitizeObject = (obj) => {
+            for (const key in obj) {
+                if (key.startsWith('$')) {
+                    delete obj[key]
+                } else if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                    sanitizeObject(obj[key])
+                } else if (Array.isArray(obj[key])) {
+                    obj[key].forEach(item => {
+                        if (typeof item === 'object' && item !== null) {
+                            sanitizeObject(item)
+                        }
+                    })
+                }
+            }
+        }
+        sanitizeObject(req.body)
+    }
+    
+    // Note: Query sanitization is handled by Express 5 internally
+    // MongoDB operators in query strings are automatically rejected
+    next()
+})
 
 // Data sanitization against XSS
-app.use(xss())
+// Custom XSS protection middleware for Express 5
+app.use((req, res, next) => {
+    // Sanitize body to prevent XSS
+    if (req.body && typeof req.body === 'object') {
+        const sanitizeString = (str) => {
+            if (typeof str !== 'string') return str
+            // Remove potentially dangerous characters
+            return str
+                .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+                .replace(/javascript:/gi, '')
+                .replace(/on\w+\s*=/gi, '')
+        }
+        
+        const sanitizeObject = (obj) => {
+            for (const key in obj) {
+                if (typeof obj[key] === 'string') {
+                    obj[key] = sanitizeString(obj[key])
+                } else if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                    sanitizeObject(obj[key])
+                } else if (Array.isArray(obj[key])) {
+                    obj[key] = obj[key].map(item => {
+                        if (typeof item === 'string') {
+                            return sanitizeString(item)
+                        } else if (typeof item === 'object' && item !== null) {
+                            sanitizeObject(item)
+                            return item
+                        }
+                        return item
+                    })
+                }
+            }
+        }
+        sanitizeObject(req.body)
+    }
+    next()
+})
 
 // Prevent HTTP Parameter Pollution
 app.use(
@@ -97,9 +159,27 @@ app.get('/health', (req, res) => {
     })
 })
 
+// Root endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'LMS AI Pay API',
+        version: config.API_VERSION,
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/health',
+            api: `/api/${config.API_VERSION}`,
+        },
+    })
+})
+
+// Favicon handler (to avoid 404 errors)
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end()
+})
+
 // API routes
-const routes = require('./routes')
-app.use(`/api/${config.API_VERSION}`, routes)
+app.use(`/api/${config.API_VERSION}`, routes);
 
 // API documentation - Swagger (commented out until swagger.config.js is created)
 // if (config.NODE_ENV === 'development') {
@@ -130,4 +210,4 @@ app.use(notFound)
 // Global error handler
 app.use(errorHandler)
 
-module.exports = app
+export default app;

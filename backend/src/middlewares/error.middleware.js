@@ -1,7 +1,7 @@
 // src/middlewares/error.middleware.js
-const logger = require('../config/logger.config')
-const ApiResponse = require('../utils/response.util')
-const { HTTP_STATUS, ERROR_CODES } = require('../config/constants')
+import logger from '../config/logger.config.js';
+import ApiResponse from '../utils/response.util.js';
+import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js';
 
 /**
  * Handle 404 Not Found
@@ -123,10 +123,9 @@ const asyncHandler = (fn) => {
     }
 }
 
-module.exports = {
+export {
     notFound,
     errorHandler,
     asyncHandler,
-}
-
+};
 

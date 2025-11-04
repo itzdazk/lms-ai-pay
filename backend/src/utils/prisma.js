@@ -10,4 +10,3 @@ process.on('beforeExit', async () => {
 });
 
 export default prisma;
-

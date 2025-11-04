@@ -1,9 +1,9 @@
 // src/routes/index.js
-const express = require('express')
-// const authRoutes = require('./auth.routes')
-// const userRoutes = require('./user.routes')
-// const courseRoutes = require('./course.routes')
-// const categoryRoutes = require('./category.routes')
+import express from 'express';
+// import authRoutes from './auth.routes.js';
+// import userRoutes from './user.routes.js';
+// import courseRoutes from './course.routes.js';
+// import categoryRoutes from './category.routes.js';
 
 const router = express.Router()
 
@@ -49,4 +49,4 @@ router.get('/health', (req, res) => {
 // router.use('/dashboard', dashboardRoutes);
 // router.use('/search', searchRoutes);
 
-module.exports = router
+export default router;

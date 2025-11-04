@@ -1,7 +1,7 @@
 // src/middlewares/validate.middleware.js
-const { validationResult } = require('express-validator')
-const ApiResponse = require('../utils/response.util')
-const { HTTP_STATUS } = require('../config/constants')
+import { validationResult } from 'express-validator';
+import ApiResponse from '../utils/response.util.js';
+import { HTTP_STATUS, PAGINATION } from '../config/constants.js';
 
 /**
  * Validate request using express-validator
@@ -60,22 +60,20 @@ const validateJoi = (schema, property = 'body') => {
  * Validate pagination params
  */
 const validatePagination = (req, res, next) => {
-    const { PAGINATION } = require('../config/constants')
-
-    let page = parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE
-    let limit = parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT
+    let page = parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE;
+    let limit = parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT;
 
     // Validate page
     if (page < 1) {
-        page = PAGINATION.DEFAULT_PAGE
+        page = PAGINATION.DEFAULT_PAGE;
     }
 
     // Validate limit
     if (limit < 1) {
-        limit = PAGINATION.DEFAULT_LIMIT
+        limit = PAGINATION.DEFAULT_LIMIT;
     }
     if (limit > PAGINATION.MAX_LIMIT) {
-        limit = PAGINATION.MAX_LIMIT
+        limit = PAGINATION.MAX_LIMIT;
     }
 
     // Attach to request
@@ -83,10 +81,10 @@ const validatePagination = (req, res, next) => {
         page,
         limit,
         skip: (page - 1) * limit,
-    }
+    };
 
-    next()
-}
+    next();
+};
 
 /**
  * Validate ID parameter
@@ -104,11 +102,10 @@ const validateId = (paramName = 'id') => {
     }
 }
 
-module.exports = {
+export {
     validate,
     validateJoi,
     validatePagination,
     validateId,
-}
-
+};
 

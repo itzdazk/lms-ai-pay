@@ -1,5 +1,5 @@
 // src/utils/response.util.js
-const { HTTP_STATUS } = require('../config/constants')
+import { HTTP_STATUS } from '../config/constants.js';
 
 class ApiResponse {
     /**
@@ -140,6 +140,5 @@ class ApiResponse {
     }
 }
 
-module.exports = ApiResponse
-
+export default ApiResponse;
 

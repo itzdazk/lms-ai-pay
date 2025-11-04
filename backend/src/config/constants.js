@@ -147,7 +147,7 @@ const RATE_LIMITS = {
     },
 }
 
-module.exports = {
+export {
     USER_ROLES,
     USER_STATUS,
     COURSE_LEVEL,
@@ -168,6 +168,9 @@ module.exports = {
     PAGINATION,
     JWT_EXPIRY,
     RATE_LIMITS,
-}
+};
+
+
+
 
 

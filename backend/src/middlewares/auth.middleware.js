@@ -1,9 +1,9 @@
 // src/middlewares/auth.middleware.js
-const JWTUtil = require('../utils/jwt.util')
-const ApiResponse = require('../utils/response.util')
-const { prisma } = require('../config/database.config')
-const { USER_STATUS } = require('../config/constants')
-const logger = require('../config/logger.config')
+import JWTUtil from '../utils/jwt.util.js';
+import ApiResponse from '../utils/response.util.js';
+import { prisma } from '../config/database.config.js';
+import { USER_STATUS } from '../config/constants.js';
+import logger from '../config/logger.config.js';
 
 /**
  * Authenticate user using JWT token
@@ -116,10 +116,13 @@ const requireEmailVerification = (req, res, next) => {
     next()
 }
 
-module.exports = {
+export {
     authenticate,
     optionalAuthenticate,
     requireEmailVerification,
-}
+};
+
+
+
 
 

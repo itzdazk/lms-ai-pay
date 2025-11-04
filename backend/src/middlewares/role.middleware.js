@@ -1,6 +1,7 @@
 // src/middlewares/role.middleware.js
-const ApiResponse = require('../utils/response.util')
-const { USER_ROLES } = require('../config/constants')
+import ApiResponse from '../utils/response.util.js';
+import { USER_ROLES } from '../config/constants.js';
+import { prisma } from '../config/database.config.js';
 
 /**
  * Check if user has required role(s)
@@ -74,8 +75,7 @@ const isOwnerOrAdmin = (getUserId) => {
  */
 const isCourseInstructorOrAdmin = async (req, res, next) => {
     try {
-        const { prisma } = require('../config/database.config')
-        const courseId = parseInt(req.params.courseId || req.params.id)
+        const courseId = parseInt(req.params.courseId || req.params.id);
 
         if (!courseId) {
             return ApiResponse.badRequest(res, 'Course ID is required')
@@ -106,13 +106,12 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
     }
 }
 
-module.exports = {
+export {
     authorize,
     isAdmin,
     isInstructor,
     isStudent,
     isOwnerOrAdmin,
     isCourseInstructorOrAdmin,
-}
-
+};
 

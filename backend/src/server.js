@@ -1,8 +1,8 @@
 // src/server.js
-const app = require('./app')
-const config = require('./config/app.config')
-const logger = require('./config/logger.config')
-const { connectDB, disconnectDB } = require('./config/database.config')
+import app from './app.js';
+import config from './config/app.config.js';
+import logger from './config/logger.config.js';
+import { connectDB, disconnectDB } from './config/database.config.js';
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {

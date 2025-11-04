@@ -1,15 +1,15 @@
 // src/routes/auth.routes.js
-const express = require('express');
-const authController = require('../controllers/auth.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
-const {
+import express from 'express';
+import authController from '../controllers/auth.controller.js';
+import { authenticate } from '../middlewares/auth.middleware.js';
+import {
   registerValidator,
   loginValidator,
   verifyEmailValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
-} = require('../validators/auth.validator');
-const rateLimit = require('express-rate-limit');
+} from '../validators/auth.validator.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
@@ -83,5 +83,5 @@ router.post('/reset-password', resetPasswordValidator, authController.resetPassw
  */
 router.get('/me', authenticate, authController.getMe);
 
-module.exports = router;
+export default router;
 

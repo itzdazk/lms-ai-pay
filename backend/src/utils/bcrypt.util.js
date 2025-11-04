@@ -1,6 +1,6 @@
 // src/utils/bcrypt.util.js
-const bcrypt = require('bcryptjs')
-const config = require('../config/app.config')
+import bcrypt from 'bcryptjs';
+import config from '../config/app.config.js';
 
 class BcryptUtil {
     /**
@@ -63,6 +63,6 @@ class BcryptUtil {
     }
 }
 
-module.exports = BcryptUtil
+export default BcryptUtil;
 
 

@@ -1,8 +1,15 @@
 // src/config/logger.config.js
-const winston = require('winston')
-const DailyRotateFile = require('winston-daily-rotate-file')
-const path = require('path')
-const config = require('./app.config')
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fs from 'fs';
+import config from './app.config.js';
+
+// Get __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const logFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -24,8 +31,7 @@ const consoleFormat = winston.format.combine(
 )
 
 // Create logs directory if it doesn't exist
-const fs = require('fs')
-const logsDir = path.join(process.cwd(), 'logs')
+const logsDir = path.join(process.cwd(), 'logs');
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true })
 }
@@ -75,6 +81,5 @@ logger.stream = {
     },
 }
 
-module.exports = logger
-
+export default logger;
 

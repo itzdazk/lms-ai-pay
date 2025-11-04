@@ -1,8 +1,8 @@
 // src/controllers/auth.controller.js
-const authService = require('../services/auth.service')
-const ApiResponse = require('../utils/response.util')
-const { asyncHandler } = require('../middlewares/error.middleware')
-const config = require('../config/app.config')
+import authService from '../services/auth.service.js';
+import ApiResponse from '../utils/response.util.js';
+import { asyncHandler } from '../middlewares/error.middleware.js';
+import config from '../config/app.config.js';
 
 class AuthController {
     /**
@@ -173,4 +173,6 @@ class AuthController {
     })
 }
 
-module.exports = new AuthController()
+export default new AuthController();
+
+

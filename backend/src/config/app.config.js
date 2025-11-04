@@ -1,5 +1,6 @@
 // src/config/app.config.js
-require('dotenv').config()
+import dotenv from 'dotenv';
+dotenv.config();
 
 const config = {
     // Server
@@ -129,6 +130,4 @@ if (missingEnvVars.length > 0) {
     }
 }
 
-module.exports = config
-
-
+export default config;
