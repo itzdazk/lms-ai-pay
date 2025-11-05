@@ -1,9 +1,9 @@
 // src/services/auth.service.js
-import { prisma } from '../config/database.config.js';
-import BcryptUtil from '../utils/bcrypt.util.js';
-import JWTUtil from '../utils/jwt.util.js';
-import { USER_STATUS, USER_ROLES } from '../config/constants.js';
-import logger from '../config/logger.config.js';
+import { prisma } from '../config/database.config.js'
+import BcryptUtil from '../utils/bcrypt.util.js'
+import JWTUtil from '../utils/jwt.util.js'
+import { USER_STATUS, USER_ROLES } from '../config/constants.js'
+import logger from '../config/logger.config.js'
 
 class AuthService {
     /**
@@ -71,6 +71,8 @@ class AuthService {
         })
 
         logger.info(`New user registered: ${user.email}`)
+
+        logger.info(`Email verification token: ${emailVerificationToken}`)
 
         return {
             user,
@@ -308,4 +310,4 @@ class AuthService {
     }
 }
 
-export default new AuthService();
+export default new AuthService()

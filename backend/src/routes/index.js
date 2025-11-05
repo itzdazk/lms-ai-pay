@@ -1,6 +1,6 @@
 // src/routes/index.js
-import express from 'express';
-// import authRoutes from './auth.routes.js';
+import express from 'express'
+import authRoutes from './auth.routes.js'
 // import userRoutes from './user.routes.js';
 // import courseRoutes from './course.routes.js';
 // import categoryRoutes from './category.routes.js';
@@ -32,7 +32,7 @@ router.get('/health', (req, res) => {
 })
 
 // API Routes (uncomment when routes are ready)
-// router.use('/auth', authRoutes)
+router.use('/auth', authRoutes)
 // router.use('/users', userRoutes)
 // router.use('/courses', courseRoutes)
 // router.use('/categories', categoryRoutes)
@@ -49,4 +49,4 @@ router.get('/health', (req, res) => {
 // router.use('/dashboard', dashboardRoutes);
 // router.use('/search', searchRoutes);
 
-export default router;
+export default router

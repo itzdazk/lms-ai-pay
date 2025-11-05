@@ -1,6 +1,6 @@
 // src/config/app.config.js
-import dotenv from 'dotenv';
-dotenv.config();
+import dotenv from 'dotenv'
+dotenv.config()
 
 const config = {
     // Server
@@ -13,6 +13,7 @@ const config = {
     DATABASE_URL: process.env.DATABASE_URL,
 
     // JWT
+    // node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
     JWT_SECRET:
         process.env.JWT_SECRET || 'your-jwt-secret-change-in-production',
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
@@ -130,4 +131,4 @@ if (missingEnvVars.length > 0) {
     }
 }
 
-export default config;
+export default config
