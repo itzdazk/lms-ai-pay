@@ -19,7 +19,7 @@ import routes from './routes/index.js';
 const app = express()
 
 // Trust proxy
-app.set('trust proxy', 1)
+app.set('trust proxy', 1) // Collect User IP
 
 // Security middleware
 app.use(
@@ -65,7 +65,6 @@ if (config.NODE_ENV === 'development') {
     app.use(morgan('combined', { stream: logger.stream }))
 }
 
-// Data sanitization against NoSQL injection
 // Custom middleware for Express 5 compatibility
 app.use((req, res, next) => {
     // Sanitize body parameters (remove MongoDB operators)
@@ -93,7 +92,6 @@ app.use((req, res, next) => {
     next()
 })
 
-// Data sanitization against XSS
 // Custom XSS protection middleware for Express 5
 app.use((req, res, next) => {
     // Sanitize body to prevent XSS

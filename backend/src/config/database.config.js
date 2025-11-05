@@ -47,10 +47,10 @@ prisma.$on('info', (e) => {
 const connectDB = async () => {
     try {
         await prisma.$connect()
-        logger.info('✅ Database connected successfully')
+        logger.info('Database connected successfully')
         return true
     } catch (error) {
-        logger.error('❌ Database connection failed:', error)
+        logger.error('Database connection failed:', error)
         process.exit(1)
     }
 }
@@ -59,7 +59,7 @@ const connectDB = async () => {
 const disconnectDB = async () => {
     try {
         await prisma.$disconnect()
-        logger.info('🔌 Database disconnected')
+        logger.info('Database disconnected')
     } catch (error) {
         logger.error('Error disconnecting database:', error)
         process.exit(1)

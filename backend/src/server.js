@@ -5,8 +5,8 @@ import logger from './config/logger.config.js';
 import { connectDB, disconnectDB } from './config/database.config.js';
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-    logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...')
+process.on('uncaughtException', (err) => { 
+    logger.error('UNCAUGHT EXCEPTION! Shutting down...')
     logger.error(err.name, err.message)
     logger.error(err.stack)
     process.exit(1)
@@ -16,23 +16,23 @@ process.on('uncaughtException', (err) => {
 const startServer = async () => {
     try {
         // Connect to database
-        await connectDB()
+        await connectDB() // Wait until completion -> continue
 
         // Start server
         const server = app.listen(config.PORT, () => {
             logger.info('=================================')
-            logger.info(`🚀 Server running in ${config.NODE_ENV} mode`)
-            logger.info(`📡 Server URL: ${config.SERVER_URL}`)
+            logger.info(`Server running in ${config.NODE_ENV} mode`)
+            logger.info(`Server URL: ${config.SERVER_URL}`)
             logger.info(
-                `🔗 API Base: ${config.SERVER_URL}/api/${config.API_VERSION}`
+                `API Base: ${config.SERVER_URL}/api/${config.API_VERSION}`
             )
-            logger.info(`⚡ Port: ${config.PORT}`)
+            logger.info(`Port: ${config.PORT}`)
             logger.info('=================================')
         })
 
         // Handle unhandled promise rejections
-        process.on('unhandledRejection', (err) => {
-            logger.error('UNHANDLED REJECTION! 💥 Shutting down...')
+        process.on('unhandledRejection', (err) => { 
+            logger.error('UNHANDLED REJECTION! Shutting down...')
             logger.error(err.name, err.message)
             logger.error(err.stack)
 
@@ -44,9 +44,9 @@ const startServer = async () => {
 
         // Handle SIGTERM
         process.on('SIGTERM', () => {
-            logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully...')
+            logger.info('SIGTERM RECEIVED. Shutting down gracefully...')
             server.close(async () => {
-                logger.info('💥 Process terminated!')
+                logger.info('Process terminated!')
                 await disconnectDB()
                 process.exit(0)
             })
@@ -54,9 +54,9 @@ const startServer = async () => {
 
         // Handle SIGINT (Ctrl+C)
         process.on('SIGINT', () => {
-            logger.info('👋 SIGINT RECEIVED. Shutting down gracefully...')
+            logger.info('SIGINT RECEIVED. Shutting down gracefully...')
             server.close(async () => {
-                logger.info('💥 Process terminated!')
+                logger.info('Process terminated!')
                 await disconnectDB()
                 process.exit(0)
             })
