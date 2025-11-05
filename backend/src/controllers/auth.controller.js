@@ -1,8 +1,8 @@
 // src/controllers/auth.controller.js
-import authService from '../services/auth.service.js';
-import ApiResponse from '../utils/response.util.js';
-import { asyncHandler } from '../middlewares/error.middleware.js';
-import config from '../config/app.config.js';
+import authService from '../services/auth.service.js'
+import ApiResponse from '../utils/response.util.js'
+import { asyncHandler } from '../middlewares/error.middleware.js'
+import config from '../config/app.config.js'
 
 class AuthController {
     /**
@@ -129,8 +129,9 @@ class AuthController {
      * @access  Private
      */
     resendVerification = asyncHandler(async (req, res) => {
-        // Implementation depends on email service
-        return ApiResponse.success(res, null, 'Verification email sent')
+        const result = await authService.resendVerification(req.user.id)
+
+        return ApiResponse.success(res, null, result.message)
     })
 
     /**
@@ -173,6 +174,4 @@ class AuthController {
     })
 }
 
-export default new AuthController();
-
-
+export default new AuthController()

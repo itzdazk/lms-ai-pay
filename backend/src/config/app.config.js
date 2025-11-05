@@ -106,6 +106,14 @@ const config = {
     BCRYPT_ROUNDS: 12,
     MAX_LOGIN_ATTEMPTS: 5,
     LOCK_TIME: 2 * 60 * 60 * 1000, // 2 hours
+
+    // Email Templates
+    EMAIL_VERIFICATION_URL:
+        process.env.EMAIL_VERIFICATION_URL ||
+        `${process.env.CLIENT_URL}/verify-email`,
+    PASSWORD_RESET_URL:
+        process.env.PASSWORD_RESET_URL ||
+        `${process.env.CLIENT_URL}/reset-password`,
 }
 
 // Validate required environment variables
