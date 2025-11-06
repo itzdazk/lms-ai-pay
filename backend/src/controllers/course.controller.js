@@ -160,6 +160,28 @@ class CourseController {
             'Instructor details retrieved successfully'
         )
     })
+
+    /**
+     * @route   POST /api/v1/courses/:id/view
+     * @desc    Increment course view count
+     * @access  Public
+     */
+    incrementViewCount = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const result = await courseService.incrementViewCount(courseId)
+
+        return ApiResponse.success(
+            res,
+            result,
+            'View count updated successfully'
+        )
+    })
 }
 
 export default new CourseController()

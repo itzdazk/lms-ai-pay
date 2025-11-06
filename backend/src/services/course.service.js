@@ -597,6 +597,49 @@ class CourseService {
 
         return instructor
     }
+
+    /**
+     * Increment course view count
+     */
+    async incrementViewCount(courseId) {
+        // Check if course exists and is published
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                status: true,
+                viewsCount: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Increment view count
+        const updatedCourse = await prisma.course.update({
+            where: { id: courseId },
+            data: {
+                viewsCount: {
+                    increment: 1,
+                },
+            },
+            select: {
+                id: true,
+                viewsCount: true,
+            },
+        })
+
+        logger.info(
+            `Incremented view count for course ID: ${courseId}. New count: ${updatedCourse.viewsCount}`
+        )
+
+        return updatedCourse
+    }
 }
 
 export default new CourseService()

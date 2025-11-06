@@ -74,15 +74,15 @@ router.get(
     courseController.getCourseInstructor
 )
 
-// /**
-//  * @route   POST /api/v1/courses/:id/view
-//  * @desc    Increment course view count
-//  * @access  Public
-//  */
-// router.post(
-//     '/:id/view',
-//     getCourseByIdValidator,
-//     courseController.incrementViewCount
-// )
+/**
+ * @route   POST /api/v1/courses/:id/view
+ * @desc    Increment course view count
+ * @access  Public
+ */
+router.post(
+    '/:id/view',
+    getCourseByIdValidator,
+    courseController.incrementViewCount
+)
 
 export default router
