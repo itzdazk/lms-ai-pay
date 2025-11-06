@@ -57,4 +57,44 @@ router.delete(
     categoryController.deleteCategory
 )
 
+/**
+ * @route   GET /api/v1/categories
+ * @desc    Get all categories with optional filters
+ * @access  Public
+ * @query   page, limit, parentId, isActive, search
+ */
+router.get('/', getCategoriesValidator, categoryController.getCategories)
+
+/**
+ * @route   GET /api/v1/categories/:id
+ * @desc    Get category by ID
+ * @access  Public
+ */
+router.get('/:id', getCategoryByIdValidator, categoryController.getCategoryById)
+
+/**
+ * @route   GET /api/v1/categories/:id/courses
+ * @desc    Get courses in a category by ID
+ * @access  Public
+ * @query   page, limit, level, sort
+ */
+router.get(
+    '/:id/courses',
+    getCategoryCoursesValidator,
+    categoryController.getCoursesByCategoryId
+)
+
+/**
+ * @route   GET /api/v1/categories/:slug/courses
+ * @desc    Get courses in a category by slug
+ * @access  Public
+ * @query   page, limit, level, sort
+ */
+router.get(
+    '/:slug/courses',
+    getCategoryBySlugValidator,
+    getCategoryCoursesValidator,
+    categoryController.getCoursesByCategorySlug
+)
+
 export default router

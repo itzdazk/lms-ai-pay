@@ -91,6 +91,128 @@ class CategoryController {
 
         return ApiResponse.success(res, null, 'Category deleted successfully')
     })
+
+    /**
+     * @route   GET /api/v1/categories
+     * @desc    Get all categories (with optional filters)
+     * @access  Public
+     */
+    getCategories = asyncHandler(async (req, res) => {
+        const { page, limit, parentId, isActive, search } = req.query
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            parentId: parentId ? parseInt(parentId) : undefined,
+            isActive:
+                isActive === 'true'
+                    ? true
+                    : isActive === 'false'
+                      ? false
+                      : undefined,
+            search: search || undefined,
+        }
+
+        const result = await categoryService.getCategories(filters)
+
+        return ApiResponse.paginated(
+            res,
+            result.categories,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Categories retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/categories/:id
+     * @desc    Get category by ID
+     * @access  Public
+     */
+    getCategoryById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+
+        const category = await categoryService.getCategoryById(parseInt(id))
+
+        if (!category) {
+            return ApiResponse.notFound(res, 'Category not found')
+        }
+
+        return ApiResponse.success(
+            res,
+            category,
+            'Category retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/categories/:id/courses
+     * @desc    Get courses in a category by ID
+     * @access  Public
+     */
+    getCoursesByCategoryId = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { page, limit, level, sort } = req.query
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            level: level || undefined,
+            sort: sort || 'newest', // newest, popular, rating, price_asc, price_desc
+        }
+
+        const result = await categoryService.getCoursesByCategory(
+            parseInt(id),
+            filters
+        )
+
+        return ApiResponse.paginated(
+            res,
+            result.courses,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Courses retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/categories/:slug/courses
+     * @desc    Get courses in a category by slug
+     * @access  Public
+     */
+    getCoursesByCategorySlug = asyncHandler(async (req, res) => {
+        const { slug } = req.params
+        const { page, limit, level, sort } = req.query
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            level: level || undefined,
+            sort: sort || 'newest',
+        }
+
+        const result = await categoryService.getCoursesByCategorySlug(
+            slug,
+            filters
+        )
+
+        return ApiResponse.paginated(
+            res,
+            result.courses,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Courses retrieved successfully'
+        )
+    })
 }
 
 export default new CategoryController()
