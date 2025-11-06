@@ -46,6 +46,7 @@ const authenticate = async (req, res, next) => {
                 status: true,
                 avatarUrl: true,
                 emailVerified: true,
+                tokenVersion: true,
             },
         })
 
@@ -55,6 +56,14 @@ const authenticate = async (req, res, next) => {
 
         if (user.status !== USER_STATUS.ACTIVE) {
             return ApiResponse.forbidden(res, 'Your account is not active')
+        }
+
+        // Check tokenVersion
+        if (decoded.tokenVersion !== user.tokenVersion) {
+            return ApiResponse.unauthorized(
+                res,
+                'Token has been invalidated. Please login again.'
+            )
         }
 
         // Attach user to request

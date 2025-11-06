@@ -59,7 +59,11 @@ class AuthController {
      * @access  Private
      */
     logout = asyncHandler(async (req, res) => {
+        await authService.invalidateAllTokens(req.user.id)
+
+        // Clear cookies
         CookieUtil.clearAuthTokens(res)
+
         return ApiResponse.success(res, null, 'Logout successful')
     })
 
