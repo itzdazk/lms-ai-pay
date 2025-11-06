@@ -138,6 +138,28 @@ class CourseController {
             'Course lessons retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/courses/:id/instructor
+     * @desc    Get course instructor details
+     * @access  Public
+     */
+    getCourseInstructor = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const instructor = await courseService.getCourseInstructor(courseId)
+
+        return ApiResponse.success(
+            res,
+            instructor,
+            'Instructor details retrieved successfully'
+        )
+    })
 }
 
 export default new CourseController()

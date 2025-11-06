@@ -517,6 +517,86 @@ class CourseService {
             totalLessons: lessons.length,
         }
     }
+
+    /**
+     * Get course instructor details
+     */
+    async getCourseInstructor(courseId) {
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                        bio: true,
+                        createdAt: true,
+                        _count: {
+                            select: {
+                                coursesAsInstructor: {
+                                    where: {
+                                        status: COURSE_STATUS.PUBLISHED,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Get instructor's other courses
+        const otherCourses = await prisma.course.findMany({
+            where: {
+                instructorId: course.instructor.id,
+                status: COURSE_STATUS.PUBLISHED,
+                NOT: {
+                    id: courseId,
+                },
+            },
+            take: 5,
+            orderBy: {
+                publishedAt: 'desc',
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                thumbnailUrl: true,
+                price: true,
+                discountPrice: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+            },
+        })
+
+        const instructor = {
+            ...course.instructor,
+            totalCourses: course.instructor._count.coursesAsInstructor,
+            otherCourses,
+        }
+
+        // Remove _count field
+        delete instructor._count
+
+        logger.info(`Retrieved instructor details for course ID: ${courseId}`)
+
+        return instructor
+    }
 }
 
 export default new CourseService()

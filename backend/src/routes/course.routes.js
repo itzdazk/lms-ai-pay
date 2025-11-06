@@ -63,16 +63,16 @@ router.get(
     courseController.getCourseLessons
 )
 
-// /**
-//  * @route   GET /api/v1/courses/:id/instructor
-//  * @desc    Get course instructor details
-//  * @access  Public
-//  */
-// router.get(
-//     '/:id/instructor',
-//     getCourseByIdValidator,
-//     courseController.getCourseInstructor
-// )
+/**
+ * @route   GET /api/v1/courses/:id/instructor
+ * @desc    Get course instructor details
+ * @access  Public
+ */
+router.get(
+    '/:id/instructor',
+    getCourseByIdValidator,
+    courseController.getCourseInstructor
+)
 
 // /**
 //  * @route   POST /api/v1/courses/:id/view
