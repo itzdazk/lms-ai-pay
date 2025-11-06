@@ -1,1 +1,0 @@
-1. Validation phone number chỉ được 10 số, không ít hơn, không nhiều hơn, bắt đầu bằng số 0

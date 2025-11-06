@@ -2,7 +2,7 @@
 import { prisma } from '../config/database.config.js';
 import BcryptUtil from '../utils/bcrypt.util.js';
 import logger from '../config/logger.config.js';
-import { USER_ROLES } from '../config/constants.js';
+import { USER_ROLES, USER_STATUS } from '../config/constants.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -312,6 +312,32 @@ class UsersService {
             throw new Error('Cannot change admin role to non-admin role');
         }
 
+        // Prevent changing role to admin or guest (only STUDENT and INSTRUCTOR are allowed)
+        if (data.role !== undefined) {
+            const roleUpper = data.role?.toUpperCase();
+            
+            // Block ADMIN
+            if (data.role === USER_ROLES.ADMIN || roleUpper === USER_ROLES.ADMIN) {
+                logger.warn(`Attempt to change user role to ADMIN blocked via updateUser: userId=${userIdInt}, role=${data.role}`);
+                throw new Error('Cannot change user role to admin through API');
+            }
+            
+            // Block GUEST - only STUDENT and INSTRUCTOR are allowed
+            if (data.role === USER_ROLES.GUEST || roleUpper === USER_ROLES.GUEST) {
+                logger.warn(`Attempt to change user role to GUEST blocked via updateUser: userId=${userIdInt}, role=${data.role}`);
+                throw new Error('Cannot change user role to GUEST. Only STUDENT and INSTRUCTOR roles are allowed');
+            }
+            
+            // Only allow STUDENT and INSTRUCTOR
+            if (data.role !== USER_ROLES.STUDENT && 
+                data.role !== USER_ROLES.INSTRUCTOR &&
+                roleUpper !== USER_ROLES.STUDENT &&
+                roleUpper !== USER_ROLES.INSTRUCTOR) {
+                logger.warn(`Invalid role attempted via updateUser: userId=${userIdInt}, role=${data.role}`);
+                throw new Error('Invalid role. Only STUDENT and INSTRUCTOR roles are allowed');
+            }
+        }
+
         const updateData = {};
 
         if (data.fullName !== undefined) {
@@ -358,6 +384,122 @@ class UsersService {
         });
 
         logger.info(`User updated by admin: ${user.username} (${user.id})`);
+
+        return user;
+    }
+
+    /**
+     * Change user role (Admin only)
+     */
+    async changeUserRole(userId, role) {
+        const userIdInt = parseInt(userId, 10);
+        if (isNaN(userIdInt)) {
+            throw new Error('Invalid user ID');
+        }
+
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({
+            where: { id: userIdInt },
+            select: { id: true, username: true, role: true },
+        });
+
+        if (!existingUser) {
+            throw new Error('User not found');
+        }
+
+        // Prevent changing admin role to non-admin
+        if (
+            existingUser.role === USER_ROLES.ADMIN &&
+            role !== USER_ROLES.ADMIN
+        ) {
+            throw new Error('Cannot change admin role to non-admin role');
+        }
+
+        // Prevent changing role to admin or guest (only STUDENT and INSTRUCTOR are allowed)
+        // Check both uppercase and compare with constant
+        const roleUpper = role?.toUpperCase();
+        
+        // Block ADMIN
+        if (role === USER_ROLES.ADMIN || roleUpper === USER_ROLES.ADMIN) {
+            logger.warn(`Attempt to change user role to ADMIN blocked: userId=${userIdInt}, role=${role}`);
+            throw new Error('Cannot change user role to admin through API');
+        }
+        
+        // Block GUEST - only STUDENT and INSTRUCTOR are allowed
+        if (role === USER_ROLES.GUEST || roleUpper === USER_ROLES.GUEST) {
+            logger.warn(`Attempt to change user role to GUEST blocked: userId=${userIdInt}, role=${role}`);
+            throw new Error('Cannot change user role to GUEST. Only STUDENT and INSTRUCTOR roles are allowed');
+        }
+        
+        // Only allow STUDENT and INSTRUCTOR
+        if (role !== USER_ROLES.STUDENT && 
+            role !== USER_ROLES.INSTRUCTOR &&
+            roleUpper !== USER_ROLES.STUDENT &&
+            roleUpper !== USER_ROLES.INSTRUCTOR) {
+            logger.warn(`Invalid role attempted: userId=${userIdInt}, role=${role}`);
+            throw new Error('Invalid role. Only STUDENT and INSTRUCTOR roles are allowed');
+        }
+
+        const user = await prisma.user.update({
+            where: { id: userIdInt },
+            data: { role },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                fullName: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+
+        logger.info(`User role changed: ${user.username} (${user.id}) -> ${role}`);
+
+        return user;
+    }
+
+    /**
+     * Change user status (Admin only)
+     */
+    async changeUserStatus(userId, status) {
+        const userIdInt = parseInt(userId, 10);
+        if (isNaN(userIdInt)) {
+            throw new Error('Invalid user ID');
+        }
+
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({
+            where: { id: userIdInt },
+            select: { id: true, username: true, role: true },
+        });
+
+        if (!existingUser) {
+            throw new Error('User not found');
+        }
+
+        // Prevent changing admin status (safety check)
+        if (existingUser.role === USER_ROLES.ADMIN && status !== USER_STATUS.ACTIVE) {
+            throw new Error('Cannot change admin user status');
+        }
+
+        const user = await prisma.user.update({
+            where: { id: userIdInt },
+            data: { status },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                fullName: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+
+        logger.info(`User status changed: ${user.username} (${user.id}) -> ${status}`);
 
         return user;
     }

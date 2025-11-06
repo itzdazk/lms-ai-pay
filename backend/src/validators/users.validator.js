@@ -110,8 +110,8 @@ const updateUserValidator = [
 
     body('role')
         .optional()
-        .isIn([USER_ROLES.ADMIN, USER_ROLES.INSTRUCTOR, USER_ROLES.STUDENT, USER_ROLES.GUEST])
-        .withMessage('Invalid role'),
+        .isIn([USER_ROLES.INSTRUCTOR, USER_ROLES.STUDENT])
+        .withMessage('Invalid role. Only STUDENT and INSTRUCTOR roles are allowed'),
 
     body('status')
         .optional()
@@ -134,12 +134,44 @@ const userIdValidator = [
     validate,
 ];
 
+// Change role validator (Admin only)
+const changeRoleValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Invalid user ID'),
+
+    body('role')
+        .notEmpty()
+        .withMessage('Role is required')
+        .isIn([USER_ROLES.INSTRUCTOR, USER_ROLES.STUDENT])
+        .withMessage('Invalid role. Only STUDENT and INSTRUCTOR roles are allowed'),
+
+    validate,
+];
+
+// Change status validator (Admin only)
+const changeStatusValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Invalid user ID'),
+
+    body('status')
+        .notEmpty()
+        .withMessage('Status is required')
+        .isIn([USER_STATUS.ACTIVE, USER_STATUS.INACTIVE, USER_STATUS.BANNED])
+        .withMessage('Invalid status'),
+
+    validate,
+];
+
 export {
     updateProfileValidator,
     changePasswordValidator,
     getUsersValidator,
     updateUserValidator,
     userIdValidator,
+    changeRoleValidator,
+    changeStatusValidator,
 };
 
 

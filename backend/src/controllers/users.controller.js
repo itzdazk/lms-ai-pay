@@ -24,7 +24,7 @@ class UsersController {
 
     /**
      * Upload avatar
-     * POST /api/v1/users/avatar
+     * PATCH /api/v1/users/profile/avatar
      */
     uploadAvatar = asyncHandler(async (req, res) => {
         const user = await usersService.uploadAvatar(req.user.id, req.file);
@@ -33,7 +33,7 @@ class UsersController {
 
     /**
      * Change password
-     * PUT /api/v1/users/password
+     * PUT /api/v1/users/change-password
      */
     changePassword = asyncHandler(async (req, res) => {
         const { currentPassword, newPassword } = req.body;
@@ -63,7 +63,7 @@ class UsersController {
     });
 
     /**
-     * Get user by ID
+     * Get user by ID (Admin only)
      * GET /api/v1/users/:id
      */
     getUserById = asyncHandler(async (req, res) => {
@@ -78,6 +78,26 @@ class UsersController {
     updateUser = asyncHandler(async (req, res) => {
         const user = await usersService.updateUser(req.params.id, req.body);
         return ApiResponse.success(res, user, 'User updated successfully');
+    });
+
+    /**
+     * Change user role (Admin only)
+     * PATCH /api/v1/users/:id/role
+     */
+    changeUserRole = asyncHandler(async (req, res) => {
+        const { role } = req.body;
+        const user = await usersService.changeUserRole(req.params.id, role);
+        return ApiResponse.success(res, user, 'User role updated successfully');
+    });
+
+    /**
+     * Change user status (Admin only)
+     * PATCH /api/v1/users/:id/status
+     */
+    changeUserStatus = asyncHandler(async (req, res) => {
+        const { status } = req.body;
+        const user = await usersService.changeUserStatus(req.params.id, status);
+        return ApiResponse.success(res, user, 'User status updated successfully');
     });
 
     /**

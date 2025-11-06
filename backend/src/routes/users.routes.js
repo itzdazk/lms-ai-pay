@@ -2,7 +2,7 @@
 import express from 'express';
 import usersController from '../controllers/users.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
-import { isAdmin, isOwnerOrAdmin } from '../middlewares/role.middleware.js';
+import { isAdmin } from '../middlewares/role.middleware.js';
 import { validateId, validatePagination } from '../middlewares/validate.middleware.js';
 import {
     updateProfileValidator,
@@ -10,6 +10,8 @@ import {
     getUsersValidator,
     updateUserValidator,
     userIdValidator,
+    changeRoleValidator,
+    changeStatusValidator,
 } from '../validators/users.validator.js';
 import { uploadAvatar } from '../config/multer.config.js';
 
@@ -21,21 +23,19 @@ router.use(authenticate);
 // Profile routes (current user)
 router.get('/profile', usersController.getProfile);
 router.put('/profile', updateProfileValidator, usersController.updateProfile);
-router.post(
-    '/avatar',
+router.patch(
+    '/profile/avatar',
     uploadAvatar.single('avatar'),
     usersController.uploadAvatar
 );
 router.put(
-    '/password',
+    '/change-password',
     changePasswordValidator,
     usersController.changePassword
 );
 
 // Admin routes (users management)
-// Route with parameter must be defined before route without parameter
-// Allow user to view their own profile or admin to view any user
-router.get('/:id', isOwnerOrAdmin('id'), userIdValidator, usersController.getUserById);
+// Routes with specific paths must be defined before routes with parameters
 router.get(
     '/',
     isAdmin,
@@ -43,6 +43,23 @@ router.get(
     getUsersValidator,
     usersController.getUsers
 );
+// Specific routes (/:id/role, /:id/status) must be before /:id
+router.patch(
+    '/:id/role',
+    isAdmin,
+    userIdValidator,
+    changeRoleValidator,
+    usersController.changeUserRole
+);
+router.patch(
+    '/:id/status',
+    isAdmin,
+    userIdValidator,
+    changeStatusValidator,
+    usersController.changeUserStatus
+);
+// Generic routes with :id parameter
+router.get('/:id', isAdmin, userIdValidator, usersController.getUserById);
 router.put(
     '/:id',
     isAdmin,
