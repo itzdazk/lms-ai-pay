@@ -3,6 +3,7 @@ import authService from '../services/auth.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
 import config from '../config/app.config.js'
+import CookieUtil from '../utils/cookie.utils.js'
 
 class AuthController {
     /**
@@ -21,19 +22,12 @@ class AuthController {
             role,
         })
 
-        // Set refresh token in httpOnly cookie
-        res.cookie('refreshToken', result.tokens.refreshToken, {
-            httpOnly: true,
-            secure: config.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: config.COOKIE_MAX_AGE,
-        })
+        CookieUtil.setAuthTokens(res, result.tokens)
 
         return ApiResponse.created(
             res,
             {
                 user: result.user,
-                accessToken: result.tokens.accessToken,
             },
             'Registration successful'
         )
@@ -46,22 +40,14 @@ class AuthController {
      */
     login = asyncHandler(async (req, res) => {
         const { email, password } = req.body
-
         const result = await authService.login(email, password)
 
-        // Set refresh token in httpOnly cookie
-        res.cookie('refreshToken', result.tokens.refreshToken, {
-            httpOnly: true,
-            secure: config.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: config.COOKIE_MAX_AGE,
-        })
+        CookieUtil.setAuthTokens(res, result.tokens)
 
         return ApiResponse.success(
             res,
             {
                 user: result.user,
-                accessToken: result.tokens.accessToken,
             },
             'Login successful'
         )
@@ -73,9 +59,7 @@ class AuthController {
      * @access  Private
      */
     logout = asyncHandler(async (req, res) => {
-        // Clear refresh token cookie
-        res.clearCookie('refreshToken')
-
+        CookieUtil.clearAuthTokens(res)
         return ApiResponse.success(res, null, 'Logout successful')
     })
 
@@ -93,21 +77,22 @@ class AuthController {
 
         const tokens = await authService.refreshToken(refreshToken)
 
-        // Update refresh token in cookie
+        // Update 2 cookie
+        res.cookie('accessToken', tokens.accessToken, {
+            httpOnly: true,
+            secure: config.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        })
+
         res.cookie('refreshToken', tokens.refreshToken, {
             httpOnly: true,
             secure: config.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: config.COOKIE_MAX_AGE,
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         })
 
-        return ApiResponse.success(
-            res,
-            {
-                accessToken: tokens.accessToken,
-            },
-            'Token refreshed successfully'
-        )
+        return ApiResponse.success(res, null, 'Token refreshed successfully')
     })
 
     /**
