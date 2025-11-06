@@ -147,6 +147,39 @@ class CategoryController {
             'Category retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/categories/:id/courses
+     * @desc    Get courses in a category by ID
+     * @access  Public
+     */
+    getCoursesByCategoryId = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { page, limit, level, sort } = req.query
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            level: level || undefined,
+            sort: sort || 'newest', // newest, popular, rating, price_asc, price_desc
+        }
+
+        const result = await categoryService.getCoursesByCategory(
+            parseInt(id),
+            filters
+        )
+
+        return ApiResponse.paginated(
+            res,
+            result.courses,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Courses retrieved successfully'
+        )
+    })
 }
 
 export default new CategoryController()

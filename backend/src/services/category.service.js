@@ -327,6 +327,110 @@ class CategoryService {
             updatedAt: category.updatedAt,
         }
     }
+
+    /**
+     * Get courses by category ID
+     */
+    async getCoursesByCategory(categoryId, filters) {
+        const { page, limit, level, sort } = filters
+
+        const skip = (page - 1) * limit
+
+        // Check if category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+        })
+
+        if (!category) {
+            throw new Error('Category not found')
+        }
+
+        // Build where clause
+        const where = {
+            categoryId,
+            status: COURSE_STATUS.PUBLISHED,
+        }
+
+        if (level) {
+            where.level = level
+        }
+
+        // Build orderBy clause
+        let orderBy = {}
+        switch (sort) {
+            case 'popular':
+                orderBy = { enrolledCount: 'desc' }
+                break
+            case 'rating':
+                orderBy = { ratingAvg: 'desc' }
+                break
+            case 'price_asc':
+                orderBy = { price: 'asc' }
+                break
+            case 'price_desc':
+                orderBy = { price: 'desc' }
+                break
+            case 'newest':
+            default:
+                orderBy = { publishedAt: 'desc' }
+        }
+
+        const [courses, total] = await Promise.all([
+            prisma.course.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    shortDescription: true,
+                    thumbnailUrl: true,
+                    price: true,
+                    discountPrice: true,
+                    level: true,
+                    durationHours: true,
+                    totalLessons: true,
+                    ratingAvg: true,
+                    ratingCount: true,
+                    enrolledCount: true,
+                    isFeatured: true,
+                    publishedAt: true,
+                    instructor: {
+                        select: {
+                            id: true,
+                            username: true,
+                            fullName: true,
+                            avatarUrl: true,
+                        },
+                    },
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                },
+            }),
+            prisma.course.count({ where }),
+        ])
+
+        logger.info(
+            `Retrieved ${courses.length} courses for category ${categoryId}`
+        )
+
+        return {
+            courses,
+            total,
+            category: {
+                id: category.id,
+                name: category.name,
+                slug: category.slug,
+            },
+        }
+    }
 }
 
 export default new CategoryService()
