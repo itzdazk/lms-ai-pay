@@ -29,6 +29,7 @@ model User {
   emailVerifiedAt        DateTime? @map("email_verified_at") @db.Timestamp
   passwordResetToken     String?   @map("password_reset_token") @db.VarChar(255)
   passwordResetExpires   DateTime? @map("password_reset_expires") @db.Timestamp
+  tokenVersion           Int       @default(0) @map("token_version") // new field
   lastLoginAt            DateTime? @map("last_login_at") @db.Timestamp
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamp
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamp
