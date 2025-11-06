@@ -180,6 +180,39 @@ class CategoryController {
             'Courses retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/categories/:slug/courses
+     * @desc    Get courses in a category by slug
+     * @access  Public
+     */
+    getCoursesByCategorySlug = asyncHandler(async (req, res) => {
+        const { slug } = req.params
+        const { page, limit, level, sort } = req.query
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            level: level || undefined,
+            sort: sort || 'newest',
+        }
+
+        const result = await categoryService.getCoursesByCategorySlug(
+            slug,
+            filters
+        )
+
+        return ApiResponse.paginated(
+            res,
+            result.courses,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Courses retrieved successfully'
+        )
+    })
 }
 
 export default new CategoryController()

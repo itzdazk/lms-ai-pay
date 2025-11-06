@@ -84,4 +84,17 @@ router.get(
     categoryController.getCoursesByCategoryId
 )
 
+/**
+ * @route   GET /api/v1/categories/:slug/courses
+ * @desc    Get courses in a category by slug
+ * @access  Public
+ * @query   page, limit, level, sort
+ */
+router.get(
+    '/:slug/courses',
+    getCategoryBySlugValidator,
+    getCategoryCoursesValidator,
+    categoryController.getCoursesByCategorySlug
+)
+
 export default router

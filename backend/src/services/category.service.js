@@ -431,6 +431,24 @@ class CategoryService {
             },
         }
     }
+
+    /**
+     * Get courses by category slug
+     */
+    async getCoursesByCategorySlug(slug, filters) {
+        // Find category by slug
+        const category = await prisma.category.findUnique({
+            where: { slug },
+            select: { id: true, name: true, slug: true },
+        })
+
+        if (!category) {
+            throw new Error('Category not found')
+        }
+
+        // Reuse getCoursesByCategory method
+        return await this.getCoursesByCategory(category.id, filters)
+    }
 }
 
 export default new CategoryService()
