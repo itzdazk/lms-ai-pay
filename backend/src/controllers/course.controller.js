@@ -85,6 +85,19 @@ class CourseController {
             'Trending courses retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/courses/slug/:slug
+     * @desc    Get course by slug
+     * @access  Public
+     */
+    getCourseBySlug = asyncHandler(async (req, res) => {
+        const { slug } = req.params
+
+        const course = await courseService.getCourseBySlug(slug)
+
+        return ApiResponse.success(res, course, 'Course retrieved successfully')
+    })
 }
 
 export default new CourseController()

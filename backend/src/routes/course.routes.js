@@ -34,16 +34,16 @@ router.get('/featured', getLimitValidator, courseController.getFeaturedCourses)
  */
 router.get('/trending', getLimitValidator, courseController.getTrendingCourses)
 
-// /**
-//  * @route   GET /api/v1/courses/slug/:slug
-//  * @desc    Get course details by slug
-//  * @access  Public
-//  */
-// router.get(
-//     '/slug/:slug',
-//     getCourseBySlugValidator,
-//     courseController.getCourseBySlug
-// )
+/**
+ * @route   GET /api/v1/courses/slug/:slug
+ * @desc    Get course details by slug
+ * @access  Public
+ */
+router.get(
+    '/slug/:slug',
+    getCourseBySlugValidator,
+    courseController.getCourseBySlug
+)
 
 // /**
 //  * @route   GET /api/v1/courses/:id
