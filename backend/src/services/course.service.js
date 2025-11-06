@@ -356,6 +356,110 @@ class CourseService {
 
         return formattedCourse
     }
+
+    /**
+     * Get course by ID with full details
+     */
+    async getCourseById(courseId) {
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                shortDescription: true,
+                thumbnailUrl: true,
+                videoPreviewUrl: true,
+                videoPreviewDuration: true,
+                price: true,
+                discountPrice: true,
+                level: true,
+                durationHours: true,
+                totalLessons: true,
+                language: true,
+                requirements: true,
+                whatYouLearn: true,
+                courseObjectives: true,
+                targetAudience: true,
+                status: true,
+                isFeatured: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+                viewsCount: true,
+                completionRate: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                        bio: true,
+                    },
+                },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+                courseTags: {
+                    select: {
+                        tag: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        lessons: {
+                            where: {
+                                isPublished: true,
+                            },
+                        },
+                        enrollments: true,
+                    },
+                },
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        // Only return published courses or provide limited info for unpublished
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Format tags
+        const formattedCourse = {
+            ...course,
+            tags: course.courseTags.map((ct) => ct.tag),
+            lessonsCount: course._count.lessons,
+            enrollmentsCount: course._count.enrollments,
+        }
+
+        // Remove internal fields
+        delete formattedCourse.courseTags
+        delete formattedCourse._count
+
+        logger.info(
+            `Retrieved course details: ${course.title} (ID: ${course.id})`
+        )
+
+        return formattedCourse
+    }
 }
 
 export default new CourseService()

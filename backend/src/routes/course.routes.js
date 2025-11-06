@@ -45,12 +45,12 @@ router.get(
     courseController.getCourseBySlug
 )
 
-// /**
-//  * @route   GET /api/v1/courses/:id
-//  * @desc    Get course details by ID
-//  * @access  Public
-//  */
-// router.get('/:id', getCourseByIdValidator, courseController.getCourseById)
+/**
+ * @route   GET /api/v1/courses/:id
+ * @desc    Get course details by ID
+ * @access  Public
+ */
+router.get('/:id', getCourseByIdValidator, courseController.getCourseById)
 
 // /**
 //  * @route   GET /api/v1/courses/:id/lessons

@@ -98,6 +98,24 @@ class CourseController {
 
         return ApiResponse.success(res, course, 'Course retrieved successfully')
     })
+
+    /**
+     * @route   GET /api/v1/courses/:id
+     * @desc    Get course by ID
+     * @access  Public
+     */
+    getCourseById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const course = await courseService.getCourseById(courseId)
+
+        return ApiResponse.success(res, course, 'Course retrieved successfully')
+    })
 }
 
 export default new CourseController()
