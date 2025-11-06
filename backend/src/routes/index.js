@@ -5,6 +5,7 @@ import userRoutes from './users.routes.js'
 import courseRoutes from './course.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
+import instructorCourseRoutes from './instructor-course.routes.js'
 
 const router = express.Router()
 
@@ -39,6 +40,7 @@ router.use('/users', userRoutes)
 router.use('/courses', courseRoutes)
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
+router.use('/instructor/courses', instructorCourseRoutes)
 
 // Additional routes can be added here
 // router.use('/lessons', lessonRoutes);
