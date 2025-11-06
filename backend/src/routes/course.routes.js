@@ -52,16 +52,16 @@ router.get(
  */
 router.get('/:id', getCourseByIdValidator, courseController.getCourseById)
 
-// /**
-//  * @route   GET /api/v1/courses/:id/lessons
-//  * @desc    Get course lessons (preview only for non-enrolled users)
-//  * @access  Public
-//  */
-// router.get(
-//     '/:id/lessons',
-//     getCourseByIdValidator,
-//     courseController.getCourseLessons
-// )
+/**
+ * @route   GET /api/v1/courses/:id/lessons
+ * @desc    Get course lessons (preview only for non-enrolled users)
+ * @access  Public
+ */
+router.get(
+    '/:id/lessons',
+    getCourseByIdValidator,
+    courseController.getCourseLessons
+)
 
 // /**
 //  * @route   GET /api/v1/courses/:id/instructor

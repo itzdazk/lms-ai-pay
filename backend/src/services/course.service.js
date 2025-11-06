@@ -460,6 +460,63 @@ class CourseService {
 
         return formattedCourse
     }
+
+    /**
+     * Get course lessons (with preview check)
+     */
+    async getCourseLessons(courseId) {
+        // Check if course exists and is published
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Get lessons (only published lessons, and only preview or basic info)
+        const lessons = await prisma.lesson.findMany({
+            where: {
+                courseId,
+                isPublished: true,
+            },
+            orderBy: {
+                lessonOrder: 'asc',
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                videoDuration: true,
+                lessonOrder: true,
+                isPreview: true,
+                // Don't include videoUrl, content, transcriptUrl for non-enrolled users
+            },
+        })
+
+        logger.info(
+            `Retrieved ${lessons.length} lessons for course ID: ${courseId}`
+        )
+
+        return {
+            course: {
+                id: course.id,
+                title: course.title,
+            },
+            lessons,
+            totalLessons: lessons.length,
+        }
+    }
 }
 
 export default new CourseService()
