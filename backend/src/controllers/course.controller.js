@@ -67,6 +67,24 @@ class CourseController {
             'Featured courses retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/courses/trending
+     * @desc    Get trending courses
+     * @access  Public
+     */
+    getTrendingCourses = asyncHandler(async (req, res) => {
+        const { limit } = req.query
+        const limitNum = parseInt(limit) || 10
+
+        const courses = await courseService.getTrendingCourses(limitNum)
+
+        return ApiResponse.success(
+            res,
+            courses,
+            'Trending courses retrieved successfully'
+        )
+    })
 }
 
 export default new CourseController()

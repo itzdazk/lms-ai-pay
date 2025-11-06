@@ -26,13 +26,13 @@ router.get('/', getCoursesValidator, courseController.getCourses)
  */
 router.get('/featured', getLimitValidator, courseController.getFeaturedCourses)
 
-// /**
-//  * @route   GET /api/v1/courses/trending
-//  * @desc    Get trending courses (based on recent enrollments and views)
-//  * @access  Public
-//  * @query   limit (default: 10, max: 50)
-//  */
-// router.get('/trending', getLimitValidator, courseController.getTrendingCourses)
+/**
+ * @route   GET /api/v1/courses/trending
+ * @desc    Get trending courses (based on recent enrollments and views)
+ * @access  Public
+ * @query   limit (default: 10, max: 50)
+ */
+router.get('/trending', getLimitValidator, courseController.getTrendingCourses)
 
 // /**
 //  * @route   GET /api/v1/courses/slug/:slug

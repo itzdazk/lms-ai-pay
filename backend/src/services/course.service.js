@@ -188,6 +188,70 @@ class CourseService {
 
         return courses
     }
+
+    /**
+     * Get trending courses (based on recent enrollments and views)
+     */
+    async getTrendingCourses(limit = 10) {
+        // Trending is determined by:
+        // 1. High enrollment count
+        // 2. High views count
+        // 3. Recently published (last 3 months)
+        const threeMonthsAgo = new Date()
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+
+        const courses = await prisma.course.findMany({
+            where: {
+                status: COURSE_STATUS.PUBLISHED,
+                publishedAt: {
+                    gte: threeMonthsAgo,
+                },
+            },
+            take: limit,
+            orderBy: [
+                { viewsCount: 'desc' },
+                { enrolledCount: 'desc' },
+                { ratingAvg: 'desc' },
+            ],
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                shortDescription: true,
+                thumbnailUrl: true,
+                price: true,
+                discountPrice: true,
+                level: true,
+                durationHours: true,
+                totalLessons: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+                viewsCount: true,
+                isFeatured: true,
+                publishedAt: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                    },
+                },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+            },
+        })
+
+        logger.info(`Retrieved ${courses.length} trending courses`)
+
+        return courses
+    }
 }
 
 export default new CourseService()
