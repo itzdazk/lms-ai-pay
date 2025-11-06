@@ -85,6 +85,103 @@ class CourseController {
             'Trending courses retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/courses/slug/:slug
+     * @desc    Get course by slug
+     * @access  Public
+     */
+    getCourseBySlug = asyncHandler(async (req, res) => {
+        const { slug } = req.params
+
+        const course = await courseService.getCourseBySlug(slug)
+
+        return ApiResponse.success(res, course, 'Course retrieved successfully')
+    })
+
+    /**
+     * @route   GET /api/v1/courses/:id
+     * @desc    Get course by ID
+     * @access  Public
+     */
+    getCourseById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const course = await courseService.getCourseById(courseId)
+
+        return ApiResponse.success(res, course, 'Course retrieved successfully')
+    })
+
+    /**
+     * @route   GET /api/v1/courses/:id/lessons
+     * @desc    Get course lessons
+     * @access  Public
+     */
+    getCourseLessons = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const result = await courseService.getCourseLessons(courseId)
+
+        return ApiResponse.success(
+            res,
+            result,
+            'Course lessons retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/courses/:id/instructor
+     * @desc    Get course instructor details
+     * @access  Public
+     */
+    getCourseInstructor = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const instructor = await courseService.getCourseInstructor(courseId)
+
+        return ApiResponse.success(
+            res,
+            instructor,
+            'Instructor details retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/courses/:id/view
+     * @desc    Increment course view count
+     * @access  Public
+     */
+    incrementViewCount = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const result = await courseService.incrementViewCount(courseId)
+
+        return ApiResponse.success(
+            res,
+            result,
+            'View count updated successfully'
+        )
+    })
 }
 
 export default new CourseController()

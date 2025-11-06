@@ -252,6 +252,394 @@ class CourseService {
 
         return courses
     }
+
+    /**
+     * Get course by slug with full details
+     */
+    async getCourseBySlug(slug) {
+        const course = await prisma.course.findUnique({
+            where: { slug },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                shortDescription: true,
+                thumbnailUrl: true,
+                videoPreviewUrl: true,
+                videoPreviewDuration: true,
+                price: true,
+                discountPrice: true,
+                level: true,
+                durationHours: true,
+                totalLessons: true,
+                language: true,
+                requirements: true,
+                whatYouLearn: true,
+                courseObjectives: true,
+                targetAudience: true,
+                status: true,
+                isFeatured: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+                viewsCount: true,
+                completionRate: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                        bio: true,
+                    },
+                },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+                courseTags: {
+                    select: {
+                        tag: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        lessons: {
+                            where: {
+                                isPublished: true,
+                            },
+                        },
+                        enrollments: true,
+                    },
+                },
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        // Only return published courses
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Format tags
+        const formattedCourse = {
+            ...course,
+            tags: course.courseTags.map((ct) => ct.tag),
+            lessonsCount: course._count.lessons,
+            enrollmentsCount: course._count.enrollments,
+        }
+
+        // Remove internal fields
+        delete formattedCourse.courseTags
+        delete formattedCourse._count
+
+        logger.info(
+            `Retrieved course details by slug: ${course.title} (slug: ${slug})`
+        )
+
+        return formattedCourse
+    }
+
+    /**
+     * Get course by ID with full details
+     */
+    async getCourseById(courseId) {
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                shortDescription: true,
+                thumbnailUrl: true,
+                videoPreviewUrl: true,
+                videoPreviewDuration: true,
+                price: true,
+                discountPrice: true,
+                level: true,
+                durationHours: true,
+                totalLessons: true,
+                language: true,
+                requirements: true,
+                whatYouLearn: true,
+                courseObjectives: true,
+                targetAudience: true,
+                status: true,
+                isFeatured: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+                viewsCount: true,
+                completionRate: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                        bio: true,
+                    },
+                },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+                courseTags: {
+                    select: {
+                        tag: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        lessons: {
+                            where: {
+                                isPublished: true,
+                            },
+                        },
+                        enrollments: true,
+                    },
+                },
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        // Only return published courses or provide limited info for unpublished
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Format tags
+        const formattedCourse = {
+            ...course,
+            tags: course.courseTags.map((ct) => ct.tag),
+            lessonsCount: course._count.lessons,
+            enrollmentsCount: course._count.enrollments,
+        }
+
+        // Remove internal fields
+        delete formattedCourse.courseTags
+        delete formattedCourse._count
+
+        logger.info(
+            `Retrieved course details: ${course.title} (ID: ${course.id})`
+        )
+
+        return formattedCourse
+    }
+
+    /**
+     * Get course lessons (with preview check)
+     */
+    async getCourseLessons(courseId) {
+        // Check if course exists and is published
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Get lessons (only published lessons, and only preview or basic info)
+        const lessons = await prisma.lesson.findMany({
+            where: {
+                courseId,
+                isPublished: true,
+            },
+            orderBy: {
+                lessonOrder: 'asc',
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                videoDuration: true,
+                lessonOrder: true,
+                isPreview: true,
+                // Don't include videoUrl, content, transcriptUrl for non-enrolled users
+            },
+        })
+
+        logger.info(
+            `Retrieved ${lessons.length} lessons for course ID: ${courseId}`
+        )
+
+        return {
+            course: {
+                id: course.id,
+                title: course.title,
+            },
+            lessons,
+            totalLessons: lessons.length,
+        }
+    }
+
+    /**
+     * Get course instructor details
+     */
+    async getCourseInstructor(courseId) {
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                        bio: true,
+                        createdAt: true,
+                        _count: {
+                            select: {
+                                coursesAsInstructor: {
+                                    where: {
+                                        status: COURSE_STATUS.PUBLISHED,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Get instructor's other courses
+        const otherCourses = await prisma.course.findMany({
+            where: {
+                instructorId: course.instructor.id,
+                status: COURSE_STATUS.PUBLISHED,
+                NOT: {
+                    id: courseId,
+                },
+            },
+            take: 5,
+            orderBy: {
+                publishedAt: 'desc',
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                thumbnailUrl: true,
+                price: true,
+                discountPrice: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+            },
+        })
+
+        const instructor = {
+            ...course.instructor,
+            totalCourses: course.instructor._count.coursesAsInstructor,
+            otherCourses,
+        }
+
+        // Remove _count field
+        delete instructor._count
+
+        logger.info(`Retrieved instructor details for course ID: ${courseId}`)
+
+        return instructor
+    }
+
+    /**
+     * Increment course view count
+     */
+    async incrementViewCount(courseId) {
+        // Check if course exists and is published
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                status: true,
+                viewsCount: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available')
+        }
+
+        // Increment view count
+        const updatedCourse = await prisma.course.update({
+            where: { id: courseId },
+            data: {
+                viewsCount: {
+                    increment: 1,
+                },
+            },
+            select: {
+                id: true,
+                viewsCount: true,
+            },
+        })
+
+        logger.info(
+            `Incremented view count for course ID: ${courseId}. New count: ${updatedCourse.viewsCount}`
+        )
+
+        return updatedCourse
+    }
 }
 
 export default new CourseService()

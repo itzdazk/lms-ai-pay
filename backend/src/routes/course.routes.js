@@ -34,55 +34,55 @@ router.get('/featured', getLimitValidator, courseController.getFeaturedCourses)
  */
 router.get('/trending', getLimitValidator, courseController.getTrendingCourses)
 
-// /**
-//  * @route   GET /api/v1/courses/slug/:slug
-//  * @desc    Get course details by slug
-//  * @access  Public
-//  */
-// router.get(
-//     '/slug/:slug',
-//     getCourseBySlugValidator,
-//     courseController.getCourseBySlug
-// )
+/**
+ * @route   GET /api/v1/courses/slug/:slug
+ * @desc    Get course details by slug
+ * @access  Public
+ */
+router.get(
+    '/slug/:slug',
+    getCourseBySlugValidator,
+    courseController.getCourseBySlug
+)
 
-// /**
-//  * @route   GET /api/v1/courses/:id
-//  * @desc    Get course details by ID
-//  * @access  Public
-//  */
-// router.get('/:id', getCourseByIdValidator, courseController.getCourseById)
+/**
+ * @route   GET /api/v1/courses/:id
+ * @desc    Get course details by ID
+ * @access  Public
+ */
+router.get('/:id', getCourseByIdValidator, courseController.getCourseById)
 
-// /**
-//  * @route   GET /api/v1/courses/:id/lessons
-//  * @desc    Get course lessons (preview only for non-enrolled users)
-//  * @access  Public
-//  */
-// router.get(
-//     '/:id/lessons',
-//     getCourseByIdValidator,
-//     courseController.getCourseLessons
-// )
+/**
+ * @route   GET /api/v1/courses/:id/lessons
+ * @desc    Get course lessons (preview only for non-enrolled users)
+ * @access  Public
+ */
+router.get(
+    '/:id/lessons',
+    getCourseByIdValidator,
+    courseController.getCourseLessons
+)
 
-// /**
-//  * @route   GET /api/v1/courses/:id/instructor
-//  * @desc    Get course instructor details
-//  * @access  Public
-//  */
-// router.get(
-//     '/:id/instructor',
-//     getCourseByIdValidator,
-//     courseController.getCourseInstructor
-// )
+/**
+ * @route   GET /api/v1/courses/:id/instructor
+ * @desc    Get course instructor details
+ * @access  Public
+ */
+router.get(
+    '/:id/instructor',
+    getCourseByIdValidator,
+    courseController.getCourseInstructor
+)
 
-// /**
-//  * @route   POST /api/v1/courses/:id/view
-//  * @desc    Increment course view count
-//  * @access  Public
-//  */
-// router.post(
-//     '/:id/view',
-//     getCourseByIdValidator,
-//     courseController.incrementViewCount
-// )
+/**
+ * @route   POST /api/v1/courses/:id/view
+ * @desc    Increment course view count
+ * @access  Public
+ */
+router.post(
+    '/:id/view',
+    getCourseByIdValidator,
+    courseController.incrementViewCount
+)
 
 export default router
