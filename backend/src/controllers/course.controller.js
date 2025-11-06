@@ -49,6 +49,24 @@ class CourseController {
             'Courses retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/courses/featured
+     * @desc    Get featured courses
+     * @access  Public
+     */
+    getFeaturedCourses = asyncHandler(async (req, res) => {
+        const { limit } = req.query
+        const limitNum = parseInt(limit) || 10
+
+        const courses = await courseService.getFeaturedCourses(limitNum)
+
+        return ApiResponse.success(
+            res,
+            courses,
+            'Featured courses retrieved successfully'
+        )
+    })
 }
 
 export default new CourseController()

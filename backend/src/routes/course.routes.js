@@ -18,13 +18,13 @@ const router = express.Router()
  */
 router.get('/', getCoursesValidator, courseController.getCourses)
 
-// /**
-//  * @route   GET /api/v1/courses/featured
-//  * @desc    Get featured courses
-//  * @access  Public
-//  * @query   limit (default: 10, max: 50)
-//  */
-// router.get('/featured', getLimitValidator, courseController.getFeaturedCourses)
+/**
+ * @route   GET /api/v1/courses/featured
+ * @desc    Get featured courses
+ * @access  Public
+ * @query   limit (default: 10, max: 50)
+ */
+router.get('/featured', getLimitValidator, courseController.getFeaturedCourses)
 
 // /**
 //  * @route   GET /api/v1/courses/trending

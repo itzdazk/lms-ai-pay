@@ -138,6 +138,56 @@ class CourseService {
             total,
         }
     }
+
+    /**
+     * Get featured courses
+     */
+    async getFeaturedCourses(limit = 10) {
+        const courses = await prisma.course.findMany({
+            where: {
+                status: COURSE_STATUS.PUBLISHED,
+                isFeatured: true,
+            },
+            take: limit,
+            orderBy: [{ enrolledCount: 'desc' }, { ratingAvg: 'desc' }],
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                shortDescription: true,
+                thumbnailUrl: true,
+                price: true,
+                discountPrice: true,
+                level: true,
+                durationHours: true,
+                totalLessons: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+                isFeatured: true,
+                publishedAt: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                    },
+                },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+            },
+        })
+
+        logger.info(`Retrieved ${courses.length} featured courses`)
+
+        return courses
+    }
 }
 
 export default new CourseService()
