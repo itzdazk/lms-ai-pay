@@ -3,7 +3,7 @@ import express from 'express'
 import authRoutes from './auth.routes.js'
 // import userRoutes from './user.routes.js';
 // import courseRoutes from './course.routes.js';
-// import categoryRoutes from './category.routes.js';
+import categoryRoutes from './category.routes.js'
 
 const router = express.Router()
 
@@ -35,7 +35,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes)
 // router.use('/users', userRoutes)
 // router.use('/courses', courseRoutes)
-// router.use('/categories', categoryRoutes)
+router.use('/categories', categoryRoutes)
 
 // Additional routes can be added here
 // router.use('/lessons', lessonRoutes);

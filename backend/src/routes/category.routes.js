@@ -1,0 +1,34 @@
+// src/routes/category.routes.js
+import express from 'express'
+import categoryController from '../controllers/category.controller.js'
+import {
+    authenticate,
+    optionalAuthenticate,
+} from '../middlewares/auth.middleware.js'
+import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
+import {
+    createCategoryValidator,
+    updateCategoryValidator,
+    getCategoryByIdValidator,
+    getCategoryBySlugValidator,
+    getCategoriesValidator,
+    getCategoryCoursesValidator,
+    deleteCategoryValidator,
+} from '../validators/category.validator.js'
+
+const router = express.Router()
+
+/**
+ * @route   POST /api/v1/categories
+ * @desc    Create new category
+ * @access  Private (Admin/Instructor)
+ */
+router.post(
+    '/',
+    authenticate,
+    isInstructor,
+    createCategoryValidator,
+    categoryController.createCategory
+)
+
+export default router
