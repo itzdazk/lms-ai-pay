@@ -63,6 +63,80 @@ class CategoryService {
 
         return category
     }
+
+    /**
+     * Update category
+     */
+    async updateCategory(categoryId, updateData) {
+        // Check if category exists
+        const existingCategory = await prisma.category.findUnique({
+            where: { id: categoryId },
+        })
+
+        if (!existingCategory) {
+            throw new Error('Category not found')
+        }
+
+        // If slug is being updated, check for uniqueness
+        if (updateData.slug && updateData.slug !== existingCategory.slug) {
+            const slugExists = await prisma.category.findUnique({
+                where: { slug: updateData.slug },
+            })
+
+            if (slugExists) {
+                throw new Error('Category with this slug already exists')
+            }
+        }
+
+        // If parentId is being updated, validate
+        if (updateData.parentId !== undefined) {
+            // Prevent setting itself as parent
+            if (updateData.parentId === categoryId) {
+                throw new Error('Category cannot be its own parent')
+            }
+
+            // If parentId is not null, check if parent exists
+            if (updateData.parentId !== null) {
+                const parentCategory = await prisma.category.findUnique({
+                    where: { id: updateData.parentId },
+                })
+
+                if (!parentCategory) {
+                    throw new Error('Parent category not found')
+                }
+
+                // Prevent circular reference (child cannot become parent of its parent)
+                if (parentCategory.parentId === categoryId) {
+                    throw new Error('Circular reference not allowed')
+                }
+            }
+        }
+
+        const category = await prisma.category.update({
+            where: { id: categoryId },
+            data: updateData,
+            include: {
+                parent: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+                children: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+            },
+        })
+
+        logger.info(`Category updated: ${category.name} (ID: ${category.id})`)
+
+        return category
+    }
 }
 
 export default new CategoryService()

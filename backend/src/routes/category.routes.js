@@ -31,4 +31,17 @@ router.post(
     categoryController.createCategory
 )
 
+/**
+ * @route   PUT /api/v1/categories/:id
+ * @desc    Update category
+ * @access  Private (Admin/Instructor)
+ */
+router.put(
+    '/:id',
+    authenticate,
+    isInstructor,
+    updateCategoryValidator,
+    categoryController.updateCategory
+)
+
 export default router

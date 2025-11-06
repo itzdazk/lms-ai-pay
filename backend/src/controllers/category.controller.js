@@ -38,6 +38,46 @@ class CategoryController {
             'Category created successfully'
         )
     })
+
+    /**
+     * @route   PUT /api/v1/categories/:id
+     * @desc    Update category
+     * @access  Private (Admin/Instructor)
+     */
+    updateCategory = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const {
+            name,
+            slug,
+            description,
+            imageUrl,
+            parentId,
+            sortOrder,
+            isActive,
+        } = req.body
+
+        const updateData = {}
+
+        if (name !== undefined) updateData.name = name
+        if (slug !== undefined) updateData.slug = slug
+        if (description !== undefined) updateData.description = description
+        if (imageUrl !== undefined) updateData.imageUrl = imageUrl
+        if (parentId !== undefined)
+            updateData.parentId = parentId ? parseInt(parentId) : null
+        if (sortOrder !== undefined) updateData.sortOrder = parseInt(sortOrder)
+        if (isActive !== undefined) updateData.isActive = isActive
+
+        const category = await categoryService.updateCategory(
+            parseInt(id),
+            updateData
+        )
+
+        return ApiResponse.success(
+            res,
+            category,
+            'Category updated successfully'
+        )
+    })
 }
 
 export default new CategoryController()
