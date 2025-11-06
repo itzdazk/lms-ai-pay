@@ -34,14 +34,14 @@ model User {
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamp
 
   // Relations
-  coursesAsInstructor    Course[]  @relation("CourseInstructor")
-  enrollments            Enrollment[]
-  orders                 Order[]
-  progress               Progress[]
-  quizSubmissions        QuizSubmission[]
-  aiRecommendations      AiRecommendation[]
-  conversations          Conversation[]
-  notifications          Notification[]
+  coursesAsInstructor Course[]           @relation("CourseInstructor")
+  enrollments         Enrollment[]
+  orders              Order[]
+  progress            Progress[]
+  quizSubmissions     QuizSubmission[]
+  aiRecommendations   AiRecommendation[]
+  conversations       Conversation[]
+  notifications       Notification[]
 
   @@index([email])
   @@index([username])
@@ -69,7 +69,7 @@ model Category {
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamp
   updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamp
 
-  courses     Course[]
+  courses Course[]
 
   @@index([parentId])
   @@index([slug])
@@ -81,13 +81,13 @@ model Category {
 // 3. TAGS
 // =====================================================
 model Tag {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique @db.VarChar(50)
-  slug        String    @unique @db.VarChar(50)
-  description String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  slug        String   @unique @db.VarChar(50)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp
 
-  courses     CourseTag[]
+  courses CourseTag[]
 
   @@index([slug])
   @@map("tags")
@@ -97,38 +97,38 @@ model Tag {
 // 4. COURSES
 // =====================================================
 model Course {
-  id                 Int       @id @default(autoincrement())
-  title              String    @db.VarChar(200)
-  slug               String    @unique @db.VarChar(200)
-  description        String?    @db.Text
-  shortDescription   String?   @map("short_description") @db.VarChar(500)
-  thumbnailUrl       String?   @map("thumbnail_url") @db.VarChar(255)
-  videoPreviewUrl    String?   @map("video_preview_url") @db.VarChar(255)
-  videoPreviewDuration Int?    @map("video_preview_duration")
-  price              Decimal   @default(0) @db.Decimal(10, 2)
-  discountPrice      Decimal?   @map("discount_price") @db.Decimal(10, 2)
-  instructorId      Int       @map("instructor_id")
-  instructor         User      @relation("CourseInstructor", fields: [instructorId], references: [id])
-  categoryId        Int       @map("category_id")
-  category          Category   @relation(fields: [categoryId], references: [id])
-  level             String?    @db.VarChar(20)
-  durationHours     Int       @default(0) @map("duration_hours")
-  totalLessons      Int       @default(0) @map("total_lessons")
-  language          String    @default("vi") @db.VarChar(10)
-  requirements      String?   @db.Text
-  whatYouLearn      String?   @map("what_you_learn") @db.Text
-  courseObjectives  String?   @map("course_objectives") @db.Text
-  targetAudience    String?   @map("target_audience") @db.Text
-  status            String    @default("draft") @db.VarChar(20)
-  isFeatured        Boolean   @default(false) @map("is_featured")
-  ratingAvg         Decimal   @default(0) @map("rating_avg") @db.Decimal(2, 1)
-  ratingCount       Int       @default(0) @map("rating_count")
-  enrolledCount     Int       @default(0) @map("enrolled_count")
-  viewsCount        Int       @default(0) @map("views_count")
-  completionRate    Decimal   @default(0) @map("completion_rate") @db.Decimal(5, 2)
-  publishedAt       DateTime? @map("published_at") @db.Timestamp
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  id                   Int       @id @default(autoincrement())
+  title                String    @db.VarChar(200)
+  slug                 String    @unique @db.VarChar(200)
+  description          String?   @db.Text
+  shortDescription     String?   @map("short_description") @db.VarChar(500)
+  thumbnailUrl         String?   @map("thumbnail_url") @db.VarChar(255)
+  videoPreviewUrl      String?   @map("video_preview_url") @db.VarChar(255)
+  videoPreviewDuration Int?      @map("video_preview_duration")
+  price                Decimal   @default(0) @db.Decimal(10, 2)
+  discountPrice        Decimal?  @map("discount_price") @db.Decimal(10, 2)
+  instructorId         Int       @map("instructor_id")
+  instructor           User      @relation("CourseInstructor", fields: [instructorId], references: [id])
+  categoryId           Int       @map("category_id")
+  category             Category  @relation(fields: [categoryId], references: [id])
+  level                String?   @db.VarChar(20)
+  durationHours        Int       @default(0) @map("duration_hours")
+  totalLessons         Int       @default(0) @map("total_lessons")
+  language             String    @default("vi") @db.VarChar(10)
+  requirements         String?   @db.Text
+  whatYouLearn         String?   @map("what_you_learn") @db.Text
+  courseObjectives     String?   @map("course_objectives") @db.Text
+  targetAudience       String?   @map("target_audience") @db.Text
+  status               String    @default("draft") @db.VarChar(20)
+  isFeatured           Boolean   @default(false) @map("is_featured")
+  ratingAvg            Decimal   @default(0) @map("rating_avg") @db.Decimal(2, 1)
+  ratingCount          Int       @default(0) @map("rating_count")
+  enrolledCount        Int       @default(0) @map("enrolled_count")
+  viewsCount           Int       @default(0) @map("views_count")
+  completionRate       Decimal   @default(0) @map("completion_rate") @db.Decimal(5, 2)
+  publishedAt          DateTime? @map("published_at") @db.Timestamp
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamp
 
   // Relations
   courseTags        CourseTag[]
@@ -153,10 +153,10 @@ model Course {
 // 4.1. COURSE_TAGS (Many-to-Many)
 // =====================================================
 model CourseTag {
-  courseId  Int @map("course_id")
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  tagId     Int @map("tag_id")
-  tag       Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  courseId Int    @map("course_id")
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  tagId    Int    @map("tag_id")
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([courseId, tagId])
   @@index([courseId])
@@ -199,20 +199,20 @@ model Lesson {
 // 6. ENROLLMENTS
 // =====================================================
 model Enrollment {
-  id               Int       @id @default(autoincrement())
-  userId           Int       @map("user_id")
-  user             User      @relation(fields: [userId], references: [id])
-  courseId         Int       @map("course_id")
-  course           Course    @relation(fields: [courseId], references: [id])
-  enrolledAt       DateTime  @default(now()) @map("enrolled_at") @db.Timestamp
-  startedAt        DateTime? @map("started_at") @db.Timestamp
-  completedAt      DateTime? @map("completed_at") @db.Timestamp
-  progressPercentage Decimal @default(0) @map("progress_percentage") @db.Decimal(5, 2)
-  lastAccessedAt   DateTime? @map("last_accessed_at") @db.Timestamp
-  expiresAt        DateTime? @map("expires_at") @db.Timestamp
-  status           String    @default("active") @db.VarChar(20)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @map("user_id")
+  user               User      @relation(fields: [userId], references: [id])
+  courseId           Int       @map("course_id")
+  course             Course    @relation(fields: [courseId], references: [id])
+  enrolledAt         DateTime  @default(now()) @map("enrolled_at") @db.Timestamp
+  startedAt          DateTime? @map("started_at") @db.Timestamp
+  completedAt        DateTime? @map("completed_at") @db.Timestamp
+  progressPercentage Decimal   @default(0) @map("progress_percentage") @db.Decimal(5, 2)
+  lastAccessedAt     DateTime? @map("last_accessed_at") @db.Timestamp
+  expiresAt          DateTime? @map("expires_at") @db.Timestamp
+  status             String    @default("active") @db.VarChar(20)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamp
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -226,26 +226,26 @@ model Enrollment {
 // 7. ORDERS
 // =====================================================
 model Order {
-  id              Int       @id @default(autoincrement())
-  userId          Int       @map("user_id")
-  user            User      @relation(fields: [userId], references: [id])
-  courseId        Int       @map("course_id")
-  course          Course    @relation(fields: [courseId], references: [id])
-  orderCode       String    @unique @map("order_code") @db.VarChar(50)
-  originalPrice   Decimal   @map("original_price") @db.Decimal(10, 2)
-  discountAmount  Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  finalPrice      Decimal   @map("final_price") @db.Decimal(10, 2)
-  paymentMethod   String?   @map("payment_method") @db.VarChar(50)
-  paymentGateway  String    @map("payment_gateway") @db.VarChar(50)
-  paymentStatus   String    @default("pending") @map("payment_status") @db.VarChar(20)
-  transactionId   String?   @unique @map("transaction_id") @db.VarChar(255)
-  refundAmount    Decimal   @default(0) @map("refund_amount") @db.Decimal(10, 2)
-  refundedAt      DateTime? @map("refunded_at") @db.Timestamp
-  paidAt          DateTime? @map("paid_at") @db.Timestamp
-  billingAddress  Json?     @map("billing_address")
-  notes           String?   @db.Text
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  id             Int       @id @default(autoincrement())
+  userId         Int       @map("user_id")
+  user           User      @relation(fields: [userId], references: [id])
+  courseId       Int       @map("course_id")
+  course         Course    @relation(fields: [courseId], references: [id])
+  orderCode      String    @unique @map("order_code") @db.VarChar(50)
+  originalPrice  Decimal   @map("original_price") @db.Decimal(10, 2)
+  discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  finalPrice     Decimal   @map("final_price") @db.Decimal(10, 2)
+  paymentMethod  String?   @map("payment_method") @db.VarChar(50)
+  paymentGateway String    @map("payment_gateway") @db.VarChar(50)
+  paymentStatus  String    @default("pending") @map("payment_status") @db.VarChar(20)
+  transactionId  String?   @unique @map("transaction_id") @db.VarChar(255)
+  refundAmount   Decimal   @default(0) @map("refund_amount") @db.Decimal(10, 2)
+  refundedAt     DateTime? @map("refunded_at") @db.Timestamp
+  paidAt         DateTime? @map("paid_at") @db.Timestamp
+  billingAddress Json?     @map("billing_address")
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp
 
   paymentTransactions PaymentTransaction[]
 
@@ -263,19 +263,19 @@ model Order {
 // 8. PAYMENT_TRANSACTIONS
 // =====================================================
 model PaymentTransaction {
-  id             Int       @id @default(autoincrement())
-  orderId        Int       @map("order_id")
-  order          Order     @relation(fields: [orderId], references: [id])
-  transactionId  String?   @unique @map("transaction_id") @db.VarChar(100)
-  paymentGateway String    @map("payment_gateway") @db.VarChar(50)
-  amount         Decimal   @db.Decimal(10, 2)
-  currency       String    @default("VND") @db.VarChar(10)
-  status         String?   @db.VarChar(20)
-  gatewayResponse Json?   @map("gateway_response")
-  errorMessage   String?   @map("error_message") @db.Text
-  ipAddress      String?   @map("ip_address") @db.VarChar(45)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  id              Int      @id @default(autoincrement())
+  orderId         Int      @map("order_id")
+  order           Order    @relation(fields: [orderId], references: [id])
+  transactionId   String?  @unique @map("transaction_id") @db.VarChar(100)
+  paymentGateway  String   @map("payment_gateway") @db.VarChar(50)
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("VND") @db.VarChar(10)
+  status          String?  @db.VarChar(20)
+  gatewayResponse Json?    @map("gateway_response")
+  errorMessage    String?  @map("error_message") @db.Text
+  ipAddress       String?  @map("ip_address") @db.VarChar(45)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamp
 
   @@index([orderId])
   @@index([transactionId])
@@ -337,21 +337,21 @@ model Notification {
 // 11. QUIZZES
 // =====================================================
 model Quiz {
-  id              Int       @id @default(autoincrement())
-  lessonId        Int?      @map("lesson_id")
-  lesson          Lesson?   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  courseId        Int?      @map("course_id")
-  course          Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title           String    @db.VarChar(200)
-  description     String?   @db.Text
+  id              Int      @id @default(autoincrement())
+  lessonId        Int?     @map("lesson_id")
+  lesson          Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  courseId        Int?     @map("course_id")
+  course          Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title           String   @db.VarChar(200)
+  description     String?  @db.Text
   questions       Json
-  passingScore    Int       @default(70) @map("passing_score")
-  attemptsAllowed Int       @default(1) @map("attempts_allowed")
-  isPublished     Boolean   @default(true) @map("is_published")
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  passingScore    Int      @default(70) @map("passing_score")
+  attemptsAllowed Int      @default(1) @map("attempts_allowed")
+  isPublished     Boolean  @default(true) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamp
 
-  submissions     QuizSubmission[]
+  submissions QuizSubmission[]
 
   @@index([lessonId])
   @@index([courseId])
@@ -363,15 +363,15 @@ model Quiz {
 // 11.1. QUIZ_SUBMISSIONS
 // =====================================================
 model QuizSubmission {
-  id          Int       @id @default(autoincrement())
-  userId      Int       @map("user_id")
-  user        User      @relation(fields: [userId], references: [id])
-  quizId      Int       @map("quiz_id")
-  quiz        Quiz      @relation(fields: [quizId], references: [id])
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  quizId      Int      @map("quiz_id")
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
   answers     Json
-  score       Decimal?  @db.Decimal(5, 2)
-  isPassed    Boolean?  @map("is_passed")
-  submittedAt DateTime  @default(now()) @map("submitted_at") @db.Timestamp
+  score       Decimal? @db.Decimal(5, 2)
+  isPassed    Boolean? @map("is_passed")
+  submittedAt DateTime @default(now()) @map("submitted_at") @db.Timestamp
 
   @@index([userId])
   @@index([quizId])
@@ -383,7 +383,7 @@ model QuizSubmission {
 // 12. AI_RECOMMENDATIONS
 // =====================================================
 model AiRecommendation {
-  id                Int      @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   userId             Int      @map("user_id")
   user               User     @relation(fields: [userId], references: [id])
   courseId           Int      @map("course_id")
@@ -421,7 +421,7 @@ model Conversation {
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp
   lastMessageAt DateTime? @map("last_message_at") @db.Timestamp
 
-  messages      ChatMessage[]
+  messages ChatMessage[]
 
   @@index([userId])
   @@index([courseId])
@@ -435,17 +435,17 @@ model Conversation {
 // 14. CHAT_MESSAGES
 // =====================================================
 model ChatMessage {
-  id            Int       @id @default(autoincrement())
-  conversationId Int      @map("conversation_id")
-  conversation  Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderType    String    @map("sender_type") @db.VarChar(20)
-  message       String    @db.Text
-  messageType   String    @default("text") @map("message_type") @db.VarChar(20)
-  attachments   Json?    
-  metadata      Json?    
-  isHelpful     Boolean?  @map("is_helpful")
-  feedbackText  String?   @map("feedback_text") @db.Text
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp
+  id             Int          @id @default(autoincrement())
+  conversationId Int          @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType     String       @map("sender_type") @db.VarChar(20)
+  message        String       @db.Text
+  messageType    String       @default("text") @map("message_type") @db.VarChar(20)
+  attachments    Json?
+  metadata       Json?
+  isHelpful      Boolean?     @map("is_helpful")
+  feedbackText   String?      @map("feedback_text") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp
 
   @@index([conversationId])
   @@index([senderType])
@@ -453,10 +453,3 @@ model ChatMessage {
   @@index([isHelpful])
   @@map("chat_messages")
 }
-
-
-
-
-
-
-
