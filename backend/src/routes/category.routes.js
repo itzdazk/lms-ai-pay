@@ -65,4 +65,11 @@ router.delete(
  */
 router.get('/', getCategoriesValidator, categoryController.getCategories)
 
+/**
+ * @route   GET /api/v1/categories/:id
+ * @desc    Get category by ID
+ * @access  Public
+ */
+router.get('/:id', getCategoryByIdValidator, categoryController.getCategoryById)
+
 export default router

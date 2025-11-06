@@ -270,6 +270,63 @@ class CategoryService {
             total,
         }
     }
+
+    /**
+     * Get category by ID
+     */
+    async getCategoryById(categoryId) {
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+            include: {
+                parent: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+                children: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        imageUrl: true,
+                        isActive: true,
+                    },
+                    where: { isActive: true },
+                    orderBy: { sortOrder: 'asc' },
+                },
+                _count: {
+                    select: {
+                        courses: {
+                            where: {
+                                status: COURSE_STATUS.PUBLISHED,
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+        if (!category) {
+            throw new Error('Category not found')
+        }
+
+        return {
+            id: category.id,
+            name: category.name,
+            slug: category.slug,
+            description: category.description,
+            imageUrl: category.imageUrl,
+            sortOrder: category.sortOrder,
+            isActive: category.isActive,
+            parent: category.parent,
+            children: category.children,
+            coursesCount: category._count.courses,
+            createdAt: category.createdAt,
+            updatedAt: category.updatedAt,
+        }
+    }
 }
 
 export default new CategoryService()

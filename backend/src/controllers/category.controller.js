@@ -126,6 +126,27 @@ class CategoryController {
             'Categories retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/categories/:id
+     * @desc    Get category by ID
+     * @access  Public
+     */
+    getCategoryById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+
+        const category = await categoryService.getCategoryById(parseInt(id))
+
+        if (!category) {
+            return ApiResponse.notFound(res, 'Category not found')
+        }
+
+        return ApiResponse.success(
+            res,
+            category,
+            'Category retrieved successfully'
+        )
+    })
 }
 
 export default new CategoryController()
