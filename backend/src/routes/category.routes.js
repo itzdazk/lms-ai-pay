@@ -57,4 +57,12 @@ router.delete(
     categoryController.deleteCategory
 )
 
+/**
+ * @route   GET /api/v1/categories
+ * @desc    Get all categories with optional filters
+ * @access  Public
+ * @query   page, limit, parentId, isActive, search
+ */
+router.get('/', getCategoriesValidator, categoryController.getCategories)
+
 export default router

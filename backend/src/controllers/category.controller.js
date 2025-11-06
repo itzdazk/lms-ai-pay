@@ -91,6 +91,41 @@ class CategoryController {
 
         return ApiResponse.success(res, null, 'Category deleted successfully')
     })
+
+    /**
+     * @route   GET /api/v1/categories
+     * @desc    Get all categories (with optional filters)
+     * @access  Public
+     */
+    getCategories = asyncHandler(async (req, res) => {
+        const { page, limit, parentId, isActive, search } = req.query
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            parentId: parentId ? parseInt(parentId) : undefined,
+            isActive:
+                isActive === 'true'
+                    ? true
+                    : isActive === 'false'
+                      ? false
+                      : undefined,
+            search: search || undefined,
+        }
+
+        const result = await categoryService.getCategories(filters)
+
+        return ApiResponse.paginated(
+            res,
+            result.categories,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Categories retrieved successfully'
+        )
+    })
 }
 
 export default new CategoryController()

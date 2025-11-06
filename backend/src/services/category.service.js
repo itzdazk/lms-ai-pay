@@ -181,6 +181,95 @@ class CategoryService {
 
         return true
     }
+
+    /**
+     * Get all categories with filters
+     */
+    async getCategories(filters) {
+        const { page, limit, parentId, isActive, search } = filters
+
+        const skip = (page - 1) * limit
+
+        // Build where clause
+        const where = {}
+
+        if (parentId !== undefined) {
+            where.parentId = parentId
+        }
+
+        if (isActive !== undefined) {
+            where.isActive = isActive
+        }
+
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ]
+        }
+
+        // Get categories with children count
+        const [categories, total] = await Promise.all([
+            prisma.category.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+                include: {
+                    parent: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                    children: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                            isActive: true,
+                        },
+                        where: { isActive: true },
+                        orderBy: { sortOrder: 'asc' },
+                    },
+                    _count: {
+                        select: {
+                            courses: {
+                                where: {
+                                    status: COURSE_STATUS.PUBLISHED,
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            prisma.category.count({ where }),
+        ])
+
+        // Format response
+        const formattedCategories = categories.map((category) => ({
+            id: category.id,
+            name: category.name,
+            slug: category.slug,
+            description: category.description,
+            imageUrl: category.imageUrl,
+            sortOrder: category.sortOrder,
+            isActive: category.isActive,
+            parent: category.parent,
+            children: category.children,
+            coursesCount: category._count.courses,
+            createdAt: category.createdAt,
+            updatedAt: category.updatedAt,
+        }))
+
+        logger.info(`Retrieved ${categories.length} categories`)
+
+        return {
+            categories: formattedCategories,
+            total,
+        }
+    }
 }
 
 export default new CategoryService()
