@@ -2,7 +2,7 @@
 import express from 'express'
 import authRoutes from './auth.routes.js'
 import userRoutes from './users.routes.js'
-// import courseRoutes from './course.routes.js';
+import courseRoutes from './course.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 
@@ -36,7 +36,7 @@ router.get('/health', (req, res) => {
 // API Routes (uncomment when routes are ready)
 router.use('/auth', authRoutes)
 router.use('/users', userRoutes)
-// router.use('/courses', courseRoutes)
+router.use('/courses', courseRoutes)
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 
