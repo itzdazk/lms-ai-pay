@@ -137,6 +137,50 @@ class CategoryService {
 
         return category
     }
+
+    /**
+     * Delete category
+     */
+    async deleteCategory(categoryId) {
+        // Check if category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+            include: {
+                _count: {
+                    select: {
+                        courses: true,
+                        children: true,
+                    },
+                },
+            },
+        })
+
+        if (!category) {
+            throw new Error('Category not found')
+        }
+
+        // Check if category has courses
+        if (category._count.courses > 0) {
+            throw new Error(
+                `Cannot delete category with ${category._count.courses} active courses. Please reassign courses first.`
+            )
+        }
+
+        // Check if category has children
+        if (category._count.children > 0) {
+            throw new Error(
+                `Cannot delete category with ${category._count.children} subcategories. Please delete subcategories first.`
+            )
+        }
+
+        await prisma.category.delete({
+            where: { id: categoryId },
+        })
+
+        logger.info(`Category deleted: ${category.name} (ID: ${category.id})`)
+
+        return true
+    }
 }
 
 export default new CategoryService()

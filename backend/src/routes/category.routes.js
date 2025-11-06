@@ -44,4 +44,17 @@ router.put(
     categoryController.updateCategory
 )
 
+/**
+ * @route   DELETE /api/v1/categories/:id
+ * @desc    Delete category
+ * @access  Private (Admin/Instructor)
+ */
+router.delete(
+    '/:id',
+    authenticate,
+    isInstructor,
+    deleteCategoryValidator,
+    categoryController.deleteCategory
+)
+
 export default router

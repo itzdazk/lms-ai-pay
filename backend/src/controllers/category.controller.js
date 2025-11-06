@@ -78,6 +78,19 @@ class CategoryController {
             'Category updated successfully'
         )
     })
+
+    /**
+     * @route   DELETE /api/v1/categories/:id
+     * @desc    Delete category
+     * @access  Private (Admin/Instructor)
+     */
+    deleteCategory = asyncHandler(async (req, res) => {
+        const { id } = req.params
+
+        await categoryService.deleteCategory(parseInt(id))
+
+        return ApiResponse.success(res, null, 'Category deleted successfully')
+    })
 }
 
 export default new CategoryController()
