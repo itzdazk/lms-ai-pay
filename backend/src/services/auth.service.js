@@ -52,6 +52,7 @@ class AuthService {
                 role,
                 status: USER_STATUS.ACTIVE,
                 emailVerificationToken,
+                tokenVersion: 0,
             },
             select: {
                 id: true,
@@ -61,6 +62,7 @@ class AuthService {
                 role: true,
                 status: true,
                 emailVerified: true,
+                tokenVersion: true,
                 createdAt: true,
             },
         })
@@ -69,6 +71,7 @@ class AuthService {
         const tokens = JWTUtil.generateTokens({
             userId: user.id,
             role: user.role,
+            tokenVersion: user.tokenVersion,
         })
 
         logger.info(`New user registered: ${user.email}`)
@@ -99,6 +102,19 @@ class AuthService {
         // Find user by email
         const user = await prisma.user.findUnique({
             where: { email },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                fullName: true,
+                role: true,
+                status: true,
+                avatarUrl: true,
+                emailVerified: true,
+                passwordHash: true,
+                tokenVersion: true,
+                lastLoginAt: true,
+            },
         })
 
         if (!user) {
@@ -130,6 +146,7 @@ class AuthService {
         const tokens = JWTUtil.generateTokens({
             userId: user.id,
             role: user.role,
+            tokenVersion: user.tokenVersion,
         })
 
         logger.info(`User logged in: ${user.email}`)
@@ -149,6 +166,10 @@ class AuthService {
         }
     }
 
+    // async logout() {
+
+    // }
+
     /**
      * Refresh access token
      */
@@ -162,6 +183,7 @@ class AuthService {
                     id: true,
                     role: true,
                     status: true,
+                    tokenVersion: true,
                 },
             })
 
@@ -173,9 +195,14 @@ class AuthService {
                 throw new Error('User account is not active')
             }
 
+            if (decoded.tokenVersion !== user.tokenVersion) {
+                throw new Error('Token has been invalidated')
+            }
+
             const tokens = JWTUtil.generateTokens({
                 userId: user.id,
                 role: user.role,
+                tokenVersion: user.tokenVersion,
             })
 
             return tokens
@@ -393,6 +420,30 @@ class AuthService {
     }
 
     /**
+     * Invalidate all tokens for a user
+     * @param {number} userId - User ID
+     * @returns {Promise<boolean>}
+     */
+    async invalidateAllTokens(userId) {
+        try {
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    tokenVersion: {
+                        increment: 1,
+                    },
+                },
+            })
+
+            logger.info(`All tokens invalidated for user ID: ${userId}`)
+            return true
+        } catch (error) {
+            logger.error('Error invalidating tokens:', error)
+            throw new Error('Failed to invalidate tokens')
+        }
+    }
+
+    /**
      * Change password
      */
     async changePassword(userId, currentPassword, newPassword) {
@@ -417,7 +468,12 @@ class AuthService {
 
         await prisma.user.update({
             where: { id: userId },
-            data: { passwordHash },
+            data: {
+                passwordHash,
+                tokenVersion: {
+                    increment: 1,
+                },
+            },
         })
 
         logger.info(`Password changed for user: ${user.email}`)
