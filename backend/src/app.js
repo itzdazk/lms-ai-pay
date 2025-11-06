@@ -9,6 +9,8 @@ import cookieParser from 'cookie-parser';
 // import xss from 'xss-clean'; // Not compatible with Express 5
 import hpp from 'hpp';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import config from './config/app.config.js';
 import logger from './config/logger.config.js';
@@ -175,6 +177,11 @@ app.get('/', (req, res) => {
 app.get('/favicon.ico', (req, res) => {
     res.status(204).end()
 })
+
+// Serve static files (uploads)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API routes
 app.use(`/api/${config.API_VERSION}`, routes);

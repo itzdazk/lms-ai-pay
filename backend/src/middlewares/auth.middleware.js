@@ -1,25 +1,32 @@
 // src/middlewares/auth.middleware.js
-import JWTUtil from '../utils/jwt.util.js';
-import ApiResponse from '../utils/response.util.js';
-import { prisma } from '../config/database.config.js';
-import { USER_STATUS } from '../config/constants.js';
-import logger from '../config/logger.config.js';
+import JWTUtil from '../utils/jwt.util.js'
+import ApiResponse from '../utils/response.util.js'
+import { prisma } from '../config/database.config.js'
+import { USER_STATUS } from '../config/constants.js'
+import logger from '../config/logger.config.js'
 
 /**
- * Authenticate user using JWT token
+ * Authenticate user using JWT token from cookie or header
  */
 const authenticate = async (req, res, next) => {
     try {
-        // Get token from header
-        const authHeader = req.headers.authorization
+        // Đọc token từ COOKIE TRƯỚC
+        let token = req.cookies?.accessToken // Đọc từ cookie
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Nếu không có trong cookie, đọc từ Authorization header
+        if (!token) {
+            const authHeader = req.headers.authorization
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7)
+            }
+        }
+
+        // Bây giờ mới check xem có token không
+        if (!token) {
             return ApiResponse.unauthorized(res, 'No token provided')
         }
 
-        const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-
-        // Verify token
+        // Verify token (giữ nguyên)
         let decoded
         try {
             decoded = JWTUtil.verifyAccessToken(token)
@@ -27,7 +34,7 @@ const authenticate = async (req, res, next) => {
             return ApiResponse.unauthorized(res, error.message)
         }
 
-        // Check if user exists and is active
+        // Check if user exists and is active (giữ nguyên)
         const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
             select: {
@@ -39,6 +46,7 @@ const authenticate = async (req, res, next) => {
                 status: true,
                 avatarUrl: true,
                 emailVerified: true,
+                tokenVersion: true,
             },
         })
 
@@ -48,6 +56,14 @@ const authenticate = async (req, res, next) => {
 
         if (user.status !== USER_STATUS.ACTIVE) {
             return ApiResponse.forbidden(res, 'Your account is not active')
+        }
+
+        // Check tokenVersion
+        if (decoded.tokenVersion !== user.tokenVersion) {
+            return ApiResponse.unauthorized(
+                res,
+                'Token has been invalidated. Please login again.'
+            )
         }
 
         // Attach user to request
@@ -64,13 +80,20 @@ const authenticate = async (req, res, next) => {
  */
 const optionalAuthenticate = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization
+        // Đọc token từ COOKIE TRƯỚC
+        let token = req.cookies?.accessToken
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return next()
+        // Authorization header
+        if (!token) {
+            const authHeader = req.headers.authorization
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7)
+            }
         }
 
-        const token = authHeader.substring(7)
+        if (!token) {
+            return next()
+        }
 
         try {
             const decoded = JWTUtil.verifyAccessToken(token)
@@ -116,13 +139,4 @@ const requireEmailVerification = (req, res, next) => {
     next()
 }
 
-export {
-    authenticate,
-    optionalAuthenticate,
-    requireEmailVerification,
-};
-
-
-
-
-
+export { authenticate, optionalAuthenticate, requireEmailVerification }

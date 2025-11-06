@@ -33,7 +33,17 @@ class EmailService {
             logger.info(`Email sent: ${info.messageId}`)
             return info
         } catch (error) {
-            logger.error('Error sending email:', error)
+            // Log detailed error information
+            logger.error('Error sending email:', {
+                message: error.message,
+                code: error.code,
+                command: error.command,
+                response: error.response,
+                responseCode: error.responseCode,
+                stack: error.stack,
+                to,
+                subject,
+            })
             throw new Error('Failed to send email')
         }
     }
