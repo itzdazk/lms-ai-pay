@@ -313,3 +313,80 @@ export const changeCourseStatusValidator = [
         ),
     validate,
 ]
+
+/**
+ * Validator for uploading thumbnail
+ */
+export const uploadThumbnailValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    body('thumbnailUrl')
+        .notEmpty()
+        .withMessage('Thumbnail URL is required')
+        .trim()
+        .isURL()
+        .withMessage('Thumbnail URL must be a valid URL'),
+    validate,
+]
+
+/**
+ * Validator for uploading video preview
+ */
+export const uploadVideoPreviewValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    body('videoPreviewUrl')
+        .notEmpty()
+        .withMessage('Video preview URL is required')
+        .trim()
+        .isURL()
+        .withMessage('Video preview URL must be a valid URL'),
+    body('videoPreviewDuration')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Video preview duration must be a non-negative integer'),
+    validate,
+]
+
+/**
+ * Validator for getting course analytics
+ */
+export const getCourseAnalyticsValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    validate,
+]
+
+/**
+ * Validator for adding tags to course
+ */
+export const addTagsToCourseValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    body('tagIds')
+        .notEmpty()
+        .withMessage('Tag IDs are required')
+        .isArray({ min: 1 })
+        .withMessage('Tag IDs must be a non-empty array'),
+    body('tagIds.*')
+        .isInt({ min: 1 })
+        .withMessage('Each tag ID must be a positive integer'),
+    validate,
+]
+
+/**
+ * Validator for removing tag from course
+ */
+export const removeTagFromCourseValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    param('tagId')
+        .isInt({ min: 1 })
+        .withMessage('Tag ID must be a positive integer'),
+    validate,
+]

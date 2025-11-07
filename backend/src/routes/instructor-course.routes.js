@@ -9,6 +9,8 @@ import {
     updateCourseValidator,
     deleteCourseValidator,
     changeCourseStatusValidator,
+    uploadThumbnailValidator,
+    uploadVideoPreviewValidator,
 } from '../validators/instructor-course.validator.js'
 
 const router = express.Router()
@@ -75,6 +77,28 @@ router.patch(
     '/:id/status',
     changeCourseStatusValidator,
     instructorCourseController.changeCourseStatus
+)
+
+/**
+ * @route   PATCH /api/v1/instructor/courses/:id/thumbnail
+ * @desc    Upload course thumbnail
+ * @access  Private (Instructor/Admin)
+ */
+router.patch(
+    '/:id/thumbnail',
+    uploadThumbnailValidator,
+    instructorCourseController.uploadThumbnail
+)
+
+/**
+ * @route   PATCH /api/v1/instructor/courses/:id/preview
+ * @desc    Upload course video preview
+ * @access  Private (Instructor/Admin)
+ */
+router.patch(
+    '/:id/preview',
+    uploadVideoPreviewValidator,
+    instructorCourseController.uploadVideoPreview
 )
 
 export default router
