@@ -6,6 +6,7 @@ import courseRoutes from './course.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 import instructorCourseRoutes from './instructor-course.routes.js'
+import adminCourseRoutes from './admin-course.routes.js'
 
 const router = express.Router()
 
@@ -20,6 +21,11 @@ router.get('/', (req, res) => {
             health: '/api/v1/health',
             auth: '/api/v1/auth',
             users: '/api/v1/users',
+            courses: '/api/v1/courses',
+            categories: '/api/v1/categories',
+            tags: '/api/v1/tags',
+            instructorCourses: '/api/v1/instructor/courses',
+            adminCourses: '/api/v1/admin/courses',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -41,6 +47,7 @@ router.use('/courses', courseRoutes)
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/instructor/courses', instructorCourseRoutes)
+router.use('/admin/courses', adminCourseRoutes)
 
 // Additional routes can be added here
 // router.use('/lessons', lessonRoutes);
