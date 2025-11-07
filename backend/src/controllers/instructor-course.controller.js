@@ -159,22 +159,23 @@ class InstructorCourseController {
      */
     uploadThumbnail = asyncHandler(async (req, res) => {
         const { id } = req.params
-        const { thumbnailUrl } = req.body
         const instructorId = req.user.id
+        const userRole = req.user.role
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
             return ApiResponse.badRequest(res, 'Invalid course ID')
         }
 
-        if (!thumbnailUrl) {
-            return ApiResponse.badRequest(res, 'Thumbnail URL is required')
+        if (!req.file) {
+            return ApiResponse.badRequest(res, 'No thumbnail file uploaded')
         }
 
         const course = await instructorCourseService.uploadThumbnail(
             courseId,
             instructorId,
-            thumbnailUrl
+            req.file,
+            userRole
         )
 
         return ApiResponse.success(
@@ -185,28 +186,29 @@ class InstructorCourseController {
     })
 
     /**
-     * @route   PATCH /api/v1/instructor/courses/:id/preview
+     * @route   PATCH /api/v1/instructor/courses/:id/video-preview
      * @desc    Upload course video preview
      * @access  Private (Instructor/Admin)
      */
     uploadVideoPreview = asyncHandler(async (req, res) => {
         const { id } = req.params
-        const { videoPreviewUrl, videoPreviewDuration } = req.body
         const instructorId = req.user.id
+        const userRole = req.user.role
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
             return ApiResponse.badRequest(res, 'Invalid course ID')
         }
 
-        if (!videoPreviewUrl) {
-            return ApiResponse.badRequest(res, 'Video preview URL is required')
+        if (!req.file) {
+            return ApiResponse.badRequest(res, 'No video preview file uploaded')
         }
 
         const course = await instructorCourseService.uploadVideoPreview(
             courseId,
             instructorId,
-            { videoPreviewUrl, videoPreviewDuration }
+            req.file,
+            userRole
         )
 
         return ApiResponse.success(

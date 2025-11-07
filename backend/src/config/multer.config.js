@@ -1,9 +1,9 @@
 // src/config/multer.config.js
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import config from './app.config.js';
+import multer from 'multer'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import fs from 'fs'
+import config from './app.config.js'
 import {
     ALLOWED_IMAGE_TYPES,
     ALLOWED_VIDEO_TYPES,
@@ -11,67 +11,73 @@ import {
     MAX_IMAGE_SIZE,
     MAX_VIDEO_SIZE,
     MAX_FILE_SIZE,
-} from './constants.js';
+} from './constants.js'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-const avatarsDir = path.join(uploadsDir, 'avatars');
-const videosDir = path.join(uploadsDir, 'videos');
-const transcriptsDir = path.join(uploadsDir, 'transcripts');
+// === ĐƯỜNG DẪN THƯ MỤC ===
+const uploadsDir = path.join(__dirname, '../../uploads')
+const avatarsDir = path.join(uploadsDir, 'avatars')
+const videosDir = path.join(uploadsDir, 'videos')
+const transcriptsDir = path.join(uploadsDir, 'transcripts')
+const thumbnailsDir = path.join(uploadsDir, 'thumbnails') // MỚI
+const videoPreviewsDir = path.join(uploadsDir, 'video-previews') // MỚI
 
-[uploadsDir, avatarsDir, videosDir, transcriptsDir].forEach((dir) => {
+// === TỰ ĐỘNG TẠO THƯ MỤC ===
+;[
+    uploadsDir,
+    avatarsDir,
+    videosDir,
+    transcriptsDir,
+    thumbnailsDir,
+    videoPreviewsDir,
+].forEach((dir) => {
     if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true })
+        console.log(`Created upload directory: ${dir}`)
     }
-});
+})
 
-// Storage configuration for avatar
+// ========================
+// 1. AVATAR UPLOAD
+// ========================
 const avatarStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, avatarsDir);
-    },
+    destination: (req, file, cb) => cb(null, avatarsDir),
     filename: (req, file, cb) => {
-        // Generate unique filename: timestamp-userId-originalname
-        const userId = req.user?.id || 'anonymous';
-        const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-');
-        const filename = `${timestamp}-${userId}-${name}${ext}`;
-        cb(null, filename);
-    },
-});
-
-// File filter for avatar
-const avatarFileFilter = (req, file, cb) => {
-    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(
-            new Error(
-                `Invalid file type. Allowed types: ${ALLOWED_IMAGE_TYPES.join(', ')}`
-            ),
-            false
-        );
-    }
-};
-
-// Multer instance for avatar upload
-const uploadAvatar = multer({
-    storage: avatarStorage,
-    fileFilter: avatarFileFilter,
-    limits: {
-        fileSize: MAX_IMAGE_SIZE, // 5MB
+        const userId = req.user?.id || 'anonymous'
+        const timestamp = Date.now()
+        const ext = path.extname(file.originalname)
+        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const filename = `${timestamp}-${userId}-${name}${ext}`
+        cb(null, filename)
     },
 })
 
-// Storage configuration for video
+const avatarFileFilter = (req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        cb(null, true)
+    } else {
+        cb(
+            new Error(
+                `Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+            ),
+            false
+        )
+    }
+}
+
+const uploadAvatar = multer({
+    storage: avatarStorage,
+    fileFilter: avatarFileFilter,
+    limits: { fileSize: MAX_IMAGE_SIZE },
+})
+
+// ========================
+// 2. VIDEO LESSON UPLOAD
+// ========================
 const videoStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, videosDir)
-    },
+    destination: (req, file, cb) => cb(null, videosDir),
     filename: (req, file, cb) => {
         const lessonId = req.params.id || 'temp'
         const timestamp = Date.now()
@@ -82,34 +88,30 @@ const videoStorage = multer.diskStorage({
     },
 })
 
-// File filter for video
 const videoFileFilter = (req, file, cb) => {
     if (ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
         cb(null, true)
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed types: ${ALLOWED_VIDEO_TYPES.join(', ')}`
+                `Invalid file type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`
             ),
             false
         )
     }
 }
 
-// Multer instance for video upload
 const uploadVideo = multer({
     storage: videoStorage,
     fileFilter: videoFileFilter,
-    limits: {
-        fileSize: MAX_VIDEO_SIZE, // 500MB
-    },
+    limits: { fileSize: MAX_VIDEO_SIZE },
 })
 
-// Storage configuration for transcript
+// ========================
+// 3. TRANSCRIPT UPLOAD
+// ========================
 const transcriptStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, transcriptsDir)
-    },
+    destination: (req, file, cb) => cb(null, transcriptsDir),
     filename: (req, file, cb) => {
         const lessonId = req.params.id || 'temp'
         const timestamp = Date.now()
@@ -120,38 +122,106 @@ const transcriptStorage = multer.diskStorage({
     },
 })
 
-// File filter for transcript
 const transcriptFileFilter = (req, file, cb) => {
     if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) {
         cb(null, true)
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed types: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`
+                `Invalid file type. Allowed: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`
             ),
             false
         )
     }
 }
 
-// Multer instance for transcript upload
 const uploadTranscript = multer({
     storage: transcriptStorage,
     fileFilter: transcriptFileFilter,
-    limits: {
-        fileSize: MAX_FILE_SIZE, // 10MB
+    limits: { fileSize: MAX_FILE_SIZE },
+})
+
+// ========================
+// 4. THUMBNAIL UPLOAD (MỚI)
+// ========================
+const thumbnailStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, thumbnailsDir),
+    filename: (req, file, cb) => {
+        const courseId = req.params.id || 'temp'
+        const timestamp = Date.now()
+        const ext = path.extname(file.originalname)
+        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const filename = `${timestamp}-course-${courseId}-thumb${ext}`
+        cb(null, filename)
     },
 })
 
-export { 
-    uploadAvatar, 
-    uploadVideo, 
-    uploadTranscript,
-    videosDir,
-    transcriptsDir,
-    avatarsDir,
-    uploadsDir
+const thumbnailFileFilter = (req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        cb(null, true)
+    } else {
+        cb(
+            new Error(
+                `Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+            ),
+            false
+        )
+    }
 }
 
+const uploadThumbnail = multer({
+    storage: thumbnailStorage,
+    fileFilter: thumbnailFileFilter,
+    limits: { fileSize: MAX_IMAGE_SIZE },
+}).single('thumbnail')
 
+// ========================
+// 5. VIDEO PREVIEW UPLOAD (MỚI)
+// ========================
+const videoPreviewStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, videoPreviewsDir),
+    filename: (req, file, cb) => {
+        const courseId = req.params.id || 'temp'
+        const timestamp = Date.now()
+        const ext = path.extname(file.originalname)
+        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const filename = `${timestamp}-course-${courseId}-preview${ext}`
+        cb(null, filename)
+    },
+})
 
+const videoPreviewFileFilter = (req, file, cb) => {
+    if (ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
+        cb(null, true)
+    } else {
+        cb(
+            new Error(
+                `Invalid file type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`
+            ),
+            false
+        )
+    }
+}
+
+const uploadVideoPreview = multer({
+    storage: videoPreviewStorage,
+    fileFilter: videoPreviewFileFilter,
+    limits: { fileSize: MAX_VIDEO_SIZE }, // Có thể giảm xuống 100MB nếu cần
+}).single('videoPreview')
+
+// ========================
+// EXPORT
+// ========================
+export {
+    uploadAvatar,
+    uploadVideo,
+    uploadTranscript,
+    uploadThumbnail,
+    uploadVideoPreview,
+    uploadsDir,
+    avatarsDir,
+    videosDir,
+    transcriptsDir,
+    thumbnailsDir,
+    videoPreviewsDir,
+}
