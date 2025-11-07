@@ -151,6 +151,70 @@ class InstructorCourseController {
             'Course statistics retrieved successfully'
         )
     })
+
+    /**
+     * @route   PATCH /api/v1/instructor/courses/:id/thumbnail
+     * @desc    Upload course thumbnail
+     * @access  Private (Instructor/Admin)
+     */
+    uploadThumbnail = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { thumbnailUrl } = req.body
+        const instructorId = req.user.id
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        if (!thumbnailUrl) {
+            return ApiResponse.badRequest(res, 'Thumbnail URL is required')
+        }
+
+        const course = await instructorCourseService.uploadThumbnail(
+            courseId,
+            instructorId,
+            thumbnailUrl
+        )
+
+        return ApiResponse.success(
+            res,
+            course,
+            'Thumbnail uploaded successfully'
+        )
+    })
+
+    /**
+     * @route   PATCH /api/v1/instructor/courses/:id/preview
+     * @desc    Upload course video preview
+     * @access  Private (Instructor/Admin)
+     */
+    uploadVideoPreview = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { videoPreviewUrl, videoPreviewDuration } = req.body
+        const instructorId = req.user.id
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        if (!videoPreviewUrl) {
+            return ApiResponse.badRequest(res, 'Video preview URL is required')
+        }
+
+        const course = await instructorCourseService.uploadVideoPreview(
+            courseId,
+            instructorId,
+            { videoPreviewUrl, videoPreviewDuration }
+        )
+
+        return ApiResponse.success(
+            res,
+            course,
+            'Video preview uploaded successfully'
+        )
+    })
 }
 
 export default new InstructorCourseController()

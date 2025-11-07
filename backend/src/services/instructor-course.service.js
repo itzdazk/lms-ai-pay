@@ -687,6 +687,108 @@ class InstructorCourseService {
             totalRevenue: totalRevenue._sum.finalPrice || 0,
         }
     }
+
+    /**
+     * Upload course thumbnail
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @param {string} thumbnailUrl - Thumbnail URL
+     * @returns {Promise<object>} Updated course
+     */
+    async uploadThumbnail(courseId, instructorId, thumbnailUrl) {
+        // Check if course exists and belongs to instructor
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                instructorId: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.instructorId !== instructorId) {
+            throw new Error(
+                'You do not have permission to update this course thumbnail'
+            )
+        }
+
+        // Update thumbnail
+        const updatedCourse = await prisma.course.update({
+            where: { id: courseId },
+            data: { thumbnailUrl },
+            select: {
+                id: true,
+                title: true,
+                thumbnailUrl: true,
+                updatedAt: true,
+            },
+        })
+
+        logger.info(
+            `Instructor ${instructorId} updated thumbnail for course: ${course.title} (ID: ${courseId})`
+        )
+
+        return updatedCourse
+    }
+
+    /**
+     * Upload course video preview
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @param {object} videoData - Video preview data {videoPreviewUrl, videoPreviewDuration}
+     * @returns {Promise<object>} Updated course
+     */
+    async uploadVideoPreview(courseId, instructorId, videoData) {
+        const { videoPreviewUrl, videoPreviewDuration } = videoData
+
+        // Check if course exists and belongs to instructor
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                instructorId: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.instructorId !== instructorId) {
+            throw new Error(
+                'You do not have permission to update this course video preview'
+            )
+        }
+
+        // Update video preview
+        const updatedCourse = await prisma.course.update({
+            where: { id: courseId },
+            data: {
+                videoPreviewUrl,
+                videoPreviewDuration: videoPreviewDuration
+                    ? parseInt(videoPreviewDuration)
+                    : null,
+            },
+            select: {
+                id: true,
+                title: true,
+                videoPreviewUrl: true,
+                videoPreviewDuration: true,
+                updatedAt: true,
+            },
+        })
+
+        logger.info(
+            `Instructor ${instructorId} updated video preview for course: ${course.title} (ID: ${courseId})`
+        )
+
+        return updatedCourse
+    }
 }
 
 export default new InstructorCourseService()
