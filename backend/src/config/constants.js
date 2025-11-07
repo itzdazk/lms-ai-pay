@@ -73,7 +73,7 @@ const ALLOWED_IMAGE_TYPES = [
     'image/jpg',
     'image/webp',
 ]
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm']
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mp3', 'video/webm']
 const ALLOWED_DOCUMENT_TYPES = [
     'application/pdf',
     'application/msword',
@@ -168,9 +168,4 @@ export {
     PAGINATION,
     JWT_EXPIRY,
     RATE_LIMITS,
-};
-
-
-
-
-
+}

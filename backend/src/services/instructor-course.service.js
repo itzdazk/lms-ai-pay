@@ -4,6 +4,7 @@ import { COURSE_STATUS, COURSE_LEVEL, USER_ROLES } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
 import path from 'path'
+import fs from 'fs'
 import { thumbnailsDir, videoPreviewsDir } from '../config/multer.config.js'
 
 class InstructorCourseService {
@@ -744,7 +745,7 @@ class InstructorCourseService {
      * @param {object} videoData - Video preview data {videoPreviewUrl, videoPreviewDuration}
      * @returns {Promise<object>} Updated course
      */
-    async uploadThumbnail(
+    async uploadVideoPreview(
         courseId,
         instructorId,
         file,
@@ -756,42 +757,45 @@ class InstructorCourseService {
                 id: true,
                 title: true,
                 instructorId: true,
-                thumbnailUrl: true,
+                videoPreviewUrl: true,
             },
         })
 
         if (!course) throw new Error('Course not found')
         if (userRole !== 'ADMIN' && course.instructorId !== instructorId)
             throw new Error(
-                'You do not have permission to update this course thumbnail'
+                'You do not have permission to update this course video preview'
             )
 
-        const thumbnailUrl = `/uploads/thumbnails/${file.filename}`
+        const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
 
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
-            data: { thumbnailUrl },
+            data: { videoPreviewUrl, videoPreviewDuration: null },
             select: {
                 id: true,
                 title: true,
-                thumbnailUrl: true,
+                videoPreviewUrl: true,
+                videoPreviewDuration: true,
                 updatedAt: true,
             },
         })
 
-        // XÓA FILE CŨ DÙNG BIẾN thumbnailsDir
-        if (course.thumbnailUrl) {
-            const oldFileName = path.basename(course.thumbnailUrl)
-            const oldPath = path.join(thumbnailsDir, oldFileName)
+        // XÓA FILE CŨ DÙNG BIẾN videoPreviewsDir
+        if (course.videoPreviewUrl) {
+            const oldFileName = path.basename(course.videoPreviewUrl)
+            const oldPath = path.join(videoPreviewsDir, oldFileName)
 
             if (fs.existsSync(oldPath)) {
                 fs.unlinkSync(oldPath)
-                logger.info(`Deleted old thumbnail: ${course.thumbnailUrl}`)
+                logger.info(
+                    `Deleted old video preview: ${course.videoPreviewUrl}`
+                )
             }
         }
 
         logger.info(
-            `Thumbnail uploaded for course: ${course.title} (ID: ${courseId})`
+            `Video preview uploaded for course: ${course.title} (ID: ${courseId})`
         )
         return updatedCourse
     }
