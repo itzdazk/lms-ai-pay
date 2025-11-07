@@ -1,0 +1,307 @@
+// src/controllers/lessons.controller.js
+import lessonsService from '../services/lessons.service.js'
+import ApiResponse from '../utils/response.util.js'
+import { asyncHandler } from '../middlewares/error.middleware.js'
+import { USER_ROLES } from '../config/constants.js'
+import { COURSE_STATUS } from '../config/constants.js'
+import logger from '../config/logger.config.js'
+import fs from 'fs'
+
+class LessonsController {
+    /**
+     * @route   GET /api/v1/lessons/:id
+     * @desc    Get lesson by ID (Public)
+     * @access  Public (but check if published)
+     */
+    getLessonById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const lesson = await lessonsService.getLessonById(parseInt(id))
+
+        // Check if lesson is published or user is instructor/admin
+        const isInstructorOrAdmin =
+            req.user &&
+            (req.user.role === USER_ROLES.INSTRUCTOR ||
+                req.user.role === USER_ROLES.ADMIN)
+
+        // Check if course is published
+        const isCoursePublished =
+            lesson.course.status === COURSE_STATUS.PUBLISHED
+
+        // Only show unpublished lessons to instructors/admins
+        if (!lesson.isPublished && !isInstructorOrAdmin) {
+            return ApiResponse.forbidden(
+                res,
+                'This lesson is not available'
+            )
+        }
+
+        // Only show lessons from published courses to public users
+        if (!isCoursePublished && !isInstructorOrAdmin) {
+            return ApiResponse.forbidden(
+                res,
+                'This lesson is not available'
+            )
+        }
+
+        return ApiResponse.success(res, lesson, 'Lesson retrieved successfully')
+    })
+
+    /**
+     * @route   GET /api/v1/lessons/:id/video
+     * @desc    Get lesson video URL
+     * @access  Public (but check if published)
+     */
+    getLessonVideo = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const result = await lessonsService.getLessonVideo(parseInt(id))
+
+        // Check if lesson is published or user is instructor/admin
+        const isInstructorOrAdmin =
+            req.user &&
+            (req.user.role === USER_ROLES.INSTRUCTOR ||
+                req.user.role === USER_ROLES.ADMIN)
+
+        // Check if course is published
+        const isCoursePublished =
+            result.course.status === COURSE_STATUS.PUBLISHED
+
+        if (!result.isPublished && !isInstructorOrAdmin) {
+            return ApiResponse.forbidden(
+                res,
+                'This video is not available'
+            )
+        }
+
+        // Only show videos from published courses to public users
+        if (!isCoursePublished && !isInstructorOrAdmin) {
+            return ApiResponse.forbidden(
+                res,
+                'This video is not available'
+            )
+        }
+
+        return ApiResponse.success(
+            res,
+            {
+                id: result.id,
+                title: result.title,
+                videoUrl: result.videoUrl,
+                videoDuration: result.videoDuration,
+            },
+            'Video URL retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/lessons/:id/transcript
+     * @desc    Get lesson transcript URL
+     * @access  Public (but check if published)
+     */
+    getLessonTranscript = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const result = await lessonsService.getLessonTranscript(parseInt(id))
+
+        // Check if lesson is published or user is instructor/admin
+        const isInstructorOrAdmin =
+            req.user &&
+            (req.user.role === USER_ROLES.INSTRUCTOR ||
+                req.user.role === USER_ROLES.ADMIN)
+
+        // Check if course is published
+        const isCoursePublished =
+            result.course.status === COURSE_STATUS.PUBLISHED
+
+        if (!result.isPublished && !isInstructorOrAdmin) {
+            return ApiResponse.forbidden(
+                res,
+                'This transcript is not available'
+            )
+        }
+
+        // Only show transcripts from published courses to public users
+        if (!isCoursePublished && !isInstructorOrAdmin) {
+            return ApiResponse.forbidden(
+                res,
+                'This transcript is not available'
+            )
+        }
+
+        return ApiResponse.success(
+            res,
+            {
+                id: result.id,
+                title: result.title,
+                transcriptUrl: result.transcriptUrl,
+            },
+            'Transcript URL retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/instructor/courses/:courseId/lessons
+     * @desc    Create new lesson
+     * @access  Private (Instructor/Admin)
+     */
+    createLesson = asyncHandler(async (req, res) => {
+        const { courseId } = req.params
+        const lesson = await lessonsService.createLesson(
+            parseInt(courseId),
+            req.body,
+            req.user.id
+        )
+
+        return ApiResponse.created(res, lesson, 'Lesson created successfully')
+    })
+
+    /**
+     * @route   PUT /api/v1/instructor/courses/:courseId/lessons/:id
+     * @desc    Update lesson
+     * @access  Private (Instructor/Admin)
+     */
+    updateLesson = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+        const lesson = await lessonsService.updateLesson(
+            parseInt(courseId),
+            parseInt(id),
+            req.body
+        )
+
+        return ApiResponse.success(res, lesson, 'Lesson updated successfully')
+    })
+
+    /**
+     * @route   DELETE /api/v1/instructor/courses/:courseId/lessons/:id
+     * @desc    Delete lesson
+     * @access  Private (Instructor/Admin)
+     */
+    deleteLesson = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+
+        await lessonsService.deleteLesson(parseInt(courseId), parseInt(id))
+
+        return ApiResponse.success(res, null, 'Lesson deleted successfully')
+    })
+
+    /**
+     * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/video
+     * @desc    Upload video to lesson
+     * @access  Private (Instructor/Admin)
+     */
+    uploadVideo = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+
+        if (!req.file) {
+            return ApiResponse.badRequest(res, 'Video file is required')
+        }
+
+        try {
+            const lesson = await lessonsService.uploadVideo(
+                parseInt(courseId),
+                parseInt(id),
+                req.file
+            )
+
+            return ApiResponse.success(
+                res,
+                lesson,
+                'Video uploaded successfully'
+            )
+        } catch (error) {
+            // Delete uploaded file if there's an error
+            if (req.file && req.file.path) {
+                try {
+                    if (fs.existsSync(req.file.path)) {
+                        fs.unlinkSync(req.file.path)
+                        logger.info(`Deleted uploaded video file due to error: ${req.file.path}`)
+                    }
+                } catch (deleteError) {
+                    logger.error(`Error deleting uploaded file: ${deleteError.message}`)
+                }
+            }
+            throw error
+        }
+    })
+
+    /**
+     * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/transcript
+     * @desc    Upload transcript to lesson
+     * @access  Private (Instructor/Admin)
+     */
+    uploadTranscript = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+
+        if (!req.file) {
+            return ApiResponse.badRequest(res, 'Transcript file is required')
+        }
+
+        try {
+            const lesson = await lessonsService.uploadTranscript(
+                parseInt(courseId),
+                parseInt(id),
+                req.file
+            )
+
+            return ApiResponse.success(
+                res,
+                lesson,
+                'Transcript uploaded successfully'
+            )
+        } catch (error) {
+            // Delete uploaded file if there's an error
+            if (req.file && req.file.path) {
+                try {
+                    if (fs.existsSync(req.file.path)) {
+                        fs.unlinkSync(req.file.path)
+                        logger.info(`Deleted uploaded transcript file due to error: ${req.file.path}`)
+                    }
+                } catch (deleteError) {
+                    logger.error(`Error deleting uploaded file: ${deleteError.message}`)
+                }
+            }
+            throw error
+        }
+    })
+
+    /**
+     * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/order
+     * @desc    Reorder lesson
+     * @access  Private (Instructor/Admin)
+     */
+    reorderLesson = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+        const { newOrder } = req.body
+
+        const lesson = await lessonsService.reorderLesson(
+            parseInt(courseId),
+            parseInt(id),
+            parseInt(newOrder)
+        )
+
+        return ApiResponse.success(res, lesson, 'Lesson reordered successfully')
+    })
+
+    /**
+     * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/publish
+     * @desc    Publish/Unpublish lesson
+     * @access  Private (Instructor/Admin)
+     */
+    publishLesson = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+        const { isPublished } = req.body
+
+        const lesson = await lessonsService.publishLesson(
+            parseInt(courseId),
+            parseInt(id),
+            isPublished
+        )
+
+        return ApiResponse.success(
+            res,
+            lesson,
+            `Lesson ${isPublished ? 'published' : 'unpublished'} successfully`
+        )
+    })
+}
+
+export default new LessonsController()
+
