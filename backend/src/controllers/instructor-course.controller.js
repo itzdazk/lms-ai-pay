@@ -215,6 +215,65 @@ class InstructorCourseController {
             'Video preview uploaded successfully'
         )
     })
+
+    /**
+     * @route   POST /api/v1/instructor/courses/:id/tags
+     * @desc    Add tags to a course
+     * @access  Private (Instructor/Admin)
+     */
+    addTagsToCourse = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { tagIds } = req.body
+        const instructorId = req.user.id
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0) {
+            return ApiResponse.badRequest(
+                res,
+                'Tag IDs array is required and must not be empty'
+            )
+        }
+
+        const course = await instructorCourseService.addTagsToCourse(
+            courseId,
+            instructorId,
+            tagIds
+        )
+
+        return ApiResponse.success(res, course, 'Tags added successfully')
+    })
+
+    /**
+     * @route   DELETE /api/v1/instructor/courses/:id/tags/:tagId
+     * @desc    Remove a tag from a course
+     * @access  Private (Instructor/Admin)
+     */
+    removeTagFromCourse = asyncHandler(async (req, res) => {
+        const { id, tagId } = req.params
+        const instructorId = req.user.id
+        const courseId = parseInt(id)
+        const tagIdInt = parseInt(tagId)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        if (isNaN(tagIdInt)) {
+            return ApiResponse.badRequest(res, 'Invalid tag ID')
+        }
+
+        const course = await instructorCourseService.removeTagFromCourse(
+            courseId,
+            instructorId,
+            tagIdInt
+        )
+
+        return ApiResponse.success(res, course, 'Tag removed successfully')
+    })
 }
 
 export default new InstructorCourseController()

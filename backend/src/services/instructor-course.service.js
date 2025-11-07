@@ -789,6 +789,188 @@ class InstructorCourseService {
 
         return updatedCourse
     }
+
+    /**
+     * Add tags to a course
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @param {array} tagIds - Array of tag IDs to add
+     * @returns {Promise<object>} Updated course with tags
+     */
+    async addTagsToCourse(courseId, instructorId, tagIds) {
+        // Check if course exists and belongs to instructor
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                instructorId: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.instructorId !== instructorId) {
+            throw new Error(
+                'You do not have permission to add tags to this course'
+            )
+        }
+
+        // Verify all tags exist
+        const tags = await prisma.tag.findMany({
+            where: {
+                id: {
+                    in: tagIds.map((id) => parseInt(id)),
+                },
+            },
+        })
+
+        if (tags.length !== tagIds.length) {
+            throw new Error('One or more tags not found')
+        }
+
+        // Get existing tags
+        const existingTags = await prisma.courseTag.findMany({
+            where: { courseId },
+            select: { tagId: true },
+        })
+
+        const existingTagIds = existingTags.map((ct) => ct.tagId)
+
+        // Filter out tags that already exist
+        const newTagIds = tagIds.filter(
+            (tagId) => !existingTagIds.includes(parseInt(tagId))
+        )
+
+        if (newTagIds.length === 0) {
+            throw new Error('All tags are already associated with this course')
+        }
+
+        // Add new tags
+        await prisma.courseTag.createMany({
+            data: newTagIds.map((tagId) => ({
+                courseId,
+                tagId: parseInt(tagId),
+            })),
+        })
+
+        // Fetch updated course with all tags
+        const updatedCourse = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                courseTags: {
+                    select: {
+                        tag: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+                updatedAt: true,
+            },
+        })
+
+        logger.info(
+            `Instructor ${instructorId} added ${newTagIds.length} tags to course: ${course.title} (ID: ${courseId})`
+        )
+
+        return {
+            ...updatedCourse,
+            tags: updatedCourse.courseTags.map((ct) => ct.tag),
+            courseTags: undefined,
+        }
+    }
+
+    /**
+     * Remove a tag from a course
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @param {number} tagId - Tag ID to remove
+     * @returns {Promise<object>} Updated course with tags
+     */
+    async removeTagFromCourse(courseId, instructorId, tagId) {
+        // Check if course exists and belongs to instructor
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                instructorId: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.instructorId !== instructorId) {
+            throw new Error(
+                'You do not have permission to remove tags from this course'
+            )
+        }
+
+        // Check if tag exists in course
+        const courseTag = await prisma.courseTag.findUnique({
+            where: {
+                courseId_tagId: {
+                    courseId,
+                    tagId,
+                },
+            },
+        })
+
+        if (!courseTag) {
+            throw new Error('Tag is not associated with this course')
+        }
+
+        // Remove tag
+        await prisma.courseTag.delete({
+            where: {
+                courseId_tagId: {
+                    courseId,
+                    tagId,
+                },
+            },
+        })
+
+        // Fetch updated course with remaining tags
+        const updatedCourse = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                courseTags: {
+                    select: {
+                        tag: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+                updatedAt: true,
+            },
+        })
+
+        logger.info(
+            `Instructor ${instructorId} removed tag ${tagId} from course: ${course.title} (ID: ${courseId})`
+        )
+
+        return {
+            ...updatedCourse,
+            tags: updatedCourse.courseTags.map((ct) => ct.tag),
+            courseTags: undefined,
+        }
+    }
 }
 
 export default new InstructorCourseService()
