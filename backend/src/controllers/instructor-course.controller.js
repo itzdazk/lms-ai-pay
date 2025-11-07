@@ -274,6 +274,32 @@ class InstructorCourseController {
 
         return ApiResponse.success(res, course, 'Tag removed successfully')
     })
+
+    /**
+     * @route   GET /api/v1/instructor/courses/:id/analytics
+     * @desc    Get detailed analytics for a course
+     * @access  Private (Instructor/Admin)
+     */
+    getCourseAnalytics = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const instructorId = req.user.id
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const analytics = await instructorCourseService.getCourseAnalytics(
+            courseId,
+            instructorId
+        )
+
+        return ApiResponse.success(
+            res,
+            analytics,
+            'Course analytics retrieved successfully'
+        )
+    })
 }
 
 export default new InstructorCourseController()

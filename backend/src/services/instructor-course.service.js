@@ -971,6 +971,227 @@ class InstructorCourseService {
             courseTags: undefined,
         }
     }
+
+    /**
+     * Get detailed analytics for a course
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @returns {Promise<object>} Course analytics
+     */
+    async getCourseAnalytics(courseId, instructorId) {
+        // Check if course exists and belongs to instructor
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                title: true,
+                instructorId: true,
+                status: true,
+                publishedAt: true,
+            },
+        })
+
+        if (!course) {
+            throw new Error('Course not found')
+        }
+
+        if (course.instructorId !== instructorId) {
+            throw new Error(
+                'You do not have permission to view analytics for this course'
+            )
+        }
+
+        // Get course overview stats
+        const courseStats = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                enrolledCount: true,
+                viewsCount: true,
+                ratingAvg: true,
+                ratingCount: true,
+                completionRate: true,
+                price: true,
+                discountPrice: true,
+                _count: {
+                    select: {
+                        lessons: {
+                            where: { isPublished: true },
+                        },
+                    },
+                },
+            },
+        })
+
+        // Get enrollment statistics
+        const [
+            totalEnrollments,
+            activeEnrollments,
+            completedEnrollments,
+            droppedEnrollments,
+        ] = await Promise.all([
+            prisma.enrollment.count({
+                where: { courseId },
+            }),
+            prisma.enrollment.count({
+                where: { courseId, status: 'ACTIVE' },
+            }),
+            prisma.enrollment.count({
+                where: { courseId, status: 'COMPLETED' },
+            }),
+            prisma.enrollment.count({
+                where: { courseId, status: 'DROPPED' },
+            }),
+        ])
+
+        // Get revenue statistics
+        const revenueStats = await prisma.order.aggregate({
+            where: {
+                courseId,
+                paymentStatus: 'PAID',
+            },
+            _sum: {
+                finalPrice: true,
+                discountAmount: true,
+            },
+            _count: true,
+        })
+
+        // Get recent enrollments (last 30 days)
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+        const recentEnrollments = await prisma.enrollment.count({
+            where: {
+                courseId,
+                enrolledAt: {
+                    gte: thirtyDaysAgo,
+                },
+            },
+        })
+
+        // Get enrollment trend (last 7 days)
+        const enrollmentTrend = []
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date()
+            date.setDate(date.getDate() - i)
+            date.setHours(0, 0, 0, 0)
+
+            const nextDate = new Date(date)
+            nextDate.setDate(nextDate.getDate() + 1)
+
+            const count = await prisma.enrollment.count({
+                where: {
+                    courseId,
+                    enrolledAt: {
+                        gte: date,
+                        lt: nextDate,
+                    },
+                },
+            })
+
+            enrollmentTrend.push({
+                date: date.toISOString().split('T')[0],
+                enrollments: count,
+            })
+        }
+
+        // Get student progress distribution
+        const progressDistribution = await prisma.enrollment.groupBy({
+            by: ['progressPercentage'],
+            where: { courseId },
+            _count: true,
+        })
+
+        // Categorize progress
+        let beginners = 0 // 0-25%
+        let intermediate = 0 // 26-50%
+        let advanced = 0 // 51-75%
+        let nearComplete = 0 // 76-99%
+        let completed = 0 // 100%
+
+        progressDistribution.forEach((item) => {
+            const percentage = parseFloat(item.progressPercentage)
+            if (percentage === 0) beginners += item._count
+            else if (percentage <= 25) beginners += item._count
+            else if (percentage <= 50) intermediate += item._count
+            else if (percentage <= 75) advanced += item._count
+            else if (percentage < 100) nearComplete += item._count
+            else if (percentage === 100) completed += item._count
+        })
+
+        // Get top students (by progress)
+        const topStudents = await prisma.enrollment.findMany({
+            where: { courseId },
+            orderBy: { progressPercentage: 'desc' },
+            take: 10,
+            select: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        fullName: true,
+                        avatarUrl: true,
+                    },
+                },
+                progressPercentage: true,
+                enrolledAt: true,
+                completedAt: true,
+                lastAccessedAt: true,
+            },
+        })
+
+        logger.info(
+            `Instructor ${instructorId} retrieved analytics for course ID: ${courseId}`
+        )
+
+        return {
+            courseInfo: {
+                id: course.id,
+                title: course.title,
+                status: course.status,
+                publishedAt: course.publishedAt,
+            },
+            overview: {
+                totalViews: courseStats.viewsCount,
+                totalEnrollments,
+                totalLessons: courseStats._count.lessons,
+                averageRating: parseFloat(courseStats.ratingAvg) || 0,
+                totalRatings: courseStats.ratingCount,
+                completionRate: parseFloat(courseStats.completionRate) || 0,
+                price: parseFloat(courseStats.price),
+                discountPrice: courseStats.discountPrice
+                    ? parseFloat(courseStats.discountPrice)
+                    : null,
+            },
+            enrollments: {
+                total: totalEnrollments,
+                active: activeEnrollments,
+                completed: completedEnrollments,
+                dropped: droppedEnrollments,
+                recentEnrollments, // Last 30 days
+                trend: enrollmentTrend, // Last 7 days
+            },
+            revenue: {
+                totalRevenue: parseFloat(revenueStats._sum.finalPrice) || 0,
+                totalDiscounts:
+                    parseFloat(revenueStats._sum.discountAmount) || 0,
+                totalOrders: revenueStats._count,
+                averageOrderValue:
+                    revenueStats._count > 0
+                        ? parseFloat(revenueStats._sum.finalPrice) /
+                          revenueStats._count
+                        : 0,
+            },
+            studentProgress: {
+                beginners, // 0-25%
+                intermediate, // 26-50%
+                advanced, // 51-75%
+                nearComplete, // 76-99%
+                completed, // 100%
+            },
+            topStudents,
+        }
+    }
 }
 
 export default new InstructorCourseService()
