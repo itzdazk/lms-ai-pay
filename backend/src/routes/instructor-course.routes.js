@@ -11,6 +11,9 @@ import {
     changeCourseStatusValidator,
     uploadThumbnailValidator,
     uploadVideoPreviewValidator,
+    getCourseAnalyticsValidator,
+    addTagsToCourseValidator,
+    removeTagFromCourseValidator,
 } from '../validators/instructor-course.validator.js'
 
 const router = express.Router()
@@ -69,17 +72,6 @@ router.delete(
 )
 
 /**
- * @route   PATCH /api/v1/instructor/courses/:id/status
- * @desc    Change course status (draft/published/archived)
- * @access  Private (Instructor/Admin)
- */
-router.patch(
-    '/:id/status',
-    changeCourseStatusValidator,
-    instructorCourseController.changeCourseStatus
-)
-
-/**
  * @route   PATCH /api/v1/instructor/courses/:id/thumbnail
  * @desc    Upload course thumbnail
  * @access  Private (Instructor/Admin)
@@ -99,6 +91,50 @@ router.patch(
     '/:id/preview',
     uploadVideoPreviewValidator,
     instructorCourseController.uploadVideoPreview
+)
+
+// /**
+//  * @route   GET /api/v1/instructor/courses/:id/analytics
+//  * @desc    Get detailed analytics for a course
+//  * @access  Private (Instructor/Admin)
+//  */
+// router.get(
+//     '/:id/analytics',
+//     getCourseAnalyticsValidator,
+//     instructorCourseController.getCourseAnalytics
+// )
+
+/**
+ * @route   POST /api/v1/instructor/courses/:id/tags
+ * @desc    Add tags to a course
+ * @access  Private (Instructor/Admin)
+ */
+router.post(
+    '/:id/tags',
+    addTagsToCourseValidator,
+    instructorCourseController.addTagsToCourse
+)
+
+/**
+ * @route   DELETE /api/v1/instructor/courses/:id/tags/:tagId
+ * @desc    Remove a tag from a course
+ * @access  Private (Instructor/Admin)
+ */
+router.delete(
+    '/:id/tags/:tagId',
+    removeTagFromCourseValidator,
+    instructorCourseController.removeTagFromCourse
+)
+
+/**
+ * @route   PATCH /api/v1/instructor/courses/:id/status
+ * @desc    Change course status (draft/published/archived)
+ * @access  Private (Instructor/Admin)
+ */
+router.patch(
+    '/:id/status',
+    changeCourseStatusValidator,
+    instructorCourseController.changeCourseStatus
 )
 
 export default router
