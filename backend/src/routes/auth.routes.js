@@ -10,15 +10,19 @@ import {
   resetPasswordValidator,
 } from '../validators/auth.validator.js';
 import rateLimit from 'express-rate-limit';
+import config from '../config/app.config.js';
 
 const router = express.Router();
 
 // Rate limiter for auth endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
-  message: 'Too many authentication attempts, please try again later',
-});
+// Disabled in development mode for easier testing
+const authLimiter = config.NODE_ENV === 'development' 
+  ? (req, res, next) => next() // Skip rate limiting in development
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5,
+      message: 'Too many authentication attempts, please try again later',
+    });
 
 /**
  * @route   POST /api/v1/auth/register

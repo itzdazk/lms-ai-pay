@@ -5,6 +5,8 @@ import userRoutes from './users.routes.js'
 import courseRoutes from './course.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
+import lessonsRoutes from './lessons.routes.js'
+import instructorRoutes from './instructor.routes.js'
 import instructorCourseRoutes from './instructor-course.routes.js'
 import adminCourseRoutes from './admin-course.routes.js'
 
@@ -24,7 +26,9 @@ router.get('/', (req, res) => {
             courses: '/api/v1/courses',
             categories: '/api/v1/categories',
             tags: '/api/v1/tags',
+            lessons: '/api/v1/lessons',
             instructorCourses: '/api/v1/instructor/courses',
+            instructorLessons: '/api/v1/instructor/courses/:courseId/lessons',
             adminCourses: '/api/v1/admin/courses',
             // More endpoints will be available when routes are enabled
         },
@@ -46,11 +50,12 @@ router.use('/users', userRoutes)
 router.use('/courses', courseRoutes)
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
+router.use('/lessons', lessonsRoutes)
+router.use('/instructor', instructorRoutes)
 router.use('/instructor/courses', instructorCourseRoutes)
 router.use('/admin/courses', adminCourseRoutes)
 
 // Additional routes can be added here
-// router.use('/lessons', lessonRoutes);
 // router.use('/enrollments', enrollmentRoutes);
 // router.use('/orders', orderRoutes);
 // router.use('/payments', paymentRoutes);
