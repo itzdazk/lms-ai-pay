@@ -93,16 +93,16 @@ router.patch(
     instructorCourseController.uploadVideoPreview
 )
 
-// /**
-//  * @route   GET /api/v1/instructor/courses/:id/analytics
-//  * @desc    Get detailed analytics for a course
-//  * @access  Private (Instructor/Admin)
-//  */
-// router.get(
-//     '/:id/analytics',
-//     getCourseAnalyticsValidator,
-//     instructorCourseController.getCourseAnalytics
-// )
+/**
+ * @route   GET /api/v1/instructor/courses/:id/analytics
+ * @desc    Get detailed analytics for a course
+ * @access  Private (Instructor/Admin)
+ */
+router.get(
+    '/:id/analytics',
+    getCourseAnalyticsValidator,
+    instructorCourseController.getCourseAnalytics
+)
 
 /**
  * @route   POST /api/v1/instructor/courses/:id/tags
