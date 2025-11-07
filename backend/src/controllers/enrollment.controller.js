@@ -119,10 +119,10 @@ class EnrollmentController {
 
     /**
      * @route   POST /api/v1/enrollments
-     * @desc    Enroll in a free course
+     * @desc    Enroll in a course (free or paid)
      * @access  Private (Student/Instructor/Admin)
      */
-    enrollInFreeCourse = asyncHandler(async (req, res) => {
+    enrollInCourse = asyncHandler(async (req, res) => {
         const userId = req.user.id
         const { courseId } = req.body
 
@@ -130,15 +130,26 @@ class EnrollmentController {
             return ApiResponse.badRequest(res, 'Course ID is required')
         }
 
-        const enrollment = await enrollmentService.enrollInFreeCourse(
+        const result = await enrollmentService.enrollInCourse(
             userId,
             parseInt(courseId)
         )
 
-        return ApiResponse.created(
+        // If course is FREE, return success with enrollment
+        if (!result.requiresPayment) {
+            return ApiResponse.created(
+                res,
+                result.enrollment,
+                'Successfully enrolled in free course'
+            )
+        }
+
+        // If course is PAID, return payment required response
+        return ApiResponse.success(
             res,
-            enrollment,
-            'Successfully enrolled in course'
+            result,
+            result.message,
+            200 // Use 200 OK instead of 402 Payment Required
         )
     })
 

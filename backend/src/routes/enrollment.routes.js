@@ -9,6 +9,7 @@ import {
     getCompletedEnrollmentsValidator,
     enrollInFreeCourseValidator,
     checkEnrollmentValidator,
+    enrollInCourseValidator,
 } from '../validators/enrollment.validator.js'
 
 const router = express.Router()
@@ -75,14 +76,11 @@ router.get(
 
 /**
  * @route   POST /api/v1/enrollments
- * @desc    Enroll in a free course
+ * @desc    Enroll in a course (free or paid)
  * @access  Private (Student/Instructor/Admin)
  * @body    courseId (required)
+ * @note    If course is free, enrollment is created immediately
+ *          If course is paid, returns payment required information
  */
-router.post(
-    '/',
-    enrollInFreeCourseValidator,
-    enrollmentController.enrollInFreeCourse
-)
-
+router.post('/', enrollInCourseValidator, enrollmentController.enrollInCourse)
 export default router
