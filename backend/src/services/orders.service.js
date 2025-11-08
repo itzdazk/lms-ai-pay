@@ -385,6 +385,141 @@ class OrdersService {
 
         return order
     }
+
+    /**
+     * Update order payment status to PAID
+     * This method will automatically enroll user in the course when payment is successful
+     * @param {number} orderId - Order ID
+     * @param {string} transactionId - Transaction ID from payment gateway
+     * @param {Object} paymentData - Additional payment data (optional)
+     * @returns {Promise<Object>} Updated order and enrollment
+     */
+    async updateOrderToPaid(orderId, transactionId = null, paymentData = {}) {
+        // Get current order
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: {
+                id: true,
+                userId: true,
+                courseId: true,
+                paymentStatus: true,
+                transactionId: true,
+            },
+        })
+
+        if (!order) {
+            throw new Error('Order not found')
+        }
+
+        // Check if order is already paid
+        if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+            logger.warn(
+                `Order ID ${orderId} is already paid. Returning existing order.`
+            )
+            // Still try to enroll if not already enrolled (idempotent)
+            try {
+                const { default: enrollmentService } = await import(
+                    './enrollment.service.js'
+                )
+                const enrollment = await enrollmentService.enrollFromPayment(
+                    orderId
+                )
+                return {
+                    order: await this.getOrderById(orderId, order.userId),
+                    enrollment,
+                    alreadyPaid: true,
+                }
+            } catch (error) {
+                // Enrollment might already exist, that's ok
+                logger.warn(
+                    `Could not enroll from already-paid order: ${error.message}`
+                )
+            }
+            return {
+                order: await this.getOrderById(orderId, order.userId),
+                enrollment: null,
+                alreadyPaid: true,
+            }
+        }
+
+        // Check if order is pending
+        if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
+            throw new Error(
+                `Cannot update order to PAID. Current status: ${order.paymentStatus}`
+            )
+        }
+
+        // Update order to PAID within a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Update order
+            const updatedOrder = await tx.order.update({
+                where: { id: orderId },
+                data: {
+                    paymentStatus: PAYMENT_STATUS.PAID,
+                    paidAt: new Date(),
+                    transactionId: transactionId || order.transactionId,
+                    ...paymentData,
+                },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
+                            },
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
+                    },
+                },
+            })
+
+            logger.info(
+                `Order ID ${orderId} updated to PAID. Transaction ID: ${transactionId || 'N/A'}`
+            )
+
+            return updatedOrder
+        })
+
+        // Automatically enroll user in the course
+        // Use dynamic import to avoid circular dependency
+        let enrollment = null
+        try {
+            const { default: enrollmentService } = await import(
+                './enrollment.service.js'
+            )
+            enrollment = await enrollmentService.enrollFromPayment(orderId)
+            logger.info(
+                `User ID ${order.userId} automatically enrolled in course ID ${order.courseId} after payment`
+            )
+        } catch (error) {
+            // Log error but don't fail - enrollment might already exist (idempotent)
+            logger.error(
+                `Failed to enroll user from payment: ${error.message}`,
+                error
+            )
+            // Re-throw if it's a critical error (not just "already enrolled")
+            if (!error.message.includes('already enrolled')) {
+                throw error
+            }
+        }
+
+        return {
+            order: result,
+            enrollment,
+        }
+    }
 }
 
 export default new OrdersService()
