@@ -297,21 +297,29 @@ class EnrollmentService {
     }
 
     /**
-     * Enroll in a free course
+     * Enroll in a course (free or paid)
      * @param {number} userId - User ID
      * @param {number} courseId - Course ID
      * @returns {Promise<object>}
      */
-    async enrollInFreeCourse(userId, courseId) {
+    async enrollInCourse(userId, courseId) {
         // Check if course exists and is published
         const course = await prisma.course.findUnique({
             where: { id: courseId },
             select: {
                 id: true,
                 title: true,
+                slug: true,
                 price: true,
                 discountPrice: true,
                 status: true,
+                thumbnailUrl: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                    },
+                },
             },
         })
 
@@ -321,14 +329,6 @@ class EnrollmentService {
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
             throw new Error('Course is not available for enrollment')
-        }
-
-        // Check if course is free
-        const finalPrice = course.discountPrice || course.price
-        if (parseFloat(finalPrice) > 0) {
-            throw new Error(
-                'This course is not free. Please proceed with payment.'
-            )
         }
 
         // Check if already enrolled
@@ -345,53 +345,84 @@ class EnrollmentService {
             throw new Error('You are already enrolled in this course')
         }
 
-        // Create enrollment
-        const enrollment = await prisma.enrollment.create({
-            data: {
-                userId,
-                courseId,
-                status: ENROLLMENT_STATUS.ACTIVE,
-                progressPercentage: 0,
-            },
-            select: {
-                id: true,
-                userId: true,
-                courseId: true,
-                enrolledAt: true,
-                status: true,
-                progressPercentage: true,
-                course: {
-                    select: {
-                        id: true,
-                        title: true,
-                        slug: true,
-                        thumbnailUrl: true,
-                        instructor: {
-                            select: {
-                                id: true,
-                                fullName: true,
+        // Calculate final price
+        const finalPrice = course.discountPrice || course.price
+        const isFree = parseFloat(finalPrice) === 0
+
+        // If course is FREE, create enrollment immediately
+        if (isFree) {
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    userId,
+                    courseId,
+                    status: ENROLLMENT_STATUS.ACTIVE,
+                    progressPercentage: 0,
+                },
+                select: {
+                    id: true,
+                    userId: true,
+                    courseId: true,
+                    enrolledAt: true,
+                    status: true,
+                    progressPercentage: true,
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
                             },
                         },
                     },
                 },
-            },
-        })
+            })
 
-        // Update course enrolled count
-        await prisma.course.update({
-            where: { id: courseId },
-            data: {
-                enrolledCount: {
-                    increment: 1,
+            // Update course enrolled count
+            await prisma.course.update({
+                where: { id: courseId },
+                data: {
+                    enrolledCount: {
+                        increment: 1,
+                    },
                 },
-            },
-        })
+            })
 
+            logger.info(
+                `User ID: ${userId} enrolled in free course ID: ${courseId}`
+            )
+
+            return {
+                requiresPayment: false,
+                enrollment,
+            }
+        }
+
+        // If course is PAID, return payment required info // chờ payment
         logger.info(
-            `User ID: ${userId} enrolled in free course ID: ${courseId}`
+            `User ID: ${userId} attempted to enroll in paid course ID: ${courseId}. Payment required.`
         )
 
-        return enrollment
+        return {
+            requiresPayment: true,
+            course: {
+                id: course.id,
+                title: course.title,
+                slug: course.slug,
+                thumbnailUrl: course.thumbnailUrl,
+                price: parseFloat(course.price),
+                discountPrice: course.discountPrice
+                    ? parseFloat(course.discountPrice)
+                    : null,
+                finalPrice: parseFloat(finalPrice),
+                instructor: course.instructor,
+            },
+            message: 'This course requires payment. Please proceed to payment.',
+        }
     }
 
     /**

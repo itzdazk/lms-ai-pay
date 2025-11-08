@@ -92,3 +92,15 @@ export const checkEnrollmentValidator = [
         .withMessage('Course ID must be a positive integer'),
     validate,
 ]
+
+/**
+ * Validator for enrolling in a course (free or paid)
+ */
+export const enrollInCourseValidator = [
+    body('courseId')
+        .notEmpty()
+        .withMessage('Course ID is required')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    validate,
+]
