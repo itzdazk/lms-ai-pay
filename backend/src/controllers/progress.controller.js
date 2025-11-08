@@ -2,6 +2,7 @@
 import { asyncHandler } from '../middlewares/error.middleware.js';
 import ApiResponse from '../utils/response.util.js';
 import progressService from '../services/progress.service.js';
+import { ENROLLMENT_STATUS } from '../config/constants.js';
 
 class ProgressController {
     /**
@@ -186,7 +187,7 @@ class ProgressController {
         const enrollments = await prisma.enrollment.findMany({
             where: {
                 userId,
-                status: 'active',
+                status: ENROLLMENT_STATUS.ACTIVE,
             },
             include: {
                 course: {
@@ -206,17 +207,26 @@ class ProgressController {
         });
 
         // Calculate stats
+        // Total enrollments (all statuses)
         const totalEnrollments = await prisma.enrollment.count({
             where: {
                 userId,
-                status: 'active',
             },
         });
 
+        // Active enrollments (currently learning)
+        const activeEnrollments = await prisma.enrollment.count({
+            where: {
+                userId,
+                status: ENROLLMENT_STATUS.ACTIVE,
+            },
+        });
+
+        // Completed enrollments
         const completedEnrollments = await prisma.enrollment.count({
             where: {
                 userId,
-                status: 'completed',
+                status: ENROLLMENT_STATUS.COMPLETED,
             },
         });
 
@@ -232,6 +242,7 @@ class ProgressController {
             {
                 stats: {
                     totalEnrollments,
+                    activeEnrollments,
                     completedEnrollments,
                     totalLessonsCompleted: totalProgress,
                 },
