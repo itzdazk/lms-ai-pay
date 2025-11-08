@@ -10,6 +10,7 @@
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
         "prisma:seed": "node prisma/seed.js",
+        "prisma:seed-progress": "node prisma/seed-progress-test.js",
         "prisma:studio": "prisma studio",
         "test": "jest --coverage",
         "test:watch": "jest --watch",
@@ -17,7 +18,8 @@
         "format": "prettier --write \"src/**/*.js\""
     },
     "prisma": {
-        "seed": "node prisma/seed.js"
+        "seed": "node prisma/seed.js",
+        "seed-progress": "node prisma/seed-progress-test.js"
     },
     "keywords": [
         "elearning",
