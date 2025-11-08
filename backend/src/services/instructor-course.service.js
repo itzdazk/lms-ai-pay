@@ -702,10 +702,6 @@ class InstructorCourseService {
         })
 
         if (!course) throw new Error('Course not found')
-        if (userRole !== 'ADMIN' && course.instructorId !== instructorId)
-            throw new Error(
-                'You do not have permission to update this course thumbnail'
-            )
 
         const thumbnailUrl = `/uploads/thumbnails/${file.filename}`
 
@@ -762,10 +758,6 @@ class InstructorCourseService {
         })
 
         if (!course) throw new Error('Course not found')
-        if (userRole !== 'ADMIN' && course.instructorId !== instructorId)
-            throw new Error(
-                'You do not have permission to update this course video preview'
-            )
 
         const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
 
@@ -820,12 +812,6 @@ class InstructorCourseService {
 
         if (!course) {
             throw new Error('Course not found')
-        }
-
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to add tags to this course'
-            )
         }
 
         // Verify all tags exist
@@ -920,12 +906,6 @@ class InstructorCourseService {
             throw new Error('Course not found')
         }
 
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to remove tags from this course'
-            )
-        }
-
         // Check if tag exists in course
         const courseTag = await prisma.courseTag.findUnique({
             where: {
@@ -1003,12 +983,6 @@ class InstructorCourseService {
 
         if (!course) {
             throw new Error('Course not found')
-        }
-
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to view analytics for this course'
-            )
         }
 
         // Get course overview stats
