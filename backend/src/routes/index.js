@@ -12,6 +12,7 @@ import adminCourseRoutes from './admin-course.routes.js'
 import enrollmentRoutes from './enrollment.routes.js'
 import progressRoutes from './progress.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
+import ordersRoutes from './orders.routes.js'
 
 const router = express.Router()
 
@@ -36,6 +37,7 @@ router.get('/', (req, res) => {
             enrollments: '/api/v1/enrollments',
             progress: '/api/v1/progress',
             dashboard: '/api/v1/dashboard',
+            orders: '/api/v1/orders',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -63,6 +65,7 @@ router.use('/admin/courses', adminCourseRoutes)
 router.use('/enrollments', enrollmentRoutes)
 router.use('/progress', progressRoutes)
 router.use('/dashboard', dashboardRoutes)
+router.use('/orders', ordersRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes);
