@@ -1,7 +1,7 @@
 // src/services/progress.service.js
 import { prisma } from '../config/database.config.js';
 import logger from '../config/logger.config.js';
-import { HTTP_STATUS } from '../config/constants.js';
+import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js';
 
 class ProgressService {
     /**
@@ -531,7 +531,7 @@ class ProgressService {
         // If 100% completed, mark enrollment as completed
         if (progressPercentage >= 100 && !enrollment.completedAt) {
             updateData.completedAt = new Date();
-            updateData.status = 'completed';
+            updateData.status = ENROLLMENT_STATUS.COMPLETED;
         }
 
         await prisma.enrollment.update({
