@@ -24,6 +24,45 @@ const ENROLLMENT_STATUS = {
     DROPPED: 'DROPPED',
 }
 
+const COURSE_STATUS = {
+    DRAFT: 'DRAFT',
+    PUBLISHED: 'PUBLISHED',
+    ARCHIVED: 'ARCHIVED',
+}
+
+const COURSE_LEVEL = {
+    BEGINNER: 'BEGINNER',
+    INTERMEDIATE: 'INTERMEDIATE',
+    ADVANCED: 'ADVANCED',
+}
+
+const PAYMENT_STATUS = {
+    PENDING: 'PENDING',
+    PAID: 'PAID',
+    FAILED: 'FAILED',
+    REFUNDED: 'REFUNDED',
+    PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED',
+}
+
+const TRANSACTION_STATUS = {
+    PENDING: 'PENDING',
+    SUCCESS: 'SUCCESS',
+    FAILED: 'FAILED',
+    REFUNDED: 'REFUNDED',
+}
+
+const NOTIFICATION_TYPES = {
+    COURSE_ENROLLED: 'COURSE_ENROLLED',
+    LESSON_COMPLETED: 'LESSON_COMPLETED',
+    COURSE_COMPLETED: 'COURSE_COMPLETED',
+    QUIZ_PASSED: 'QUIZ_PASSED',
+    QUIZ_FAILED: 'QUIZ_FAILED',
+    PAYMENT_SUCCESS: 'PAYMENT_SUCCESS',
+    PAYMENT_FAILED: 'PAYMENT_FAILED',
+    NEW_COURSE_PUBLISHED: 'NEW_COURSE_PUBLISHED',
+    COURSE_UPDATE: 'COURSE_UPDATE',
+}
+
 // Helper function to generate slug from title
 function generateSlug(title) {
     return title
@@ -112,11 +151,11 @@ async function main() {
         const instructor = await prisma.user.create({
             data: {
                 ...data,
-                passwordHash: instructorPassword,
+            passwordHash: instructorPassword,
                 role: USER_ROLES.INSTRUCTOR,
                 status: USER_STATUS.ACTIVE,
-                emailVerified: true,
-                emailVerifiedAt: new Date(),
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
             },
         })
         instructors.push(instructor)
@@ -163,13 +202,13 @@ async function main() {
         const student = await prisma.user.create({
             data: {
                 ...data,
-                passwordHash: studentPassword,
+            passwordHash: studentPassword,
                 role: USER_ROLES.STUDENT,
                 status: USER_STATUS.ACTIVE,
-                emailVerified: true,
-                emailVerifiedAt: new Date(),
-            },
-        })
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+        },
+    })
         students.push(student)
         console.log(`✅ Student created: ${student.email}`)
     }
@@ -316,7 +355,7 @@ Sau khóa học, bạn sẽ có thể xây dựng các ứng dụng web hoàn ch
             discountPrice: 499000,
             instructorId: instructors[0].id,
             categoryId: categories[0].id, // Web Development
-            level: 'BEGINNER',
+            level: COURSE_LEVEL.BEGINNER,
             durationHours: 40,
             language: 'vi',
             requirements:
@@ -327,7 +366,7 @@ Sau khóa học, bạn sẽ có thể xây dựng các ứng dụng web hoàn ch
                 'Xây dựng 10+ dự án thực tế, Có kỹ năng sẵn sàng cho công việc, Học best practices trong ngành',
             targetAudience:
                 'Người mới bắt đầu muốn trở thành web developer, Sinh viên, Người muốn chuyển nghề',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: true,
             ratingAvg: 4.8,
             ratingCount: 250,
@@ -348,7 +387,7 @@ React Router, Redux, Context API và nhiều hơn nữa.`,
             discountPrice: 399000,
             instructorId: instructors[0].id,
             categoryId: frontendCategory.id,
-            level: 'INTERMEDIATE',
+            level: COURSE_LEVEL.INTERMEDIATE,
             durationHours: 30,
             language: 'vi',
             requirements: 'Kiến thức cơ bản về JavaScript và HTML',
@@ -357,7 +396,7 @@ React Router, Redux, Context API và nhiều hơn nữa.`,
             courseObjectives:
                 'Master React framework, Build complex applications, Understand React ecosystem',
             targetAudience: 'Developers muốn học React, Frontend developers',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: true,
             ratingAvg: 4.9,
             ratingCount: 180,
@@ -378,7 +417,7 @@ MVC architecture, Authentication, và nhiều hơn nữa.`,
             discountPrice: 449000,
             instructorId: instructors[0].id,
             categoryId: backendCategory.id,
-            level: 'INTERMEDIATE',
+            level: COURSE_LEVEL.INTERMEDIATE,
             durationHours: 35,
             language: 'vi',
             requirements: 'Kiến thức JavaScript cơ bản',
@@ -387,7 +426,7 @@ MVC architecture, Authentication, và nhiều hơn nữa.`,
             courseObjectives:
                 'Build scalable backend applications, Understand Node.js ecosystem, Master API development',
             targetAudience: 'Backend developers, Full-stack developers',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: false,
             ratingAvg: 4.7,
             ratingCount: 150,
@@ -408,7 +447,7 @@ Học Navigation, State Management, API Integration và nhiều hơn nữa.`,
             discountPrice: 424000,
             instructorId: instructors[1].id,
             categoryId: categories[1].id, // Mobile Development
-            level: 'INTERMEDIATE',
+            level: COURSE_LEVEL.INTERMEDIATE,
             durationHours: 28,
             language: 'vi',
             requirements: 'Kiến thức React và JavaScript',
@@ -417,7 +456,7 @@ Học Navigation, State Management, API Integration và nhiều hơn nữa.`,
             courseObjectives:
                 'Build mobile apps for iOS and Android, Publish apps to stores, Understand mobile development',
             targetAudience: 'React developers, Mobile developers',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: true,
             ratingAvg: 4.6,
             ratingCount: 120,
@@ -438,7 +477,7 @@ Học NumPy, Pandas, Matplotlib, Scikit-learn, TensorFlow và nhiều hơn nữa
             discountPrice: 474000,
             instructorId: instructors[2].id,
             categoryId: categories[2].id, // Data Science
-            level: 'BEGINNER',
+            level: COURSE_LEVEL.BEGINNER,
             durationHours: 45,
             language: 'vi',
             requirements: 'Không cần kinh nghiệm lập trình',
@@ -447,7 +486,7 @@ Học NumPy, Pandas, Matplotlib, Scikit-learn, TensorFlow và nhiều hơn nữa
             courseObjectives:
                 'Master Python for data science, Build ML models, Analyze data, Understand AI fundamentals',
             targetAudience: 'Data scientists, Analysts, Developers muốn học ML',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: true,
             ratingAvg: 4.8,
             ratingCount: 200,
@@ -468,7 +507,7 @@ và cách sử dụng TypeScript với React, Node.js.`,
             discountPrice: 349000,
             instructorId: instructors[0].id,
             categoryId: categories[5].id, // Programming Languages
-            level: 'INTERMEDIATE',
+            level: COURSE_LEVEL.INTERMEDIATE,
             durationHours: 20,
             language: 'vi',
             requirements: 'Kiến thức JavaScript',
@@ -477,7 +516,7 @@ và cách sử dụng TypeScript với React, Node.js.`,
             courseObjectives:
                 'Master TypeScript, Write type-safe code, Use TypeScript in real projects',
             targetAudience: 'JavaScript developers, Frontend/Backend developers',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: false,
             ratingAvg: 4.7,
             ratingCount: 100,
@@ -498,7 +537,7 @@ Học từ cơ bản đến production deployment.`,
             discountPrice: 399000,
             instructorId: instructors[0].id,
             categoryId: categories[4].id, // DevOps
-            level: 'ADVANCED',
+            level: COURSE_LEVEL.ADVANCED,
             durationHours: 25,
             language: 'vi',
             requirements: 'Kiến thức cơ bản về Linux và command line',
@@ -507,7 +546,7 @@ Học từ cơ bản đến production deployment.`,
             courseObjectives:
                 'Containerize applications, Deploy with Kubernetes, Understand DevOps practices',
             targetAudience: 'DevOps engineers, Backend developers, System administrators',
-            status: 'published',
+            status: COURSE_STATUS.PUBLISHED,
             isFeatured: false,
             ratingAvg: 4.6,
             ratingCount: 80,
@@ -528,7 +567,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             discountPrice: 374000,
             instructorId: instructors[1].id,
             categoryId: frontendCategory.id,
-            level: 'INTERMEDIATE',
+            level: COURSE_LEVEL.INTERMEDIATE,
             durationHours: 32,
             language: 'vi',
             requirements: 'Kiến thức JavaScript và HTML/CSS',
@@ -537,7 +576,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             courseObjectives:
                 'Master Vue.js framework, Build SPA applications, Understand Vue ecosystem',
             targetAudience: 'Frontend developers, JavaScript developers',
-            status: 'draft',
+            status: COURSE_STATUS.DRAFT,
             isFeatured: false,
             ratingAvg: 0,
             ratingCount: 0,
@@ -599,8 +638,8 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                 {
                     title: 'Giới thiệu về Web Development',
                     description: 'Chào mừng đến với khóa học! Tìm hiểu những gì bạn sẽ học và xây dựng.',
-                    lessonOrder: 1,
-                    isPreview: true,
+            lessonOrder: 1,
+            isPreview: true,
                     videoDuration: 600, // 10 minutes
                 },
                 {
@@ -674,7 +713,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                 {
                     title: 'Components và Props',
                     description: 'Tạo và sử dụng components với props.',
-                    lessonOrder: 2,
+            lessonOrder: 2,
                     isPreview: true,
                     videoDuration: 1500,
                 },
@@ -718,8 +757,8 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                     title: 'Node.js Introduction',
                     description: 'Giới thiệu về Node.js và npm.',
                     lessonOrder: 1,
-                    isPreview: true,
-                    videoDuration: 900,
+            isPreview: true,
+            videoDuration: 900,
                 },
                 {
                     title: 'Modules và File System',
@@ -907,7 +946,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             finalPrice: 499000,
             paymentMethod: 'bank_transfer',
             paymentGateway: 'vnpay',
-            paymentStatus: 'paid',
+            paymentStatus: PAYMENT_STATUS.PAID,
             transactionId: 'TXN-20240120-001',
             paidAt: new Date('2024-01-20'),
         },
@@ -920,7 +959,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             finalPrice: 399000,
             paymentMethod: 'credit_card',
             paymentGateway: 'vnpay',
-            paymentStatus: 'paid',
+            paymentStatus: PAYMENT_STATUS.PAID,
             transactionId: 'TXN-20240205-001',
             paidAt: new Date('2024-02-05'),
         },
@@ -933,7 +972,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             finalPrice: 499000,
             paymentMethod: 'bank_transfer',
             paymentGateway: 'vnpay',
-            paymentStatus: 'paid',
+            paymentStatus: PAYMENT_STATUS.PAID,
             transactionId: 'TXN-20240118-001',
             paidAt: new Date('2024-01-18'),
         },
@@ -946,7 +985,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             finalPrice: 449000,
             paymentMethod: 'credit_card',
             paymentGateway: 'vnpay',
-            paymentStatus: 'pending',
+            paymentStatus: PAYMENT_STATUS.PENDING,
             transactionId: null,
             paidAt: null,
         },
@@ -959,7 +998,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             finalPrice: 424000,
             paymentMethod: 'bank_transfer',
             paymentGateway: 'vnpay',
-            paymentStatus: 'paid',
+            paymentStatus: PAYMENT_STATUS.PAID,
             transactionId: 'TXN-20240305-001',
             paidAt: new Date('2024-03-05'),
         },
@@ -986,7 +1025,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             })
 
             // Create payment transaction if paid
-            if (orderData.paymentStatus === 'paid' && transactionId) {
+            if (orderData.paymentStatus === PAYMENT_STATUS.PAID && transactionId) {
                 await prisma.paymentTransaction.create({
                     data: {
                         orderId: order.id,
@@ -994,7 +1033,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                         paymentGateway: orderData.paymentGateway,
                         amount: orderData.finalPrice,
                         currency: 'VND',
-                        status: 'completed',
+                        status: TRANSACTION_STATUS.SUCCESS,
                         createdAt: paidAt,
                     },
                 })
@@ -1098,7 +1137,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
     const notificationsData = [
         {
             userEmail: 'student1@2200freefonts.com',
-            type: 'course_enrolled',
+            type: NOTIFICATION_TYPES.COURSE_ENROLLED,
             title: 'Đăng ký khóa học thành công',
             message:
                 'Bạn đã đăng ký thành công khóa học "Complete Web Development Bootcamp 2025"',
@@ -1107,7 +1146,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
         },
         {
             userEmail: 'student1@2200freefonts.com',
-            type: 'lesson_completed',
+            type: NOTIFICATION_TYPES.LESSON_COMPLETED,
             title: 'Hoàn thành bài học',
             message:
                 'Bạn đã hoàn thành bài học "Giới thiệu về Web Development"',
@@ -1116,7 +1155,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
         },
         {
             userEmail: 'student2@2200freefonts.com',
-            type: 'course_enrolled',
+            type: NOTIFICATION_TYPES.COURSE_ENROLLED,
             title: 'Đăng ký khóa học thành công',
             message:
                 'Bạn đã đăng ký thành công khóa học "Complete Web Development Bootcamp 2025"',
@@ -1125,7 +1164,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
         },
         {
             userEmail: 'instructor1@2200freefonts.com',
-            type: 'course_published',
+            type: NOTIFICATION_TYPES.NEW_COURSE_PUBLISHED,
             title: 'Khóa học đã được xuất bản',
             message:
                 'Khóa học "Complete Web Development Bootcamp 2025" của bạn đã được xuất bản thành công',
