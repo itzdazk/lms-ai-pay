@@ -5,6 +5,7 @@ import {
     COURSE_LEVEL,
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
+    USER_ROLES,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
@@ -364,8 +365,8 @@ class AdminCourseService {
         const [totalUsers, totalInstructors, totalStudents, usersLast30Days] =
             await Promise.all([
                 prisma.user.count(),
-                prisma.user.count({ where: { role: 'INSTRUCTOR' } }),
-                prisma.user.count({ where: { role: 'STUDENT' } }),
+                prisma.user.count({ where: { role: USER_ROLES.INSTRUCTOR } }),
+                prisma.user.count({ where: { role: USER_ROLES.STUDENT } }),
                 prisma.user.count({
                     where: { createdAt: { gte: thirtyDaysAgo } },
                 }),
@@ -441,7 +442,7 @@ class AdminCourseService {
 
         // 7. Top Instructors (by course count and enrollments)
         const topInstructors = await prisma.user.findMany({
-            where: { role: 'INSTRUCTOR' },
+            where: { role: USER_ROLES.INSTRUCTOR },
             select: {
                 id: true,
                 username: true,

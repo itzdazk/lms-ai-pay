@@ -1,6 +1,6 @@
 // src/services/instructor-course.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS, COURSE_LEVEL, USER_ROLES } from '../config/constants.js'
+import { COURSE_STATUS, COURSE_LEVEL, USER_ROLES, ENROLLMENT_STATUS, PAYMENT_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
 import path from 'path'
@@ -659,7 +659,7 @@ class InstructorCourseService {
                     course: {
                         instructorId,
                     },
-                    paymentStatus: 'PAID',
+                    paymentStatus: PAYMENT_STATUS.PAID,
                 },
                 _sum: {
                     finalPrice: true,
@@ -689,7 +689,7 @@ class InstructorCourseService {
         courseId,
         instructorId,
         file,
-        userRole = 'INSTRUCTOR'
+        userRole = USER_ROLES.INSTRUCTOR
     ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -745,7 +745,7 @@ class InstructorCourseService {
         courseId,
         instructorId,
         file,
-        userRole = 'INSTRUCTOR'
+        userRole = USER_ROLES.INSTRUCTOR
     ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1017,13 +1017,13 @@ class InstructorCourseService {
                 where: { courseId },
             }),
             prisma.enrollment.count({
-                where: { courseId, status: 'ACTIVE' },
+                where: { courseId, status: ENROLLMENT_STATUS.ACTIVE },
             }),
             prisma.enrollment.count({
-                where: { courseId, status: 'COMPLETED' },
+                where: { courseId, status: ENROLLMENT_STATUS.COMPLETED },
             }),
             prisma.enrollment.count({
-                where: { courseId, status: 'DROPPED' },
+                where: { courseId, status: ENROLLMENT_STATUS.DROPPED },
             }),
         ])
 
@@ -1031,7 +1031,7 @@ class InstructorCourseService {
         const revenueStats = await prisma.order.aggregate({
             where: {
                 courseId,
-                paymentStatus: 'PAID',
+                paymentStatus: PAYMENT_STATUS.PAID,
             },
             _sum: {
                 finalPrice: true,
