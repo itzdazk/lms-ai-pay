@@ -1,7 +1,12 @@
 // backend/src/services/enrollment.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, COURSE_STATUS } from '../config/constants.js'
+import {
+    ENROLLMENT_STATUS,
+    COURSE_STATUS,
+    PAYMENT_STATUS,
+} from '../config/constants.js'
 import logger from '../config/logger.config.js'
+import ordersService from './orders.service.js'
 
 class EnrollmentService {
     /**
@@ -300,9 +305,11 @@ class EnrollmentService {
      * Enroll in a course (free or paid)
      * @param {number} userId - User ID
      * @param {number} courseId - Course ID
+     * @param {string} paymentGateway - Payment gateway (VNPay, MoMo) - Required if course is paid
+     * @param {Object} billingAddress - Billing address (optional)
      * @returns {Promise<object>}
      */
-    async enrollInCourse(userId, courseId) {
+    async enrollInCourse(userId, courseId, paymentGateway = null, billingAddress = null) {
         // Check if course exists and is published
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -402,27 +409,142 @@ class EnrollmentService {
             }
         }
 
-        // If course is PAID, return payment required info // chờ payment
+        // If course is PAID, create order automatically
+        if (!paymentGateway) {
+            throw new Error(
+                'Payment gateway is required for paid courses. Please provide paymentGateway (VNPay or MoMo).'
+            )
+        }
+
+        // Create order automatically
+        const order = await ordersService.createOrder(
+            userId,
+            courseId,
+            paymentGateway,
+            billingAddress
+        )
+
         logger.info(
-            `User ID: ${userId} attempted to enroll in paid course ID: ${courseId}. Payment required.`
+            `Order created automatically for user ID: ${userId}, course ID: ${courseId}, order ID: ${order.id}`
         )
 
         return {
             requiresPayment: true,
-            course: {
-                id: course.id,
-                title: course.title,
-                slug: course.slug,
-                thumbnailUrl: course.thumbnailUrl,
-                price: parseFloat(course.price),
-                discountPrice: course.discountPrice
-                    ? parseFloat(course.discountPrice)
-                    : null,
-                finalPrice: parseFloat(finalPrice),
-                instructor: course.instructor,
-            },
-            message: 'This course requires payment. Please proceed to payment.',
+            order,
+            message: 'Order created successfully. Please proceed to payment.',
         }
+    }
+
+    /**
+     * Enroll user from payment (called when payment is successful)
+     * This method is idempotent - if enrollment already exists, it returns the existing enrollment
+     * @param {number} orderId - Order ID
+     * @returns {Promise<object>} Enrollment object
+     */
+    async enrollFromPayment(orderId) {
+        // Get order with user and course info
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: {
+                id: true,
+                userId: true,
+                courseId: true,
+                paymentStatus: true,
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                    },
+                },
+            },
+        })
+
+        if (!order) {
+            throw new Error('Order not found')
+        }
+
+        // Check if order is paid
+        if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
+            throw new Error(
+                `Cannot enroll from unpaid order. Order status: ${order.paymentStatus}`
+            )
+        }
+
+        // Check if course is still available
+        if (order.course.status !== COURSE_STATUS.PUBLISHED) {
+            throw new Error('Course is not available for enrollment')
+        }
+
+        // Check if already enrolled (idempotent)
+        const existingEnrollment = await prisma.enrollment.findUnique({
+            where: {
+                userId_courseId: {
+                    userId: order.userId,
+                    courseId: order.courseId,
+                },
+            },
+        })
+
+        if (existingEnrollment) {
+            logger.info(
+                `User ID: ${order.userId} already enrolled in course ID: ${order.courseId}. Returning existing enrollment.`
+            )
+            return existingEnrollment
+        }
+
+        // Create enrollment within a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Create enrollment
+            const enrollment = await tx.enrollment.create({
+                data: {
+                    userId: order.userId,
+                    courseId: order.courseId,
+                    status: ENROLLMENT_STATUS.ACTIVE,
+                    progressPercentage: 0,
+                },
+                select: {
+                    id: true,
+                    userId: true,
+                    courseId: true,
+                    enrolledAt: true,
+                    status: true,
+                    progressPercentage: true,
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            })
+
+            // Update course enrolled count
+            await tx.course.update({
+                where: { id: order.courseId },
+                data: {
+                    enrolledCount: {
+                        increment: 1,
+                    },
+                },
+            })
+
+            logger.info(
+                `User ID: ${order.userId} enrolled in course ID: ${order.courseId} from order ID: ${orderId}`
+            )
+
+            return enrollment
+        })
+
+        return result
     }
 
     /**

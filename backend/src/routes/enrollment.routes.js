@@ -78,9 +78,9 @@ router.get(
  * @route   POST /api/v1/enrollments
  * @desc    Enroll in a course (free or paid)
  * @access  Private (Student/Instructor/Admin)
- * @body    courseId (required)
+ * @body    courseId (required), paymentGateway (required if paid), billingAddress (optional)
  * @note    If course is free, enrollment is created immediately
- *          If course is paid, returns payment required information
+ *          If course is paid, order is created automatically and returned
  */
 router.post('/', enrollInCourseValidator, enrollmentController.enrollInCourse)
 export default router
