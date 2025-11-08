@@ -2,19 +2,19 @@
 import express from 'express'
 import instructorCourseController from '../controllers/instructor-course.controller.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
-import { isInstructor } from '../middlewares/role.middleware.js'
+import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
 import {
     getInstructorCoursesValidator,
     createCourseValidator,
     updateCourseValidator,
     deleteCourseValidator,
     changeCourseStatusValidator,
-    uploadThumbnailValidator,
     uploadVideoPreviewValidator,
     getCourseAnalyticsValidator,
     addTagsToCourseValidator,
     removeTagFromCourseValidator,
 } from '../validators/instructor-course.validator.js'
+import { uploadThumbnail, uploadVideoPreview } from '../config/multer.config.js'
 
 const router = express.Router()
 
@@ -78,7 +78,7 @@ router.delete(
  */
 router.patch(
     '/:id/thumbnail',
-    uploadThumbnailValidator,
+    uploadThumbnail,
     instructorCourseController.uploadThumbnail
 )
 
@@ -89,7 +89,7 @@ router.patch(
  */
 router.patch(
     '/:id/preview',
-    uploadVideoPreviewValidator,
+    uploadVideoPreview,
     instructorCourseController.uploadVideoPreview
 )
 

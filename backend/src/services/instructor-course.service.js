@@ -3,6 +3,9 @@ import { prisma } from '../config/database.config.js'
 import { COURSE_STATUS, COURSE_LEVEL, USER_ROLES } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
+import path from 'path'
+import fs from 'fs'
+import { thumbnailsDir, videoPreviewsDir } from '../config/multer.config.js'
 
 class InstructorCourseService {
     /**
@@ -299,10 +302,6 @@ class InstructorCourseService {
             throw new Error('Course not found')
         }
 
-        if (existingCourse.instructorId !== instructorId) {
-            throw new Error('You do not have permission to update this course')
-        }
-
         const {
             title,
             slug,
@@ -508,10 +507,6 @@ class InstructorCourseService {
             throw new Error('Course not found')
         }
 
-        if (course.instructorId !== instructorId) {
-            throw new Error('You do not have permission to delete this course')
-        }
-
         // Check if course has enrollments
         if (course._count.enrollments > 0) {
             throw new Error(
@@ -567,12 +562,6 @@ class InstructorCourseService {
 
         if (!course) {
             throw new Error('Course not found')
-        }
-
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to change this course status'
-            )
         }
 
         // Validate publishing requirements
@@ -692,31 +681,30 @@ class InstructorCourseService {
      * Upload course thumbnail
      * @param {number} courseId - Course ID
      * @param {number} instructorId - Instructor user ID
-     * @param {string} thumbnailUrl - Thumbnail URL
+     * @param {object} file - Uploaded file object from multer
+     * @param {string} userRole - User role (for admin access)
      * @returns {Promise<object>} Updated course
      */
-    async uploadThumbnail(courseId, instructorId, thumbnailUrl) {
-        // Check if course exists and belongs to instructor
+    async uploadThumbnail(
+        courseId,
+        instructorId,
+        file,
+        userRole = 'INSTRUCTOR'
+    ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
             select: {
                 id: true,
                 title: true,
                 instructorId: true,
+                thumbnailUrl: true,
             },
         })
 
-        if (!course) {
-            throw new Error('Course not found')
-        }
+        if (!course) throw new Error('Course not found')
 
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to update this course thumbnail'
-            )
-        }
+        const thumbnailUrl = `/uploads/thumbnails/${file.filename}`
 
-        // Update thumbnail
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
             data: { thumbnailUrl },
@@ -728,10 +716,21 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} updated thumbnail for course: ${course.title} (ID: ${courseId})`
-        )
+        // XÓA FILE CŨ
+        if (course.thumbnailUrl) {
+            const oldPath = path.join(
+                process.cwd(),
+                course.thumbnailUrl.replace(/^\//, '')
+            )
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath)
+                logger.info(`Old thumbnail deleted: ${course.thumbnailUrl}`)
+            }
+        }
 
+        logger.info(
+            `Thumbnail uploaded: Course ${course.title} (ID: ${courseId})`
+        )
         return updatedCourse
     }
 
@@ -742,38 +741,29 @@ class InstructorCourseService {
      * @param {object} videoData - Video preview data {videoPreviewUrl, videoPreviewDuration}
      * @returns {Promise<object>} Updated course
      */
-    async uploadVideoPreview(courseId, instructorId, videoData) {
-        const { videoPreviewUrl, videoPreviewDuration } = videoData
-
-        // Check if course exists and belongs to instructor
+    async uploadVideoPreview(
+        courseId,
+        instructorId,
+        file,
+        userRole = 'INSTRUCTOR'
+    ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
             select: {
                 id: true,
                 title: true,
                 instructorId: true,
+                videoPreviewUrl: true,
             },
         })
 
-        if (!course) {
-            throw new Error('Course not found')
-        }
+        if (!course) throw new Error('Course not found')
 
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to update this course video preview'
-            )
-        }
+        const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
 
-        // Update video preview
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
-            data: {
-                videoPreviewUrl,
-                videoPreviewDuration: videoPreviewDuration
-                    ? parseInt(videoPreviewDuration)
-                    : null,
-            },
+            data: { videoPreviewUrl, videoPreviewDuration: null },
             select: {
                 id: true,
                 title: true,
@@ -783,10 +773,22 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} updated video preview for course: ${course.title} (ID: ${courseId})`
-        )
+        // XÓA FILE CŨ DÙNG BIẾN videoPreviewsDir
+        if (course.videoPreviewUrl) {
+            const oldFileName = path.basename(course.videoPreviewUrl)
+            const oldPath = path.join(videoPreviewsDir, oldFileName)
 
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath)
+                logger.info(
+                    `Deleted old video preview: ${course.videoPreviewUrl}`
+                )
+            }
+        }
+
+        logger.info(
+            `Video preview uploaded for course: ${course.title} (ID: ${courseId})`
+        )
         return updatedCourse
     }
 
@@ -810,12 +812,6 @@ class InstructorCourseService {
 
         if (!course) {
             throw new Error('Course not found')
-        }
-
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to add tags to this course'
-            )
         }
 
         // Verify all tags exist
@@ -910,12 +906,6 @@ class InstructorCourseService {
             throw new Error('Course not found')
         }
 
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to remove tags from this course'
-            )
-        }
-
         // Check if tag exists in course
         const courseTag = await prisma.courseTag.findUnique({
             where: {
@@ -993,12 +983,6 @@ class InstructorCourseService {
 
         if (!course) {
             throw new Error('Course not found')
-        }
-
-        if (course.instructorId !== instructorId) {
-            throw new Error(
-                'You do not have permission to view analytics for this course'
-            )
         }
 
         // Get course overview stats

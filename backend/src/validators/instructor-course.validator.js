@@ -315,22 +315,6 @@ export const changeCourseStatusValidator = [
 ]
 
 /**
- * Validator for uploading thumbnail
- */
-export const uploadThumbnailValidator = [
-    param('id')
-        .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
-    body('thumbnailUrl')
-        .notEmpty()
-        .withMessage('Thumbnail URL is required')
-        .trim()
-        .isURL()
-        .withMessage('Thumbnail URL must be a valid URL'),
-    validate,
-]
-
-/**
  * Validator for uploading video preview
  */
 export const uploadVideoPreviewValidator = [
