@@ -28,11 +28,7 @@ class OrdersController {
             billingAddress
         )
 
-        return ApiResponse.created(
-            res,
-            order,
-            'Order created successfully'
-        )
+        return ApiResponse.created(res, order, 'Order created successfully')
     })
 
     /**
@@ -92,11 +88,7 @@ class OrdersController {
 
         const order = await ordersService.getOrderById(orderId, userId)
 
-        return ApiResponse.success(
-            res,
-            order,
-            'Order retrieved successfully'
-        )
+        return ApiResponse.success(res, order, 'Order retrieved successfully')
     })
 
     /**
@@ -114,13 +106,27 @@ class OrdersController {
 
         const order = await ordersService.getOrderByCode(orderCode, userId)
 
-        return ApiResponse.success(
-            res,
-            order,
-            'Order retrieved successfully'
-        )
+        return ApiResponse.success(res, order, 'Order retrieved successfully')
+    })
+
+    /**
+     * @route   PATCH /api/v1/orders/:id/cancel
+     * @desc    Cancel pending order
+     * @access  Private (Student/Instructor/Admin)
+     */
+    cancelOrder = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const userId = req.user.id
+        const orderId = parseInt(id)
+
+        if (isNaN(orderId)) {
+            return ApiResponse.badRequest(res, 'Invalid order ID')
+        }
+
+        const order = await ordersService.cancelOrder(orderId, userId)
+
+        return ApiResponse.success(res, order, 'Order cancelled successfully')
     })
 }
 
 export default new OrdersController()
-
