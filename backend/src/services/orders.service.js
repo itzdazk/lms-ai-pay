@@ -557,6 +557,45 @@ class OrdersService {
 
         return cancelledOrder
     }
+
+    /**
+     * Get order statistics for a user
+     * @param {number} userId - User ID
+     * @returns {Promise<object>} Order statistics
+     */
+    async getUserOrderStats(userId) {
+        const [total, paid, pending, failed] = await Promise.all([
+            prisma.order.count({ where: { userId } }),
+            prisma.order.count({
+                where: { userId, paymentStatus: PAYMENT_STATUS.PAID },
+            }),
+            prisma.order.count({
+                where: { userId, paymentStatus: PAYMENT_STATUS.PENDING },
+            }),
+            prisma.order.count({
+                where: { userId, paymentStatus: PAYMENT_STATUS.FAILED },
+            }),
+        ])
+
+        // Calculate total spent
+        const totalSpent = await prisma.order.aggregate({
+            where: {
+                userId,
+                paymentStatus: PAYMENT_STATUS.PAID,
+            },
+            _sum: {
+                finalPrice: true,
+            },
+        })
+
+        return {
+            total,
+            paid,
+            pending,
+            failed,
+            totalSpent: parseFloat(totalSpent._sum.finalPrice || 0),
+        }
+    }
 }
 
 export default new OrdersService()

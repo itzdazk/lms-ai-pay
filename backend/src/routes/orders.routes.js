@@ -16,6 +16,14 @@ const router = express.Router()
 router.use(authenticate)
 
 /**
+ * @route   GET /api/v1/orders/stats
+ * @desc    Get user's order statistics
+ * @access  Private (Student/Instructor/Admin)
+ * @note    Must be defined BEFORE /:id routes to avoid conflict
+ */
+router.get('/stats', ordersController.getUserOrderStats)
+
+/**
  * @route   GET /api/v1/orders
  * @desc    Get user's orders with filters and pagination
  * @access  Private (Student/Instructor/Admin)

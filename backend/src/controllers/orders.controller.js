@@ -127,6 +127,23 @@ class OrdersController {
 
         return ApiResponse.success(res, order, 'Order cancelled successfully')
     })
+
+    /**
+     * @route   GET /api/v1/orders/stats
+     * @desc    Get user's order statistics
+     * @access  Private (Student/Instructor/Admin)
+     */
+    getUserOrderStats = asyncHandler(async (req, res) => {
+        const userId = req.user.id
+
+        const stats = await ordersService.getUserOrderStats(userId)
+
+        return ApiResponse.success(
+            res,
+            stats,
+            'Order statistics retrieved successfully'
+        )
+    })
 }
 
 export default new OrdersController()
