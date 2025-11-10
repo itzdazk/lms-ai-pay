@@ -74,6 +74,10 @@ const config = {
         'https://test-payment.momo.vn/v2/gateway/api/create',
     MOMO_RETURN_URL: process.env.MOMO_RETURN_URL,
     MOMO_NOTIFY_URL: process.env.MOMO_NOTIFY_URL,
+    MOMO_REFUND_ENDPOINT:
+        process.env.MOMO_REFUND_ENDPOINT ||
+        'https://test-payment.momo.vn/v2/gateway/api/refund',
+    MOMO_IP_WHITELIST: process.env.MOMO_IP_WHITELIST || '',
 
     // AI - OpenAI
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
