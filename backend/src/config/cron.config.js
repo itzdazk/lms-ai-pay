@@ -11,7 +11,7 @@ export const startCronJobs = () => {
 
     // Schedule: Run every 5 minutes
     // Cron syntax: * * * * * * (second, minute, hour, day, month, weekday)
-    const cronSchedule = '*/1 * * * *'
+    const cronSchedule = '*/5 * * * *'
 
     // Cron Job: Cancel pending orders that have expired (15 minutes)
     cron.schedule(cronSchedule, async () => {
