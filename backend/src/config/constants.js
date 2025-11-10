@@ -39,6 +39,11 @@ const PAYMENT_STATUS = {
     PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED',
 }
 
+const PENDING_TIME = {
+    PENDING_TIMEOUT_MS: 1 * 60 * 1000, // 1 phút
+    EXPIRY_THRESHOLD: new Date(Date.now() - 1 * 60 * 1000), // ngưỡng hết hạn: 1 phút trước
+}
+
 const TRANSACTION_STATUS = {
     PENDING: 'PENDING',
     SUCCESS: 'SUCCESS',
@@ -174,4 +179,5 @@ export {
     PAGINATION,
     JWT_EXPIRY,
     RATE_LIMITS,
+    PENDING_TIME,
 }
