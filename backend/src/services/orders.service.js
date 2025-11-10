@@ -4,6 +4,7 @@ import {
     PAYMENT_STATUS,
     COURSE_STATUS,
     PAYMENT_GATEWAY,
+    PENDING_TIME,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
@@ -108,18 +109,40 @@ class OrdersService {
         }
 
         // Check if user has pending order for this course
-        const existingOrder = await prisma.order.findFirst({
+        const existingPendingOrder = await prisma.order.findFirst({
             where: {
                 userId,
                 courseId,
                 paymentStatus: PAYMENT_STATUS.PENDING,
             },
+            orderBy: {
+                createdAt: 'desc',
+            },
         })
 
-        if (existingOrder) {
-            throw new Error(
-                'You already have a pending order for this course. Please complete or cancel it first.'
-            )
+        // If pending order exists and is recent (< 15 minutes), return it
+        if (existingPendingOrder) {
+            const orderAge =
+                Date.now() - existingPendingOrder.createdAt.getTime()
+            if (orderAge < PENDING_TIME.PENDING_TIMEOUT_MS) {
+                logger.info(
+                    `Returning existing pending order: ${existingPendingOrder.orderCode}`
+                )
+                return existingPendingOrder
+            }
+            // If the order has expired (>= 15 minutes), CANCEL it and proceed to create a new order
+            else {
+                logger.warn(
+                    `Auto-cancelling expired pending order: ${existingPendingOrder.orderCode}`
+                )
+                await prisma.order.update({
+                    where: { id: existingPendingOrder.id },
+                    data: {
+                        paymentStatus: PAYMENT_STATUS.FAILED,
+                        notes: 'Expired pending order - Auto-cancelled after 15 minutes timeout.',
+                    },
+                })
+            }
         }
 
         // Generate order code
@@ -595,6 +618,51 @@ class OrdersService {
             failed,
             totalSpent: parseFloat(totalSpent._sum.finalPrice || 0),
         }
+    }
+
+    /**
+     * Automatically cancel (change to FAILED) pending orders that have exceeded 15 minutes.
+     * Typically called by a Cron Job.
+     * @returns {Promise<number>} Number of orders cancelled
+     */
+    async cleanupExpiredPendingOrders() {
+        // 1. Find all PENDING orders created before the EXPIRY_THRESHOLD
+        const expiredOrders = await prisma.order.findMany({
+            where: {
+                paymentStatus: PAYMENT_STATUS.PENDING,
+                createdAt: {
+                    lte: PENDING_TIME.EXPIRY_THRESHOLD, // Less Than or Equal (older than expiry threshold)
+                },
+            },
+            select: {
+                id: true,
+                orderCode: true,
+            },
+        })
+
+        if (expiredOrders.length === 0) {
+            logger.debug('Cron Job: No expired pending orders found.')
+            return 0
+        }
+
+        // 2. Update all these orders to FAILED status
+        const orderIdsToUpdate = expiredOrders.map((o) => o.id)
+
+        await prisma.order.updateMany({
+            where: {
+                id: { in: orderIdsToUpdate },
+            },
+            data: {
+                paymentStatus: PAYMENT_STATUS.FAILED,
+                notes: 'Auto-cancelled by scheduler: Payment timeout exceeded (15 minutes).',
+            },
+        })
+
+        logger.warn(
+            `[CRON] Auto-cancelled ${expiredOrders.length} expired pending orders: ${expiredOrders.map((o) => o.orderCode).join(', ')}`
+        )
+
+        return expiredOrders.length
     }
 }
 
