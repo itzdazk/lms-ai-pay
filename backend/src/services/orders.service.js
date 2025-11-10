@@ -421,9 +421,8 @@ class OrdersService {
                 const { default: enrollmentService } = await import(
                     './enrollment.service.js'
                 )
-                const enrollment = await enrollmentService.enrollFromPayment(
-                    orderId
-                )
+                const enrollment =
+                    await enrollmentService.enrollFromPayment(orderId)
                 return {
                     order: await this.getOrderById(orderId, order.userId),
                     enrollment,
@@ -520,7 +519,44 @@ class OrdersService {
             enrollment,
         }
     }
+
+    /**
+     * Cancel order
+     * Only pending orders can be cancelled
+     * @param {number} orderId - Order ID
+     * @param {number} userId - User ID (for ownership verification)
+     * @returns {Promise<object>} Cancelled order
+     */
+    async cancelOrder(orderId, userId) {
+        const order = await prisma.order.findFirst({
+            where: {
+                id: orderId,
+                userId,
+            },
+        })
+
+        if (!order) {
+            throw new Error('Order not found')
+        }
+
+        if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
+            throw new Error(
+                `Cannot cancel order with status: ${order.paymentStatus}`
+            )
+        }
+
+        const cancelledOrder = await prisma.order.update({
+            where: { id: orderId },
+            data: {
+                paymentStatus: PAYMENT_STATUS.FAILED,
+                notes: 'Cancelled by user',
+            },
+        })
+
+        logger.info(`Order cancelled: ${order.orderCode} by user ${userId}`)
+
+        return cancelledOrder
+    }
 }
 
 export default new OrdersService()
-
