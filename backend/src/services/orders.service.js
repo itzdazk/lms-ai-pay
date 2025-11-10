@@ -473,15 +473,19 @@ class OrdersService {
 
         // Update order to PAID within a transaction
         const result = await prisma.$transaction(async (tx) => {
-            // Update order
+            const updateData = {
+                paymentStatus: PAYMENT_STATUS.PAID,
+                paidAt: new Date(),
+                transactionId: transactionId || order.transactionId,
+            }
+
+            if (paymentData?.gateway) {
+                updateData.paymentGateway = paymentData.gateway
+            }
+
             const updatedOrder = await tx.order.update({
                 where: { id: orderId },
-                data: {
-                    paymentStatus: PAYMENT_STATUS.PAID,
-                    paidAt: new Date(),
-                    transactionId: transactionId || order.transactionId,
-                    ...paymentData,
-                },
+                data: updateData,
                 include: {
                     course: {
                         select: {
