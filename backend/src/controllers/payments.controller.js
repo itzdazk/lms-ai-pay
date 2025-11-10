@@ -20,6 +20,7 @@ class PaymentsController {
 
     momoCallback = asyncHandler(async (req, res) => {
         const payload = Object.keys(req.body || {}).length ? req.body : req.query
+
         const result = await paymentService.handleMoMoCallback(payload)
 
         return ApiResponse.success(

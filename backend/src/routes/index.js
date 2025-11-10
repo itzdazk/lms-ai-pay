@@ -13,6 +13,7 @@ import enrollmentRoutes from './enrollment.routes.js'
 import progressRoutes from './progress.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
 import ordersRoutes from './orders.routes.js'
+import paymentsRoutes from './payments.routes.js'
 
 const router = express.Router()
 
@@ -38,6 +39,7 @@ router.get('/', (req, res) => {
             progress: '/api/v1/progress',
             dashboard: '/api/v1/dashboard',
             orders: '/api/v1/orders',
+            payments: '/api/v1/payments',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -66,6 +68,7 @@ router.use('/enrollments', enrollmentRoutes)
 router.use('/progress', progressRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/orders', ordersRoutes)
+router.use('/payments', paymentsRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes);

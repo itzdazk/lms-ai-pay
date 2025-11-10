@@ -57,6 +57,8 @@ const WEBHOOK_SIGNATURE_KEYS = [
     'orderInfo',
     'orderType',
     'partnerCode',
+    'payType',
+    'requestId',
     'responseTime',
     'resultCode',
     'transId',

@@ -49,12 +49,44 @@ const decodeExtraData = (extraData) => {
         return null
     }
     try {
-        const json = Buffer.from(extraData, 'base64').toString('utf8')
+        const json =
+            typeof extraData === 'string'
+                ? Buffer.from(extraData, 'base64').toString('utf8')
+                : ''
         return JSON.parse(json)
     } catch (error) {
         logger.warn(`Failed to decode MoMo extraData: ${error.message}`)
         return null
     }
+}
+
+const normalizeSignaturePayload = (payload) => ({
+    ...payload,
+    signature: undefined,
+    Signature: undefined,
+    partnerCode: payload.partnerCode ?? '',
+    orderId: payload.orderId ?? '',
+    requestId: payload.requestId ?? '',
+    amount: payload.amount ?? '',
+    orderInfo: payload.orderInfo ?? '',
+    orderType: payload.orderType ?? '',
+    transId: payload.transId ?? '',
+    resultCode: payload.resultCode ?? '',
+    message: payload.message ?? '',
+    payType: payload.payType ?? '',
+    responseTime: payload.responseTime ?? '',
+    extraData: payload.extraData ?? '',
+    accessKey: payload.accessKey ?? momoConfig.accessKey,
+})
+
+const buildSignatureInput = (payload, keys) => {
+    const toString = (value) =>
+        value === undefined || value === null ? '' : String(value)
+
+    return keys.reduce((acc, key) => {
+        acc[key] = toString(payload[key])
+        return acc
+    }, {})
 }
 
 class PaymentService {
@@ -531,22 +563,31 @@ class PaymentService {
             signaturePayload.accessKey = momoConfig.accessKey
         }
 
+        const normalizedSignaturePayload =
+            normalizeSignaturePayload(signaturePayload)
+
         const signatureKeys =
             source === 'callback' ? CALLBACK_SIGNATURE_KEYS : WEBHOOK_SIGNATURE_KEYS
+        const signatureInput = buildSignatureInput(
+            normalizedSignaturePayload,
+            signatureKeys
+        )
+        signatureInput.accessKey =
+            signatureInput.accessKey || String(momoConfig.accessKey || '')
 
-        if (!verifySignature(signaturePayload, signature, signatureKeys)) {
+        if (!verifySignature(signatureInput, signature, signatureKeys)) {
             throw new Error('Invalid MoMo signature')
         }
 
-        if (signaturePayload.partnerCode !== momoConfig.partnerCode) {
+        if (signatureInput.partnerCode !== momoConfig.partnerCode) {
             throw new Error('Partner code does not match configured MoMo partner')
         }
 
-        const orderCode = signaturePayload.orderId
-        const amount = normalizeAmount(signaturePayload.amount)
-        const resultCode = parseInt(signaturePayload.resultCode, 10)
-        const transactionId = signaturePayload.transId
-            ? String(signaturePayload.transId)
+        const orderCode = normalizedSignaturePayload.orderId
+        const amount = normalizeAmount(normalizedSignaturePayload.amount)
+        const resultCode = parseInt(signatureInput.resultCode, 10)
+        const transactionId = normalizedSignaturePayload.transId
+            ? String(normalizedSignaturePayload.transId)
             : null
 
         const order = await prisma.order.findUnique({
@@ -589,8 +630,10 @@ class PaymentService {
                         status: success
                             ? TRANSACTION_STATUS.SUCCESS
                             : TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: signaturePayload,
-                        errorMessage: success ? null : signaturePayload.message || null,
+                        gatewayResponse: normalizedSignaturePayload,
+                        errorMessage: success
+                            ? null
+                            : normalizedSignaturePayload.message || null,
                         ipAddress: ipAddress || transactionRecord.ipAddress,
                         amount: toDecimal(amount),
                     },
@@ -606,8 +649,10 @@ class PaymentService {
                         status: success
                             ? TRANSACTION_STATUS.SUCCESS
                             : TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: signaturePayload,
-                        errorMessage: success ? null : signaturePayload.message || null,
+                        gatewayResponse: normalizedSignaturePayload,
+                        errorMessage: success
+                            ? null
+                            : normalizedSignaturePayload.message || null,
                         ipAddress,
                     },
                 })
@@ -633,8 +678,8 @@ class PaymentService {
                 gateway: PAYMENT_GATEWAY.MOMO,
                 source,
                 transId: transactionId,
-                extraData: decodeExtraData(signaturePayload.extraData),
-                raw: signaturePayload,
+                extraData: decodeExtraData(normalizedSignaturePayload.extraData),
+                raw: normalizedSignaturePayload,
             }
 
             const updateResult = await ordersService.updateOrderToPaid(
@@ -663,7 +708,7 @@ class PaymentService {
         }
 
         logger.warn(
-            `MoMo payment failed for order ${order.orderCode}. resultCode=${resultCode}, message=${signaturePayload.message}`
+            `MoMo payment failed for order ${order.orderCode}. resultCode=${resultCode}, message=${normalizedSignaturePayload.message}`
         )
 
         return {
@@ -674,11 +719,13 @@ class PaymentService {
             },
             paymentTransaction: transactionRecord,
             resultCode,
-            message: signaturePayload.message,
+            message: normalizedSignaturePayload.message,
         }
     }
 }
 
-export default new PaymentService()
+const paymentService = new PaymentService()
 
+export default paymentService
+export { normalizeSignaturePayload, buildSignatureInput }
 
