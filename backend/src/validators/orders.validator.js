@@ -109,3 +109,12 @@ export const getOrderByCodeValidator = [
     validate,
 ]
 
+/**
+ * Validator for cancelling order
+ */
+export const cancelOrderValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Order ID must be a positive integer'),
+    validate,
+]

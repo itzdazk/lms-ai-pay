@@ -22,11 +22,7 @@ import {
 import ordersService from './orders.service.js'
 
 const ensureMoMoConfig = () => {
-    if (
-        !momoConfig.partnerCode ||
-        !momoConfig.accessKey ||
-        !momoConfig.secretKey
-    ) {
+    if (!momoConfig.partnerCode || !momoConfig.accessKey || !momoConfig.secretKey) {
         throw new Error(
             'MoMo configuration is missing. Please set MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, and MOMO_SECRET_KEY.'
         )
@@ -42,8 +38,7 @@ const normalizeAmount = (value) => {
     if (value === null || value === undefined) {
         return 0
     }
-    const numeric =
-        typeof value === 'object' && value !== null ? value.toString() : value
+    const numeric = typeof value === 'object' && value !== null ? value.toString() : value
     return Math.round(parseFloat(numeric) || 0)
 }
 
@@ -126,17 +121,13 @@ class PaymentService {
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
-            throw new Error(
-                `Order cannot be paid in status ${order.paymentStatus}`
-            )
+            throw new Error(`Order cannot be paid in status ${order.paymentStatus}`)
         }
 
         const amount = normalizeAmount(order.finalPrice)
 
         if (amount <= 0) {
-            throw new Error(
-                'Order amount must be greater than 0 to process payment'
-            )
+            throw new Error('Order amount must be greater than 0 to process payment')
         }
 
         const requestId = `${order.orderCode}-${Date.now()}`
@@ -155,9 +146,7 @@ class PaymentService {
             requestId,
             amount: amount.toString(),
             orderId: order.orderCode,
-            orderInfo: `Thanh toán khóa học ${
-                order.course?.title || order.orderCode
-            }`,
+            orderInfo: `Thanh toán khóa học ${order.course?.title || order.orderCode}`,
             redirectUrl: momoConfig.returnUrl,
             ipnUrl: momoConfig.notifyUrl,
             lang: 'vi',
@@ -334,8 +323,7 @@ class PaymentService {
 
         const requestId = `refund-${order.orderCode}-${Date.now()}`
         const description =
-            reason ||
-            `Refund for order ${order.orderCode} by admin ${adminUser.id}`
+            reason || `Refund for order ${order.orderCode} by admin ${adminUser.id}`
 
         const signaturePayload = {
             accessKey: momoConfig.accessKey,
@@ -443,10 +431,8 @@ class PaymentService {
 
     async getTransactions(currentUser, filters = {}) {
         const page = parseInt(filters.page, 10) || PAGINATION.DEFAULT_PAGE
-        const limit = Math.min(
-            parseInt(filters.limit, 10) || PAGINATION.DEFAULT_LIMIT,
-            100
-        )
+        const limit =
+            Math.min(parseInt(filters.limit, 10) || PAGINATION.DEFAULT_LIMIT, 100)
         const skip = (page - 1) * limit
 
         const whereClause = {
@@ -547,9 +533,7 @@ class PaymentService {
             currentUser.role !== USER_ROLES.ADMIN &&
             transaction.order.userId !== currentUser.id
         ) {
-            throw new Error(
-                'You do not have permission to view this transaction'
-            )
+            throw new Error('You do not have permission to view this transaction')
         }
 
         return transaction
@@ -583,9 +567,7 @@ class PaymentService {
             normalizeSignaturePayload(signaturePayload)
 
         const signatureKeys =
-            source === 'callback'
-                ? CALLBACK_SIGNATURE_KEYS
-                : WEBHOOK_SIGNATURE_KEYS
+            source === 'callback' ? CALLBACK_SIGNATURE_KEYS : WEBHOOK_SIGNATURE_KEYS
         const signatureInput = buildSignatureInput(
             normalizedSignaturePayload,
             signatureKeys
@@ -598,9 +580,7 @@ class PaymentService {
         }
 
         if (signatureInput.partnerCode !== momoConfig.partnerCode) {
-            throw new Error(
-                'Partner code does not match configured MoMo partner'
-            )
+            throw new Error('Partner code does not match configured MoMo partner')
         }
 
         const orderCode = normalizedSignaturePayload.orderId
@@ -698,9 +678,7 @@ class PaymentService {
                 gateway: PAYMENT_GATEWAY.MOMO,
                 source,
                 transId: transactionId,
-                extraData: decodeExtraData(
-                    normalizedSignaturePayload.extraData
-                ),
+                extraData: decodeExtraData(normalizedSignaturePayload.extraData),
                 raw: normalizedSignaturePayload,
             }
 

@@ -15,9 +15,7 @@ const momoConfig = {
     captureRequestType: DEFAULT_CAPTURE_REQUEST_TYPE,
     refundRequestType: DEFAULT_REFUND_REQUEST_TYPE,
     allowedIps: config.MOMO_IP_WHITELIST
-        ? config.MOMO_IP_WHITELIST.split(',')
-              .map((ip) => ip.trim())
-              .filter(Boolean)
+        ? config.MOMO_IP_WHITELIST.split(',').map((ip) => ip.trim()).filter(Boolean)
         : [],
 }
 
@@ -59,6 +57,8 @@ const WEBHOOK_SIGNATURE_KEYS = [
     'orderInfo',
     'orderType',
     'partnerCode',
+    'payType',
+    'requestId',
     'responseTime',
     'resultCode',
     'transId',
@@ -76,9 +76,7 @@ const REFUND_SIGNATURE_KEYS = [
 
 const buildRawSignature = (payload, keys) =>
     keys
-        .map(
-            (key) => `${key}=${payload[key] !== undefined ? payload[key] : ''}`
-        )
+        .map((key) => `${key}=${payload[key] !== undefined ? payload[key] : ''}`)
         .join('&')
 
 const sign = (payload, keys) => {
@@ -124,3 +122,4 @@ export {
     verifySignature,
     isIpAllowed,
 }
+
