@@ -6,13 +6,17 @@ import {
     getLessonVideoValidator,
     getLessonTranscriptValidator,
 } from '../validators/lessons.validator.js'
+import { authenticate } from '../middlewares/auth.middleware.js'
 
 const router = express.Router()
+
+// All lesson endpoints require authenticated users
+router.use(authenticate)
 
 /**
  * @route   GET /api/v1/lessons/:id
  * @desc    Get lesson by ID
- * @access  Public
+ * @access  Private (enrolled users, course instructor, admin)
  */
 router.get(
     '/:id',
@@ -23,7 +27,7 @@ router.get(
 /**
  * @route   GET /api/v1/lessons/:id/video
  * @desc    Get lesson video URL
- * @access  Public
+ * @access  Private (enrolled users, course instructor, admin)
  */
 router.get(
     '/:id/video',
@@ -34,7 +38,7 @@ router.get(
 /**
  * @route   GET /api/v1/lessons/:id/transcript
  * @desc    Get lesson transcript URL
- * @access  Public
+ * @access  Private (enrolled users, course instructor, admin)
  */
 router.get(
     '/:id/transcript',

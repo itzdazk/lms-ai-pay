@@ -1,5 +1,6 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
+import { ENROLLMENT_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import path from 'path'
 import fs from 'fs'
@@ -69,6 +70,11 @@ class LessonsService {
                     select: {
                         id: true,
                         status: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                            },
+                        },
                     },
                 },
             },
@@ -100,6 +106,11 @@ class LessonsService {
                     select: {
                         id: true,
                         status: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                            },
+                        },
                     },
                 },
             },
@@ -114,6 +125,29 @@ class LessonsService {
         }
 
         return lesson
+    }
+
+    /**
+     * Check if user has access to course (enrolled)
+     */
+    async hasUserAccessToCourse(userId, courseId) {
+        const enrollment = await prisma.enrollment.findFirst({
+            where: {
+                userId,
+                courseId,
+                status: {
+                    in: [
+                        ENROLLMENT_STATUS.ACTIVE,
+                        ENROLLMENT_STATUS.COMPLETED,
+                    ],
+                },
+            },
+            select: {
+                id: true,
+            },
+        })
+
+        return Boolean(enrollment)
     }
 
     /**

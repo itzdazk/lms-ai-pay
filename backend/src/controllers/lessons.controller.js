@@ -17,26 +17,39 @@ class LessonsController {
         const { id } = req.params
         const lesson = await lessonsService.getLessonById(parseInt(id))
 
-        // Check if lesson is published or user is instructor/admin
-        const isInstructorOrAdmin =
-            req.user &&
-            (req.user.role === USER_ROLES.INSTRUCTOR ||
-                req.user.role === USER_ROLES.ADMIN)
+        const isAdmin = req.user.role === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            lesson.course.instructor?.id === req.user.id
 
-        // Check if course is published
-        const isCoursePublished =
-            lesson.course.status === COURSE_STATUS.PUBLISHED
+        let hasEnrollment = false
+        if (!isAdmin && !isCourseInstructor) {
+            hasEnrollment = await lessonsService.hasUserAccessToCourse(
+                req.user.id,
+                lesson.course.id
+            )
 
-        // Only show unpublished lessons to instructors/admins
-        if (!lesson.isPublished && !isInstructorOrAdmin) {
+            if (!hasEnrollment) {
+                return ApiResponse.forbidden(
+                    res,
+                    'You do not have access to this lesson'
+                )
+            }
+        }
+
+        // Only show unpublished lessons to course instructor or admin
+        if (!lesson.isPublished && !isCourseInstructor && !isAdmin) {
             return ApiResponse.forbidden(
                 res,
                 'This lesson is not available'
             )
         }
 
-        // Only show lessons from published courses to public users
-        if (!isCoursePublished && !isInstructorOrAdmin) {
+        // Only show lessons from published courses to course instructor/admin
+        // Enrolled students should only access published courses
+        const isCoursePublished =
+            lesson.course.status === COURSE_STATUS.PUBLISHED
+
+        if (!isCoursePublished && !isCourseInstructor && !isAdmin) {
             return ApiResponse.forbidden(
                 res,
                 'This lesson is not available'
@@ -55,25 +68,36 @@ class LessonsController {
         const { id } = req.params
         const result = await lessonsService.getLessonVideo(parseInt(id))
 
-        // Check if lesson is published or user is instructor/admin
-        const isInstructorOrAdmin =
-            req.user &&
-            (req.user.role === USER_ROLES.INSTRUCTOR ||
-                req.user.role === USER_ROLES.ADMIN)
+        const isAdmin = req.user.role === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            result.course.instructor?.id === req.user.id
 
-        // Check if course is published
+        let hasEnrollment = false
+        if (!isAdmin && !isCourseInstructor) {
+            hasEnrollment = await lessonsService.hasUserAccessToCourse(
+                req.user.id,
+                result.course.id
+            )
+
+            if (!hasEnrollment) {
+                return ApiResponse.forbidden(
+                    res,
+                    'You do not have access to this lesson'
+                )
+            }
+        }
+
         const isCoursePublished =
             result.course.status === COURSE_STATUS.PUBLISHED
 
-        if (!result.isPublished && !isInstructorOrAdmin) {
+        if (!result.isPublished && !isCourseInstructor && !isAdmin) {
             return ApiResponse.forbidden(
                 res,
                 'This video is not available'
             )
         }
 
-        // Only show videos from published courses to public users
-        if (!isCoursePublished && !isInstructorOrAdmin) {
+        if (!isCoursePublished && !isCourseInstructor && !isAdmin) {
             return ApiResponse.forbidden(
                 res,
                 'This video is not available'
@@ -101,25 +125,36 @@ class LessonsController {
         const { id } = req.params
         const result = await lessonsService.getLessonTranscript(parseInt(id))
 
-        // Check if lesson is published or user is instructor/admin
-        const isInstructorOrAdmin =
-            req.user &&
-            (req.user.role === USER_ROLES.INSTRUCTOR ||
-                req.user.role === USER_ROLES.ADMIN)
+        const isAdmin = req.user.role === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            result.course.instructor?.id === req.user.id
 
-        // Check if course is published
+        let hasEnrollment = false
+        if (!isAdmin && !isCourseInstructor) {
+            hasEnrollment = await lessonsService.hasUserAccessToCourse(
+                req.user.id,
+                result.course.id
+            )
+
+            if (!hasEnrollment) {
+                return ApiResponse.forbidden(
+                    res,
+                    'You do not have access to this lesson'
+                )
+            }
+        }
+
         const isCoursePublished =
             result.course.status === COURSE_STATUS.PUBLISHED
 
-        if (!result.isPublished && !isInstructorOrAdmin) {
+        if (!result.isPublished && !isCourseInstructor && !isAdmin) {
             return ApiResponse.forbidden(
                 res,
                 'This transcript is not available'
             )
         }
 
-        // Only show transcripts from published courses to public users
-        if (!isCoursePublished && !isInstructorOrAdmin) {
+        if (!isCoursePublished && !isCourseInstructor && !isAdmin) {
             return ApiResponse.forbidden(
                 res,
                 'This transcript is not available'
