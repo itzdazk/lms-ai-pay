@@ -22,7 +22,11 @@ import {
 import ordersService from './orders.service.js'
 
 const ensureMoMoConfig = () => {
-    if (!momoConfig.partnerCode || !momoConfig.accessKey || !momoConfig.secretKey) {
+    if (
+        !momoConfig.partnerCode ||
+        !momoConfig.accessKey ||
+        !momoConfig.secretKey
+    ) {
         throw new Error(
             'MoMo configuration is missing. Please set MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, and MOMO_SECRET_KEY.'
         )
@@ -38,7 +42,8 @@ const normalizeAmount = (value) => {
     if (value === null || value === undefined) {
         return 0
     }
-    const numeric = typeof value === 'object' && value !== null ? value.toString() : value
+    const numeric =
+        typeof value === 'object' && value !== null ? value.toString() : value
     return Math.round(parseFloat(numeric) || 0)
 }
 
@@ -49,12 +54,44 @@ const decodeExtraData = (extraData) => {
         return null
     }
     try {
-        const json = Buffer.from(extraData, 'base64').toString('utf8')
+        const json =
+            typeof extraData === 'string'
+                ? Buffer.from(extraData, 'base64').toString('utf8')
+                : ''
         return JSON.parse(json)
     } catch (error) {
         logger.warn(`Failed to decode MoMo extraData: ${error.message}`)
         return null
     }
+}
+
+const normalizeSignaturePayload = (payload) => ({
+    ...payload,
+    signature: undefined,
+    Signature: undefined,
+    partnerCode: payload.partnerCode ?? '',
+    orderId: payload.orderId ?? '',
+    requestId: payload.requestId ?? '',
+    amount: payload.amount ?? '',
+    orderInfo: payload.orderInfo ?? '',
+    orderType: payload.orderType ?? '',
+    transId: payload.transId ?? '',
+    resultCode: payload.resultCode ?? '',
+    message: payload.message ?? '',
+    payType: payload.payType ?? '',
+    responseTime: payload.responseTime ?? '',
+    extraData: payload.extraData ?? '',
+    accessKey: payload.accessKey ?? momoConfig.accessKey,
+})
+
+const buildSignatureInput = (payload, keys) => {
+    const toString = (value) =>
+        value === undefined || value === null ? '' : String(value)
+
+    return keys.reduce((acc, key) => {
+        acc[key] = toString(payload[key])
+        return acc
+    }, {})
 }
 
 class PaymentService {
@@ -89,13 +126,17 @@ class PaymentService {
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
-            throw new Error(`Order cannot be paid in status ${order.paymentStatus}`)
+            throw new Error(
+                `Order cannot be paid in status ${order.paymentStatus}`
+            )
         }
 
         const amount = normalizeAmount(order.finalPrice)
 
         if (amount <= 0) {
-            throw new Error('Order amount must be greater than 0 to process payment')
+            throw new Error(
+                'Order amount must be greater than 0 to process payment'
+            )
         }
 
         const requestId = `${order.orderCode}-${Date.now()}`
@@ -114,7 +155,9 @@ class PaymentService {
             requestId,
             amount: amount.toString(),
             orderId: order.orderCode,
-            orderInfo: `Thanh toán khóa học ${order.course?.title || order.orderCode}`,
+            orderInfo: `Thanh toán khóa học ${
+                order.course?.title || order.orderCode
+            }`,
             redirectUrl: momoConfig.returnUrl,
             ipnUrl: momoConfig.notifyUrl,
             lang: 'vi',
@@ -291,7 +334,8 @@ class PaymentService {
 
         const requestId = `refund-${order.orderCode}-${Date.now()}`
         const description =
-            reason || `Refund for order ${order.orderCode} by admin ${adminUser.id}`
+            reason ||
+            `Refund for order ${order.orderCode} by admin ${adminUser.id}`
 
         const signaturePayload = {
             accessKey: momoConfig.accessKey,
@@ -399,8 +443,10 @@ class PaymentService {
 
     async getTransactions(currentUser, filters = {}) {
         const page = parseInt(filters.page, 10) || PAGINATION.DEFAULT_PAGE
-        const limit =
-            Math.min(parseInt(filters.limit, 10) || PAGINATION.DEFAULT_LIMIT, 100)
+        const limit = Math.min(
+            parseInt(filters.limit, 10) || PAGINATION.DEFAULT_LIMIT,
+            100
+        )
         const skip = (page - 1) * limit
 
         const whereClause = {
@@ -501,7 +547,9 @@ class PaymentService {
             currentUser.role !== USER_ROLES.ADMIN &&
             transaction.order.userId !== currentUser.id
         ) {
-            throw new Error('You do not have permission to view this transaction')
+            throw new Error(
+                'You do not have permission to view this transaction'
+            )
         }
 
         return transaction
@@ -531,22 +579,35 @@ class PaymentService {
             signaturePayload.accessKey = momoConfig.accessKey
         }
 
-        const signatureKeys =
-            source === 'callback' ? CALLBACK_SIGNATURE_KEYS : WEBHOOK_SIGNATURE_KEYS
+        const normalizedSignaturePayload =
+            normalizeSignaturePayload(signaturePayload)
 
-        if (!verifySignature(signaturePayload, signature, signatureKeys)) {
+        const signatureKeys =
+            source === 'callback'
+                ? CALLBACK_SIGNATURE_KEYS
+                : WEBHOOK_SIGNATURE_KEYS
+        const signatureInput = buildSignatureInput(
+            normalizedSignaturePayload,
+            signatureKeys
+        )
+        signatureInput.accessKey =
+            signatureInput.accessKey || String(momoConfig.accessKey || '')
+
+        if (!verifySignature(signatureInput, signature, signatureKeys)) {
             throw new Error('Invalid MoMo signature')
         }
 
-        if (signaturePayload.partnerCode !== momoConfig.partnerCode) {
-            throw new Error('Partner code does not match configured MoMo partner')
+        if (signatureInput.partnerCode !== momoConfig.partnerCode) {
+            throw new Error(
+                'Partner code does not match configured MoMo partner'
+            )
         }
 
-        const orderCode = signaturePayload.orderId
-        const amount = normalizeAmount(signaturePayload.amount)
-        const resultCode = parseInt(signaturePayload.resultCode, 10)
-        const transactionId = signaturePayload.transId
-            ? String(signaturePayload.transId)
+        const orderCode = normalizedSignaturePayload.orderId
+        const amount = normalizeAmount(normalizedSignaturePayload.amount)
+        const resultCode = parseInt(signatureInput.resultCode, 10)
+        const transactionId = normalizedSignaturePayload.transId
+            ? String(normalizedSignaturePayload.transId)
             : null
 
         const order = await prisma.order.findUnique({
@@ -589,8 +650,10 @@ class PaymentService {
                         status: success
                             ? TRANSACTION_STATUS.SUCCESS
                             : TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: signaturePayload,
-                        errorMessage: success ? null : signaturePayload.message || null,
+                        gatewayResponse: normalizedSignaturePayload,
+                        errorMessage: success
+                            ? null
+                            : normalizedSignaturePayload.message || null,
                         ipAddress: ipAddress || transactionRecord.ipAddress,
                         amount: toDecimal(amount),
                     },
@@ -606,8 +669,10 @@ class PaymentService {
                         status: success
                             ? TRANSACTION_STATUS.SUCCESS
                             : TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: signaturePayload,
-                        errorMessage: success ? null : signaturePayload.message || null,
+                        gatewayResponse: normalizedSignaturePayload,
+                        errorMessage: success
+                            ? null
+                            : normalizedSignaturePayload.message || null,
                         ipAddress,
                     },
                 })
@@ -633,8 +698,10 @@ class PaymentService {
                 gateway: PAYMENT_GATEWAY.MOMO,
                 source,
                 transId: transactionId,
-                extraData: decodeExtraData(signaturePayload.extraData),
-                raw: signaturePayload,
+                extraData: decodeExtraData(
+                    normalizedSignaturePayload.extraData
+                ),
+                raw: normalizedSignaturePayload,
             }
 
             const updateResult = await ordersService.updateOrderToPaid(
@@ -663,7 +730,7 @@ class PaymentService {
         }
 
         logger.warn(
-            `MoMo payment failed for order ${order.orderCode}. resultCode=${resultCode}, message=${signaturePayload.message}`
+            `MoMo payment failed for order ${order.orderCode}. resultCode=${resultCode}, message=${normalizedSignaturePayload.message}`
         )
 
         return {
@@ -674,11 +741,12 @@ class PaymentService {
             },
             paymentTransaction: transactionRecord,
             resultCode,
-            message: signaturePayload.message,
+            message: normalizedSignaturePayload.message,
         }
     }
 }
 
-export default new PaymentService()
+const paymentService = new PaymentService()
 
-
+export default paymentService
+export { normalizeSignaturePayload, buildSignatureInput }

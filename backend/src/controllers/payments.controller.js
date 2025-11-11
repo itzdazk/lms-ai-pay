@@ -19,7 +19,10 @@ class PaymentsController {
     })
 
     momoCallback = asyncHandler(async (req, res) => {
-        const payload = Object.keys(req.body || {}).length ? req.body : req.query
+        const payload = Object.keys(req.body || {}).length
+            ? req.body
+            : req.query
+
         const result = await paymentService.handleMoMoCallback(payload)
 
         return ApiResponse.success(
@@ -38,7 +41,10 @@ class PaymentsController {
 
     momoWebhook = async (req, res, next) => {
         try {
-            const result = await paymentService.handleMoMoWebhook(req.body, req.ip)
+            const result = await paymentService.handleMoMoWebhook(
+                req.body,
+                req.ip
+            )
             return res.status(200).json({
                 resultCode: 0,
                 message: 'Success',
@@ -68,5 +74,3 @@ class PaymentsController {
 }
 
 export default new PaymentsController()
-
-

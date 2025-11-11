@@ -30,11 +30,10 @@ router.post(
  * @desc    Handle user redirect callback from MoMo (browser)
  * @access  Public (MoMo redirect)
  */
-router.post(
-    '/momo/callback',
-    momoCallbackValidator,
-    paymentsController.momoCallback
-)
+router
+    .route('/momo/callback')
+    .get(momoCallbackValidator, paymentsController.momoCallback)
+    .post(momoCallbackValidator, paymentsController.momoCallback)
 
 /**
  * @route   POST /api/v1/payments/momo/webhook
@@ -62,5 +61,3 @@ router.post(
 )
 
 export default router
-
-
