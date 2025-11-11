@@ -3,6 +3,7 @@ import express from 'express'
 import authRoutes from './auth.routes.js'
 import userRoutes from './users.routes.js'
 import courseRoutes from './course.routes.js'
+import quizzesRoutes from './quizzes.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 import lessonsRoutes from './lessons.routes.js'
@@ -15,6 +16,7 @@ import dashboardRoutes from './dashboard.routes.js'
 import ordersRoutes from './orders.routes.js'
 import adminOrderRoutes from './admin-order.routes.js'
 import paymentsRoutes from './payments.routes.js'
+import transactionsRoutes from './transactions.routes.js'
 
 const router = express.Router()
 
@@ -33,6 +35,7 @@ router.get('/', (req, res) => {
             categories: '/api/v1/categories',
             tags: '/api/v1/tags',
             lessons: '/api/v1/lessons',
+            quizzes: '/api/v1/quizzes',
             instructorCourses: '/api/v1/instructor/courses',
             instructorLessons: '/api/v1/instructor/courses/:courseId/lessons',
             adminCourses: '/api/v1/admin/courses',
@@ -60,6 +63,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes)
 router.use('/users', userRoutes)
 router.use('/courses', courseRoutes)
+router.use('/', quizzesRoutes)
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/lessons', lessonsRoutes)
@@ -72,6 +76,7 @@ router.use('/dashboard', dashboardRoutes)
 router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
 router.use('/payments', paymentsRoutes)
+router.use('/transactions', transactionsRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes);
