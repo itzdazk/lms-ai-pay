@@ -630,17 +630,25 @@ class OrdersService {
      * @returns {Promise<number>} Number of orders cancelled
      */
     async cleanupExpiredPendingOrders() {
+        const expiryThreshold = new Date(
+            Date.now() - PENDING_TIME.PENDING_TIMEOUT_MS
+        )
+        logger.debug(
+            `Running cleanupExpiredPendingOrders. Checking orders created before: ${expiryThreshold.toISOString()}`
+        )
+
         // 1. Find all PENDING orders created before the EXPIRY_THRESHOLD
         const expiredOrders = await prisma.order.findMany({
             where: {
                 paymentStatus: PAYMENT_STATUS.PENDING,
                 createdAt: {
-                    lte: PENDING_TIME.EXPIRY_THRESHOLD, // Less Than or Equal (older than expiry threshold)
+                    lte: expiryThreshold, // Less Than or Equal (older than expiry threshold)
                 },
             },
             select: {
                 id: true,
                 orderCode: true,
+                createdAt: true,
             },
         })
 
@@ -649,10 +657,14 @@ class OrdersService {
             return 0
         }
 
+        logger.info(
+            `Found ${expiredOrders.length} expired pending orders to cancel`
+        )
+
         // 2. Update all these orders to FAILED status
         const orderIdsToUpdate = expiredOrders.map((o) => o.id)
 
-        await prisma.order.updateMany({
+        const result = await prisma.order.updateMany({
             where: {
                 id: { in: orderIdsToUpdate },
             },
@@ -663,10 +675,10 @@ class OrdersService {
         })
 
         logger.warn(
-            `[CRON] Auto-cancelled ${expiredOrders.length} expired pending orders: ${expiredOrders.map((o) => o.orderCode).join(', ')}`
+            `[CRON] Auto-cancelled ${result.count} expired pending orders: ${expiredOrders.map((o) => `${o.orderCode} (created: ${o.createdAt.toISOString()})`).join(', ')}`
         )
 
-        return expiredOrders.length
+        return result.count
     }
 }
 

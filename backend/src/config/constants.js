@@ -40,8 +40,7 @@ const PAYMENT_STATUS = {
 }
 
 const PENDING_TIME = {
-    PENDING_TIMEOUT_MS: 15 * 60 * 1000, // 15 phút
-    EXPIRY_THRESHOLD: new Date(Date.now() - 15 * 60 * 1000), // ngưỡng hết hạn: 15 phút trước
+    PENDING_TIMEOUT_MS: 1 * 60 * 1000, // 15 phút
 }
 
 const TRANSACTION_STATUS = {
