@@ -728,4 +728,3 @@ const paymentService = new PaymentService()
 
 export default paymentService
 export { normalizeSignaturePayload, buildSignatureInput }
-

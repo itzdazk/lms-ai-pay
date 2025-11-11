@@ -69,5 +69,3 @@ class PaymentsController {
 }
 
 export default new PaymentsController()
-
-
