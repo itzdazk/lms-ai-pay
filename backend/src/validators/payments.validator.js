@@ -1,6 +1,8 @@
 import { body, check, param } from 'express-validator'
 import { validate } from '../middlewares/validate.middleware.js'
 
+// ==================== MoMo Validators ====================
+
 const createMoMoPaymentValidator = [
     body('orderId')
         .notEmpty()
@@ -47,6 +49,51 @@ const momoCallbackValidator = momoSharedValidators
 
 const momoWebhookValidator = momoSharedValidators
 
+// ==================== VNPay Validators (MỚI) ====================
+
+const createVNPayPaymentValidator = [
+    body('orderId')
+        .notEmpty()
+        .withMessage('orderId is required')
+        .isInt({ min: 1 })
+        .withMessage('orderId must be a positive integer'),
+    validate,
+]
+
+const vnpayCallbackValidator = [
+    check('vnp_TxnRef').notEmpty().withMessage('vnp_TxnRef is required'),
+    check('vnp_Amount')
+        .notEmpty()
+        .withMessage('vnp_Amount is required')
+        .isNumeric()
+        .withMessage('vnp_Amount must be numeric'),
+    check('vnp_ResponseCode')
+        .notEmpty()
+        .withMessage('vnp_ResponseCode is required'),
+    check('vnp_SecureHash')
+        .notEmpty()
+        .withMessage('vnp_SecureHash is required'),
+    validate,
+]
+
+const vnpayWebhookValidator = [
+    check('vnp_TxnRef').notEmpty().withMessage('vnp_TxnRef is required'),
+    check('vnp_Amount')
+        .notEmpty()
+        .withMessage('vnp_Amount is required')
+        .isNumeric()
+        .withMessage('vnp_Amount must be numeric'),
+    check('vnp_ResponseCode')
+        .notEmpty()
+        .withMessage('vnp_ResponseCode is required'),
+    check('vnp_SecureHash')
+        .notEmpty()
+        .withMessage('vnp_SecureHash is required'),
+    validate,
+]
+
+// ==================== Refund Validator ====================
+
 const refundOrderValidator = [
     param('orderId')
         .notEmpty()
@@ -65,10 +112,14 @@ const refundOrderValidator = [
 ]
 
 export {
+    // MoMo
     createMoMoPaymentValidator,
     momoCallbackValidator,
     momoWebhookValidator,
+    // VNPay
+    createVNPayPaymentValidator,
+    vnpayCallbackValidator,
+    vnpayWebhookValidator,
+    // Refund
     refundOrderValidator,
 }
-
-
