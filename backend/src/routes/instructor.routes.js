@@ -1,6 +1,7 @@
 // src/routes/instructor.routes.js
 import express from 'express'
 import lessonsController from '../controllers/lessons.controller.js'
+import quizzesController from '../controllers/quizzes.controller.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
 import { isInstructor } from '../middlewares/role.middleware.js'
 import { isCourseInstructorOrAdmin } from '../middlewares/role.middleware.js'
@@ -14,6 +15,15 @@ import {
     reorderLessonValidator,
     publishLessonValidator,
 } from '../validators/lessons.validator.js'
+import {
+    createCourseQuizValidator,
+    createLessonQuizValidator,
+    deleteQuizValidator,
+    getInstructorQuizSubmissionsValidator,
+    getQuizAnalyticsValidator,
+    publishQuizValidator,
+    updateQuizValidator,
+} from '../validators/quizzes.validator.js'
 import { uploadVideo, uploadTranscript } from '../config/multer.config.js'
 import ApiResponse from '../utils/response.util.js'
 
@@ -151,6 +161,98 @@ router.patch(
     publishLessonValidator,
     checkLessonExists, // Check lesson exists before publish
     lessonsController.publishLesson
+)
+
+/**
+ * @route   POST /api/v1/instructor/lessons/:lessonId/quizzes
+ * @desc    Create quiz for lesson
+ * @access  Private (Instructor/Admin)
+ */
+router.post(
+    '/lessons/:lessonId/quizzes',
+    authenticate,
+    isInstructor,
+    createLessonQuizValidator,
+    quizzesController.createLessonQuiz
+)
+
+/**
+ * @route   POST /api/v1/instructor/courses/:courseId/quizzes
+ * @desc    Create quiz for course
+ * @access  Private (Instructor/Admin)
+ */
+router.post(
+    '/courses/:courseId/quizzes',
+    authenticate,
+    isInstructor,
+    isCourseInstructorOrAdmin,
+    createCourseQuizValidator,
+    quizzesController.createCourseQuiz
+)
+
+/**
+ * @route   PUT /api/v1/instructor/quizzes/:id
+ * @desc    Update quiz
+ * @access  Private (Instructor/Admin)
+ */
+router.put(
+    '/quizzes/:id',
+    authenticate,
+    isInstructor,
+    updateQuizValidator,
+    quizzesController.updateQuiz
+)
+
+/**
+ * @route   DELETE /api/v1/instructor/quizzes/:id
+ * @desc    Delete quiz
+ * @access  Private (Instructor/Admin)
+ */
+router.delete(
+    '/quizzes/:id',
+    authenticate,
+    isInstructor,
+    deleteQuizValidator,
+    quizzesController.deleteQuiz
+)
+
+/**
+ * @route   PATCH /api/v1/instructor/quizzes/:id/publish
+ * @desc    Publish or unpublish quiz
+ * @access  Private (Instructor/Admin)
+ */
+router.patch(
+    '/quizzes/:id/publish',
+    authenticate,
+    isInstructor,
+    publishQuizValidator,
+    quizzesController.publishQuiz
+)
+
+/**
+ * @route   GET /api/v1/instructor/quizzes/:quizId/submissions
+ * @desc    List quiz submissions (all students)
+ * @access  Private (Instructor/Admin)
+ */
+router.get(
+    '/quizzes/:quizId/submissions',
+    authenticate,
+    isInstructor,
+    getInstructorQuizSubmissionsValidator,
+    quizzesController.getInstructorQuizSubmissions
+)
+
+/**
+ * @route   GET /api/v1/instructor/quizzes/:quizId/analytics
+ * @desc    Quiz analytics summary
+ * @access  Private (Instructor/Admin)
+ */
+router.get(
+    '/quizzes/:quizId/analytics',
+    authenticate,
+    isInstructor,
+    getQuizAnalyticsValidator,
+    quizzesController.getQuizAnalytics
 )
 
 export default router

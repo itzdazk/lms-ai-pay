@@ -17,6 +17,7 @@ import ordersRoutes from './orders.routes.js'
 import adminOrderRoutes from './admin-order.routes.js'
 import paymentsRoutes from './payments.routes.js'
 import transactionsRoutes from './transactions.routes.js'
+import adminQuizzesRoutes from './admin-quizzes.routes.js'
 
 const router = express.Router()
 
@@ -38,6 +39,7 @@ router.get('/', (req, res) => {
             quizzes: '/api/v1/quizzes',
             instructorCourses: '/api/v1/instructor/courses',
             instructorLessons: '/api/v1/instructor/courses/:courseId/lessons',
+            instructorQuizzes: '/api/v1/instructor/quizzes',
             adminCourses: '/api/v1/admin/courses',
             enrollments: '/api/v1/enrollments',
             progress: '/api/v1/progress',
@@ -45,6 +47,7 @@ router.get('/', (req, res) => {
             orders: '/api/v1/orders',
             adminOrders: '/api/v1/admin/orders',
             payments: '/api/v1/payments',
+            adminQuizzes: '/api/v1/admin/quizzes',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -75,6 +78,7 @@ router.use('/progress', progressRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
+router.use('/admin/quizzes', adminQuizzesRoutes)
 router.use('/payments', paymentsRoutes)
 router.use('/transactions', transactionsRoutes)
 
