@@ -68,17 +68,6 @@ class PaymentsController {
      * @access  Private (Student/Instructor/Admin)
      */
     createVNPayPayment = asyncHandler(async (req, res) => {
-        // ← THÊM 4 DÒNG NÀY NGAY ĐẦU
-        console.log('========== CONTROLLER CALLED ==========')
-        logger.info('========== CONTROLLER CALLED ==========')
-        console.log('Request body:', JSON.stringify(req.body))
-        console.log('User:', JSON.stringify(req.user))
-
-        logger.info('📝 [Controller] createVNPayPayment called')
-        logger.info('📝 [Controller] User ID:', req.user?.id)
-        logger.info('📝 [Controller] Order ID:', req.body?.orderId)
-        logger.info('📝 [Controller] Client IP:', req.ip)
-
         const { orderId } = req.body
         const result = await paymentService.createVNPayPayment(
             req.user.id,
@@ -99,18 +88,7 @@ class PaymentsController {
      * @access  Public (VNPay redirect)
      */
     vnpayCallback = asyncHandler(async (req, res) => {
-        logger.info('📞 [Controller] vnpayCallback called')
-        logger.info(
-            '📞 [Controller] Query params:',
-            JSON.stringify(req.query, null, 2)
-        )
-
         const result = await paymentService.handleVNPayCallback(req.query)
-
-        logger.info(
-            '📞 [Controller] Callback result:',
-            JSON.stringify(result, null, 2)
-        )
 
         return ApiResponse.success(
             res,
@@ -136,20 +114,8 @@ class PaymentsController {
      * @access  Public (VNPay server)
      */
     vnpayWebhook = async (req, res, next) => {
-        logger.info('🔔 [Controller] vnpayWebhook called')
-        logger.info(
-            '🔔 [Controller] Query params:',
-            JSON.stringify(req.query, null, 2)
-        )
-        logger.info('🔔 [Controller] Body:', JSON.stringify(req.body, null, 2))
-
         try {
             const result = await paymentService.handleVNPayWebhook(req.query)
-
-            logger.info(
-                '🔔 [Controller] Webhook result:',
-                JSON.stringify(result, null, 2)
-            )
 
             // VNPay expects specific response format
             return res.status(200).json({
@@ -157,7 +123,6 @@ class PaymentsController {
                 Message: result.Message || 'Confirm Success',
             })
         } catch (error) {
-            console.error('🔔 [Controller] Webhook error:', error)
             return res.status(200).json({
                 RspCode: '99',
                 Message: error.message || 'Webhook processing failed',

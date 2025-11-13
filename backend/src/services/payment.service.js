@@ -30,6 +30,8 @@ import {
     isIpAllowed,
 } from '../config/momo.config.js'
 import ordersService from './orders.service.js'
+import qs from 'qs'
+import crypto from 'crypto'
 import querystring from 'querystring'
 
 const ensureMoMoConfig = () => {
@@ -186,7 +188,7 @@ class PaymentService {
         const orderInfo = `Thanh toan khoa hoc ${order.course?.title || order.orderCode}`
         const ipAddr = clientIp || '127.0.0.1'
 
-        // Build VNPay params
+        // ===== 1. Build VNPay params (KHÔNG bao gồm vnp_SecureHash) =====
         let vnpParams = {
             vnp_Version: vnpayConfig.version,
             vnp_Command: vnpayConfig.command,
@@ -202,39 +204,20 @@ class PaymentService {
             vnp_CreateDate: createDate,
         }
 
-        //* THÊM: Log params trước khi tạo signature
-        console.log(
-            '================== VNPay Payment Creation =================='
-        )
-        console.log('Raw vnpParams:', JSON.stringify(vnpParams, null, 2))
+        // ===== 2. Tạo signature =====
+        const signed = createSignature(vnpParams, vnpayConfig.hashSecret)
 
-        // Create signature
-        const secureHash = createSignature(vnpParams, vnpayConfig.hashSecret)
+        // ===== 3. Sort params =====
+        vnpParams = sortObject(vnpParams)
 
-        //* THÊM: Log signature
-        // console.log('Generated SecureHash:', secureHash)
+        // ===== 4. Thêm signature vào params =====
+        vnpParams['vnp_SecureHash'] = signed
 
-        const sortedParams = sortObject(vnpParams)
-
-        let queryString = ''
-        for (const key of Object.keys(sortedParams).sort()) {
-            const value = sortedParams[key]
-            if (queryString) queryString += '&'
-            queryString += `${key}=${encodeURIComponent(value)}`
-        }
-        queryString += `&vnp_SecureHash=${secureHash}`
-
-        //* THÊM: Log query string
-        console.log('Query String (encode: false):', queryString)
-
-        // Build payment URL
-        const paymentUrl = `${vnpayConfig.apiUrl}?${queryString}`
-
-        //* THÊM: Log final URL
-        console.log('Final Payment URL:', paymentUrl)
-        console.log(
-            '============================================================'
-        )
+        // ===== 5. Build URL =====
+        const paymentUrl =
+            vnpayConfig.apiUrl +
+            '?' +
+            qs.stringify(vnpParams, { encode: false })
 
         // Create transaction record
         const transaction = await prisma.paymentTransaction.create({
@@ -245,10 +228,7 @@ class PaymentService {
                 amount: toDecimal(amount),
                 currency: 'VND',
                 status: TRANSACTION_STATUS.PENDING,
-                gatewayResponse: {
-                    ...vnpParams,
-                    vnp_SecureHash: secureHash, // Lưu signature vào DB
-                },
+                gatewayResponse: vnpParams,
                 ipAddress: clientIp || null,
             },
         })
@@ -1063,7 +1043,7 @@ class PaymentService {
         const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert back to VND
 
         // Extract order code from txnRef (format: ORD-xxx-xxx-timestamp)
-        const orderCode = txnRef.split('-').slice(0, 3).join('-')
+        const orderCode = txnRef.split('-').slice(0, 4).join('-')
 
         const order = await prisma.order.findUnique({
             where: { orderCode },
