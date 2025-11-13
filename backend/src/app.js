@@ -1,21 +1,19 @@
 // src/app.js
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import morgan from 'morgan';
-import compression from 'compression';
-import cookieParser from 'cookie-parser';
-// import mongoSanitize from 'express-mongo-sanitize'; // Not compatible with Express 5
-// import xss from 'xss-clean'; // Not compatible with Express 5
-import hpp from 'hpp';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express from 'express'
+import helmet from 'helmet'
+import cors from 'cors'
+import morgan from 'morgan'
+import compression from 'compression'
+import cookieParser from 'cookie-parser'
+import hpp from 'hpp'
+import rateLimit from 'express-rate-limit'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-import config from './config/app.config.js';
-import logger from './config/logger.config.js';
-import { notFound, errorHandler } from './middlewares/error.middleware.js';
-import routes from './routes/index.js';
+import config from './config/app.config.js'
+import logger from './config/logger.config.js'
+import { notFound, errorHandler } from './middlewares/error.middleware.js'
+import routes from './routes/index.js'
 
 // Create Express app
 const app = express()
@@ -75,10 +73,14 @@ app.use((req, res, next) => {
             for (const key in obj) {
                 if (key.startsWith('$')) {
                     delete obj[key]
-                } else if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                } else if (
+                    typeof obj[key] === 'object' &&
+                    obj[key] !== null &&
+                    !Array.isArray(obj[key])
+                ) {
                     sanitizeObject(obj[key])
                 } else if (Array.isArray(obj[key])) {
-                    obj[key].forEach(item => {
+                    obj[key].forEach((item) => {
                         if (typeof item === 'object' && item !== null) {
                             sanitizeObject(item)
                         }
@@ -88,9 +90,6 @@ app.use((req, res, next) => {
         }
         sanitizeObject(req.body)
     }
-    
-    // Note: Query sanitization is handled by Express 5 internally
-    // MongoDB operators in query strings are automatically rejected
     next()
 })
 
@@ -102,20 +101,30 @@ app.use((req, res, next) => {
             if (typeof str !== 'string') return str
             // Remove potentially dangerous characters
             return str
-                .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-                .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+                .replace(
+                    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+                    ''
+                )
+                .replace(
+                    /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
+                    ''
+                )
                 .replace(/javascript:/gi, '')
                 .replace(/on\w+\s*=/gi, '')
         }
-        
+
         const sanitizeObject = (obj) => {
             for (const key in obj) {
                 if (typeof obj[key] === 'string') {
                     obj[key] = sanitizeString(obj[key])
-                } else if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                } else if (
+                    typeof obj[key] === 'object' &&
+                    obj[key] !== null &&
+                    !Array.isArray(obj[key])
+                ) {
                     sanitizeObject(obj[key])
                 } else if (Array.isArray(obj[key])) {
-                    obj[key] = obj[key].map(item => {
+                    obj[key] = obj[key].map((item) => {
                         if (typeof item === 'string') {
                             return sanitizeString(item)
                         } else if (typeof item === 'object' && item !== null) {
@@ -179,12 +188,12 @@ app.get('/favicon.ico', (req, res) => {
 })
 
 // Serve static files (uploads)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 // API routes
-app.use(`/api/${config.API_VERSION}`, routes);
+app.use(`/api/${config.API_VERSION}`, routes)
 
 // API documentation - Swagger (commented out until swagger.config.js is created)
 // if (config.NODE_ENV === 'development') {
@@ -215,4 +224,4 @@ app.use(notFound)
 // Global error handler
 app.use(errorHandler)
 
-export default app;
+export default app

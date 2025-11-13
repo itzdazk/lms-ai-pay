@@ -7,9 +7,14 @@ import {
     momoCallbackValidator,
     momoWebhookValidator,
     refundOrderValidator,
+    createVNPayPaymentValidator,
+    vnpayCallbackValidator,
+    vnpayWebhookValidator,
 } from '../validators/payments.validator.js'
 
 const router = express.Router()
+
+// ==================== MoMo Routes ====================
 
 /**
  * @route   POST /api/v1/payments/momo/create
@@ -46,9 +51,49 @@ router.post(
     paymentsController.momoWebhook
 )
 
+// ==================== VNPay Routes ====================
+
+/**
+ * @route   POST /api/v1/payments/vnpay/create
+ * @desc    Generate VNPay payment URL for pending order
+ * @access  Private (Student/Instructor/Admin)
+ * @body    orderId
+ */
+router.post(
+    '/vnpay/create',
+    authenticate,
+    isStudent,
+    createVNPayPaymentValidator,
+    paymentsController.createVNPayPayment
+)
+
+/**
+ * @route   GET /api/v1/payments/vnpay/callback
+ * @desc    Handle user redirect callback from VNPay (browser)
+ * @access  Public (VNPay redirect)
+ */
+router.get(
+    '/vnpay/callback',
+    vnpayCallbackValidator,
+    paymentsController.vnpayCallback
+)
+
+/**
+ * @route   POST /api/v1/payments/vnpay/webhook
+ * @desc    Handle VNPay IPN webhook (server-to-server)
+ * @access  Public (VNPay server)
+ */
+router.post(
+    '/vnpay/webhook',
+    vnpayWebhookValidator,
+    paymentsController.vnpayWebhook
+)
+
+// ==================== Refund Route ====================
+
 /**
  * @route   POST /api/v1/payments/refund/:orderId
- * @desc    Process refund for a paid MoMo order
+ * @desc    Process refund for a paid order (MoMo or VNPay)
  * @access  Private (Admin)
  * @body    amount (optional), reason (optional)
  */
@@ -61,4 +106,3 @@ router.post(
 )
 
 export default router
-

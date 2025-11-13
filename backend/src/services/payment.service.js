@@ -10,6 +10,16 @@ import {
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
 import {
+    vnpayConfig,
+    createSignature,
+    verifySignature as verifyVNPaySignature,
+    formatDate,
+    parseDate,
+    getResponseMessage,
+    normalizeAmount as vnpayNormalizeAmount,
+    sortObject,
+} from '../config/vnpay.config.js'
+import {
     momoConfig,
     CREATE_SIGNATURE_KEYS,
     CALLBACK_SIGNATURE_KEYS,
@@ -20,9 +30,16 @@ import {
     isIpAllowed,
 } from '../config/momo.config.js'
 import ordersService from './orders.service.js'
+import qs from 'qs'
+import crypto from 'crypto'
+import querystring from 'querystring'
 
 const ensureMoMoConfig = () => {
-    if (!momoConfig.partnerCode || !momoConfig.accessKey || !momoConfig.secretKey) {
+    if (
+        !momoConfig.partnerCode ||
+        !momoConfig.accessKey ||
+        !momoConfig.secretKey
+    ) {
         throw new Error(
             'MoMo configuration is missing. Please set MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, and MOMO_SECRET_KEY.'
         )
@@ -34,11 +51,25 @@ const ensureMoMoConfig = () => {
     }
 }
 
+const ensureVNPayConfig = () => {
+    if (!vnpayConfig.tmnCode || !vnpayConfig.hashSecret) {
+        throw new Error(
+            'VNPay configuration is missing. Please set VNPAY_TMN_CODE and VNPAY_HASH_SECRET.'
+        )
+    }
+    if (!vnpayConfig.returnUrl) {
+        throw new Error(
+            'VNPay return URL is not configured. Please set VNPAY_RETURN_URL.'
+        )
+    }
+}
+
 const normalizeAmount = (value) => {
     if (value === null || value === undefined) {
         return 0
     }
-    const numeric = typeof value === 'object' && value !== null ? value.toString() : value
+    const numeric =
+        typeof value === 'object' && value !== null ? value.toString() : value
     return Math.round(parseFloat(numeric) || 0)
 }
 
@@ -90,6 +121,151 @@ const buildSignatureInput = (payload, keys) => {
 }
 
 class PaymentService {
+    // ==================== VNPay Methods ====================
+
+    /**
+     * Create VNPay payment URL
+     */
+    async createVNPayPayment(userId, orderId, clientIp = null) {
+        ensureVNPayConfig()
+
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                course: { select: { title: true } },
+            },
+        })
+
+        if (!order) {
+            throw new Error('Order not found')
+        }
+
+        if (order.userId !== userId) {
+            throw new Error('You are not authorized to pay for this order')
+        }
+
+        if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY) {
+            throw new Error('Order is not assigned to VNPay payment gateway')
+        }
+
+        if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+            throw new Error('Order has already been paid')
+        }
+
+        if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
+            throw new Error('Order has already been refunded')
+        }
+
+        if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
+            throw new Error(
+                `Order cannot be paid in status ${order.paymentStatus}`
+            )
+        }
+
+        const amount = normalizeAmount(order.finalPrice)
+
+        if (amount <= 0) {
+            throw new Error(
+                'Order amount must be greater than 0 to process payment'
+            )
+        }
+
+        // Mark previous pending VNPay transactions as failed
+        await prisma.paymentTransaction.updateMany({
+            where: {
+                orderId: order.id,
+                paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                status: TRANSACTION_STATUS.PENDING,
+            },
+            data: {
+                status: TRANSACTION_STATUS.FAILED,
+                errorMessage: 'Superseded by new VNPay payment request',
+            },
+        })
+
+        const createDate = formatDate(new Date())
+        const txnRef = `${order.orderCode}-${Date.now()}`
+        const orderInfo = `Thanh toan khoa hoc ${order.course?.title || order.orderCode}`
+        const ipAddr = clientIp || '127.0.0.1'
+
+        // ===== 1. Build VNPay params (KHÔNG bao gồm vnp_SecureHash) =====
+        let vnpParams = {
+            vnp_Version: vnpayConfig.version,
+            vnp_Command: vnpayConfig.command,
+            vnp_TmnCode: vnpayConfig.tmnCode,
+            vnp_Amount: amount * 100, // VNPay requires amount in smallest currency unit (VND * 100)
+            vnp_CurrCode: vnpayConfig.currCode,
+            vnp_TxnRef: txnRef,
+            vnp_OrderInfo: orderInfo,
+            vnp_OrderType: 'other',
+            vnp_Locale: vnpayConfig.locale,
+            vnp_ReturnUrl: vnpayConfig.returnUrl,
+            vnp_IpAddr: ipAddr,
+            vnp_CreateDate: createDate,
+        }
+
+        // ===== 2. Tạo signature =====
+        const signed = createSignature(vnpParams, vnpayConfig.hashSecret)
+
+        // ===== 3. Sort params =====
+        vnpParams = sortObject(vnpParams)
+
+        // ===== 4. Thêm signature vào params =====
+        vnpParams['vnp_SecureHash'] = signed
+
+        // ===== 5. Build URL =====
+        const paymentUrl =
+            vnpayConfig.apiUrl +
+            '?' +
+            qs.stringify(vnpParams, { encode: false })
+
+        // Create transaction record
+        const transaction = await prisma.paymentTransaction.create({
+            data: {
+                orderId: order.id,
+                transactionId: txnRef,
+                paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                amount: toDecimal(amount),
+                currency: 'VND',
+                status: TRANSACTION_STATUS.PENDING,
+                gatewayResponse: vnpParams,
+                ipAddress: clientIp || null,
+            },
+        })
+
+        logger.info(
+            `VNPay payment created for order ${order.orderCode}. TxnRef: ${txnRef}`
+        )
+
+        return {
+            payUrl: paymentUrl,
+            txnRef,
+            message: 'VNPay payment URL created successfully',
+            order: {
+                id: order.id,
+                orderCode: order.orderCode,
+                finalPrice: amount,
+                paymentStatus: order.paymentStatus,
+            },
+            transaction,
+        }
+    }
+
+    /**
+     * Handle VNPay callback (return URL)
+     */
+    async handleVNPayCallback(query) {
+        return this.#processVNPayResult(query, 'callback')
+    }
+
+    /**
+     * Handle VNPay IPN (webhook)
+     */
+    async handleVNPayWebhook(query) {
+        return this.#processVNPayResult(query, 'ipn')
+    }
+
+    // ==================== MoMo Methods ====================
     async createMoMoPayment(userId, orderId, clientIp = null) {
         ensureMoMoConfig()
 
@@ -121,13 +297,17 @@ class PaymentService {
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
-            throw new Error(`Order cannot be paid in status ${order.paymentStatus}`)
+            throw new Error(
+                `Order cannot be paid in status ${order.paymentStatus}`
+            )
         }
 
         const amount = normalizeAmount(order.finalPrice)
 
         if (amount <= 0) {
-            throw new Error('Order amount must be greater than 0 to process payment')
+            throw new Error(
+                'Order amount must be greater than 0 to process payment'
+            )
         }
 
         const requestId = `${order.orderCode}-${Date.now()}`
@@ -269,15 +449,13 @@ class PaymentService {
         return this.#processMoMoResult(payload, 'webhook', ipAddress)
     }
 
+    // ==================== Refund Methods ====================
     async refundOrder(orderId, adminUser, amountInput = null, reason = null) {
-        ensureMoMoConfig()
-
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             include: {
                 paymentTransactions: {
                     where: {
-                        paymentGateway: PAYMENT_GATEWAY.MOMO,
                         status: TRANSACTION_STATUS.SUCCESS,
                     },
                     orderBy: { createdAt: 'desc' },
@@ -290,10 +468,6 @@ class PaymentService {
             throw new Error('Order not found')
         }
 
-        if (order.paymentGateway !== PAYMENT_GATEWAY.MOMO) {
-            throw new Error('Refund is only available for MoMo payments')
-        }
-
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
             throw new Error('Only paid orders can be refunded')
         }
@@ -302,9 +476,42 @@ class PaymentService {
 
         if (!successfulTransaction || !successfulTransaction.transactionId) {
             throw new Error(
-                'No successful MoMo transaction found for this order to refund'
+                'No successful transaction found for this order to refund'
             )
         }
+
+        // Route to appropriate refund handler
+        if (order.paymentGateway === PAYMENT_GATEWAY.MOMO) {
+            return this.#refundMoMoOrder(
+                order,
+                successfulTransaction,
+                adminUser,
+                amountInput,
+                reason
+            )
+        } else if (order.paymentGateway === PAYMENT_GATEWAY.VNPAY) {
+            return this.#refundVNPayOrder(
+                order,
+                successfulTransaction,
+                adminUser,
+                amountInput,
+                reason
+            )
+        }
+
+        throw new Error(
+            `Refund not supported for payment gateway: ${order.paymentGateway}`
+        )
+    }
+
+    async #refundMoMoOrder(
+        order,
+        successfulTransaction,
+        adminUser,
+        amountInput,
+        reason
+    ) {
+        ensureMoMoConfig()
 
         const orderAmount = normalizeAmount(order.finalPrice)
         const existingRefundAmount = normalizeAmount(order.refundAmount)
@@ -323,7 +530,8 @@ class PaymentService {
 
         const requestId = `refund-${order.orderCode}-${Date.now()}`
         const description =
-            reason || `Refund for order ${order.orderCode} by admin ${adminUser.id}`
+            reason ||
+            `Refund for order ${order.orderCode} by admin ${adminUser.id}`
 
         const signaturePayload = {
             accessKey: momoConfig.accessKey,
@@ -429,10 +637,83 @@ class PaymentService {
         }
     }
 
+    async #refundVNPayOrder(
+        order,
+        successfulTransaction,
+        adminUser,
+        amountInput,
+        reason
+    ) {
+        // VNPay refund requires manual process or API integration if available
+        // For now, we'll mark it as refunded in our system
+        const orderAmount = normalizeAmount(order.finalPrice)
+        const existingRefundAmount = normalizeAmount(order.refundAmount)
+        const requestedAmount =
+            amountInput !== null && amountInput !== undefined
+                ? Math.round(parseFloat(amountInput))
+                : orderAmount
+
+        if (requestedAmount <= 0) {
+            throw new Error('Refund amount must be greater than 0')
+        }
+
+        if (requestedAmount > orderAmount - existingRefundAmount) {
+            throw new Error('Refund amount exceeds remaining paid amount')
+        }
+
+        const newRefundTotal = existingRefundAmount + requestedAmount
+        const isFullRefund = newRefundTotal >= orderAmount
+        const newStatus = isFullRefund
+            ? PAYMENT_STATUS.REFUNDED
+            : PAYMENT_STATUS.PARTIALLY_REFUNDED
+
+        const result = await prisma.$transaction(async (tx) => {
+            const transactionRecord = await tx.paymentTransaction.create({
+                data: {
+                    orderId: order.id,
+                    paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                    transactionId: `refund-${successfulTransaction.transactionId}-${Date.now()}`,
+                    amount: toDecimal(requestedAmount),
+                    currency: 'VND',
+                    status: TRANSACTION_STATUS.REFUNDED,
+                    gatewayResponse: {
+                        message: reason || 'Manual refund by admin',
+                        adminId: adminUser.id,
+                        refundDate: new Date().toISOString(),
+                    },
+                },
+            })
+
+            const updatedOrder = await tx.order.update({
+                where: { id: order.id },
+                data: {
+                    paymentStatus: newStatus,
+                    refundAmount: toDecimal(newRefundTotal),
+                    refundedAt: new Date(),
+                },
+            })
+
+            return { transactionRecord, updatedOrder }
+        })
+
+        logger.info(
+            `VNPay refund processed for order ${order.orderCode}. Amount: ${requestedAmount}, status: ${newStatus}`
+        )
+
+        return {
+            order: result.updatedOrder,
+            refundTransaction: result.transactionRecord,
+            message:
+                'VNPay refund recorded. Please process refund manually in VNPay portal.',
+        }
+    }
+
     async getTransactions(currentUser, filters = {}) {
         const page = parseInt(filters.page, 10) || PAGINATION.DEFAULT_PAGE
-        const limit =
-            Math.min(parseInt(filters.limit, 10) || PAGINATION.DEFAULT_LIMIT, 100)
+        const limit = Math.min(
+            parseInt(filters.limit, 10) || PAGINATION.DEFAULT_LIMIT,
+            100
+        )
         const skip = (page - 1) * limit
 
         const whereClause = {
@@ -533,7 +814,9 @@ class PaymentService {
             currentUser.role !== USER_ROLES.ADMIN &&
             transaction.order.userId !== currentUser.id
         ) {
-            throw new Error('You do not have permission to view this transaction')
+            throw new Error(
+                'You do not have permission to view this transaction'
+            )
         }
 
         return transaction
@@ -567,7 +850,9 @@ class PaymentService {
             normalizeSignaturePayload(signaturePayload)
 
         const signatureKeys =
-            source === 'callback' ? CALLBACK_SIGNATURE_KEYS : WEBHOOK_SIGNATURE_KEYS
+            source === 'callback'
+                ? CALLBACK_SIGNATURE_KEYS
+                : WEBHOOK_SIGNATURE_KEYS
         const signatureInput = buildSignatureInput(
             normalizedSignaturePayload,
             signatureKeys
@@ -580,7 +865,9 @@ class PaymentService {
         }
 
         if (signatureInput.partnerCode !== momoConfig.partnerCode) {
-            throw new Error('Partner code does not match configured MoMo partner')
+            throw new Error(
+                'Partner code does not match configured MoMo partner'
+            )
         }
 
         const orderCode = normalizedSignaturePayload.orderId
@@ -678,7 +965,9 @@ class PaymentService {
                 gateway: PAYMENT_GATEWAY.MOMO,
                 source,
                 transId: transactionId,
-                extraData: decodeExtraData(normalizedSignaturePayload.extraData),
+                extraData: decodeExtraData(
+                    normalizedSignaturePayload.extraData
+                ),
                 raw: normalizedSignaturePayload,
             }
 
@@ -720,6 +1009,209 @@ class PaymentService {
             paymentTransaction: transactionRecord,
             resultCode,
             message: normalizedSignaturePayload.message,
+        }
+    }
+
+    async #processVNPayResult(query, source) {
+        ensureVNPayConfig()
+
+        const vnpParams = { ...query }
+        const secureHash = vnpParams.vnp_SecureHash
+
+        // Remove hash params
+        delete vnpParams.vnp_SecureHash
+        delete vnpParams.vnp_SecureHashType
+
+        // Verify signature
+        const isValid = verifyVNPaySignature(
+            vnpParams,
+            secureHash,
+            vnpayConfig.hashSecret
+        )
+
+        if (!isValid) {
+            logger.error(`VNPay signature verification failed for ${source}`, {
+                receivedHash: secureHash,
+                params: vnpParams,
+            })
+            throw new Error('Invalid VNPay signature')
+        }
+
+        const txnRef = vnpParams.vnp_TxnRef
+        const responseCode = vnpParams.vnp_ResponseCode
+        const transactionNo = vnpParams.vnp_TransactionNo
+        const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert back to VND
+
+        // Extract order code from txnRef (format: ORD-xxx-xxx-timestamp)
+        const orderCode = txnRef.split('-').slice(0, 4).join('-')
+
+        const order = await prisma.order.findUnique({
+            where: { orderCode },
+            include: {
+                paymentTransactions: {
+                    where: {
+                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                        transactionId: txnRef,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                },
+            },
+        })
+
+        if (!order) {
+            throw new Error('Order not found for the provided VNPay callback')
+        }
+
+        const expectedAmount = normalizeAmount(order.finalPrice)
+
+        if (amount !== expectedAmount) {
+            throw new Error(
+                `Payment amount mismatch. Expected ${expectedAmount}, received ${amount}`
+            )
+        }
+
+        // ===== KHÁC BIỆT GIỮA CALLBACK VÀ IPN =====
+        // Check if already processed (important for IPN idempotency)
+        if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+            logger.info(`VNPay ${source}: Order ${orderCode} already processed`)
+
+            // ===== IPN trả về format đặc biệt =====
+            if (source === 'ipn') {
+                return {
+                    RspCode: '00',
+                    Message: 'Confirm Success',
+                }
+            }
+
+            // ===== CALLBACK trả về format thông thường =====
+            return {
+                order: {
+                    id: order.id,
+                    orderCode: order.orderCode,
+                    paymentStatus: order.paymentStatus,
+                },
+                paymentTransaction: order.paymentTransactions[0],
+                alreadyPaid: true,
+            }
+        }
+
+        const success = responseCode === '00'
+        let transactionRecord = order.paymentTransactions[0]
+
+        // Update or create transaction
+        if (transactionRecord) {
+            transactionRecord = await prisma.paymentTransaction.update({
+                where: { id: transactionRecord.id },
+                data: {
+                    transactionId: transactionNo || txnRef,
+                    status: success
+                        ? TRANSACTION_STATUS.SUCCESS
+                        : TRANSACTION_STATUS.FAILED,
+                    gatewayResponse: vnpParams,
+                    errorMessage: success
+                        ? null
+                        : getResponseMessage(responseCode),
+                },
+            })
+        } else {
+            transactionRecord = await prisma.paymentTransaction.create({
+                data: {
+                    orderId: order.id,
+                    transactionId: transactionNo || txnRef,
+                    paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                    amount: toDecimal(amount),
+                    currency: 'VND',
+                    status: success
+                        ? TRANSACTION_STATUS.SUCCESS
+                        : TRANSACTION_STATUS.FAILED,
+                    gatewayResponse: vnpParams,
+                    errorMessage: success
+                        ? null
+                        : getResponseMessage(responseCode),
+                },
+            })
+        }
+
+        if (success) {
+            // Mark other pending transactions as failed
+            await prisma.paymentTransaction.updateMany({
+                where: {
+                    orderId: order.id,
+                    status: TRANSACTION_STATUS.PENDING,
+                    id: { not: transactionRecord.id },
+                },
+                data: {
+                    status: TRANSACTION_STATUS.FAILED,
+                    errorMessage: 'Superseded by successful VNPay payment',
+                },
+            })
+
+            // Update order and create enrollment
+            const paymentData = {
+                gateway: PAYMENT_GATEWAY.VNPAY,
+                source,
+                transactionNo,
+                responseCode,
+                raw: vnpParams,
+            }
+
+            const updateResult = await ordersService.updateOrderToPaid(
+                order.id,
+                transactionNo || txnRef,
+                paymentData
+            )
+
+            logger.info(
+                `VNPay payment success processed for order ${order.orderCode} (source: ${source})`
+            )
+
+            // ===== IPN trả về format đặc biệt =====
+            if (source === 'ipn') {
+                return {
+                    RspCode: '00',
+                    Message: 'Confirm Success',
+                }
+            }
+
+            // ===== CALLBACK trả về format thông thường =====
+            return {
+                order: updateResult.order,
+                enrollment: updateResult.enrollment,
+                paymentTransaction: transactionRecord,
+                alreadyPaid: updateResult.alreadyPaid || false,
+            }
+        }
+
+        // Payment failed
+        if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
+            await prisma.order.update({
+                where: { id: order.id },
+                data: { paymentStatus: PAYMENT_STATUS.FAILED },
+            })
+        }
+
+        logger.warn(
+            `VNPay payment failed for order ${order.orderCode}. ResponseCode=${responseCode} (source: ${source})`
+        )
+
+        // ===== IPN trả về format đặc biệt ngay cả khi failed =====
+        if (source === 'ipn') {
+            return {
+                RspCode: '00',
+                Message: 'Confirm Success',
+            }
+        }
+
+        // ===== CALLBACK trả về format thông thường =====
+        return {
+            order: {
+                id: order.id,
+                orderCode: order.orderCode,
+                paymentStatus: PAYMENT_STATUS.FAILED,
+            },
+            paymentTransaction: transactionRecord,
+            responseCode,
+            message: getResponseMessage(responseCode),
         }
     }
 }

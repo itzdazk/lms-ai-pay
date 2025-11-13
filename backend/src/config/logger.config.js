@@ -1,15 +1,15 @@
 // src/config/logger.config.js
-import winston from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import fs from 'fs';
-import config from './app.config.js';
+import winston from 'winston'
+import DailyRotateFile from 'winston-daily-rotate-file'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+import fs from 'fs'
+import config from './app.config.js'
 
 // Get __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const logFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -31,7 +31,7 @@ const consoleFormat = winston.format.combine(
 )
 
 // Create logs directory if it doesn't exist
-const logsDir = path.join(process.cwd(), 'logs');
+const logsDir = path.join(process.cwd(), 'logs')
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true })
 }
@@ -41,7 +41,8 @@ const transports = [
     // Console transport
     new winston.transports.Console({
         format: consoleFormat,
-        level: config.NODE_ENV === 'production' ? 'info' : 'debug',
+        // level: config.NODE_ENV === 'production' ? 'info' : 'debug',
+        level: 'debug',
     }),
 
     // Error log file
@@ -68,7 +69,8 @@ const transports = [
 
 // Create logger
 const logger = winston.createLogger({
-    level: config.LOG_LEVEL,
+    // level: config.LOG_LEVEL,
+    level: 'debug',
     format: logFormat,
     transports,
     exitOnError: false,
@@ -81,5 +83,4 @@ logger.stream = {
     },
 }
 
-export default logger;
-
+export default logger
