@@ -79,11 +79,11 @@ router.get(
 )
 
 /**
- * @route   POST /api/v1/payments/vnpay/webhook
+ * @route   GET /api/v1/payments/vnpay/webhook
  * @desc    Handle VNPay IPN webhook (server-to-server)
  * @access  Public (VNPay server)
  */
-router.post(
+router.get(
     '/vnpay/webhook',
     vnpayWebhookValidator,
     paymentsController.vnpayWebhook

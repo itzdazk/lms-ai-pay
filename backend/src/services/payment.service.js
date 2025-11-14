@@ -1012,23 +1012,32 @@ class PaymentService {
         }
     }
 
+    /**
+     * Private method to process VNPay payment result (both IPN webhook and Return URL callback)
+     * @param {Object} query - Raw query parameters from VNPay (GET request)
+     * @param {String} source - 'ipn' (webhook) or 'callback' (return URL)
+     * @returns {Object} Response data depending on source and payment status
+     */
     async #processVNPayResult(query, source) {
+        // Ensure VNPay config is loaded (tmnCode, hashSecret, returnUrl, etc.)
         ensureVNPayConfig()
 
+        // Clone query params to avoid mutating original object
         const vnpParams = { ...query }
         const secureHash = vnpParams.vnp_SecureHash
 
-        // Remove hash params
+        // Remove signature fields before verification (they are not part of signed data)
         delete vnpParams.vnp_SecureHash
         delete vnpParams.vnp_SecureHashType
 
-        // Verify signature
+        // Verify HMAC SHA512 signature using sorted params and secret key
         const isValid = verifyVNPaySignature(
             vnpParams,
             secureHash,
             vnpayConfig.hashSecret
         )
 
+        // If signature is invalid → reject immediately (security check)
         if (!isValid) {
             logger.error(`VNPay signature verification failed for ${source}`, {
                 receivedHash: secureHash,
@@ -1037,16 +1046,18 @@ class PaymentService {
             throw new Error('Invalid VNPay signature')
         }
 
-        const txnRef = vnpParams.vnp_TxnRef
-        const responseCode = vnpParams.vnp_ResponseCode
-        const transactionNo = vnpParams.vnp_TransactionNo
+        // Extract key transaction details from VNPay response
+        const txnRef = vnpParams.vnp_TxnRef // Merchant's transaction reference
+        const responseCode = vnpParams.vnp_ResponseCode // VNPay response code (00 = success)
+        const transactionNo = vnpParams.vnp_TransactionNo // VNPay's internal transaction ID
         const transactionId =
             transactionNo && transactionNo !== '0' ? transactionNo : txnRef
-        const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert back to VND
+        const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert from "cents" (x100) back to VND
 
-        // Extract order code from txnRef (format: ORD-xxx-xxx-timestamp)
+        // Extract order code from txnRef (assumed format: ORD-xxx-xxx-timestamp)
         const orderCode = txnRef.split('-').slice(0, 4).join('-')
 
+        // Fetch order from DB using orderCode, include related VNPay transactions
         const order = await prisma.order.findUnique({
             where: { orderCode },
             include: {
@@ -1060,24 +1071,24 @@ class PaymentService {
             },
         })
 
+        // If order not found → invalid request
         if (!order) {
             throw new Error('Order not found for the provided VNPay callback')
         }
 
+        // Validate payment amount matches expected order price
         const expectedAmount = normalizeAmount(order.finalPrice)
-
         if (amount !== expectedAmount) {
             throw new Error(
                 `Payment amount mismatch. Expected ${expectedAmount}, received ${amount}`
             )
         }
 
-        // ===== KHÁC BIỆT GIỮA CALLBACK VÀ IPN =====
-        // Check if already processed (important for IPN idempotency)
+        // ===== IDempotency: Prevent duplicate processing (critical for IPN) =====
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
             logger.info(`VNPay ${source}: Order ${orderCode} already processed`)
 
-            // ===== IPN trả về format đặc biệt =====
+            // IPN: Return minimal success response to stop VNPay retries
             if (source === 'ipn') {
                 return {
                     RspCode: '00',
@@ -1085,7 +1096,7 @@ class PaymentService {
                 }
             }
 
-            // ===== CALLBACK trả về format thông thường =====
+            // Callback: Return full details for frontend display
             return {
                 order: {
                     id: order.id,
@@ -1099,13 +1110,15 @@ class PaymentService {
             }
         }
 
+        // Determine if payment was successful (responseCode '00')
         const success = responseCode === '00'
 
+        // Find existing transaction record by VNPay transaction ID
         let transactionRecord = await prisma.paymentTransaction.findUnique({
             where: { transactionId },
         })
 
-        // Update or create transaction
+        // Update existing transaction or create new one
         if (transactionRecord) {
             transactionRecord = await prisma.paymentTransaction.update({
                 where: { id: transactionRecord.id },
@@ -1138,8 +1151,9 @@ class PaymentService {
             })
         }
 
+        // ===== SUCCESS PATH =====
         if (success) {
-            // Mark other pending transactions as failed
+            // Cancel any other pending VNPay transactions for this order
             await prisma.paymentTransaction.updateMany({
                 where: {
                     orderId: order.id,
@@ -1152,7 +1166,7 @@ class PaymentService {
                 },
             })
 
-            // Update order and create enrollment
+            // Prepare metadata to pass to order update service
             const paymentData = {
                 gateway: PAYMENT_GATEWAY.VNPAY,
                 source,
@@ -1161,17 +1175,22 @@ class PaymentService {
                 raw: vnpParams,
             }
 
-            const updateResult = await ordersService.updateOrderToPaid(
-                order.id,
-                transactionNo || txnRef,
-                paymentData
-            )
+            // CRITICAL: Only update order status in DB if this is IPN (webhook)
+            // Return URL (callback) must NOT modify DB state
+            let updateResult = { alreadyPaid: true }
+            if (source === 'ipn') {
+                updateResult = await ordersService.updateOrderToPaid(
+                    order.id,
+                    transactionNo || txnRef,
+                    paymentData
+                )
+            }
 
             logger.info(
                 `VNPay payment success processed for order ${order.orderCode} (source: ${source})`
             )
 
-            // ===== IPN trả về format đặc biệt =====
+            // IPN: Return minimal JSON to acknowledge receipt and stop retries
             if (source === 'ipn') {
                 return {
                     RspCode: '00',
@@ -1179,7 +1198,8 @@ class PaymentService {
                 }
             }
 
-            // ===== CALLBACK trả về format thông thường =====
+            // Callback: Return full data for frontend (order, enrollment, etc.)
+            // Order Successfully
             return {
                 order: updateResult.order,
                 enrollment: updateResult.enrollment,
@@ -1190,19 +1210,22 @@ class PaymentService {
             }
         }
 
-        // Payment failed
+        // ===== FAILURE PATH =====
+        // Only update order to FAILED if it's still PENDING and this is IPN
         if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
-            await prisma.order.update({
-                where: { id: order.id },
-                data: { paymentStatus: PAYMENT_STATUS.FAILED },
-            })
+            if (source === 'ipn') {
+                await prisma.order.update({
+                    where: { id: order.id },
+                    data: { paymentStatus: PAYMENT_STATUS.FAILED },
+                })
+            }
         }
 
         logger.warn(
             `VNPay payment failed for order ${order.orderCode}. ResponseCode=${responseCode} (source: ${source})`
         )
 
-        // ===== IPN trả về format đặc biệt ngay cả khi failed =====
+        // IPN: Even on failure, return success code to confirm receipt
         if (source === 'ipn') {
             return {
                 RspCode: '00',
@@ -1210,7 +1233,8 @@ class PaymentService {
             }
         }
 
-        // ===== CALLBACK trả về format thông thường =====
+        // Callback: Return failure details to frontend
+        // Cancel Order
         return {
             order: {
                 id: order.id,
