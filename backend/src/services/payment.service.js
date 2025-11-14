@@ -1040,6 +1040,8 @@ class PaymentService {
         const txnRef = vnpParams.vnp_TxnRef
         const responseCode = vnpParams.vnp_ResponseCode
         const transactionNo = vnpParams.vnp_TransactionNo
+        const transactionId =
+            transactionNo && transactionNo !== '0' ? transactionNo : txnRef
         const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert back to VND
 
         // Extract order code from txnRef (format: ORD-xxx-xxx-timestamp)
@@ -1092,18 +1094,22 @@ class PaymentService {
                 },
                 paymentTransaction: order.paymentTransactions[0],
                 alreadyPaid: true,
+                responseCode,
+                message: getResponseMessage(responseCode),
             }
         }
 
         const success = responseCode === '00'
-        let transactionRecord = order.paymentTransactions[0]
+
+        let transactionRecord = await prisma.paymentTransaction.findUnique({
+            where: { transactionId },
+        })
 
         // Update or create transaction
         if (transactionRecord) {
             transactionRecord = await prisma.paymentTransaction.update({
                 where: { id: transactionRecord.id },
                 data: {
-                    transactionId: transactionNo || txnRef,
                     status: success
                         ? TRANSACTION_STATUS.SUCCESS
                         : TRANSACTION_STATUS.FAILED,
@@ -1117,7 +1123,7 @@ class PaymentService {
             transactionRecord = await prisma.paymentTransaction.create({
                 data: {
                     orderId: order.id,
-                    transactionId: transactionNo || txnRef,
+                    transactionId,
                     paymentGateway: PAYMENT_GATEWAY.VNPAY,
                     amount: toDecimal(amount),
                     currency: 'VND',
@@ -1179,6 +1185,8 @@ class PaymentService {
                 enrollment: updateResult.enrollment,
                 paymentTransaction: transactionRecord,
                 alreadyPaid: updateResult.alreadyPaid || false,
+                responseCode,
+                message: getResponseMessage(responseCode),
             }
         }
 
