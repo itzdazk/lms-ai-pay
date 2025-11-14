@@ -3,7 +3,6 @@ import app from './app.js'
 import config from './config/app.config.js'
 import logger from './config/logger.config.js'
 import { connectDB, disconnectDB } from './config/database.config.js'
-import { startCronJobs } from './config/cron.config.js'
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -18,9 +17,6 @@ const startServer = async () => {
     try {
         // Connect to database
         await connectDB() // Wait until completion -> continue
-
-        // Cron Job
-        startCronJobs()
 
         // Start server
         const server = app.listen(config.PORT, () => {

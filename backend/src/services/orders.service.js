@@ -623,63 +623,6 @@ class OrdersService {
             totalSpent: parseFloat(totalSpent._sum.finalPrice || 0),
         }
     }
-
-    /**
-     * Automatically cancel (change to FAILED) pending orders that have exceeded 15 minutes.
-     * Typically called by a Cron Job.
-     * @returns {Promise<number>} Number of orders cancelled
-     */
-    async cleanupExpiredPendingOrders() {
-        const expiryThreshold = new Date(
-            Date.now() - PENDING_TIME.PENDING_TIMEOUT_MS
-        )
-        logger.debug(
-            `Running cleanupExpiredPendingOrders. Checking orders created before: ${expiryThreshold.toISOString()}`
-        )
-
-        // 1. Find all PENDING orders created before the EXPIRY_THRESHOLD
-        const expiredOrders = await prisma.order.findMany({
-            where: {
-                paymentStatus: PAYMENT_STATUS.PENDING,
-                createdAt: {
-                    lte: expiryThreshold, // Less Than or Equal (older than expiry threshold)
-                },
-            },
-            select: {
-                id: true,
-                orderCode: true,
-                createdAt: true,
-            },
-        })
-
-        if (expiredOrders.length === 0) {
-            logger.debug('Cron Job: No expired pending orders found.')
-            return 0
-        }
-
-        logger.info(
-            `Found ${expiredOrders.length} expired pending orders to cancel`
-        )
-
-        // 2. Update all these orders to FAILED status
-        const orderIdsToUpdate = expiredOrders.map((o) => o.id)
-
-        const result = await prisma.order.updateMany({
-            where: {
-                id: { in: orderIdsToUpdate },
-            },
-            data: {
-                paymentStatus: PAYMENT_STATUS.FAILED,
-                notes: 'Auto-cancelled by scheduler: Payment timeout exceeded (15 minutes).',
-            },
-        })
-
-        logger.warn(
-            `[CRON] Auto-cancelled ${result.count} expired pending orders: ${expiredOrders.map((o) => `${o.orderCode} (created: ${o.createdAt.toISOString()})`).join(', ')}`
-        )
-
-        return result.count
-    }
 }
 
 export default new OrdersService()
