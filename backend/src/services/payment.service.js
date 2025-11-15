@@ -20,6 +20,7 @@ import {
     isIpAllowed,
 } from '../config/momo.config.js'
 import ordersService from './orders.service.js'
+import notificationsService from './notifications.service.js'
 
 const ensureMoMoConfig = () => {
     if (!momoConfig.partnerCode || !momoConfig.accessKey || !momoConfig.secretKey) {
@@ -704,12 +705,53 @@ class PaymentService {
             await prisma.order.update({
                 where: { id: order.id },
                 data: { paymentStatus: PAYMENT_STATUS.FAILED },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                        },
+                    },
+                },
             })
         }
 
         logger.warn(
             `MoMo payment failed for order ${order.orderCode}. resultCode=${resultCode}, message=${normalizedSignaturePayload.message}`
         )
+
+        // Create notification for payment failed
+        const failedOrder = await prisma.order.findUnique({
+            where: { id: order.id },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                    },
+                },
+                user: {
+                    select: {
+                        id: true,
+                    },
+                },
+            },
+        })
+
+        if (failedOrder && failedOrder.course && failedOrder.user) {
+            await notificationsService.notifyPaymentFailed(
+                failedOrder.user.id,
+                failedOrder.id,
+                failedOrder.courseId,
+                failedOrder.course.title,
+                normalizedSignaturePayload.message || 'Thanh toán không thành công'
+            )
+        }
 
         return {
             order: {

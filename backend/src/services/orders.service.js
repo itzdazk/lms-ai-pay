@@ -7,6 +7,7 @@ import {
     PENDING_TIME,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
+import notificationsService from './notifications.service.js'
 
 class OrdersService {
     /**
@@ -540,6 +541,15 @@ class OrdersService {
                 throw error
             }
         }
+
+        // Create notification for payment success
+        await notificationsService.notifyPaymentSuccess(
+            result.user.id,
+            result.id,
+            result.courseId,
+            result.course.title,
+            result.finalPrice
+        )
 
         return {
             order: result,

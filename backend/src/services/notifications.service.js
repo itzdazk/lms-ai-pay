@@ -163,6 +163,99 @@ class NotificationsService {
 
         return notification
     }
+
+    /**
+     * Helper methods for auto-creating notifications
+     */
+    async notifyEnrollmentSuccess(userId, courseId, courseTitle) {
+        try {
+            await this.createNotification({
+                userId,
+                type: 'ENROLLMENT_SUCCESS',
+                title: 'Đăng ký khóa học thành công',
+                message: `Bạn đã đăng ký thành công khóa học "${courseTitle}". Bắt đầu học ngay!`,
+                relatedId: courseId,
+                relatedType: 'COURSE',
+            })
+        } catch (error) {
+            logger.error(
+                `Failed to create enrollment notification: ${error.message}`,
+                error
+            )
+        }
+    }
+
+    async notifyPaymentSuccess(userId, orderId, courseId, courseTitle, amount) {
+        try {
+            await this.createNotification({
+                userId,
+                type: 'PAYMENT_SUCCESS',
+                title: 'Thanh toán thành công',
+                message: `Thanh toán khóa học "${courseTitle}" thành công. Bạn đã được đăng ký vào khóa học.`,
+                relatedId: orderId,
+                relatedType: 'ORDER',
+            })
+        } catch (error) {
+            logger.error(
+                `Failed to create payment success notification: ${error.message}`,
+                error
+            )
+        }
+    }
+
+    async notifyPaymentFailed(userId, orderId, courseId, courseTitle, reason) {
+        try {
+            await this.createNotification({
+                userId,
+                type: 'PAYMENT_FAILED',
+                title: 'Thanh toán thất bại',
+                message: `Thanh toán khóa học "${courseTitle}" thất bại. ${reason || 'Vui lòng thử lại.'}`,
+                relatedId: orderId,
+                relatedType: 'ORDER',
+            })
+        } catch (error) {
+            logger.error(
+                `Failed to create payment failed notification: ${error.message}`,
+                error
+            )
+        }
+    }
+
+    async notifyLessonCompleted(userId, lessonId, courseId, lessonTitle, courseTitle) {
+        try {
+            await this.createNotification({
+                userId,
+                type: 'LESSON_COMPLETED',
+                title: 'Hoàn thành bài học',
+                message: `Bạn đã hoàn thành bài học "${lessonTitle}" trong khóa học "${courseTitle}".`,
+                relatedId: lessonId,
+                relatedType: 'LESSON',
+            })
+        } catch (error) {
+            logger.error(
+                `Failed to create lesson completed notification: ${error.message}`,
+                error
+            )
+        }
+    }
+
+    async notifyCourseCompleted(userId, courseId, courseTitle) {
+        try {
+            await this.createNotification({
+                userId,
+                type: 'COURSE_COMPLETED',
+                title: 'Chúc mừng! Bạn đã hoàn thành khóa học',
+                message: `Bạn đã hoàn thành 100% khóa học "${courseTitle}". Hãy xem chứng chỉ của bạn!`,
+                relatedId: courseId,
+                relatedType: 'COURSE',
+            })
+        } catch (error) {
+            logger.error(
+                `Failed to create course completed notification: ${error.message}`,
+                error
+            )
+        }
+    }
 }
 
 export default new NotificationsService()
