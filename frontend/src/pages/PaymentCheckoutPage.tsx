@@ -31,9 +31,9 @@ export function PaymentCheckoutPage() {
 
   if (!course) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-3xl mb-4">Không tìm thấy khóa học</h1>
-        <Button asChild>
+      <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
+        <h1 className="text-3xl mb-4 text-white">Không tìm thấy khóa học</h1>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
           <Link to="/courses">Quay lại danh sách khóa học</Link>
         </Button>
       </div>
@@ -43,13 +43,13 @@ export function PaymentCheckoutPage() {
   if (course.is_free) {
     // Auto enroll for free courses
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <CheckCircle className="h-20 w-20 text-green-600 mx-auto mb-6" />
-        <h1 className="text-3xl mb-4">Đăng ký thành công!</h1>
-        <p className="text-lg text-gray-600 mb-8">
+      <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
+        <CheckCircle className="h-20 w-20 text-green-500 mx-auto mb-6" />
+        <h1 className="text-3xl mb-4 text-white">Đăng ký thành công!</h1>
+        <p className="text-lg text-gray-400 mb-8">
           Bạn đã đăng ký khóa học "{course.title}" miễn phí
         </p>
-        <Button size="lg" asChild>
+        <Button size="lg" asChild className="bg-blue-600 hover:bg-blue-700 text-white">
           <Link to={`/learn/${course.id}`}>Bắt đầu học ngay</Link>
         </Button>
       </div>
@@ -75,10 +75,15 @@ export function PaymentCheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-4">
       <div className="container mx-auto px-4">
         {/* Back Button */}
-        <Button variant="ghost" className="mb-6" asChild>
+        <Button
+          variant="outline"
+          className="mb-6 border-2 border-[#2D2D2D] !text-white bg-black hover:bg-[#1F1F1F] rounded-lg"
+          size="lg"
+          asChild
+        >
           <Link to={`/courses/${course.id}`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
@@ -89,10 +94,10 @@ export function PaymentCheckoutPage() {
           {/* Left Column - Payment Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Payment Method */}
-            <Card>
+            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader>
-                <CardTitle>Phương thức thanh toán</CardTitle>
-                <CardDescription>Chọn phương thức thanh toán phù hợp với bạn</CardDescription>
+                <CardTitle className="text-white">Phương thức thanh toán</CardTitle>
+                <CardDescription className="text-gray-400">Chọn phương thức thanh toán phù hợp với bạn</CardDescription>
               </CardHeader>
               <CardContent>
                 <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -100,17 +105,20 @@ export function PaymentCheckoutPage() {
                     {/* VNPay */}
                     <Label
                       htmlFor="vnpay"
-                      className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: paymentMethod === 'vnpay' ? '#2563eb' : '#e5e7eb' }}
+                      className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                        paymentMethod === 'vnpay' 
+                          ? 'border-blue-600 bg-blue-600/20' 
+                          : 'border-[#2D2D2D] hover:bg-[#1F1F1F]'
+                      }`}
                     >
                       <RadioGroupItem value="vnpay" id="vnpay" />
                       <div className="flex items-center gap-3 flex-1">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <CreditCard className="h-6 w-6 text-blue-600" />
+                        <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                          <CreditCard className="h-6 w-6 text-blue-500" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold">VNPay</p>
-                          <p className="text-sm text-gray-600">ATM, Visa, Mastercard, Internet Banking</p>
+                          <p className="font-semibold text-white">VNPay</p>
+                          <p className="text-sm text-gray-400">ATM, Visa, Mastercard, Internet Banking</p>
                         </div>
                       </div>
                       {paymentMethod === 'vnpay' && (
@@ -121,17 +129,20 @@ export function PaymentCheckoutPage() {
                     {/* MoMo */}
                     <Label
                       htmlFor="momo"
-                      className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: paymentMethod === 'momo' ? '#2563eb' : '#e5e7eb' }}
+                      className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                        paymentMethod === 'momo' 
+                          ? 'border-blue-600 bg-blue-600/20' 
+                          : 'border-[#2D2D2D] hover:bg-[#1F1F1F]'
+                      }`}
                     >
                       <RadioGroupItem value="momo" id="momo" />
                       <div className="flex items-center gap-3 flex-1">
-                        <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-                          <Wallet className="h-6 w-6 text-pink-600" />
+                        <div className="w-12 h-12 bg-pink-600/20 rounded-lg flex items-center justify-center">
+                          <Wallet className="h-6 w-6 text-pink-500" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold">MoMo</p>
-                          <p className="text-sm text-gray-600">Ví điện tử MoMo</p>
+                          <p className="font-semibold text-white">MoMo</p>
+                          <p className="text-sm text-gray-400">Ví điện tử MoMo</p>
                         </div>
                       </div>
                       {paymentMethod === 'momo' && (
@@ -144,42 +155,42 @@ export function PaymentCheckoutPage() {
             </Card>
 
             {/* Billing Information */}
-            <Card>
+            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader>
-                <CardTitle>Thông tin thanh toán</CardTitle>
+                <CardTitle className="text-white">Thông tin thanh toán</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Họ</Label>
-                      <Input id="firstName" placeholder="Nguyễn" />
+                      <Label htmlFor="firstName" className="text-white">Họ</Label>
+                      <Input id="firstName" placeholder="Nguyễn" className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Tên</Label>
-                      <Input id="lastName" placeholder="Văn A" />
+                      <Label htmlFor="lastName" className="text-white">Tên</Label>
+                      <Input id="lastName" placeholder="Văn A" className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="email@example.com" />
+                    <Label htmlFor="email" className="text-white">Email</Label>
+                    <Input id="email" type="email" placeholder="email@example.com" className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Số điện thoại</Label>
-                    <Input id="phone" type="tel" placeholder="0901234567" />
+                    <Label htmlFor="phone" className="text-white">Số điện thoại</Label>
+                    <Input id="phone" type="tel" placeholder="0901234567" className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Security Info */}
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="bg-blue-600/20 border-blue-600/50">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
-                  <ShieldCheck className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+                  <ShieldCheck className="h-6 w-6 text-blue-500 flex-shrink-0 mt-1" />
                   <div>
-                    <p className="font-semibold text-blue-900 mb-1">Thanh toán an toàn</p>
-                    <p className="text-sm text-blue-700">
+                    <p className="font-semibold text-blue-400 mb-1">Thanh toán an toàn</p>
+                    <p className="text-sm text-blue-300">
                       Thông tin thanh toán của bạn được mã hóa và bảo mật. Chúng tôi không lưu trữ 
                       thông tin thẻ của bạn.
                     </p>
@@ -191,9 +202,9 @@ export function PaymentCheckoutPage() {
 
           {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
+            <Card className="sticky top-24 bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader>
-                <CardTitle>Chi tiết đơn hàng</CardTitle>
+                <CardTitle className="text-white">Chi tiết đơn hàng</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Course Info */}
@@ -203,10 +214,10 @@ export function PaymentCheckoutPage() {
                     alt={course.title}
                     className="w-full h-32 object-cover rounded-lg mb-3"
                   />
-                  <h3 className="font-semibold mb-2 line-clamp-2">{course.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{course.instructor_name}</p>
+                  <h3 className="font-semibold mb-2 line-clamp-2 text-white">{course.title}</h3>
+                  <p className="text-sm text-gray-400 mb-3">{course.instructor_name}</p>
 
-                  <div className="space-y-2 text-sm text-gray-600">
+                  <div className="space-y-2 text-sm text-gray-400">
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-4 w-4" />
                       <span>{course.lessons_count} bài học</span>
@@ -222,28 +233,28 @@ export function PaymentCheckoutPage() {
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-[#2D2D2D]" />
 
                 {/* Price Breakdown */}
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Giá gốc:</span>
-                    <span className="text-gray-600">{formatPrice(course.original_price)}</span>
+                    <span className="text-gray-400">Giá gốc:</span>
+                    <span className="text-gray-400">{formatPrice(course.original_price)}</span>
                   </div>
                   {savings > 0 && (
-                    <div className="flex justify-between text-green-600">
+                    <div className="flex justify-between text-green-500">
                       <span>Giảm giá:</span>
                       <span>-{formatPrice(savings)}</span>
                     </div>
                   )}
-                  <Separator />
+                  <Separator className="bg-[#2D2D2D]" />
                   <div className="flex justify-between items-center">
-                    <span className="text-xl">Tổng cộng:</span>
-                    <span className="text-2xl text-blue-600">{formatPrice(finalPrice)}</span>
+                    <span className="text-xl text-white">Tổng cộng:</span>
+                    <span className="text-2xl text-blue-500">{formatPrice(finalPrice)}</span>
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-[#2D2D2D]" />
 
                 {/* Terms Agreement */}
                 <div className="space-y-4">
@@ -254,20 +265,21 @@ export function PaymentCheckoutPage() {
                       onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
                       className="mt-1"
                     />
-                    <label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+                    <label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer text-gray-300">
                       Tôi đồng ý với{' '}
-                      <Link to="/terms" className="text-blue-600 hover:underline">
+                      <Link to="/terms" className="text-blue-500 hover:underline">
                         Điều khoản sử dụng
                       </Link>{' '}
                       và{' '}
-                      <Link to="/privacy" className="text-blue-600 hover:underline">
+                      <Link to="/privacy" className="text-blue-500 hover:underline">
                         Chính sách bảo mật
                       </Link>
                     </label>
                   </div>
 
                   <Button
-                    className="w-full"
+                    variant="outline"
+                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
                     size="lg"
                     onClick={handlePayment}
                     disabled={isProcessing || !agreeTerms}
@@ -291,14 +303,14 @@ export function PaymentCheckoutPage() {
                 </div>
 
                 {/* Money Back Guarantee */}
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="bg-green-600/20 p-4 rounded-lg border border-green-600/50">
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-green-900 text-sm mb-1">
+                      <p className="font-semibold text-green-400 text-sm mb-1">
                         Đảm bảo hoàn tiền 30 ngày
                       </p>
-                      <p className="text-xs text-green-700">
+                      <p className="text-xs text-green-300">
                         Nếu không hài lòng, bạn có thể yêu cầu hoàn tiền trong 30 ngày đầu tiên
                       </p>
                     </div>

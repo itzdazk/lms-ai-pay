@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   FileText,
   MessageCircle,
-  BookOpen
+  BookOpen,
+  ClipboardList
 } from 'lucide-react';
 import { getCourseById, mockLessons, getEnrollment, currentUser } from '../lib/mockData';
 
@@ -32,9 +33,9 @@ export function VideoPlayerPage() {
 
   if (!course) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-3xl mb-4">Không tìm thấy khóa học</h1>
-        <Button asChild>
+      <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
+        <h1 className="text-3xl mb-4 text-white">Không tìm thấy khóa học</h1>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
           <Link to="/dashboard">Quay lại Dashboard</Link>
         </Button>
       </div>
@@ -45,27 +46,27 @@ export function VideoPlayerPage() {
   const courseLessons = mockLessons.filter(lesson => lesson.course_id === course.id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Top Bar */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-[#1A1A1A] border-b border-[#2D2D2D] sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="!text-white hover:bg-white/10">
                 <Link to="/dashboard">
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Dashboard
                 </Link>
               </Button>
               <div>
-                <h2 className="font-semibold line-clamp-1">{course.title}</h2>
-                <p className="text-sm text-gray-600">
+                <h2 className="font-semibold line-clamp-1 text-white">{course.title}</h2>
+                <p className="text-sm text-gray-400">
                   {enrollment?.progress_percentage || 0}% hoàn thành
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild className="border-[#2D2D2D] !text-white hover:bg-white/10">
                 <Link to="/ai-chat">
                   <MessageCircle className="h-4 w-4 mr-2" />
                   AI Tutor
@@ -81,8 +82,8 @@ export function VideoPlayerPage() {
           {/* Video Player Section */}
           <div className="lg:col-span-2 space-y-6">
             {/* Video Player */}
-            <Card className="overflow-hidden">
-              <div className="relative bg-black aspect-video">
+            <Card className="overflow-hidden bg-[#1A1A1A] border-[#2D2D2D]">
+              <div className="relative bg-card aspect-video">
                 {/* Placeholder for video */}
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
                   <div className="text-center text-white">
@@ -98,7 +99,7 @@ export function VideoPlayerPage() {
                   <div className="mb-4">
                     <div className="h-1 bg-white/30 rounded-full overflow-hidden cursor-pointer group">
                       <div 
-                        className="h-full bg-blue-600 transition-all group-hover:bg-blue-500"
+                        className="h-full bg-white transition-all group-hover:bg-white/90"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -143,14 +144,14 @@ export function VideoPlayerPage() {
             </Card>
 
             {/* Lesson Info */}
-            <Card>
+            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle>{selectedLesson.title}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-2">{selectedLesson.description}</p>
+                    <CardTitle className="text-white">{selectedLesson.title}</CardTitle>
+                    <p className="text-sm text-gray-400 mt-2">{selectedLesson.description}</p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="border-[#2D2D2D] !text-white hover:bg-[#1F1F1F]">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Đánh dấu hoàn thành
                   </Button>
@@ -160,24 +161,24 @@ export function VideoPlayerPage() {
 
             {/* Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList>
-                <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-                <TabsTrigger value="transcript">
+              <TabsList className="w-full bg-[#1A1A1A] border border-[#2D2D2D]">
+                <TabsTrigger value="overview" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">Tổng quan</TabsTrigger>
+                <TabsTrigger value="transcript" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
                   <FileText className="h-4 w-4 mr-2" />
                   Transcript
                 </TabsTrigger>
-                <TabsTrigger value="notes">
+                <TabsTrigger value="notes" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
                   <BookOpen className="h-4 w-4 mr-2" />
                   Ghi chú
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-6">
-                <Card>
+                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
                   <CardContent className="pt-6">
                     <div className="prose max-w-none">
-                      <h3>Trong bài học này bạn sẽ học:</h3>
-                      <ul>
+                      <h3 className="text-white">Trong bài học này bạn sẽ học:</h3>
+                      <ul className="text-gray-300">
                         <li>Khái niệm cơ bản về {selectedLesson.title}</li>
                         <li>Cách triển khai và áp dụng vào dự án</li>
                         <li>Best practices và tips</li>
@@ -189,7 +190,7 @@ export function VideoPlayerPage() {
               </TabsContent>
 
               <TabsContent value="transcript" className="mt-6">
-                <Card>
+                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
                   <CardContent className="pt-6">
                     <div className="space-y-4 max-h-96 overflow-y-auto">
                       {[
@@ -198,9 +199,9 @@ export function VideoPlayerPage() {
                         { time: '00:45', text: 'Tiếp theo, chúng ta sẽ xem cách triển khai...' },
                         { time: '01:20', text: 'Một điều quan trọng cần lưu ý là...' },
                       ].map((item, index) => (
-                        <div key={index} className="flex gap-4 hover:bg-gray-50 p-2 rounded cursor-pointer">
-                          <span className="text-sm text-blue-600 font-mono">{item.time}</span>
-                          <p className="text-sm flex-1">{item.text}</p>
+                        <div key={index} className="flex gap-4 hover:bg-[#1F1F1F] p-2 rounded cursor-pointer">
+                          <span className="text-sm text-blue-500 font-mono">{item.time}</span>
+                          <p className="text-sm flex-1 text-gray-300">{item.text}</p>
                         </div>
                       ))}
                     </div>
@@ -209,13 +210,13 @@ export function VideoPlayerPage() {
               </TabsContent>
 
               <TabsContent value="notes" className="mt-6">
-                <Card>
+                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
                   <CardContent className="pt-6">
                     <textarea
-                      className="w-full min-h-48 p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full min-h-48 p-4 border border-[#2D2D2D] rounded-lg bg-[#1F1F1F] text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Viết ghi chú của bạn ở đây..."
                     />
-                    <Button className="mt-4">Lưu ghi chú</Button>
+                    <Button className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Lưu ghi chú</Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -224,21 +225,21 @@ export function VideoPlayerPage() {
 
           {/* Sidebar - Course Content */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
+            <Card className="sticky top-24 bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center justify-between text-white">
                   <span>Nội dung khóa học</span>
-                  <Badge variant="outline">{courseLessons.length} bài</Badge>
+                  <Badge variant="outline" className="border-[#2D2D2D] text-gray-300">{courseLessons.length} bài</Badge>
                 </CardTitle>
                 <Progress value={enrollment?.progress_percentage || 0} className="mt-2" />
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-gray-400 mt-2">
                   {enrollment?.progress_percentage || 0}% hoàn thành
                 </p>
               </CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible defaultValue="section-1" className="w-full">
                   <AccordionItem value="section-1">
-                    <AccordionTrigger>
+                    <AccordionTrigger className="text-white">
                       <div className="flex items-center justify-between w-full pr-4">
                         <span>Phần 1: Giới thiệu</span>
                       </div>
@@ -251,25 +252,25 @@ export function VideoPlayerPage() {
                             onClick={() => setSelectedLesson(lesson)}
                             className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                               selectedLesson.id === lesson.id
-                                ? 'bg-blue-50 border border-blue-200'
-                                : 'hover:bg-gray-50'
+                                ? 'bg-blue-600/20 border border-blue-600'
+                                : 'hover:bg-[#1F1F1F]'
                             }`}
                           >
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               {lesson.is_preview ? (
-                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600/20 flex items-center justify-center">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
                                 </div>
                               ) : (
-                                <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 border-gray-300" />
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 border-[#2D2D2D]" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{lesson.title}</p>
+                                <p className="text-sm font-medium truncate text-white">{lesson.title}</p>
                                 <p className="text-xs text-gray-500">{lesson.duration_minutes} phút</p>
                               </div>
                             </div>
                             {!lesson.is_preview && !enrollment && (
-                              <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <Lock className="h-4 w-4 text-gray-500 flex-shrink-0" />
                             )}
                           </div>
                         ))}
@@ -278,18 +279,24 @@ export function VideoPlayerPage() {
                   </AccordionItem>
                 </Accordion>
 
-                <div className="mt-4 pt-4 border-t space-y-2">
-                  <Button className="w-full" variant="outline" asChild>
+                <div className="mt-4 pt-4 border-t border-[#2D2D2D] space-y-2">
+                  <Button
+                    variant="outline"
+                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                    asChild
+                  >
                     <Link to="/ai-chat">
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Hỏi AI Tutor
                     </Link>
                   </Button>
-                  <Button className="w-full" asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                    asChild
+                  >
                     <Link to="/quiz/1">
-                      <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
+                      <ClipboardList className="h-4 w-4 mr-2" />
                       Làm Quiz
                     </Link>
                   </Button>
