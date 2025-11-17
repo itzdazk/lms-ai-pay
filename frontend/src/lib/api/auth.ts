@@ -65,16 +65,3 @@ export const authApi = {
     return localStorage.getItem('token');
   },
 };
-
-
-
-
-
-
-
-
-
-
-
-
-

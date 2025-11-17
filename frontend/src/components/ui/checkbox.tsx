@@ -28,17 +28,3 @@ function Checkbox({
 }
 
 export { Checkbox };
-
-
-
-
-
-
-
-
-
-
-
-
-
-

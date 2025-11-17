@@ -92,16 +92,3 @@ export const coursesApi = {
     return response.data.data;
   },
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
