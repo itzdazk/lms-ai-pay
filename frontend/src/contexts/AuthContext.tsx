@@ -28,16 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const storedUser = authApi.getStoredUser();
-    if (storedUser && authApi.isAuthenticated()) {
-      setUser(storedUser);
-      // Optionally refresh user data from server
-      authApi.getCurrentUser().catch(() => {
-        // If token is invalid, clear everything
-        authApi.logout();
-      });
+    try {
+      const storedUser = authApi.getStoredUser();
+      if (storedUser && authApi.isAuthenticated()) {
+        setUser(storedUser);
+        // Optionally refresh user data from server
+        authApi.getCurrentUser().catch(() => {
+          // If token is invalid, clear everything
+          authApi.logout();
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -89,6 +94,9 @@ export function useAuth() {
   }
   return context;
 }
+
+
+
 
 
 

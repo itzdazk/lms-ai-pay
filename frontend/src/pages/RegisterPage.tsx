@@ -3,7 +3,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Checkbox } from '../components/ui/checkbox';
 import { BookOpen } from 'lucide-react';
 import { useState } from 'react';
@@ -14,7 +13,6 @@ export function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student',
     agreeToTerms: false,
   });
 
@@ -34,94 +32,78 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-black py-2 px-4">
+      <div className="w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black border border-white/30">
             <BookOpen className="h-7 w-7 text-white" />
           </div>
-          <span className="text-2xl font-semibold">EduLearn</span>
+          <span className="text-2xl font-semibold text-white">EduLearn</span>
         </Link>
 
-        <Card>
+        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Đăng ký tài khoản</CardTitle>
-            <CardDescription className="text-center">
+            <CardTitle className="text-2xl text-center text-white">Đăng ký tài khoản</CardTitle>
+            <CardDescription className="text-center text-gray-400">
               Tạo tài khoản để bắt đầu học tập
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Họ và tên</Label>
+                <Label htmlFor="fullName" className="text-white">Họ và tên</Label>
                 <Input
                   id="fullName"
                   type="text"
                   placeholder="Nguyễn Văn A"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-white">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="name@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu</Label>
+                <Label htmlFor="password" className="text-white">Mật khẩu</Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
                   required
                 />
                 <p className="text-xs text-gray-500">Tối thiểu 8 ký tự</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+                <Label htmlFor="confirmPassword" className="text-white">Xác nhận mật khẩu</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
                   required
                 />
               </div>
 
-              <div className="space-y-3">
-                <Label>Bạn là:</Label>
-                <RadioGroup
-                  value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="student" id="student" />
-                    <Label htmlFor="student" className="font-normal cursor-pointer">
-                      Học viên - Tôi muốn học
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="instructor" id="instructor" />
-                    <Label htmlFor="instructor" className="font-normal cursor-pointer">
-                      Giảng viên - Tôi muốn dạy
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
 
               <div className="flex items-start space-x-2">
                 <Checkbox
@@ -130,7 +112,7 @@ export function RegisterPage() {
                   onCheckedChange={(checked) => setFormData({ ...formData, agreeToTerms: checked as boolean })}
                   className="mt-1"
                 />
-                <label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+                <label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer text-gray-300">
                   Tôi đồng ý với{' '}
                   <Link to="/terms" className="text-blue-600 hover:underline">
                     Điều khoản sử dụng
@@ -142,22 +124,30 @@ export function RegisterPage() {
                 </label>
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+              >
                 Đăng ký
               </Button>
             </form>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-[#2D2D2D]" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Hoặc đăng ký với</span>
+                <span className="bg-[#1A1A1A] px-2 text-gray-500">Hoặc đăng ký với</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" type="button">
+              <Button
+                variant="outline"
+                type="button"
+                className="border-[#2D2D2D] !text-white hover:bg-white/10"
+              >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -178,7 +168,11 @@ export function RegisterPage() {
                 </svg>
                 Google
               </Button>
-              <Button variant="outline" type="button">
+              <Button
+                variant="outline"
+                type="button"
+                className="border-[#2D2D2D] !text-white hover:bg-white/10"
+              >
                 <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                 </svg>
@@ -187,7 +181,7 @@ export function RegisterPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <div className="text-sm text-center w-full text-gray-600">
+            <div className="text-sm text-center w-full text-gray-400">
               Đã có tài khoản?{' '}
               <Link to="/login" className="text-blue-600 hover:underline">
                 Đăng nhập ngay
