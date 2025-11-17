@@ -15,11 +15,8 @@ import dashboardRoutes from './dashboard.routes.js'
 import ordersRoutes from './orders.routes.js'
 import adminOrderRoutes from './admin-order.routes.js'
 import paymentsRoutes from './payments.routes.js'
-<<<<<<< HEAD
 import transactionsRoutes from './transactions.routes.js'
-=======
 import notificationsRoutes from './notifications.routes.js'
->>>>>>> feature/notifications-apis
 
 const router = express.Router()
 
@@ -47,11 +44,8 @@ router.get('/', (req, res) => {
             orders: '/api/v1/orders',
             adminOrders: '/api/v1/admin/orders',
             payments: '/api/v1/payments',
-<<<<<<< HEAD
             transactions: '/api/v1/transactions',
-=======
             notifications: '/api/v1/notifications',
->>>>>>> feature/notifications-apis
             // More endpoints will be available when routes are enabled
         },
     })
@@ -82,11 +76,8 @@ router.use('/dashboard', dashboardRoutes)
 router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
 router.use('/payments', paymentsRoutes)
-<<<<<<< HEAD
 router.use('/transactions', transactionsRoutes)
-=======
 router.use('/notifications', notificationsRoutes)
->>>>>>> feature/notifications-apis
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)
