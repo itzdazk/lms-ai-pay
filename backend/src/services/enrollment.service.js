@@ -7,6 +7,7 @@ import {
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import ordersService from './orders.service.js'
+import notificationsService from './notifications.service.js'
 
 class EnrollmentService {
     /**
@@ -403,6 +404,13 @@ class EnrollmentService {
                 `User ID: ${userId} enrolled in free course ID: ${courseId}`
             )
 
+            // Create notification for enrollment success
+            await notificationsService.notifyEnrollmentSuccess(
+                userId,
+                courseId,
+                course.title
+            )
+
             return {
                 requiresPayment: false,
                 enrollment,
@@ -539,6 +547,13 @@ class EnrollmentService {
 
             logger.info(
                 `User ID: ${order.userId} enrolled in course ID: ${order.courseId} from order ID: ${orderId}`
+            )
+
+            // Create notification for enrollment success (from payment)
+            await notificationsService.notifyEnrollmentSuccess(
+                order.userId,
+                order.courseId,
+                order.course.title
             )
 
             return enrollment

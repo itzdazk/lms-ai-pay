@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.config.js';
 import logger from '../config/logger.config.js';
 import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js';
+import notificationsService from './notifications.service.js';
 
 class ProgressService {
     /**
@@ -414,6 +415,15 @@ class ProgressService {
         // Auto-calculate course progress percentage
         await this.updateCourseProgress(userId, lesson.courseId);
 
+        // Create notification for lesson completed
+        await notificationsService.notifyLessonCompleted(
+            userId,
+            lesson.id,
+            lesson.courseId,
+            lesson.title,
+            lesson.course.title
+        );
+
         return {
             progress: {
                 id: progress.id,
@@ -532,6 +542,13 @@ class ProgressService {
         if (progressPercentage >= 100 && !enrollment.completedAt) {
             updateData.completedAt = new Date();
             updateData.status = ENROLLMENT_STATUS.COMPLETED;
+
+            // Create notification for course completed
+            await notificationsService.notifyCourseCompleted(
+                userId,
+                courseId,
+                enrollment.course.title
+            );
         }
 
         await prisma.enrollment.update({
