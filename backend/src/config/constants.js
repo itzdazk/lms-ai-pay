@@ -93,6 +93,31 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024 // 500MB
 
+const UPLOAD_TYPES = {
+    IMAGE: {
+        AVATAR: 'avatar',
+        THUMBNAIL: 'thumbnail',
+        GENERAL: 'general',
+    },
+    VIDEO: {
+        LESSON: 'lesson',
+        PREVIEW: 'preview',
+        GENERAL: 'general',
+    },
+    DOCUMENT: {
+        TRANSCRIPT: 'transcript',
+        MATERIAL: 'material',
+        GENERAL: 'general',
+    },
+}
+
+const UPLOAD_STATUS = {
+    PENDING: 'pending',
+    PROCESSING: 'processing',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+}
+
 const ERROR_CODES = {
     VALIDATION_ERROR: 'VALIDATION_ERROR',
     AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
@@ -179,4 +204,6 @@ export {
     JWT_EXPIRY,
     RATE_LIMITS,
     PENDING_TIME,
+    UPLOAD_TYPES,
+    UPLOAD_STATUS,
 }

@@ -4,7 +4,7 @@ import categoryController from '../controllers/category.controller.js'
 import {
     authenticate,
     optionalAuthenticate,
-} from '../middlewares/auth.middleware.js'
+} from '../middlewares/authenticate.middleware.js'
 import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
 import {
     createCategoryValidator,

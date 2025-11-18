@@ -1,6 +1,6 @@
 import express from 'express'
 import transactionsController from '../controllers/transactions.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import {
     getTransactionsValidator,
     getTransactionByIdValidator,
@@ -17,7 +17,11 @@ router.use(authenticate)
  * @access  Private
  * @query   page, limit, status, paymentGateway, startDate, endDate, userId
  */
-router.get('/', getTransactionsValidator, transactionsController.getTransactions)
+router.get(
+    '/',
+    getTransactionsValidator,
+    transactionsController.getTransactions
+)
 
 /**
  * @route   GET /api/v1/transactions/:transactionId

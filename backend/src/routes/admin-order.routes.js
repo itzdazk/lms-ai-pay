@@ -1,7 +1,7 @@
 // backend/src/routes/admin-order.routes.js
 import express from 'express'
 import adminOrderController from '../controllers/admin-order.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isAdmin } from '../middlewares/role.middleware.js'
 
 const router = express.Router()

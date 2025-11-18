@@ -1,20 +1,16 @@
 // src/routes/dashboard.routes.js
-import express from 'express';
-import progressController from '../controllers/progress.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
+import express from 'express'
+import progressController from '../controllers/progress.controller.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 
-const router = express.Router();
+const router = express.Router()
 
 /**
  * @route   GET /api/v1/dashboard/progress
  * @desc    Get dashboard progress overview
  * @access  Private
  */
-router.get(
-    '/progress',
-    authenticate,
-    progressController.getDashboardProgress
-);
+router.get('/progress', authenticate, progressController.getDashboardProgress)
 
 /**
  * @route   GET /api/v1/dashboard/continue-watching
@@ -25,7 +21,7 @@ router.get(
     '/continue-watching',
     authenticate,
     progressController.getContinueWatching
-);
+)
 
 /**
  * @route   GET /api/v1/dashboard/recent-activities
@@ -36,8 +32,6 @@ router.get(
     '/recent-activities',
     authenticate,
     progressController.getRecentActivities
-);
+)
 
-export default router;
-
-
+export default router

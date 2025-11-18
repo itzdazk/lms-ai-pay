@@ -1,7 +1,7 @@
 // src/routes/notifications.routes.js
 import express from 'express'
 import notificationsController from '../controllers/notifications.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import {
     getNotificationsValidator,
     getNotificationByIdValidator,
@@ -14,7 +14,11 @@ const router = express.Router()
 // All notification endpoints require authentication
 router.use(authenticate)
 
-router.get('/', getNotificationsValidator, notificationsController.getNotifications)
+router.get(
+    '/',
+    getNotificationsValidator,
+    notificationsController.getNotifications
+)
 router.get(
     '/unread',
     getNotificationsValidator,
@@ -40,4 +44,3 @@ router.delete(
 router.delete('/', notificationsController.deleteAllNotifications)
 
 export default router
-
