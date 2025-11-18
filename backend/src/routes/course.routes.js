@@ -14,7 +14,18 @@ const router = express.Router()
  * @route   GET /api/v1/courses
  * @desc    Get all courses with filters, search, sort
  * @access  Public
- * @query   page, limit, search, categoryId, level, minPrice, maxPrice, isFeatured, instructorId, sort
+ * @query   Các query parameters được hỗ trợ:
+ *          - page: Trang hiện tại (default: 1)
+ *          - limit: Số lượng items mỗi trang (default: 20, max: 100)
+ *          - search: Từ khóa tìm kiếm trong title, description
+ *          - categoryId: Lọc theo category ID
+ *          - level: Lọc theo level (BEGINNER|INTERMEDIATE|ADVANCED)
+ *          - minPrice: Giá tối thiểu
+ *          - maxPrice: Giá tối đa
+ *          - isFeatured: Lọc khóa học nổi bật (true|false)
+ *          - instructorId: Lọc theo instructor ID
+ *          - sort: Sắp xếp (newest|popular|rating|price_asc|price_desc)
+ * @example /api/v1/courses?search=javascript&level=BEGINNER&sort=rating&page=1&limit=20
  */
 router.get('/', getCoursesValidator, courseController.getCourses)
 

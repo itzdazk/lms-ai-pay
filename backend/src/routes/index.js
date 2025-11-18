@@ -16,6 +16,7 @@ import ordersRoutes from './orders.routes.js'
 import adminOrderRoutes from './admin-order.routes.js'
 import paymentsRoutes from './payments.routes.js'
 import transactionsRoutes from './transactions.routes.js'
+import searchRoutes from './search.routes.js'
 import notificationsRoutes from './notifications.routes.js'
 
 const router = express.Router()
@@ -45,6 +46,7 @@ router.get('/', (req, res) => {
             adminOrders: '/api/v1/admin/orders',
             payments: '/api/v1/payments',
             transactions: '/api/v1/transactions',
+            search: '/api/v1/search',
             notifications: '/api/v1/notifications',
             // More endpoints will be available when routes are enabled
         },
@@ -77,6 +79,7 @@ router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
 router.use('/payments', paymentsRoutes)
 router.use('/transactions', transactionsRoutes)
+router.use('/search', searchRoutes)
 router.use('/notifications', notificationsRoutes)
 
 // Additional routes can be added here
