@@ -19,11 +19,7 @@ const router = express.Router()
  * @desc    Get tags list with pagination and search
  * @access  Public
  */
-router.get(
-    '/',
-    getTagsValidator,
-    tagsController.getTags
-)
+router.get('/', getTagsValidator, tagsController.getTags)
 
 /**
  * @route   GET /api/v1/tags/:id/courses
@@ -31,22 +27,14 @@ router.get(
  * @access  Public
  * @note    Must be defined before /:id to avoid route conflict
  */
-router.get(
-    '/:id/courses',
-    getTagCoursesValidator,
-    tagsController.getTagCourses
-)
+router.get('/:id/courses', getTagCoursesValidator, tagsController.getTagCourses)
 
 /**
  * @route   GET /api/v1/tags/:id
  * @desc    Get tag by ID
  * @access  Public
  */
-router.get(
-    '/:id',
-    getTagByIdValidator,
-    tagsController.getTagById
-)
+router.get('/:id', getTagByIdValidator, tagsController.getTagById)
 
 /**
  * @route   POST /api/v1/tags
@@ -88,4 +76,3 @@ router.delete(
 )
 
 export default router
-

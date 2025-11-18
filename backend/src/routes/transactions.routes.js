@@ -17,7 +17,11 @@ router.use(authenticate)
  * @access  Private
  * @query   page, limit, status, paymentGateway, startDate, endDate, userId
  */
-router.get('/', getTransactionsValidator, transactionsController.getTransactions)
+router.get(
+    '/',
+    getTransactionsValidator,
+    transactionsController.getTransactions
+)
 
 /**
  * @route   GET /api/v1/transactions/:transactionId

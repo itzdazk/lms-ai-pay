@@ -18,11 +18,7 @@ router.use(authenticate)
  * @desc    Get lesson by ID
  * @access  Private (enrolled users, course instructor, admin)
  */
-router.get(
-    '/:id',
-    getLessonByIdValidator,
-    lessonsController.getLessonById
-)
+router.get('/:id', getLessonByIdValidator, lessonsController.getLessonById)
 
 /**
  * @route   GET /api/v1/lessons/:id/video
@@ -47,6 +43,3 @@ router.get(
 )
 
 export default router
-
-
-

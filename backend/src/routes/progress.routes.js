@@ -1,7 +1,7 @@
 // src/routes/progress.routes.js
-import express from 'express';
-import progressController from '../controllers/progress.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
+import express from 'express'
+import progressController from '../controllers/progress.controller.js'
+import { authenticate } from '../middlewares/auth.middleware.js'
 import {
     getCourseProgressValidator,
     getLessonProgressValidator,
@@ -9,9 +9,9 @@ import {
     updateProgressValidator,
     completeLessonValidator,
     getResumePositionValidator,
-} from '../validators/progress.validator.js';
+} from '../validators/progress.validator.js'
 
-const router = express.Router();
+const router = express.Router()
 
 /**
  * @route   GET /api/v1/progress/courses/:courseId
@@ -23,7 +23,7 @@ router.get(
     authenticate,
     getCourseProgressValidator,
     progressController.getCourseProgress
-);
+)
 
 /**
  * @route   GET /api/v1/progress/lessons/:lessonId
@@ -35,7 +35,7 @@ router.get(
     authenticate,
     getLessonProgressValidator,
     progressController.getLessonProgress
-);
+)
 
 /**
  * @route   POST /api/v1/progress/lessons/:lessonId/start
@@ -47,7 +47,7 @@ router.post(
     authenticate,
     startLessonValidator,
     progressController.startLesson
-);
+)
 
 /**
  * @route   PUT /api/v1/progress/lessons/:lessonId/update
@@ -59,7 +59,7 @@ router.put(
     authenticate,
     updateProgressValidator,
     progressController.updateProgress
-);
+)
 
 /**
  * @route   POST /api/v1/progress/lessons/:lessonId/complete
@@ -71,7 +71,7 @@ router.post(
     authenticate,
     completeLessonValidator,
     progressController.completeLesson
-);
+)
 
 /**
  * @route   GET /api/v1/progress/lessons/:lessonId/resume
@@ -83,8 +83,6 @@ router.get(
     authenticate,
     getResumePositionValidator,
     progressController.getResumePosition
-);
+)
 
-export default router;
-
-
+export default router
