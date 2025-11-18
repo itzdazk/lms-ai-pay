@@ -8,6 +8,7 @@ import {
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import notificationsService from './notifications.service.js'
+import emailService from './email.service.js'
 
 class OrdersService {
     /**
@@ -550,6 +551,24 @@ class OrdersService {
             result.course.title,
             result.finalPrice
         )
+
+        // Send payment success email
+        try {
+            await emailService.sendPaymentSuccessEmail(
+                result.user.email,
+                result.user.fullName,
+                result
+            )
+            logger.info(
+                `Payment success email sent to user ${result.user.id} for order ${result.orderCode}`
+            )
+        } catch (error) {
+            // Log error but don't fail the payment process
+            logger.error(
+                `Failed to send payment success email: ${error.message}`,
+                error
+            )
+        }
 
         return {
             order: result,

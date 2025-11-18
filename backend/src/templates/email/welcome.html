@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chào mừng - LMS AI Pay</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #10B981; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+        .button { display: inline-block; padding: 12px 30px; background: #10B981; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Chào mừng đến với LMS AI Pay!</h1>
+        </div>
+        <div class="content">
+            <p>Xin chào <strong>{{username}}</strong>,</p>
+            <p>Email của bạn đã được xác thực thành công! Chào mừng bạn đến với nền tảng học tập của chúng tôi.</p>
+            <p>Bây giờ bạn có thể:</p>
+            <ul>
+                <li>Duyệt qua hàng nghìn khóa học</li>
+                <li>Đăng ký các khóa học mà bạn quan tâm</li>
+                <li>Theo dõi tiến độ học tập của bạn</li>
+                <li>Nhận đề xuất được hỗ trợ bởi AI</li>
+            </ul>
+            <div style="text-align: center;">
+                <a href="{{clientUrl}}/courses" class="button">Duyệt Khóa học</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} LMS AI Pay. Bảo lưu mọi quyền.</p>
+        </div>
+    </div>
+</body>
+</html>

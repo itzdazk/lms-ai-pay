@@ -8,6 +8,7 @@ import {
 import logger from '../config/logger.config.js'
 import ordersService from './orders.service.js'
 import notificationsService from './notifications.service.js'
+import emailService from './email.service.js'
 
 class EnrollmentService {
     /**
@@ -416,6 +417,34 @@ class EnrollmentService {
                 course.title
             )
 
+            // Send enrollment success email
+            try {
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { email: true, fullName: true },
+                })
+
+                if (user) {
+                    await emailService.sendEnrollmentSuccessEmail(
+                        user.email,
+                        user.fullName,
+                        {
+                            ...course,
+                            instructor: course.instructor,
+                        }
+                    )
+                    logger.info(
+                        `Enrollment success email sent to user ${userId} for course ${courseId}`
+                    )
+                }
+            } catch (error) {
+                // Log error but don't fail the enrollment process
+                logger.error(
+                    `Failed to send enrollment success email: ${error.message}`,
+                    error
+                )
+            }
+
             return {
                 requiresPayment: false,
                 enrollment,
@@ -560,6 +589,36 @@ class EnrollmentService {
                 order.courseId,
                 order.course.title
             )
+
+            // Send enrollment success email (only if not already sent from payment email)
+            // Note: Payment email is sent from orders.service.js, but we send enrollment email here
+            // for consistency and in case enrollment happens separately
+            try {
+                const user = await prisma.user.findUnique({
+                    where: { id: order.userId },
+                    select: { email: true, fullName: true },
+                })
+
+                if (user) {
+                    await emailService.sendEnrollmentSuccessEmail(
+                        user.email,
+                        user.fullName,
+                        {
+                            ...order.course,
+                            instructor: order.course.instructor,
+                        }
+                    )
+                    logger.info(
+                        `Enrollment success email sent to user ${order.userId} for course ${order.courseId}`
+                    )
+                }
+            } catch (error) {
+                // Log error but don't fail the enrollment process
+                logger.error(
+                    `Failed to send enrollment success email: ${error.message}`,
+                    error
+                )
+            }
 
             return enrollment
         })

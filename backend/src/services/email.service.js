@@ -1,7 +1,14 @@
 // src/services/email.service.js
 import nodemailer from 'nodemailer'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const templatesDir = path.join(__dirname, '../templates/email')
 
 class EmailService {
     constructor() {
@@ -14,6 +21,35 @@ class EmailService {
                 pass: config.SMTP_PASSWORD,
             },
         })
+    }
+
+    /**
+     * Load and render email template
+     * @param {string} templateName - Template file name (without .html)
+     * @param {object} data - Data to replace placeholders
+     * @returns {string} Rendered HTML
+     */
+    async loadTemplate(templateName, data = {}) {
+        try {
+            const templatePath = path.join(templatesDir, `${templateName}.html`)
+            let html = fs.readFileSync(templatePath, 'utf-8')
+
+            // Replace placeholders with data
+            Object.keys(data).forEach((key) => {
+                const regex = new RegExp(`{{${key}}}`, 'g')
+                html = html.replace(regex, data[key] || '')
+            })
+
+            // Replace year placeholder if not provided
+            if (!data.year) {
+                html = html.replace(/{{year}}/g, new Date().getFullYear().toString())
+            }
+
+            return html
+        } catch (error) {
+            logger.error(`Failed to load template ${templateName}:`, error)
+            throw new Error(`Failed to load email template: ${templateName}`)
+        }
     }
 
     /**
@@ -41,51 +77,20 @@ class EmailService {
     /**
      * Send verification email
      */
-    async sendVerificationEmail(email, userName, token) {
+    async sendVerificationEmail(email, username, token) {
         const verificationUrl = `${config.EMAIL_VERIFICATION_URL}?token=${token}`
 
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
-                    .button { display: inline-block; padding: 12px 30px; background: #4F46E5; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>Email Verification</h1>
-                    </div>
-                    <div class="content">
-                        <p>Hi <strong>${userName}</strong>,</p>
-                        <p>Thank you for registering with LMS AI Pay! Please verify your email address by clicking the button below:</p>
-                        <div style="text-align: center;">
-                            <a href="${verificationUrl}" class="button">Verify Email</a>
-                        </div>
-                        <p>Or copy and paste this link into your browser:</p>
-                        <p style="word-break: break-all; color: #4F46E5;">${verificationUrl}</p>
-                        <p><strong>This link will expire in 24 hours.</strong></p>
-                        <p>If you didn't create an account, please ignore this email.</p>
-                    </div>
-                    <div class="footer">
-                        <p>&copy; ${new Date().getFullYear()} LMS AI Pay. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `
+        const html = await this.loadTemplate('verification', {
+            username,
+            verificationUrl,
+            year: new Date().getFullYear().toString(),
+        })
 
-        const text = `Hi ${userName},\n\nThank you for registering! Please verify your email by visiting: ${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`
+        const text = `Xin chào ${username},\n\nCảm ơn bạn đã đăng ký! Vui lòng xác thực email của bạn bằng cách truy cập: ${verificationUrl}\n\nLiên kết này sẽ hết hạn sau 24 giờ.\n\nNếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.`
 
         return this.sendEmail({
             to: email,
-            subject: 'Verify Your Email - LMS AI Pay',
+            subject: 'Xác thực Email của bạn - LMS AI Pay',
             html,
             text,
         })
@@ -94,58 +99,20 @@ class EmailService {
     /**
      * Send password reset email
      */
-    async sendPasswordResetEmail(email, userName, token) {
+    async sendPasswordResetEmail(email, username, token) {
         const resetUrl = `${config.PASSWORD_RESET_URL}?token=${token}`
 
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: #DC2626; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
-                    .button { display: inline-block; padding: 12px 30px; background: #DC2626; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                    .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>Password Reset Request</h1>
-                    </div>
-                    <div class="content">
-                        <p>Hi <strong>${userName}</strong>,</p>
-                        <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                        <div style="text-align: center;">
-                            <a href="${resetUrl}" class="button">Reset Password</a>
-                        </div>
-                        <p>Or copy and paste this link into your browser:</p>
-                        <p style="word-break: break-all; color: #DC2626;">${resetUrl}</p>
-                        <div class="warning">
-                            <p><strong>⚠️ Important:</strong></p>
-                            <ul>
-                                <li>This link will expire in 1 hour</li>
-                                <li>If you didn't request this, please ignore this email</li>
-                                <li>Your password won't change until you access the link above</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="footer">
-                        <p>&copy; ${new Date().getFullYear()} LMS AI Pay. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `
+        const html = await this.loadTemplate('password-reset', {
+            username,
+            resetUrl,
+            year: new Date().getFullYear().toString(),
+        })
 
-        const text = `Hi ${userName},\n\nWe received a request to reset your password. Visit this link to create a new password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
+        const text = `Xin chào ${username},\n\nChúng tôi đã nhận được yêu cầu đặt lại mật khẩu của bạn. Truy cập liên kết này để tạo mật khẩu mới: ${resetUrl}\n\nLiên kết này sẽ hết hạn sau 1 giờ.\n\nNếu bạn không yêu cầu điều này, vui lòng bỏ qua email này.`
 
         return this.sendEmail({
             to: email,
-            subject: 'Reset Your Password - LMS AI Pay',
+            subject: 'Đặt lại Mật khẩu của bạn - LMS AI Pay',
             html,
             text,
         })
@@ -154,52 +121,18 @@ class EmailService {
     /**
      * Send welcome email after verification
      */
-    async sendWelcomeEmail(email, userName) {
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: #10B981; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
-                    .button { display: inline-block; padding: 12px 30px; background: #10B981; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>🎉 Welcome to LMS AI Pay!</h1>
-                    </div>
-                    <div class="content">
-                        <p>Hi <strong>${userName}</strong>,</p>
-                        <p>Your email has been successfully verified! Welcome to our learning platform.</p>
-                        <p>You can now:</p>
-                        <ul>
-                            <li>Browse thousands of courses</li>
-                            <li>Enroll in courses that interest you</li>
-                            <li>Track your learning progress</li>
-                            <li>Get AI-powered recommendations</li>
-                        </ul>
-                        <div style="text-align: center;">
-                            <a href="${config.CLIENT_URL}/courses" class="button">Browse Courses</a>
-                        </div>
-                    </div>
-                    <div class="footer">
-                        <p>&copy; ${new Date().getFullYear()} LMS AI Pay. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `
+    async sendWelcomeEmail(email, username) {
+        const html = await this.loadTemplate('welcome', {
+            username,
+            clientUrl: config.CLIENT_URL,
+            year: new Date().getFullYear().toString(),
+        })
 
-        const text = `Hi ${userName},\n\nYour email has been successfully verified! Welcome to LMS AI Pay.\n\nVisit ${config.CLIENT_URL}/courses to browse our courses.`
+        const text = `Xin chào ${username},\n\nEmail của bạn đã được xác thực thành công! Chào mừng đến với LMS AI Pay.\n\nTruy cập ${config.CLIENT_URL}/courses để duyệt các khóa học của chúng tôi.`
 
         return this.sendEmail({
             to: email,
-            subject: 'Welcome to LMS AI Pay! 🎉',
+            subject: 'Chào mừng đến với LMS AI Pay! 🎉',
             html,
             text,
         })
@@ -208,47 +141,76 @@ class EmailService {
     /**
      * Send password change confirmation email
      */
-    async sendPasswordChangeConfirmation(email, userName) {
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: #10B981; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
-                    .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>Password Changed Successfully</h1>
-                    </div>
-                    <div class="content">
-                        <p>Hi <strong>${userName}</strong>,</p>
-                        <p>Your password has been successfully changed.</p>
-                        <div class="warning">
-                            <p><strong>⚠️ Security Notice:</strong></p>
-                            <p>If you didn't make this change, please contact our support team immediately at <a href="mailto:${config.EMAIL_FROM}">${config.EMAIL_FROM}</a></p>
-                        </div>
-                        <p>Changed at: <strong>${new Date().toLocaleString()}</strong></p>
-                    </div>
-                    <div class="footer">
-                        <p>&copy; ${new Date().getFullYear()} LMS AI Pay. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `
+    async sendPasswordChangeConfirmation(email, username) {
+        const html = await this.loadTemplate('password-change-confirmation', {
+            username,
+            supportEmail: config.EMAIL_FROM,
+            changedAt: new Date().toLocaleString('vi-VN'),
+            year: new Date().getFullYear().toString(),
+        })
 
-        const text = `Hi ${userName},\n\nYour password has been successfully changed.\n\nIf you didn't make this change, please contact us immediately.\n\nChanged at: ${new Date().toLocaleString()}`
+        const text = `Xin chào ${username},\n\nMật khẩu của bạn đã được thay đổi thành công.\n\nNếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay lập tức.\n\nThay đổi lúc: ${new Date().toLocaleString('vi-VN')}`
 
         return this.sendEmail({
             to: email,
-            subject: 'Password Changed - LMS AI Pay',
+            subject: 'Đổi Mật khẩu - LMS AI Pay',
+            html,
+            text,
+        })
+    }
+
+    /**
+     * Send payment success email
+     */
+    async sendPaymentSuccessEmail(email, username, order) {
+        const courseUrl = `${config.CLIENT_URL}/courses/${order.course?.slug || order.courseId}`
+        const formattedAmount = new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+        }).format(parseFloat(order.finalPrice || 0))
+
+        const html = await this.loadTemplate('payment-success', {
+            username,
+            orderCode: order.orderCode || 'N/A',
+            courseTitle: order.course?.title || 'N/A',
+            amount: formattedAmount,
+            paymentGateway: order.paymentGateway || 'N/A',
+            transactionId: order.transactionId || 'N/A',
+            paymentDate: new Date(order.paidAt || Date.now()).toLocaleString('vi-VN'),
+            courseUrl,
+            year: new Date().getFullYear().toString(),
+        })
+
+        const text = `Xin chào ${username},\n\nThanh toán của bạn đã được xử lý thành công!\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nSố tiền: ${formattedAmount}\n\nBây giờ bạn có thể truy cập khóa học tại: ${courseUrl}\n\nCảm ơn bạn đã mua hàng!`
+
+        return this.sendEmail({
+            to: email,
+            subject: 'Thanh toán Thành công - LMS AI Pay',
+            html,
+            text,
+        })
+    }
+
+    /**
+     * Send enrollment success email
+     */
+    async sendEnrollmentSuccessEmail(email, username, course) {
+        const courseUrl = `${config.CLIENT_URL}/courses/${course.slug || course.id}`
+
+        const html = await this.loadTemplate('enrollment-success', {
+            username,
+            courseTitle: course.title || 'N/A',
+            instructorName: course.instructor?.fullName || 'N/A',
+            enrollmentDate: new Date().toLocaleString('vi-VN'),
+            courseUrl,
+            year: new Date().getFullYear().toString(),
+        })
+
+        const text = `Xin chào ${username},\n\nChúc mừng! Bạn đã đăng ký thành công vào khóa học.\n\nKhóa học: ${course.title || 'N/A'}\nGiảng viên: ${course.instructor?.fullName || 'N/A'}\n\nBây giờ bạn có thể truy cập khóa học tại: ${courseUrl}\n\nChúng tôi rất vui mừng được đồng hành cùng bạn trong hành trình học tập này!`
+
+        return this.sendEmail({
+            to: email,
+            subject: 'Đăng ký Thành công - LMS AI Pay',
             html,
             text,
         })

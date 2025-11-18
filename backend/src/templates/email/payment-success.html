@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán Thành công - LMS AI Pay</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #10B981; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+        .button { display: inline-block; padding: 12px 30px; background: #10B981; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .info-box { background: #E0F2FE; border-left: 4px solid #0EA5E9; padding: 15px; margin: 20px 0; }
+        .order-details { background: white; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        .amount { font-size: 24px; font-weight: bold; color: #10B981; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Thanh toán Thành công!</h1>
+        </div>
+        <div class="content">
+            <p>Xin chào <strong>{{username}}</strong>,</p>
+            <p>Thanh toán của bạn đã được xử lý thành công! Bạn đã được đăng ký vào khóa học.</p>
+            
+            <div class="info-box">
+                <p><strong>Chi tiết Đơn hàng:</strong></p>
+                <p>Mã đơn hàng: <strong>{{orderCode}}</strong></p>
+                <p>Khóa học: <strong>{{courseTitle}}</strong></p>
+                <p>Số tiền đã thanh toán: <span class="amount">{{amount}}</span></p>
+                <p>Cổng thanh toán: <strong>{{paymentGateway}}</strong></p>
+                <p>Mã giao dịch: <strong>{{transactionId}}</strong></p>
+                <p>Ngày: <strong>{{paymentDate}}</strong></p>
+            </div>
+
+            <p>Bây giờ bạn có thể truy cập khóa học và bắt đầu học ngay lập tức!</p>
+            
+            <div style="text-align: center;">
+                <a href="{{courseUrl}}" class="button">Bắt đầu Học</a>
+            </div>
+
+            <div class="order-details">
+                <p><strong>Bước tiếp theo?</strong></p>
+                <ul>
+                    <li>Truy cập khóa học từ bảng điều khiển của bạn</li>
+                    <li>Xem video bài học theo tốc độ của bạn</li>
+                    <li>Hoàn thành các bài kiểm tra và bài tập</li>
+                    <li>Theo dõi tiến độ học tập của bạn</li>
+                </ul>
+            </div>
+
+            <p>Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với đội ngũ hỗ trợ của chúng tôi.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} LMS AI Pay. Bảo lưu mọi quyền.</p>
+        </div>
+    </div>
+</body>
+</html>
