@@ -1,10 +1,10 @@
 // src/services/users.service.js
-import { prisma } from '../config/database.config.js';
-import BcryptUtil from '../utils/bcrypt.util.js';
-import logger from '../config/logger.config.js';
-import { USER_ROLES, USER_STATUS } from '../config/constants.js';
-import path from 'path';
-import fs from 'fs';
+import { prisma } from '../config/database.config.js'
+import BcryptUtil from '../utils/bcrypt.util.js'
+import logger from '../config/logger.config.js'
+import { USER_ROLES, USER_STATUS } from '../config/constants.js'
+import path from 'path'
+import fs from 'fs'
 
 class UsersService {
     /**
@@ -15,7 +15,7 @@ class UsersService {
             where: { id: userId },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 avatarUrl: true,
@@ -29,29 +29,29 @@ class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
         if (!user) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
-        return user;
+        return user
     }
 
     /**
      * Update current user profile
      */
     async updateProfile(userId, data) {
-        const updateData = {};
+        const updateData = {}
 
         if (data.fullName !== undefined) {
-            updateData.fullName = data.fullName.trim();
+            updateData.fullName = data.fullName.trim()
         }
         if (data.phone !== undefined) {
-            updateData.phone = data.phone ? data.phone.trim() : null;
+            updateData.phone = data.phone ? data.phone.trim() : null
         }
         if (data.bio !== undefined) {
-            updateData.bio = data.bio ? data.bio.trim() : null;
+            updateData.bio = data.bio ? data.bio.trim() : null
         }
 
         const user = await prisma.user.update({
@@ -59,7 +59,7 @@ class UsersService {
             data: updateData,
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 avatarUrl: true,
@@ -71,11 +71,11 @@ class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
-        logger.info(`User profile updated: ${user.username} (${user.id})`);
+        logger.info(`User profile updated: ${user.userName} (${user.id})`)
 
-        return user;
+        return user
     }
 
     /**
@@ -83,17 +83,17 @@ class UsersService {
      */
     async uploadAvatar(userId, file) {
         if (!file) {
-            throw new Error('No file uploaded');
+            throw new Error('No file uploaded')
         }
 
         // Get current user to delete old avatar if exists
         const currentUser = await prisma.user.findUnique({
             where: { id: userId },
             select: { avatarUrl: true },
-        });
+        })
 
         // Generate avatar URL (relative path from uploads directory)
-        const avatarUrl = `/uploads/avatars/${file.filename}`;
+        const avatarUrl = `/uploads/avatars/${file.filename}`
 
         // Update user with new avatar URL
         const user = await prisma.user.update({
@@ -101,14 +101,14 @@ class UsersService {
             data: { avatarUrl },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 avatarUrl: true,
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
         // Delete old avatar file if exists
         if (currentUser?.avatarUrl) {
@@ -117,19 +117,19 @@ class UsersService {
                     process.cwd(),
                     'backend',
                     currentUser.avatarUrl
-                );
+                )
                 if (fs.existsSync(oldAvatarPath)) {
-                    fs.unlinkSync(oldAvatarPath);
-                    logger.info(`Old avatar deleted: ${currentUser.avatarUrl}`);
+                    fs.unlinkSync(oldAvatarPath)
+                    logger.info(`Old avatar deleted: ${currentUser.avatarUrl}`)
                 }
             } catch (error) {
-                logger.warn(`Failed to delete old avatar: ${error.message}`);
+                logger.warn(`Failed to delete old avatar: ${error.message}`)
             }
         }
 
-        logger.info(`Avatar uploaded for user: ${user.username} (${user.id})`);
+        logger.info(`Avatar uploaded for user: ${user.userName} (${user.id})`)
 
-        return user;
+        return user
     }
 
     /**
@@ -142,73 +142,67 @@ class UsersService {
             select: {
                 id: true,
                 passwordHash: true,
-                username: true,
+                userName: true,
             },
-        });
+        })
 
         if (!user) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
         // Verify current password
         const isPasswordValid = await BcryptUtil.compare(
             currentPassword,
             user.passwordHash
-        );
+        )
 
         if (!isPasswordValid) {
-            throw new Error('Current password is incorrect');
+            throw new Error('Current password is incorrect')
         }
 
         // Hash new password
-        const newPasswordHash = await BcryptUtil.hash(newPassword);
+        const newPasswordHash = await BcryptUtil.hash(newPassword)
 
         // Update password
         await prisma.user.update({
             where: { id: userId },
             data: { passwordHash: newPasswordHash },
-        });
+        })
 
-        logger.info(`Password changed for user: ${user.username} (${user.id})`);
+        logger.info(`Password changed for user: ${user.userName} (${user.id})`)
 
-        return { message: 'Password changed successfully' };
+        return { message: 'Password changed successfully' }
     }
 
     /**
      * Get users list (Admin only)
      */
     async getUsers(query) {
-        const {
-            page = 1,
-            limit = 20,
-            role,
-            status,
-            search,
-        } = query;
+        const { page = 1, limit = 20, role, status, search } = query
 
         // Parse page and limit to integers
-        const pageNum = parseInt(page, 10) || 1;
-        const limitNum = parseInt(limit, 10) || 20;
+        const pageNum = parseInt(page, 10) || 1
+        const limitNum = parseInt(limit, 10) || 20
 
-        const skip = (pageNum - 1) * limitNum;
+        const skip = (pageNum - 1) * limitNum
 
         // Build where clause
-        const where = {};
+        const where = {}
 
         if (role) {
-            where.role = role;
+            where.role = role
         }
 
         if (status) {
-            where.status = status;
+            where.status = status
         }
 
         if (search) {
             where.OR = [
-                { username: { contains: search, mode: 'insensitive' } },
+                { userName: { contains: search, mode: 'insensitive' } },
                 { email: { contains: search, mode: 'insensitive' } },
                 { fullName: { contains: search, mode: 'insensitive' } },
-            ];
+            ]
         }
 
         // Get users and total count
@@ -219,7 +213,7 @@ class UsersService {
                 take: limitNum,
                 select: {
                     id: true,
-                    username: true,
+                    userName: true,
                     email: true,
                     fullName: true,
                     avatarUrl: true,
@@ -235,7 +229,7 @@ class UsersService {
                 orderBy: { createdAt: 'desc' },
             }),
             prisma.user.count({ where }),
-        ]);
+        ])
 
         return {
             users,
@@ -245,23 +239,23 @@ class UsersService {
                 total,
                 totalPages: Math.ceil(total / limitNum),
             },
-        };
+        }
     }
 
     /**
      * Get user by ID
      */
     async getUserById(userId) {
-        const userIdInt = parseInt(userId, 10);
+        const userIdInt = parseInt(userId, 10)
         if (isNaN(userIdInt)) {
-            throw new Error('Invalid user ID');
+            throw new Error('Invalid user ID')
         }
 
         const user = await prisma.user.findUnique({
             where: { id: userIdInt },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 avatarUrl: true,
@@ -275,32 +269,32 @@ class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
         if (!user) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
-        return user;
+        return user
     }
 
     /**
      * Update user (Admin only)
      */
     async updateUser(userId, data) {
-        const userIdInt = parseInt(userId, 10);
+        const userIdInt = parseInt(userId, 10)
         if (isNaN(userIdInt)) {
-            throw new Error('Invalid user ID');
+            throw new Error('Invalid user ID')
         }
 
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
             where: { id: userIdInt },
-            select: { id: true, username: true, role: true },
-        });
+            select: { id: true, userName: true, role: true },
+        })
 
         if (!existingUser) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
         // Prevent changing admin role to non-admin
@@ -309,56 +303,74 @@ class UsersService {
             data.role !== undefined &&
             data.role !== USER_ROLES.ADMIN
         ) {
-            throw new Error('Cannot change admin role to non-admin role');
+            throw new Error('Cannot change admin role to non-admin role')
         }
 
         // Prevent changing role to admin or guest (only STUDENT and INSTRUCTOR are allowed)
         if (data.role !== undefined) {
-            const roleUpper = data.role?.toUpperCase();
-            
+            const roleUpper = data.role?.toUpperCase()
+
             // Block ADMIN
-            if (data.role === USER_ROLES.ADMIN || roleUpper === USER_ROLES.ADMIN) {
-                logger.warn(`Attempt to change user role to ADMIN blocked via updateUser: userId=${userIdInt}, role=${data.role}`);
-                throw new Error('Cannot change user role to admin through API');
+            if (
+                data.role === USER_ROLES.ADMIN ||
+                roleUpper === USER_ROLES.ADMIN
+            ) {
+                logger.warn(
+                    `Attempt to change user role to ADMIN blocked via updateUser: userId=${userIdInt}, role=${data.role}`
+                )
+                throw new Error('Cannot change user role to admin through API')
             }
-            
+
             // Block GUEST - only STUDENT and INSTRUCTOR are allowed
-            if (data.role === USER_ROLES.GUEST || roleUpper === USER_ROLES.GUEST) {
-                logger.warn(`Attempt to change user role to GUEST blocked via updateUser: userId=${userIdInt}, role=${data.role}`);
-                throw new Error('Cannot change user role to GUEST. Only STUDENT and INSTRUCTOR roles are allowed');
+            if (
+                data.role === USER_ROLES.GUEST ||
+                roleUpper === USER_ROLES.GUEST
+            ) {
+                logger.warn(
+                    `Attempt to change user role to GUEST blocked via updateUser: userId=${userIdInt}, role=${data.role}`
+                )
+                throw new Error(
+                    'Cannot change user role to GUEST. Only STUDENT and INSTRUCTOR roles are allowed'
+                )
             }
-            
+
             // Only allow STUDENT and INSTRUCTOR
-            if (data.role !== USER_ROLES.STUDENT && 
+            if (
+                data.role !== USER_ROLES.STUDENT &&
                 data.role !== USER_ROLES.INSTRUCTOR &&
                 roleUpper !== USER_ROLES.STUDENT &&
-                roleUpper !== USER_ROLES.INSTRUCTOR) {
-                logger.warn(`Invalid role attempted via updateUser: userId=${userIdInt}, role=${data.role}`);
-                throw new Error('Invalid role. Only STUDENT and INSTRUCTOR roles are allowed');
+                roleUpper !== USER_ROLES.INSTRUCTOR
+            ) {
+                logger.warn(
+                    `Invalid role attempted via updateUser: userId=${userIdInt}, role=${data.role}`
+                )
+                throw new Error(
+                    'Invalid role. Only STUDENT and INSTRUCTOR roles are allowed'
+                )
             }
         }
 
-        const updateData = {};
+        const updateData = {}
 
         if (data.fullName !== undefined) {
-            updateData.fullName = data.fullName.trim();
+            updateData.fullName = data.fullName.trim()
         }
         if (data.phone !== undefined) {
-            updateData.phone = data.phone ? data.phone.trim() : null;
+            updateData.phone = data.phone ? data.phone.trim() : null
         }
         if (data.bio !== undefined) {
-            updateData.bio = data.bio ? data.bio.trim() : null;
+            updateData.bio = data.bio ? data.bio.trim() : null
         }
         if (data.role !== undefined) {
-            updateData.role = data.role;
+            updateData.role = data.role
         }
         if (data.status !== undefined) {
-            updateData.status = data.status;
+            updateData.status = data.status
         }
         if (data.emailVerified !== undefined) {
-            updateData.emailVerified = data.emailVerified;
+            updateData.emailVerified = data.emailVerified
             if (data.emailVerified && !existingUser.emailVerifiedAt) {
-                updateData.emailVerifiedAt = new Date();
+                updateData.emailVerifiedAt = new Date()
             }
         }
 
@@ -367,7 +379,7 @@ class UsersService {
             data: updateData,
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 avatarUrl: true,
@@ -381,30 +393,30 @@ class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
-        logger.info(`User updated by admin: ${user.username} (${user.id})`);
+        logger.info(`User updated by admin: ${user.userName} (${user.id})`)
 
-        return user;
+        return user
     }
 
     /**
      * Change user role (Admin only)
      */
     async changeUserRole(userId, role) {
-        const userIdInt = parseInt(userId, 10);
+        const userIdInt = parseInt(userId, 10)
         if (isNaN(userIdInt)) {
-            throw new Error('Invalid user ID');
+            throw new Error('Invalid user ID')
         }
 
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
             where: { id: userIdInt },
-            select: { id: true, username: true, role: true },
-        });
+            select: { id: true, userName: true, role: true },
+        })
 
         if (!existingUser) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
         // Prevent changing admin role to non-admin
@@ -412,32 +424,44 @@ class UsersService {
             existingUser.role === USER_ROLES.ADMIN &&
             role !== USER_ROLES.ADMIN
         ) {
-            throw new Error('Cannot change admin role to non-admin role');
+            throw new Error('Cannot change admin role to non-admin role')
         }
 
         // Prevent changing role to admin or guest (only STUDENT and INSTRUCTOR are allowed)
         // Check both uppercase and compare with constant
-        const roleUpper = role?.toUpperCase();
-        
+        const roleUpper = role?.toUpperCase()
+
         // Block ADMIN
         if (role === USER_ROLES.ADMIN || roleUpper === USER_ROLES.ADMIN) {
-            logger.warn(`Attempt to change user role to ADMIN blocked: userId=${userIdInt}, role=${role}`);
-            throw new Error('Cannot change user role to admin through API');
+            logger.warn(
+                `Attempt to change user role to ADMIN blocked: userId=${userIdInt}, role=${role}`
+            )
+            throw new Error('Cannot change user role to admin through API')
         }
-        
+
         // Block GUEST - only STUDENT and INSTRUCTOR are allowed
         if (role === USER_ROLES.GUEST || roleUpper === USER_ROLES.GUEST) {
-            logger.warn(`Attempt to change user role to GUEST blocked: userId=${userIdInt}, role=${role}`);
-            throw new Error('Cannot change user role to GUEST. Only STUDENT and INSTRUCTOR roles are allowed');
+            logger.warn(
+                `Attempt to change user role to GUEST blocked: userId=${userIdInt}, role=${role}`
+            )
+            throw new Error(
+                'Cannot change user role to GUEST. Only STUDENT and INSTRUCTOR roles are allowed'
+            )
         }
-        
+
         // Only allow STUDENT and INSTRUCTOR
-        if (role !== USER_ROLES.STUDENT && 
+        if (
+            role !== USER_ROLES.STUDENT &&
             role !== USER_ROLES.INSTRUCTOR &&
             roleUpper !== USER_ROLES.STUDENT &&
-            roleUpper !== USER_ROLES.INSTRUCTOR) {
-            logger.warn(`Invalid role attempted: userId=${userIdInt}, role=${role}`);
-            throw new Error('Invalid role. Only STUDENT and INSTRUCTOR roles are allowed');
+            roleUpper !== USER_ROLES.INSTRUCTOR
+        ) {
+            logger.warn(
+                `Invalid role attempted: userId=${userIdInt}, role=${role}`
+            )
+            throw new Error(
+                'Invalid role. Only STUDENT and INSTRUCTOR roles are allowed'
+            )
         }
 
         const user = await prisma.user.update({
@@ -445,7 +469,7 @@ class UsersService {
             data: { role },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 role: true,
@@ -453,35 +477,40 @@ class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
-        logger.info(`User role changed: ${user.username} (${user.id}) -> ${role}`);
+        logger.info(
+            `User role changed: ${user.userName} (${user.id}) -> ${role}`
+        )
 
-        return user;
+        return user
     }
 
     /**
      * Change user status (Admin only)
      */
     async changeUserStatus(userId, status) {
-        const userIdInt = parseInt(userId, 10);
+        const userIdInt = parseInt(userId, 10)
         if (isNaN(userIdInt)) {
-            throw new Error('Invalid user ID');
+            throw new Error('Invalid user ID')
         }
 
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
             where: { id: userIdInt },
-            select: { id: true, username: true, role: true },
-        });
+            select: { id: true, userName: true, role: true },
+        })
 
         if (!existingUser) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
         // Prevent changing admin status (safety check)
-        if (existingUser.role === USER_ROLES.ADMIN && status !== USER_STATUS.ACTIVE) {
-            throw new Error('Cannot change admin user status');
+        if (
+            existingUser.role === USER_ROLES.ADMIN &&
+            status !== USER_STATUS.ACTIVE
+        ) {
+            throw new Error('Cannot change admin user status')
         }
 
         const user = await prisma.user.update({
@@ -489,7 +518,7 @@ class UsersService {
             data: { status },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 role: true,
@@ -497,20 +526,22 @@ class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
-        });
+        })
 
-        logger.info(`User status changed: ${user.username} (${user.id}) -> ${status}`);
+        logger.info(
+            `User status changed: ${user.userName} (${user.id}) -> ${status}`
+        )
 
-        return user;
+        return user
     }
 
     /**
      * Delete user (Admin only)
      */
     async deleteUser(userId) {
-        const userIdInt = parseInt(userId, 10);
+        const userIdInt = parseInt(userId, 10)
         if (isNaN(userIdInt)) {
-            throw new Error('Invalid user ID');
+            throw new Error('Invalid user ID')
         }
 
         // Check if user exists
@@ -518,20 +549,20 @@ class UsersService {
             where: { id: userIdInt },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 avatarUrl: true,
                 role: true,
             },
-        });
+        })
 
         if (!user) {
-            throw new Error('User not found');
+            throw new Error('User not found')
         }
 
         // Prevent deleting admin users (safety check)
         if (user.role === USER_ROLES.ADMIN) {
-            throw new Error('Cannot delete admin user');
+            throw new Error('Cannot delete admin user')
         }
 
         // Delete avatar file if exists
@@ -541,27 +572,25 @@ class UsersService {
                     process.cwd(),
                     'backend',
                     user.avatarUrl
-                );
+                )
                 if (fs.existsSync(avatarPath)) {
-                    fs.unlinkSync(avatarPath);
-                    logger.info(`Avatar deleted: ${user.avatarUrl}`);
+                    fs.unlinkSync(avatarPath)
+                    logger.info(`Avatar deleted: ${user.avatarUrl}`)
                 }
             } catch (error) {
-                logger.warn(`Failed to delete avatar: ${error.message}`);
+                logger.warn(`Failed to delete avatar: ${error.message}`)
             }
         }
 
         // Delete user (cascade will handle related records)
         await prisma.user.delete({
             where: { id: userIdInt },
-        });
+        })
 
-        logger.info(`User deleted: ${user.username} (${user.id})`);
+        logger.info(`User deleted: ${user.userName} (${user.id})`)
 
-        return { message: 'User deleted successfully' };
+        return { message: 'User deleted successfully' }
     }
 }
 
-export default new UsersService();
-
-
+export default new UsersService()

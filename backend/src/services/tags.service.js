@@ -8,11 +8,7 @@ class TagsService {
      * Get tags list with pagination and search
      */
     async getTags(query) {
-        const {
-            page = 1,
-            limit = 20,
-            search,
-        } = query
+        const { page = 1, limit = 20, search } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
@@ -105,12 +101,7 @@ class TagsService {
             throw new Error('Tag not found')
         }
 
-        const {
-            page = 1,
-            limit = 20,
-            level,
-            sort = 'newest',
-        } = query
+        const { page = 1, limit = 20, level, sort = 'newest' } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
@@ -177,7 +168,7 @@ class TagsService {
                     instructor: {
                         select: {
                             id: true,
-                            username: true,
+                            userName: true,
                             fullName: true,
                             avatarUrl: true,
                         },
@@ -332,6 +323,3 @@ class TagsService {
 }
 
 export default new TagsService()
-
-
-

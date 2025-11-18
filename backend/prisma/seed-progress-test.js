@@ -15,7 +15,7 @@ async function main() {
         where: { email: 'studentSeed1@example.com' },
         update: {},
         create: {
-            username: 'student_seed1',
+            userName: 'student_seed1',
             email: 'studentseed1@example.com',
             passwordHash: studentPassword,
             fullName: 'Nguyễn Văn Học',
@@ -28,7 +28,7 @@ async function main() {
         where: { email: 'instructorSeed1@example.com' },
         update: {},
         create: {
-            username: 'instructor_seed1',
+            userName: 'instructor_seed1',
             email: 'instructorseed1@example.com',
             passwordHash: instructorPassword,
             fullName: 'Giảng viên A',

@@ -3,15 +3,15 @@ import { body } from 'express-validator'
 import { validate } from '../middlewares/validate.middleware.js'
 
 const registerValidator = [
-    body('username')
+    body('userName')
         .trim()
         .notEmpty()
-        .withMessage('Username is required')
+        .withMessage('userName is required')
         .isLength({ min: 3, max: 50 })
-        .withMessage('Username must be between 3 and 50 characters')
+        .withMessage('userName must be between 3 and 50 characters')
         .matches(/^[a-zA-Z0-9_]+$/)
         .withMessage(
-            'Username can only contain letters, numbers and underscores'
+            'userName can only contain letters, numbers and underscores'
         ),
 
     body('email')

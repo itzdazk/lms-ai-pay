@@ -157,7 +157,7 @@ class EnrollmentService {
                         instructor: {
                             select: {
                                 id: true,
-                                username: true,
+                                userName: true,
                                 fullName: true,
                                 avatarUrl: true,
                                 bio: true,
@@ -310,7 +310,12 @@ class EnrollmentService {
      * @param {Object} billingAddress - Billing address (optional)
      * @returns {Promise<object>}
      */
-    async enrollInCourse(userId, courseId, paymentGateway = null, billingAddress = null) {
+    async enrollInCourse(
+        userId,
+        courseId,
+        paymentGateway = null,
+        billingAddress = null
+    ) {
         // Check if course exists and is published
         const course = await prisma.course.findUnique({
             where: { id: courseId },

@@ -39,7 +39,7 @@ const authenticate = async (req, res, next) => {
             where: { id: decoded.userId },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 role: true,
@@ -102,7 +102,7 @@ const optionalAuthenticate = async (req, res, next) => {
                 where: { id: decoded.userId },
                 select: {
                     id: true,
-                    username: true,
+                    userName: true,
                     email: true,
                     fullName: true,
                     role: true,

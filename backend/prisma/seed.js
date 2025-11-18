@@ -106,7 +106,7 @@ async function main() {
     const adminPassword = await bcrypt.hash('Admin@123', 12)
     const admin = await prisma.user.create({
         data: {
-            username: 'admin',
+            userName: 'admin',
             email: 'admin@2200freefonts.com',
             passwordHash: adminPassword,
             fullName: 'Admin User',
@@ -123,21 +123,21 @@ async function main() {
     // Create Multiple Instructors
     const instructorsData = [
         {
-            username: 'instructor1',
+            userName: 'instructor1',
             email: 'instructor1@2200freefonts.com',
             fullName: 'Nguyễn Văn A',
             bio: 'Full-stack developer với 10+ năm kinh nghiệm. Chuyên về React, Node.js và cloud computing.',
             phone: '0912345678',
         },
         {
-            username: 'instructor2',
+            userName: 'instructor2',
             email: 'instructor2@2200freefonts.com',
             fullName: 'Trần Thị B',
             bio: 'Mobile app developer, chuyên về React Native và Flutter. Đã phát triển 50+ ứng dụng di động.',
             phone: '0923456789',
         },
         {
-            username: 'instructor3',
+            userName: 'instructor3',
             email: 'instructor3@2200freefonts.com',
             fullName: 'Lê Văn C',
             bio: 'Data scientist và AI engineer. Chuyên về machine learning, deep learning và Python.',
@@ -151,11 +151,11 @@ async function main() {
         const instructor = await prisma.user.create({
             data: {
                 ...data,
-            passwordHash: instructorPassword,
+                passwordHash: instructorPassword,
                 role: USER_ROLES.INSTRUCTOR,
                 status: USER_STATUS.ACTIVE,
-            emailVerified: true,
-            emailVerifiedAt: new Date(),
+                emailVerified: true,
+                emailVerifiedAt: new Date(),
             },
         })
         instructors.push(instructor)
@@ -165,31 +165,31 @@ async function main() {
     // Create Multiple Students
     const studentsData = [
         {
-            username: 'student1',
+            userName: 'student1',
             email: 'student1@2200freefonts.com',
             fullName: 'Phạm Thị D',
             phone: '0945678901',
         },
         {
-            username: 'student2',
+            userName: 'student2',
             email: 'student2@2200freefonts.com',
             fullName: 'Hoàng Văn E',
             phone: '0956789012',
         },
         {
-            username: 'student3',
+            userName: 'student3',
             email: 'student3@2200freefonts.com',
             fullName: 'Vũ Thị F',
             phone: '0967890123',
         },
         {
-            username: 'student4',
+            userName: 'student4',
             email: 'student4@2200freefonts.com',
             fullName: 'Đặng Văn G',
             phone: '0978901234',
         },
         {
-            username: 'student5',
+            userName: 'student5',
             email: 'student5@2200freefonts.com',
             fullName: 'Bùi Thị H',
             phone: '0989012345',
@@ -202,13 +202,13 @@ async function main() {
         const student = await prisma.user.create({
             data: {
                 ...data,
-            passwordHash: studentPassword,
+                passwordHash: studentPassword,
                 role: USER_ROLES.STUDENT,
                 status: USER_STATUS.ACTIVE,
-            emailVerified: true,
-            emailVerifiedAt: new Date(),
-        },
-    })
+                emailVerified: true,
+                emailVerifiedAt: new Date(),
+            },
+        })
         students.push(student)
         console.log(`✅ Student created: ${student.email}`)
     }
@@ -494,7 +494,12 @@ Học NumPy, Pandas, Matplotlib, Scikit-learn, TensorFlow và nhiều hơn nữa
             viewsCount: 4000,
             completionRate: 72.0,
             publishedAt: new Date('2024-03-15'),
-            courseTags: ['python', 'machine-learning', 'data-science', 'deep-learning'],
+            courseTags: [
+                'python',
+                'machine-learning',
+                'data-science',
+                'deep-learning',
+            ],
         },
         {
             title: 'Complete TypeScript Course',
@@ -515,7 +520,8 @@ và cách sử dụng TypeScript với React, Node.js.`,
                 'TypeScript, Type System, Generics, Decorators, React + TypeScript, Node.js + TypeScript',
             courseObjectives:
                 'Master TypeScript, Write type-safe code, Use TypeScript in real projects',
-            targetAudience: 'JavaScript developers, Frontend/Backend developers',
+            targetAudience:
+                'JavaScript developers, Frontend/Backend developers',
             status: COURSE_STATUS.PUBLISHED,
             isFeatured: false,
             ratingAvg: 4.7,
@@ -545,7 +551,8 @@ Học từ cơ bản đến production deployment.`,
                 'Docker, Docker Compose, Kubernetes, Container Orchestration, CI/CD, Cloud Deployment',
             courseObjectives:
                 'Containerize applications, Deploy with Kubernetes, Understand DevOps practices',
-            targetAudience: 'DevOps engineers, Backend developers, System administrators',
+            targetAudience:
+                'DevOps engineers, Backend developers, System administrators',
             status: COURSE_STATUS.PUBLISHED,
             isFeatured: false,
             ratingAvg: 4.6,
@@ -637,14 +644,16 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             lessons: [
                 {
                     title: 'Giới thiệu về Web Development',
-                    description: 'Chào mừng đến với khóa học! Tìm hiểu những gì bạn sẽ học và xây dựng.',
-            lessonOrder: 1,
-            isPreview: true,
+                    description:
+                        'Chào mừng đến với khóa học! Tìm hiểu những gì bạn sẽ học và xây dựng.',
+                    lessonOrder: 1,
+                    isPreview: true,
                     videoDuration: 600, // 10 minutes
                 },
                 {
                     title: 'Thiết lập môi trường phát triển',
-                    description: 'Cài đặt VS Code, Node.js và các công cụ cần thiết khác.',
+                    description:
+                        'Cài đặt VS Code, Node.js và các công cụ cần thiết khác.',
                     lessonOrder: 2,
                     isPreview: true,
                     videoDuration: 900, // 15 minutes
@@ -663,13 +672,15 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                 },
                 {
                     title: 'JavaScript Basics',
-                    description: 'Biến, functions, arrays, objects trong JavaScript.',
+                    description:
+                        'Biến, functions, arrays, objects trong JavaScript.',
                     lessonOrder: 5,
                     videoDuration: 1800, // 30 minutes
                 },
                 {
                     title: 'DOM Manipulation',
-                    description: 'Tương tác với DOM, events, và dynamic content.',
+                    description:
+                        'Tương tác với DOM, events, và dynamic content.',
                     lessonOrder: 6,
                     videoDuration: 2100, // 35 minutes
                 },
@@ -713,7 +724,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                 {
                     title: 'Components và Props',
                     description: 'Tạo và sử dụng components với props.',
-            lessonOrder: 2,
+                    lessonOrder: 2,
                     isPreview: true,
                     videoDuration: 1500,
                 },
@@ -757,8 +768,8 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                     title: 'Node.js Introduction',
                     description: 'Giới thiệu về Node.js và npm.',
                     lessonOrder: 1,
-            isPreview: true,
-            videoDuration: 900,
+                    isPreview: true,
+                    videoDuration: 900,
                 },
                 {
                     title: 'Modules và File System',
@@ -786,7 +797,8 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                 },
                 {
                     title: 'Authentication và Security',
-                    description: 'Implement authentication và security best practices.',
+                    description:
+                        'Implement authentication và security best practices.',
                     lessonOrder: 6,
                     videoDuration: 3000,
                 },
@@ -893,9 +905,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
         const student = students.find(
             (s) => s.email === enrollmentData.studentEmail
         )
-        const course = courses.find(
-            (c) => c.slug === enrollmentData.courseSlug
-        )
+        const course = courses.find((c) => c.slug === enrollmentData.courseSlug)
 
         if (student && course) {
             await prisma.enrollment.upsert({
@@ -1005,13 +1015,17 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
     ]
 
     for (const orderData of ordersData) {
-        const student = students.find(
-            (s) => s.email === orderData.studentEmail
-        )
+        const student = students.find((s) => s.email === orderData.studentEmail)
         const course = courses.find((c) => c.slug === orderData.courseSlug)
 
         if (student && course) {
-            const { transactionId, paidAt, studentEmail, courseSlug, ...orderFields } = orderData
+            const {
+                transactionId,
+                paidAt,
+                studentEmail,
+                courseSlug,
+                ...orderFields
+            } = orderData
             const order = await prisma.order.upsert({
                 where: { orderCode: orderData.orderCode },
                 update: {},
@@ -1025,7 +1039,10 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
             })
 
             // Create payment transaction if paid
-            if (orderData.paymentStatus === PAYMENT_STATUS.PAID && transactionId) {
+            if (
+                orderData.paymentStatus === PAYMENT_STATUS.PAID &&
+                transactionId
+            ) {
                 await prisma.paymentTransaction.create({
                     data: {
                         orderId: order.id,
@@ -1054,7 +1071,9 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
     })
 
     // Student 1 progress in course 1 (completed first 4 lessons)
-    const student1 = students.find((s) => s.email === 'student1@2200freefonts.com')
+    const student1 = students.find(
+        (s) => s.email === 'student1@2200freefonts.com'
+    )
     if (student1 && course1Lessons.length >= 4) {
         for (let i = 0; i < 4; i++) {
             await prisma.progress.upsert({
@@ -1102,7 +1121,9 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
     }
 
     // Student 2 progress in course 1 (completed more lessons)
-    const student2 = students.find((s) => s.email === 'student2@2200freefonts.com')
+    const student2 = students.find(
+        (s) => s.email === 'student2@2200freefonts.com'
+    )
     if (student2 && course1Lessons.length >= 7) {
         for (let i = 0; i < 7; i++) {
             await prisma.progress.upsert({
@@ -1213,8 +1234,7 @@ Vuex/Pinia, và xây dựng ứng dụng thực tế.`,
                 questions: [
                     {
                         id: 1,
-                        question:
-                            'Web Development bao gồm những phần nào?',
+                        question: 'Web Development bao gồm những phần nào?',
                         type: 'multiple_choice',
                         options: [
                             'Frontend và Backend',

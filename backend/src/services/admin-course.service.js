@@ -48,7 +48,7 @@ class AdminCourseService {
                     instructor: {
                         OR: [
                             {
-                                username: {
+                                userName: {
                                     contains: search,
                                     mode: 'insensitive',
                                 },
@@ -182,7 +182,7 @@ class AdminCourseService {
                     instructor: {
                         select: {
                             id: true,
-                            username: true,
+                            userName: true,
                             fullName: true,
                             email: true,
                             avatarUrl: true,
@@ -262,7 +262,7 @@ class AdminCourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                     },
                 },
@@ -389,7 +389,7 @@ class AdminCourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                     },
                 },
@@ -421,7 +421,7 @@ class AdminCourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                     },
                 },
@@ -445,7 +445,7 @@ class AdminCourseService {
             where: { role: USER_ROLES.INSTRUCTOR },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 fullName: true,
                 email: true,
                 avatarUrl: true,
@@ -489,7 +489,7 @@ class AdminCourseService {
 
             return {
                 id: instructor.id,
-                username: instructor.username,
+                userName: instructor.userName,
                 fullName: instructor.fullName,
                 email: instructor.email,
                 avatarUrl: instructor.avatarUrl,

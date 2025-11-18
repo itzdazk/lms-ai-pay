@@ -114,7 +114,7 @@ class CourseService {
                     instructor: {
                         select: {
                             id: true,
-                            username: true,
+                            userName: true,
                             fullName: true,
                             avatarUrl: true,
                         },
@@ -169,7 +169,7 @@ class CourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                         avatarUrl: true,
                     },
@@ -233,7 +233,7 @@ class CourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                         avatarUrl: true,
                     },
@@ -291,7 +291,7 @@ class CourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                         avatarUrl: true,
                         bio: true,
@@ -395,7 +395,7 @@ class CourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                         avatarUrl: true,
                         bio: true,
@@ -531,7 +531,7 @@ class CourseService {
                 instructor: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                         avatarUrl: true,
                         bio: true,

@@ -1,6 +1,12 @@
 // src/services/instructor-course.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS, COURSE_LEVEL, USER_ROLES, ENROLLMENT_STATUS, PAYMENT_STATUS } from '../config/constants.js'
+import {
+    COURSE_STATUS,
+    COURSE_LEVEL,
+    USER_ROLES,
+    ENROLLMENT_STATUS,
+    PAYMENT_STATUS,
+} from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
 import path from 'path'
@@ -1112,7 +1118,7 @@ class InstructorCourseService {
                 user: {
                     select: {
                         id: true,
-                        username: true,
+                        userName: true,
                         fullName: true,
                         avatarUrl: true,
                     },

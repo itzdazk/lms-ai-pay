@@ -41,7 +41,7 @@ class EmailService {
     /**
      * Send verification email
      */
-    async sendVerificationEmail(email, username, token) {
+    async sendVerificationEmail(email, userName, token) {
         const verificationUrl = `${config.EMAIL_VERIFICATION_URL}?token=${token}`
 
         const html = `
@@ -63,7 +63,7 @@ class EmailService {
                         <h1>Email Verification</h1>
                     </div>
                     <div class="content">
-                        <p>Hi <strong>${username}</strong>,</p>
+                        <p>Hi <strong>${userName}</strong>,</p>
                         <p>Thank you for registering with LMS AI Pay! Please verify your email address by clicking the button below:</p>
                         <div style="text-align: center;">
                             <a href="${verificationUrl}" class="button">Verify Email</a>
@@ -81,7 +81,7 @@ class EmailService {
             </html>
         `
 
-        const text = `Hi ${username},\n\nThank you for registering! Please verify your email by visiting: ${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`
+        const text = `Hi ${userName},\n\nThank you for registering! Please verify your email by visiting: ${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`
 
         return this.sendEmail({
             to: email,
@@ -94,7 +94,7 @@ class EmailService {
     /**
      * Send password reset email
      */
-    async sendPasswordResetEmail(email, username, token) {
+    async sendPasswordResetEmail(email, userName, token) {
         const resetUrl = `${config.PASSWORD_RESET_URL}?token=${token}`
 
         const html = `
@@ -117,7 +117,7 @@ class EmailService {
                         <h1>Password Reset Request</h1>
                     </div>
                     <div class="content">
-                        <p>Hi <strong>${username}</strong>,</p>
+                        <p>Hi <strong>${userName}</strong>,</p>
                         <p>We received a request to reset your password. Click the button below to create a new password:</p>
                         <div style="text-align: center;">
                             <a href="${resetUrl}" class="button">Reset Password</a>
@@ -141,7 +141,7 @@ class EmailService {
             </html>
         `
 
-        const text = `Hi ${username},\n\nWe received a request to reset your password. Visit this link to create a new password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
+        const text = `Hi ${userName},\n\nWe received a request to reset your password. Visit this link to create a new password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
 
         return this.sendEmail({
             to: email,
@@ -154,7 +154,7 @@ class EmailService {
     /**
      * Send welcome email after verification
      */
-    async sendWelcomeEmail(email, username) {
+    async sendWelcomeEmail(email, userName) {
         const html = `
             <!DOCTYPE html>
             <html>
@@ -174,7 +174,7 @@ class EmailService {
                         <h1>🎉 Welcome to LMS AI Pay!</h1>
                     </div>
                     <div class="content">
-                        <p>Hi <strong>${username}</strong>,</p>
+                        <p>Hi <strong>${userName}</strong>,</p>
                         <p>Your email has been successfully verified! Welcome to our learning platform.</p>
                         <p>You can now:</p>
                         <ul>
@@ -195,7 +195,7 @@ class EmailService {
             </html>
         `
 
-        const text = `Hi ${username},\n\nYour email has been successfully verified! Welcome to LMS AI Pay.\n\nVisit ${config.CLIENT_URL}/courses to browse our courses.`
+        const text = `Hi ${userName},\n\nYour email has been successfully verified! Welcome to LMS AI Pay.\n\nVisit ${config.CLIENT_URL}/courses to browse our courses.`
 
         return this.sendEmail({
             to: email,
@@ -208,7 +208,7 @@ class EmailService {
     /**
      * Send password change confirmation email
      */
-    async sendPasswordChangeConfirmation(email, username) {
+    async sendPasswordChangeConfirmation(email, userName) {
         const html = `
             <!DOCTYPE html>
             <html>
@@ -228,7 +228,7 @@ class EmailService {
                         <h1>Password Changed Successfully</h1>
                     </div>
                     <div class="content">
-                        <p>Hi <strong>${username}</strong>,</p>
+                        <p>Hi <strong>${userName}</strong>,</p>
                         <p>Your password has been successfully changed.</p>
                         <div class="warning">
                             <p><strong>⚠️ Security Notice:</strong></p>
@@ -244,7 +244,7 @@ class EmailService {
             </html>
         `
 
-        const text = `Hi ${username},\n\nYour password has been successfully changed.\n\nIf you didn't make this change, please contact us immediately.\n\nChanged at: ${new Date().toLocaleString()}`
+        const text = `Hi ${userName},\n\nYour password has been successfully changed.\n\nIf you didn't make this change, please contact us immediately.\n\nChanged at: ${new Date().toLocaleString()}`
 
         return this.sendEmail({
             to: email,

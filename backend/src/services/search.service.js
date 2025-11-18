@@ -133,7 +133,7 @@ class SearchService {
                     instructor: {
                         select: {
                             id: true,
-                            username: true,
+                            userName: true,
                             fullName: true,
                             avatarUrl: true,
                         },
@@ -194,11 +194,11 @@ class SearchService {
             status: USER_STATUS.ACTIVE,
         }
 
-        // Full-text search trong fullName, username, bio
+        // Full-text search trong fullName, userName, bio
         if (q) {
             where.OR = [
                 { fullName: { contains: q, mode: 'insensitive' } },
-                { username: { contains: q, mode: 'insensitive' } },
+                { userName: { contains: q, mode: 'insensitive' } },
                 { bio: { contains: q, mode: 'insensitive' } },
             ]
         }
@@ -227,7 +227,7 @@ class SearchService {
                 orderBy,
                 select: {
                     id: true,
-                    username: true,
+                    userName: true,
                     fullName: true,
                     avatarUrl: true,
                     bio: true,
@@ -384,7 +384,7 @@ class SearchService {
                         },
                     },
                     {
-                        username: {
+                        userName: {
                             contains: searchTerm,
                             mode: 'insensitive',
                         },
@@ -394,7 +394,7 @@ class SearchService {
             take: limit,
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 fullName: true,
                 avatarUrl: true,
             },

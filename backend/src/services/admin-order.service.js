@@ -51,7 +51,7 @@ class AdminOrderService {
                                 },
                             },
                             {
-                                username: {
+                                userName: {
                                     contains: search,
                                     mode: 'insensitive',
                                 },
@@ -129,7 +129,7 @@ class AdminOrderService {
                     user: {
                         select: {
                             id: true,
-                            username: true,
+                            userName: true,
                             email: true,
                             fullName: true,
                         },

@@ -12,7 +12,7 @@ class AuthService {
      */
     async register(data) {
         const {
-            username,
+            userName,
             email,
             password,
             fullName,
@@ -22,7 +22,7 @@ class AuthService {
         // Check if user already exists
         const existingUser = await prisma.user.findFirst({
             where: {
-                OR: [{ email }, { username }],
+                OR: [{ email }, { userName }],
             },
         })
 
@@ -30,8 +30,8 @@ class AuthService {
             if (existingUser.email === email) {
                 throw new Error('Email already exists')
             }
-            if (existingUser.username === username) {
-                throw new Error('Username already exists')
+            if (existingUser.userName === userName) {
+                throw new Error('userName already exists')
             }
         }
 
@@ -45,7 +45,7 @@ class AuthService {
         // Create user
         const user = await prisma.user.create({
             data: {
-                username,
+                userName,
                 email,
                 passwordHash,
                 fullName,
@@ -56,7 +56,7 @@ class AuthService {
             },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 role: true,
@@ -80,7 +80,7 @@ class AuthService {
         try {
             await emailService.sendVerificationEmail(
                 user.email,
-                user.username,
+                user.userName,
                 emailVerificationToken
             )
             logger.info(`Verification email sent to: ${user.email}`)
@@ -104,7 +104,7 @@ class AuthService {
             where: { email },
             select: {
                 id: true,
-                username: true,
+                userName: true,
                 email: true,
                 fullName: true,
                 role: true,
@@ -154,7 +154,7 @@ class AuthService {
         return {
             user: {
                 id: user.id,
-                username: user.username,
+                userName: user.userName,
                 email: user.email,
                 fullName: user.fullName,
                 role: user.role,
@@ -225,7 +225,7 @@ class AuthService {
                 select: {
                     id: true,
                     email: true,
-                    username: true,
+                    userName: true,
                     emailVerified: true,
                 },
             })
@@ -249,7 +249,7 @@ class AuthService {
 
             // Send welcome email
             try {
-                await emailService.sendWelcomeEmail(user.email, user.username)
+                await emailService.sendWelcomeEmail(user.email, user.userName)
             } catch (error) {
                 logger.error('Failed to send welcome email:', error)
             }
@@ -274,7 +274,7 @@ class AuthService {
             select: {
                 id: true,
                 email: true,
-                username: true,
+                userName: true,
                 emailVerified: true,
             },
         })
@@ -301,7 +301,7 @@ class AuthService {
         // Send verification email
         await emailService.sendVerificationEmail(
             user.email,
-            user.username,
+            user.userName,
             emailVerificationToken
         )
 
@@ -319,7 +319,7 @@ class AuthService {
             select: {
                 id: true,
                 email: true,
-                username: true,
+                userName: true,
             },
         })
 
@@ -346,7 +346,7 @@ class AuthService {
         try {
             await emailService.sendPasswordResetEmail(
                 user.email,
-                user.username,
+                user.userName,
                 resetToken
             )
             logger.info(`Password reset email sent to: ${user.email}`)
@@ -376,7 +376,7 @@ class AuthService {
                 select: {
                     id: true,
                     email: true,
-                    username: true,
+                    userName: true,
                 },
             })
 
@@ -399,7 +399,7 @@ class AuthService {
             try {
                 await emailService.sendPasswordChangeConfirmation(
                     user.email,
-                    user.username
+                    user.userName
                 )
             } catch (error) {
                 logger.error(

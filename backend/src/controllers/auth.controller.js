@@ -12,10 +12,10 @@ class AuthController {
      * @access  Public
      */
     register = asyncHandler(async (req, res) => {
-        const { username, email, password, fullName, role } = req.body
+        const { userName, email, password, fullName, role } = req.body
 
         const result = await authService.register({
-            username,
+            userName,
             email,
             password,
             fullName,
