@@ -1217,15 +1217,49 @@ class PaymentService {
                 raw: vnpParams,
             }
 
-            // CRITICAL: Only update order status in DB if this is IPN (webhook)
-            // Return URL (callback) must NOT modify DB state
+            // Update order status to PAID (idempotent - safe to call multiple times)
+            // This ensures email is sent even if IPN webhook is not configured
+            // updateOrderToPaid has built-in idempotency check (won't process if already PAID)
             let updateResult = { alreadyPaid: true }
-            if (source === 'ipn') {
+            if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
                 updateResult = await ordersService.updateOrderToPaid(
                     order.id,
                     transactionNo || txnRef,
                     paymentData
                 )
+            } else {
+                // Order already paid, fetch full order details for response
+                const fullOrder = await prisma.order.findUnique({
+                    where: { id: order.id },
+                    include: {
+                        course: {
+                            select: {
+                                id: true,
+                                title: true,
+                                slug: true,
+                                thumbnailUrl: true,
+                                instructor: {
+                                    select: {
+                                        id: true,
+                                        fullName: true,
+                                    },
+                                },
+                            },
+                        },
+                        user: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                })
+                updateResult = {
+                    order: fullOrder,
+                    enrollment: null,
+                    alreadyPaid: true,
+                }
             }
 
             logger.info(
