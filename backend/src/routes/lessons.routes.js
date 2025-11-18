@@ -6,7 +6,7 @@ import {
     getLessonVideoValidator,
     getLessonTranscriptValidator,
 } from '../validators/lessons.validator.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 
 const router = express.Router()
 

@@ -1,7 +1,7 @@
 // backend/src/routes/enrollment.routes.js
 import express from 'express'
 import enrollmentController from '../controllers/enrollment.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import {
     getEnrollmentsValidator,
     getEnrollmentByIdValidator,

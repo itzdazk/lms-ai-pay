@@ -1,7 +1,7 @@
 // src/routes/tags.routes.js
 import express from 'express'
 import tagsController from '../controllers/tags.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isInstructor } from '../middlewares/role.middleware.js'
 import {
     createTagValidator,

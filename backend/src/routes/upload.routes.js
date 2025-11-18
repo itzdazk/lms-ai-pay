@@ -1,7 +1,7 @@
 // src/routes/upload.routes.js
 import express from 'express'
 import uploadController from '../controllers/upload.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { authorize } from '../middlewares/authorize.middleware.js'
 import { USER_ROLES } from '../config/constants.js'
 import {

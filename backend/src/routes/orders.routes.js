@@ -1,7 +1,7 @@
 // backend/src/routes/orders.routes.js
 import express from 'express'
 import ordersController from '../controllers/orders.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import {
     createOrderValidator,
     getOrdersValidator,

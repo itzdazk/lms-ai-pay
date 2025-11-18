@@ -1,7 +1,7 @@
 // src/routes/instructor-course.routes.js
 import express from 'express'
 import instructorCourseController from '../controllers/instructor-course.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
 import {
     getInstructorCoursesValidator,

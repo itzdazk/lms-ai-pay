@@ -1,7 +1,7 @@
 // src/routes/users.routes.js
 import express from 'express'
 import usersController from '../controllers/users.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isAdmin } from '../middlewares/role.middleware.js'
 import {
     validateId,

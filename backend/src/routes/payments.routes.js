@@ -1,6 +1,6 @@
 import express from 'express'
 import paymentsController from '../controllers/payments.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isAdmin, isStudent } from '../middlewares/role.middleware.js'
 import {
     createMoMoPaymentValidator,

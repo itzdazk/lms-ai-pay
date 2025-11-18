@@ -1,7 +1,7 @@
 // src/routes/dashboard.routes.js
 import express from 'express'
 import progressController from '../controllers/progress.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 
 const router = express.Router()
 

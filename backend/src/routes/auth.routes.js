@@ -1,7 +1,7 @@
 // src/routes/auth.routes.js
 import express from 'express'
 import authController from '../controllers/auth.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import {
     registerValidator,
     loginValidator,
