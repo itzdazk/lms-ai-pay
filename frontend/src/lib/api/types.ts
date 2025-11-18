@@ -22,7 +22,7 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  username: string;
+  userName: string;
   email: string;
   password: string;
   fullName: string;
@@ -36,7 +36,7 @@ export interface AuthResponse {
 
 export interface User {
   id: string;
-  username: string;
+  userName: string;
   email: string;
   fullName: string;
   role: 'admin' | 'instructor' | 'student';

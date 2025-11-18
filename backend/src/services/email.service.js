@@ -77,16 +77,16 @@ class EmailService {
     /**
      * Send verification email
      */
-    async sendVerificationEmail(email, username, token) {
+    async sendVerificationEmail(email, userName, token) {
         const verificationUrl = `${config.EMAIL_VERIFICATION_URL}?token=${token}`
 
         const html = await this.loadTemplate('verification', {
-            username,
+            userName,
             verificationUrl,
             year: new Date().getFullYear().toString(),
         })
 
-        const text = `Xin chào ${username},\n\nCảm ơn bạn đã đăng ký! Vui lòng xác thực email của bạn bằng cách truy cập: ${verificationUrl}\n\nLiên kết này sẽ hết hạn sau 24 giờ.\n\nNếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.`
+        const text = `Xin chào ${userName},\n\nCảm ơn bạn đã đăng ký! Vui lòng xác thực email của bạn bằng cách truy cập: ${verificationUrl}\n\nLiên kết này sẽ hết hạn sau 24 giờ.\n\nNếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.`
 
         return this.sendEmail({
             to: email,
@@ -99,16 +99,16 @@ class EmailService {
     /**
      * Send password reset email
      */
-    async sendPasswordResetEmail(email, username, token) {
+    async sendPasswordResetEmail(email, userName, token) {
         const resetUrl = `${config.PASSWORD_RESET_URL}?token=${token}`
 
         const html = await this.loadTemplate('password-reset', {
-            username,
+            userName,
             resetUrl,
             year: new Date().getFullYear().toString(),
         })
 
-        const text = `Xin chào ${username},\n\nChúng tôi đã nhận được yêu cầu đặt lại mật khẩu của bạn. Truy cập liên kết này để tạo mật khẩu mới: ${resetUrl}\n\nLiên kết này sẽ hết hạn sau 1 giờ.\n\nNếu bạn không yêu cầu điều này, vui lòng bỏ qua email này.`
+        const text = `Xin chào ${userName},\n\nChúng tôi đã nhận được yêu cầu đặt lại mật khẩu của bạn. Truy cập liên kết này để tạo mật khẩu mới: ${resetUrl}\n\nLiên kết này sẽ hết hạn sau 1 giờ.\n\nNếu bạn không yêu cầu điều này, vui lòng bỏ qua email này.`
 
         return this.sendEmail({
             to: email,
@@ -121,14 +121,14 @@ class EmailService {
     /**
      * Send welcome email after verification
      */
-    async sendWelcomeEmail(email, username) {
+    async sendWelcomeEmail(email, userName) {
         const html = await this.loadTemplate('welcome', {
-            username,
+            userName,
             clientUrl: config.CLIENT_URL,
             year: new Date().getFullYear().toString(),
         })
 
-        const text = `Xin chào ${username},\n\nEmail của bạn đã được xác thực thành công! Chào mừng đến với LMS AI Pay.\n\nTruy cập ${config.CLIENT_URL}/courses để duyệt các khóa học của chúng tôi.`
+        const text = `Xin chào ${userName},\n\nEmail của bạn đã được xác thực thành công! Chào mừng đến với LMS AI Pay.\n\nTruy cập ${config.CLIENT_URL}/courses để duyệt các khóa học của chúng tôi.`
 
         return this.sendEmail({
             to: email,
@@ -141,15 +141,15 @@ class EmailService {
     /**
      * Send password change confirmation email
      */
-    async sendPasswordChangeConfirmation(email, username) {
+    async sendPasswordChangeConfirmation(email, userName) {
         const html = await this.loadTemplate('password-change-confirmation', {
-            username,
+            userName,
             supportEmail: config.EMAIL_FROM,
             changedAt: new Date().toLocaleString('vi-VN'),
             year: new Date().getFullYear().toString(),
         })
 
-        const text = `Xin chào ${username},\n\nMật khẩu của bạn đã được thay đổi thành công.\n\nNếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay lập tức.\n\nThay đổi lúc: ${new Date().toLocaleString('vi-VN')}`
+        const text = `Xin chào ${userName},\n\nMật khẩu của bạn đã được thay đổi thành công.\n\nNếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay lập tức.\n\nThay đổi lúc: ${new Date().toLocaleString('vi-VN')}`
 
         return this.sendEmail({
             to: email,
@@ -162,7 +162,7 @@ class EmailService {
     /**
      * Send payment success email
      */
-    async sendPaymentSuccessEmail(email, username, order) {
+    async sendPaymentSuccessEmail(email, userName, order) {
         const courseUrl = `${config.CLIENT_URL}/courses/${order.course?.slug || order.courseId}`
         const formattedAmount = new Intl.NumberFormat('vi-VN', {
             style: 'currency',
@@ -170,7 +170,7 @@ class EmailService {
         }).format(parseFloat(order.finalPrice || 0))
 
         const html = await this.loadTemplate('payment-success', {
-            username,
+            userName,
             orderCode: order.orderCode || 'N/A',
             courseTitle: order.course?.title || 'N/A',
             amount: formattedAmount,
@@ -181,7 +181,7 @@ class EmailService {
             year: new Date().getFullYear().toString(),
         })
 
-        const text = `Xin chào ${username},\n\nThanh toán của bạn đã được xử lý thành công!\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nSố tiền: ${formattedAmount}\n\nBây giờ bạn có thể truy cập khóa học tại: ${courseUrl}\n\nCảm ơn bạn đã mua hàng!`
+        const text = `Xin chào ${userName},\n\nThanh toán của bạn đã được xử lý thành công!\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nSố tiền: ${formattedAmount}\n\nBây giờ bạn có thể truy cập khóa học tại: ${courseUrl}\n\nCảm ơn bạn đã mua hàng!`
 
         return this.sendEmail({
             to: email,
@@ -194,11 +194,11 @@ class EmailService {
     /**
      * Send enrollment success email
      */
-    async sendEnrollmentSuccessEmail(email, username, course) {
+    async sendEnrollmentSuccessEmail(email, userName, course) {
         const courseUrl = `${config.CLIENT_URL}/courses/${course.slug || course.id}`
 
         const html = await this.loadTemplate('enrollment-success', {
-            username,
+            userName,
             courseTitle: course.title || 'N/A',
             instructorName: course.instructor?.fullName || 'N/A',
             enrollmentDate: new Date().toLocaleString('vi-VN'),
@@ -206,7 +206,7 @@ class EmailService {
             year: new Date().getFullYear().toString(),
         })
 
-        const text = `Xin chào ${username},\n\nChúc mừng! Bạn đã đăng ký thành công vào khóa học.\n\nKhóa học: ${course.title || 'N/A'}\nGiảng viên: ${course.instructor?.fullName || 'N/A'}\n\nBây giờ bạn có thể truy cập khóa học tại: ${courseUrl}\n\nChúng tôi rất vui mừng được đồng hành cùng bạn trong hành trình học tập này!`
+        const text = `Xin chào ${userName},\n\nChúc mừng! Bạn đã đăng ký thành công vào khóa học.\n\nKhóa học: ${course.title || 'N/A'}\nGiảng viên: ${course.instructor?.fullName || 'N/A'}\n\nBây giờ bạn có thể truy cập khóa học tại: ${courseUrl}\n\nChúng tôi rất vui mừng được đồng hành cùng bạn trong hành trình học tập này!`
 
         return this.sendEmail({
             to: email,
