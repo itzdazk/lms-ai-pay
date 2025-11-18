@@ -286,7 +286,7 @@ CREATE TABLE "chat_messages" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_userName_key" ON "users"("userName");
+CREATE UNIQUE INDEX "users_userName_key" ON "users"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
@@ -295,7 +295,7 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE INDEX "users_email_idx" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "users_userName_idx" ON "users"("userName");
+CREATE INDEX "users_userName_idx" ON "users"("username");
 
 -- CreateIndex
 CREATE INDEX "users_role_idx" ON "users"("role");
