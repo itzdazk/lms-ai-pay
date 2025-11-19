@@ -20,6 +20,7 @@ import searchRoutes from './search.routes.js'
 import notificationsRoutes from './notifications.routes.js'
 import uploadRoutes from './upload.routes.js'
 import healthRoutes from './health.routes.js'
+import adminDashboardRoutes from './admin-dashboard.routes.js'
 
 const router = express.Router()
 
@@ -52,6 +53,7 @@ router.get('/', (req, res) => {
             notifications: '/api/v1/notifications',
             uploads: '/api/v1/uploads',
             health: '/api/v1/health',
+            adminDashboard: '/api/v1/dashboard/admin',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -87,6 +89,7 @@ router.use('/search', searchRoutes)
 router.use('/notifications', notificationsRoutes)
 router.use('/uploads', uploadRoutes)
 router.use('/health', healthRoutes)
+router.use('/dashboard/admin', adminDashboardRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)
