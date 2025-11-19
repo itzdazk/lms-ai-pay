@@ -111,6 +111,25 @@ const normalizeSignaturePayload = (payload) => ({
     accessKey: payload.accessKey ?? momoConfig.accessKey,
 })
 
+const ERROR_MESSAGES = {
+    supersededByNewRequest: (gateway) =>
+        `${gateway} payment attempt superseded by a newer request`,
+    supersededBySuccess: (gateway) =>
+        `${gateway} payment attempt superseded by a successful payment`,
+    paymentCreationFailed: (gateway, resultCode) =>
+        `${gateway} payment creation failed${
+            resultCode !== undefined && resultCode !== null
+                ? ` (resultCode: ${resultCode})`
+                : ''
+        }`,
+    refundFailed: (gateway, resultCode) =>
+        `${gateway} refund failed${
+            resultCode !== undefined && resultCode !== null
+                ? ` (resultCode: ${resultCode})`
+                : ''
+        }`,
+}
+
 const buildSignatureInput = (payload, keys) => {
     const toString = (value) =>
         value === undefined || value === null ? '' : String(value)
@@ -119,6 +138,30 @@ const buildSignatureInput = (payload, keys) => {
         acc[key] = toString(payload[key])
         return acc
     }, {})
+}
+
+const generateTransactionId = (orderCode, gateway) =>
+    `${orderCode}-${gateway}-${Date.now()}`
+
+const parseTransactionId = (transactionId) => {
+    if (!transactionId) {
+        return { orderCode: null, gateway: null, timestamp: null }
+    }
+
+    const parts = transactionId.split('-')
+    if (parts.length < 3) {
+        return {
+            orderCode: transactionId,
+            gateway: null,
+            timestamp: null,
+        }
+    }
+
+    const timestamp = parts.pop()
+    const gateway = parts.pop()
+    const orderCode = parts.join('-')
+
+    return { orderCode, gateway, timestamp }
 }
 
 class PaymentService {
@@ -180,12 +223,17 @@ class PaymentService {
             },
             data: {
                 status: TRANSACTION_STATUS.FAILED,
-                errorMessage: 'Superseded by new VNPay payment request',
+                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
+                    PAYMENT_GATEWAY.VNPAY
+                ),
             },
         })
 
         const createDate = formatDate(new Date())
-        const txnRef = order.orderCode
+        const txnRef = generateTransactionId(
+            order.orderCode,
+            PAYMENT_GATEWAY.VNPAY
+        )
         const orderInfo = `Thanh toan khoa hoc ${order.course?.title || order.orderCode}`
         const ipAddr = clientIp || '127.0.0.1'
 
@@ -311,7 +359,11 @@ class PaymentService {
             )
         }
 
-        const requestId = `${order.orderCode}-${Date.now()}`
+        const transactionId = generateTransactionId(
+            order.orderCode,
+            PAYMENT_GATEWAY.MOMO
+        )
+        const requestId = transactionId
         const extraData = Buffer.from(
             JSON.stringify({
                 orderId: order.id,
@@ -363,7 +415,9 @@ class PaymentService {
             },
             data: {
                 status: TRANSACTION_STATUS.FAILED,
-                errorMessage: 'Superseded by new MoMo payment request',
+                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
+                    PAYMENT_GATEWAY.MOMO
+                ),
             },
         })
 
@@ -381,6 +435,7 @@ class PaymentService {
                 await prisma.paymentTransaction.create({
                     data: {
                         orderId: order.id,
+                        transactionId,
                         paymentGateway: PAYMENT_GATEWAY.MOMO,
                         amount: toDecimal(amount),
                         currency: 'VND',
@@ -388,7 +443,10 @@ class PaymentService {
                         gatewayResponse: responseBody,
                         errorMessage:
                             responseBody?.message ||
-                            `Failed to create MoMo payment (resultCode: ${responseBody?.resultCode})`,
+                            ERROR_MESSAGES.paymentCreationFailed(
+                                PAYMENT_GATEWAY.MOMO,
+                                responseBody?.resultCode
+                            ),
                         ipAddress: clientIp || null,
                     },
                 })
@@ -407,6 +465,7 @@ class PaymentService {
         const transaction = await prisma.paymentTransaction.create({
             data: {
                 orderId: order.id,
+                transactionId,
                 paymentGateway: PAYMENT_GATEWAY.MOMO,
                 amount: toDecimal(amount),
                 currency: 'VND',
@@ -573,14 +632,17 @@ class PaymentService {
                     data: {
                         orderId: order.id,
                         paymentGateway: PAYMENT_GATEWAY.MOMO,
-                        transactionId: responseBody?.transId || null,
+                        transactionId: responseBody?.transId || requestId,
                         amount: toDecimal(requestedAmount),
                         currency: 'VND',
                         status: TRANSACTION_STATUS.FAILED,
                         gatewayResponse: responseBody,
                         errorMessage:
                             responseBody?.message ||
-                            `MoMo refund failed (resultCode: ${responseBody?.resultCode})`,
+                            ERROR_MESSAGES.refundFailed(
+                                PAYMENT_GATEWAY.MOMO,
+                                responseBody?.resultCode
+                            ),
                     },
                 })
 
@@ -606,7 +668,7 @@ class PaymentService {
                 data: {
                     orderId: order.id,
                     paymentGateway: PAYMENT_GATEWAY.MOMO,
-                    transactionId: responseBody?.transId || null,
+                    transactionId: responseBody?.transId || requestId,
                     amount: toDecimal(requestedAmount),
                     currency: 'VND',
                     status: TRANSACTION_STATUS.REFUNDED,
@@ -874,9 +936,15 @@ class PaymentService {
         const orderCode = normalizedSignaturePayload.orderId
         const amount = normalizeAmount(normalizedSignaturePayload.amount)
         const resultCode = parseInt(signatureInput.resultCode, 10)
-        const transactionId = normalizedSignaturePayload.transId
+        const gatewayTransactionId = normalizedSignaturePayload.transId
             ? String(normalizedSignaturePayload.transId)
             : null
+        const requestId = normalizedSignaturePayload.requestId
+            ? String(normalizedSignaturePayload.requestId)
+            : null
+
+        const resolvedTransactionId =
+            requestId || gatewayTransactionId || `momo-${orderCode}`
 
         const order = await prisma.order.findUnique({
             where: { orderCode },
@@ -905,44 +973,58 @@ class PaymentService {
         let transactionRecord = null
 
         await prisma.$transaction(async (tx) => {
-            if (transactionId) {
+            if (resolvedTransactionId) {
                 transactionRecord = await tx.paymentTransaction.findUnique({
-                    where: { transactionId },
+                    where: { transactionId: resolvedTransactionId },
                 })
+            }
+            if (
+                !transactionRecord &&
+                gatewayTransactionId &&
+                gatewayTransactionId !== resolvedTransactionId
+            ) {
+                transactionRecord = await tx.paymentTransaction.findUnique({
+                    where: { transactionId: gatewayTransactionId },
+                })
+            }
+            if (!transactionRecord) {
+                transactionRecord = await tx.paymentTransaction.findFirst({
+                    where: {
+                        orderId: order.id,
+                        paymentGateway: PAYMENT_GATEWAY.MOMO,
+                        status: TRANSACTION_STATUS.PENDING,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                })
+            }
+
+            const transactionData = {
+                transactionId: resolvedTransactionId,
+                status: success
+                    ? TRANSACTION_STATUS.SUCCESS
+                    : TRANSACTION_STATUS.FAILED,
+                gatewayResponse: {
+                    ...normalizedSignaturePayload,
+                    gatewayTransactionId,
+                },
+                errorMessage: success
+                    ? null
+                    : normalizedSignaturePayload.message || null,
+                ipAddress: ipAddress || transactionRecord?.ipAddress || null,
+                amount: toDecimal(amount),
+                paymentGateway: PAYMENT_GATEWAY.MOMO,
+                currency: 'VND',
+                orderId: order.id,
             }
 
             if (transactionRecord) {
                 transactionRecord = await tx.paymentTransaction.update({
                     where: { id: transactionRecord.id },
-                    data: {
-                        status: success
-                            ? TRANSACTION_STATUS.SUCCESS
-                            : TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: normalizedSignaturePayload,
-                        errorMessage: success
-                            ? null
-                            : normalizedSignaturePayload.message || null,
-                        ipAddress: ipAddress || transactionRecord.ipAddress,
-                        amount: toDecimal(amount),
-                    },
+                    data: transactionData,
                 })
             } else {
                 transactionRecord = await tx.paymentTransaction.create({
-                    data: {
-                        orderId: order.id,
-                        transactionId,
-                        paymentGateway: PAYMENT_GATEWAY.MOMO,
-                        amount: toDecimal(amount),
-                        currency: 'VND',
-                        status: success
-                            ? TRANSACTION_STATUS.SUCCESS
-                            : TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: normalizedSignaturePayload,
-                        errorMessage: success
-                            ? null
-                            : normalizedSignaturePayload.message || null,
-                        ipAddress,
-                    },
+                    data: transactionData,
                 })
             }
 
@@ -955,17 +1037,21 @@ class PaymentService {
                     },
                     data: {
                         status: TRANSACTION_STATUS.FAILED,
-                        errorMessage: 'Superseded by successful MoMo payment',
+                        errorMessage: ERROR_MESSAGES.supersededBySuccess(
+                            PAYMENT_GATEWAY.MOMO
+                        ),
                     },
                 })
             }
         })
 
         if (success) {
+            const processedTransId =
+                gatewayTransactionId || transactionRecord.transactionId
             const paymentData = {
                 gateway: PAYMENT_GATEWAY.MOMO,
                 source,
-                transId: transactionId,
+                transId: processedTransId,
                 extraData: decodeExtraData(
                     normalizedSignaturePayload.extraData
                 ),
@@ -974,7 +1060,7 @@ class PaymentService {
 
             const updateResult = await ordersService.updateOrderToPaid(
                 order.id,
-                transactionId,
+                processedTransId,
                 paymentData
             )
 
@@ -1096,8 +1182,8 @@ class PaymentService {
         const transactionId = txnRef
         const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert from "cents" (x100) back to VND
 
-        // Extract order code from txnRef (assumed format: ORD-xxx-xxx-timestamp)
-        const orderCode = txnRef
+        const { orderCode: parsedOrderCode } = parseTransactionId(txnRef)
+        const orderCode = parsedOrderCode || txnRef
 
         // Fetch order from DB using orderCode, include related VNPay transactions
         const order = await prisma.order.findUnique({
