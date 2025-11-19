@@ -2,7 +2,6 @@
 import express from 'express'
 import uploadController from '../controllers/upload.controller.js'
 import { authenticate } from '../middlewares/authenticate.middleware.js'
-import { authorize } from '../middlewares/authorize.middleware.js'
 import { USER_ROLES } from '../config/constants.js'
 import {
     uploadAvatar,
@@ -12,6 +11,7 @@ import {
     uploadVideoPreview,
 } from '../config/multer.config.js'
 import { uploadFileValidator } from '../validators/upload.validator.js'
+import { isInstructor } from '../middlewares/role.middleware.js'
 
 const router = express.Router()
 
@@ -52,7 +52,7 @@ router.post(
 router.post(
     '/video',
     authenticate,
-    authorize([USER_ROLES.INSTRUCTOR, USER_ROLES.ADMIN]),
+    isInstructor,
     (req, res, next) => {
         const type = req.query.type || 'general'
 
@@ -78,7 +78,7 @@ router.post(
 router.post(
     '/document',
     authenticate,
-    authorize([USER_ROLES.INSTRUCTOR, USER_ROLES.ADMIN]),
+    isInstructor,
     uploadTranscript.single('document'),
     uploadFileValidator,
     uploadController.uploadDocument
@@ -90,7 +90,12 @@ router.post(
  * @access  Private
  * @param   fileId - File ID (format: timestamp-userId-filename)
  */
-router.delete('/:fileId', authenticate, uploadController.deleteFile)
+router.delete(
+    '/:fileId',
+    authenticate,
+    isInstructor,
+    uploadController.deleteFile
+)
 
 /**
  * @route   GET /api/v1/uploads/:fileId/status
