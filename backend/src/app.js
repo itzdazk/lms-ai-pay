@@ -158,16 +158,6 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'Server is running',
-        timestamp: new Date().toISOString(),
-        environment: config.NODE_ENV,
-    })
-})
-
 // Root endpoint
 app.get('/', (req, res) => {
     res.status(200).json({

@@ -19,6 +19,7 @@ import transactionsRoutes from './transactions.routes.js'
 import searchRoutes from './search.routes.js'
 import notificationsRoutes from './notifications.routes.js'
 import uploadRoutes from './upload.routes.js'
+import healthRoutes from './health.routes.js'
 
 const router = express.Router()
 
@@ -50,6 +51,7 @@ router.get('/', (req, res) => {
             search: '/api/v1/search',
             notifications: '/api/v1/notifications',
             uploads: '/api/v1/uploads',
+            health: '/api/v1/health',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -84,6 +86,7 @@ router.use('/transactions', transactionsRoutes)
 router.use('/search', searchRoutes)
 router.use('/notifications', notificationsRoutes)
 router.use('/uploads', uploadRoutes)
+router.use('/health', healthRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)
