@@ -171,7 +171,7 @@ class PaymentService {
             )
         }
 
-        // Mark previous pending VNPay transactions as failed
+        //* Mark previous pending VNPay transactions as failed
         await prisma.paymentTransaction.updateMany({
             where: {
                 orderId: order.id,
@@ -185,7 +185,7 @@ class PaymentService {
         })
 
         const createDate = formatDate(new Date())
-        const txnRef = `${order.orderCode}-${Date.now()}`
+        const txnRef = order.orderCode
         const orderInfo = `Thanh toan khoa hoc ${order.course?.title || order.orderCode}`
         const ipAddr = clientIp || '127.0.0.1'
 
@@ -1038,7 +1038,8 @@ class PaymentService {
                 failedOrder.id,
                 failedOrder.courseId,
                 failedOrder.course.title,
-                normalizedSignaturePayload.message || 'Thanh toán không thành công'
+                normalizedSignaturePayload.message ||
+                    'Thanh toán không thành công'
             )
         }
 
@@ -1092,12 +1093,11 @@ class PaymentService {
         const txnRef = vnpParams.vnp_TxnRef // Merchant's transaction reference
         const responseCode = vnpParams.vnp_ResponseCode // VNPay response code (00 = success)
         const transactionNo = vnpParams.vnp_TransactionNo // VNPay's internal transaction ID
-        const transactionId =
-            transactionNo && transactionNo !== '0' ? transactionNo : txnRef
+        const transactionId = txnRef
         const amount = parseInt(vnpParams.vnp_Amount) / 100 // Convert from "cents" (x100) back to VND
 
         // Extract order code from txnRef (assumed format: ORD-xxx-xxx-timestamp)
-        const orderCode = txnRef.split('-').slice(0, 4).join('-')
+        const orderCode = txnRef
 
         // Fetch order from DB using orderCode, include related VNPay transactions
         const order = await prisma.order.findUnique({
@@ -1157,7 +1157,7 @@ class PaymentService {
 
         // Find existing transaction record by VNPay transaction ID
         let transactionRecord = await prisma.paymentTransaction.findUnique({
-            where: { transactionId },
+            where: { transactionId: transactionId },
         })
 
         // Update existing transaction or create new one
@@ -1168,7 +1168,10 @@ class PaymentService {
                     status: success
                         ? TRANSACTION_STATUS.SUCCESS
                         : TRANSACTION_STATUS.FAILED,
-                    gatewayResponse: vnpParams,
+                    gatewayResponse: {
+                        vnpParams,
+                        vnp_TransactionNo: transactionNo, // Save VNPay's internal ID for reference
+                    },
                     errorMessage: success
                         ? null
                         : getResponseMessage(responseCode),
@@ -1195,24 +1198,11 @@ class PaymentService {
 
         // ===== SUCCESS PATH =====
         if (success) {
-            // Cancel any other pending VNPay transactions for this order
-            await prisma.paymentTransaction.updateMany({
-                where: {
-                    orderId: order.id,
-                    status: TRANSACTION_STATUS.PENDING,
-                    id: { not: transactionRecord.id },
-                },
-                data: {
-                    status: TRANSACTION_STATUS.FAILED,
-                    errorMessage: 'Superseded by successful VNPay payment',
-                },
-            })
-
             // Prepare metadata to pass to order update service
             const paymentData = {
                 gateway: PAYMENT_GATEWAY.VNPAY,
                 source,
-                transactionNo,
+                transactionNo, // VNPay's internal ID (for reference)
                 responseCode,
                 raw: vnpParams,
             }
@@ -1224,7 +1214,7 @@ class PaymentService {
             if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
                 updateResult = await ordersService.updateOrderToPaid(
                     order.id,
-                    transactionNo || txnRef,
+                    transactionNo || txnRef, // Use VNPay's transactionNo for display purposes
                     paymentData
                 )
             } else {
@@ -1288,13 +1278,14 @@ class PaymentService {
 
         // ===== FAILURE PATH =====
         // Only update order to FAILED if it's still PENDING and this is IPN
-        if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
-            if (source === 'ipn') {
-                await prisma.order.update({
-                    where: { id: order.id },
-                    data: { paymentStatus: PAYMENT_STATUS.FAILED },
-                })
-            }
+        if (
+            order.paymentStatus === PAYMENT_STATUS.PENDING &&
+            source === 'ipn'
+        ) {
+            await prisma.order.update({
+                where: { id: order.id },
+                data: { paymentStatus: PAYMENT_STATUS.FAILED },
+            })
         }
 
         logger.warn(
