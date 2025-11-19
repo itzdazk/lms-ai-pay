@@ -2,59 +2,19 @@
 import lessonsService from '../services/lessons.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
-import { USER_ROLES } from '../config/constants.js'
-import { COURSE_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import fs from 'fs'
 
 class LessonsController {
     /**
      * @route   GET /api/v1/lessons/:id
-     * @desc    Get lesson by ID (Public)
-     * @access  Public (but check if published)
+     * @desc    Get lesson by ID
+     * @access  Private (enrolled users, course instructor, admin)
+     * @note    Authorization is handled by isEnrolledOrInstructorOrAdmin middleware
      */
     getLessonById = asyncHandler(async (req, res) => {
         const { id } = req.params
         const lesson = await lessonsService.getLessonById(parseInt(id))
-
-        const isAdmin = req.user.role === USER_ROLES.ADMIN
-        const isCourseInstructor =
-            lesson.course.instructor?.id === req.user.id
-
-        let hasEnrollment = false
-        if (!isAdmin && !isCourseInstructor) {
-            hasEnrollment = await lessonsService.hasUserAccessToCourse(
-                req.user.id,
-                lesson.course.id
-            )
-
-            if (!hasEnrollment) {
-                return ApiResponse.forbidden(
-                    res,
-                    'You do not have access to this lesson'
-                )
-            }
-        }
-
-        // Only show unpublished lessons to course instructor or admin
-        if (!lesson.isPublished && !isCourseInstructor && !isAdmin) {
-            return ApiResponse.forbidden(
-                res,
-                'This lesson is not available'
-            )
-        }
-
-        // Only show lessons from published courses to course instructor/admin
-        // Enrolled students should only access published courses
-        const isCoursePublished =
-            lesson.course.status === COURSE_STATUS.PUBLISHED
-
-        if (!isCoursePublished && !isCourseInstructor && !isAdmin) {
-            return ApiResponse.forbidden(
-                res,
-                'This lesson is not available'
-            )
-        }
 
         return ApiResponse.success(res, lesson, 'Lesson retrieved successfully')
     })
@@ -62,47 +22,12 @@ class LessonsController {
     /**
      * @route   GET /api/v1/lessons/:id/video
      * @desc    Get lesson video URL
-     * @access  Public (but check if published)
+     * @access  Private (enrolled users, course instructor, admin)
+     * @note    Authorization is handled by isEnrolledOrInstructorOrAdmin middleware
      */
     getLessonVideo = asyncHandler(async (req, res) => {
         const { id } = req.params
         const result = await lessonsService.getLessonVideo(parseInt(id))
-
-        const isAdmin = req.user.role === USER_ROLES.ADMIN
-        const isCourseInstructor =
-            result.course.instructor?.id === req.user.id
-
-        let hasEnrollment = false
-        if (!isAdmin && !isCourseInstructor) {
-            hasEnrollment = await lessonsService.hasUserAccessToCourse(
-                req.user.id,
-                result.course.id
-            )
-
-            if (!hasEnrollment) {
-                return ApiResponse.forbidden(
-                    res,
-                    'You do not have access to this lesson'
-                )
-            }
-        }
-
-        const isCoursePublished =
-            result.course.status === COURSE_STATUS.PUBLISHED
-
-        if (!result.isPublished && !isCourseInstructor && !isAdmin) {
-            return ApiResponse.forbidden(
-                res,
-                'This video is not available'
-            )
-        }
-
-        if (!isCoursePublished && !isCourseInstructor && !isAdmin) {
-            return ApiResponse.forbidden(
-                res,
-                'This video is not available'
-            )
-        }
 
         return ApiResponse.success(
             res,
@@ -119,47 +44,12 @@ class LessonsController {
     /**
      * @route   GET /api/v1/lessons/:id/transcript
      * @desc    Get lesson transcript URL
-     * @access  Public (but check if published)
+     * @access  Private (enrolled users, course instructor, admin)
+     * @note    Authorization is handled by isEnrolledOrInstructorOrAdmin middleware
      */
     getLessonTranscript = asyncHandler(async (req, res) => {
         const { id } = req.params
         const result = await lessonsService.getLessonTranscript(parseInt(id))
-
-        const isAdmin = req.user.role === USER_ROLES.ADMIN
-        const isCourseInstructor =
-            result.course.instructor?.id === req.user.id
-
-        let hasEnrollment = false
-        if (!isAdmin && !isCourseInstructor) {
-            hasEnrollment = await lessonsService.hasUserAccessToCourse(
-                req.user.id,
-                result.course.id
-            )
-
-            if (!hasEnrollment) {
-                return ApiResponse.forbidden(
-                    res,
-                    'You do not have access to this lesson'
-                )
-            }
-        }
-
-        const isCoursePublished =
-            result.course.status === COURSE_STATUS.PUBLISHED
-
-        if (!result.isPublished && !isCourseInstructor && !isAdmin) {
-            return ApiResponse.forbidden(
-                res,
-                'This transcript is not available'
-            )
-        }
-
-        if (!isCoursePublished && !isCourseInstructor && !isAdmin) {
-            return ApiResponse.forbidden(
-                res,
-                'This transcript is not available'
-            )
-        }
 
         return ApiResponse.success(
             res,

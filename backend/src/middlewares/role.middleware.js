@@ -1,6 +1,6 @@
 // src/middlewares/role.middleware.js
 import ApiResponse from '../utils/response.util.js';
-import { USER_ROLES } from '../config/constants.js';
+import { USER_ROLES, ENROLLMENT_STATUS, COURSE_STATUS } from '../config/constants.js';
 import { prisma } from '../config/database.config.js';
 
 /**
@@ -106,6 +106,91 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
     }
 }
 
+/**
+ * Check if user has access to lesson (enrolled, instructor, or admin)
+ * Also checks if lesson and course are published (unless user is instructor/admin)
+ * @param {string} lessonIdParam - Parameter name for lesson ID (default: 'id')
+ */
+const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id') => {
+    return async (req, res, next) => {
+        try {
+            if (!req.user) {
+                return ApiResponse.unauthorized(res, 'Authentication required')
+            }
+
+            const lessonId = parseInt(req.params[lessonIdParam])
+
+            if (!lessonId) {
+                return ApiResponse.badRequest(res, 'Lesson ID is required')
+            }
+
+            // Get lesson with course info
+            const lesson = await prisma.lesson.findUnique({
+                where: { id: lessonId },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            status: true,
+                            instructorId: true,
+                        },
+                    },
+                },
+            })
+
+            if (!lesson) {
+                return ApiResponse.notFound(res, 'Lesson not found')
+            }
+
+            const isAdmin = req.user.role === USER_ROLES.ADMIN
+            const isCourseInstructor = req.user.id === lesson.course.instructorId
+
+            // Admin and course instructor have full access
+            if (isAdmin || isCourseInstructor) {
+                return next()
+            }
+
+            // Check enrollment for regular users
+            const enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    userId: req.user.id,
+                    courseId: lesson.course.id,
+                    status: {
+                        in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
+                    },
+                },
+            })
+
+            if (!enrollment) {
+                return ApiResponse.forbidden(
+                    res,
+                    'You do not have access to this lesson'
+                )
+            }
+
+            // Check if lesson is published
+            if (!lesson.isPublished) {
+                return ApiResponse.forbidden(
+                    res,
+                    'This lesson is not available'
+                )
+            }
+
+            // Check if course is published
+            if (lesson.course.status !== COURSE_STATUS.PUBLISHED) {
+                return ApiResponse.forbidden(
+                    res,
+                    'This lesson is not available'
+                )
+            }
+
+            next()
+        } catch (error) {
+            return ApiResponse.error(res, 'Error checking lesson access')
+        }
+    }
+}
+
 export {
     authorize,
     isAdmin,
@@ -113,5 +198,6 @@ export {
     isStudent,
     isOwnerOrAdmin,
     isCourseInstructorOrAdmin,
+    isEnrolledOrInstructorOrAdmin,
 };
 

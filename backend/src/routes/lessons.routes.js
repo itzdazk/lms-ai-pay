@@ -7,6 +7,7 @@ import {
     getLessonTranscriptValidator,
 } from '../validators/lessons.validator.js'
 import { authenticate } from '../middlewares/authenticate.middleware.js'
+import { isEnrolledOrInstructorOrAdmin } from '../middlewares/role.middleware.js'
 
 const router = express.Router()
 
@@ -18,7 +19,12 @@ router.use(authenticate)
  * @desc    Get lesson by ID
  * @access  Private (enrolled users, course instructor, admin)
  */
-router.get('/:id', getLessonByIdValidator, lessonsController.getLessonById)
+router.get(
+    '/:id',
+    getLessonByIdValidator,
+    isEnrolledOrInstructorOrAdmin('id'),
+    lessonsController.getLessonById
+)
 
 /**
  * @route   GET /api/v1/lessons/:id/video
@@ -28,6 +34,7 @@ router.get('/:id', getLessonByIdValidator, lessonsController.getLessonById)
 router.get(
     '/:id/video',
     getLessonVideoValidator,
+    isEnrolledOrInstructorOrAdmin('id'),
     lessonsController.getLessonVideo
 )
 
@@ -39,6 +46,7 @@ router.get(
 router.get(
     '/:id/transcript',
     getLessonTranscriptValidator,
+    isEnrolledOrInstructorOrAdmin('id'),
     lessonsController.getLessonTranscript
 )
 
