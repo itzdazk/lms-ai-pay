@@ -12,6 +12,7 @@ import adminCourseRoutes from './admin-course.routes.js'
 import enrollmentRoutes from './enrollment.routes.js'
 import progressRoutes from './progress.routes.js'
 import studentDashboardRoutes from './student-dashboard.routes.js'
+import instructorDashboardRoutes from './instructor-dashboard.routes.js'
 import ordersRoutes from './orders.routes.js'
 import adminOrderRoutes from './admin-order.routes.js'
 import paymentsRoutes from './payments.routes.js'
@@ -79,6 +80,7 @@ router.use('/admin/courses', adminCourseRoutes)
 router.use('/enrollments', enrollmentRoutes)
 router.use('/progress', progressRoutes)
 router.use('/dashboard/student', studentDashboardRoutes)
+router.use('/dashboard/instructor', instructorDashboardRoutes)
 router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
 router.use('/payments', paymentsRoutes)
