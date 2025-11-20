@@ -497,26 +497,26 @@ class EnrollmentService {
                         id: true,
                         title: true,
                         status: true,
+                        slug: true,
+                        thumbnailUrl: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                            },
+                        },
                     },
                 },
             },
         })
 
-        if (!order) {
-            throw new Error('Order not found')
-        }
-
-        // Check if order is paid
-        if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
+        if (!order) throw new Error('Order not found')
+        if (order.paymentStatus !== PAYMENT_STATUS.PAID)
             throw new Error(
-                `Cannot enroll from unpaid order. Order status: ${order.paymentStatus}`
+                `Cannot enroll from unpaid order. Status: ${order.paymentStatus}`
             )
-        }
-
-        // Check if course is still available
-        if (order.course.status !== COURSE_STATUS.PUBLISHED) {
+        if (order.course.status !== COURSE_STATUS.PUBLISHED)
             throw new Error('Course is not available for enrollment')
-        }
 
         // Check if already enrolled (idempotent)
         const existingEnrollment = await prisma.enrollment.findUnique({
@@ -530,76 +530,74 @@ class EnrollmentService {
 
         if (existingEnrollment) {
             logger.info(
-                `User ID: ${order.userId} already enrolled in course ID: ${order.courseId}. Returning existing enrollment.`
+                `User ${order.userId} already enrolled in course ${order.courseId}`
             )
             return existingEnrollment
         }
 
-        // Create enrollment within a transaction
-        const result = await prisma.$transaction(async (tx) => {
-            // Create enrollment
-            const enrollment = await tx.enrollment.create({
-                data: {
-                    userId: order.userId,
-                    courseId: order.courseId,
-                    status: ENROLLMENT_STATUS.ACTIVE,
-                    progressPercentage: 0,
-                },
-                select: {
-                    id: true,
-                    userId: true,
-                    courseId: true,
-                    enrolledAt: true,
-                    status: true,
-                    progressPercentage: true,
-                    course: {
-                        select: {
-                            id: true,
-                            title: true,
-                            slug: true,
-                            thumbnailUrl: true,
-                            instructor: {
-                                select: {
-                                    id: true,
-                                    fullName: true,
-                                },
+        // === BỎ HOÀN TOÀN $transaction ở đây ===
+        // Vì đã có transaction bao ngoài ở updateOrderToPaid()
+        const enrollment = await prisma.enrollment.create({
+            data: {
+                userId: order.userId,
+                courseId: order.courseId,
+                status: ENROLLMENT_STATUS.ACTIVE,
+                progressPercentage: 0,
+            },
+            select: {
+                id: true,
+                userId: true,
+                courseId: true,
+                enrolledAt: true,
+                status: true,
+                progressPercentage: true,
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        thumbnailUrl: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                fullName: true,
                             },
                         },
                     },
                 },
-            })
+            },
+        })
 
-            // Update course enrolled count
-            await tx.course.update({
-                where: { id: order.courseId },
-                data: {
-                    enrolledCount: {
-                        increment: 1,
-                    },
-                },
-            })
+        // Update course enrolled count
+        await prisma.course.update({
+            where: { id: order.courseId },
+            data: { enrolledCount: { increment: 1 } },
+        })
 
-            logger.info(
-                `User ID: ${order.userId} enrolled in course ID: ${order.courseId} from order ID: ${orderId}`
-            )
+        logger.info(
+            `User ${order.userId} enrolled in course ${order.courseId} from order ${orderId}`
+        )
 
-            // Create notification for enrollment success (from payment)
-            await notificationsService.notifyEnrollmentSuccess(
+        // Gửi notification (fire-and-forget)
+        notificationsService
+            .notifyEnrollmentSuccess(
                 order.userId,
                 order.courseId,
                 order.course.title
             )
+            .catch((err) => {
+                logger.error('Failed to send enrollment notification:', err)
+            })
 
-            // Send enrollment success email (only if not already sent from payment email)
-            // Note: Payment email is sent from orders.service.js, but we send enrollment email here
-            // for consistency and in case enrollment happens separately
+        // Gửi email (fire-and-forget – không được await trong transaction)
+        ;(async () => {
             try {
                 const user = await prisma.user.findUnique({
                     where: { id: order.userId },
                     select: { email: true, fullName: true },
                 })
 
-                if (user) {
+                if (user?.email) {
                     await emailService.sendEnrollmentSuccessEmail(
                         user.email,
                         user.fullName,
@@ -608,22 +606,17 @@ class EnrollmentService {
                             instructor: order.course.instructor,
                         }
                     )
-                    logger.info(
-                        `Enrollment success email sent to user ${order.userId} for course ${order.courseId}`
-                    )
+                    logger.info(`Enrollment email sent to ${user.email}`)
                 }
             } catch (error) {
-                // Log error but don't fail the enrollment process
                 logger.error(
-                    `Failed to send enrollment success email: ${error.message}`,
+                    `Failed to send enrollment email: ${error.message}`,
                     error
                 )
             }
+        })()
 
-            return enrollment
-        })
-
-        return result
+        return enrollment
     }
 
     /**
