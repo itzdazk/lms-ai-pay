@@ -359,6 +359,40 @@ class PaymentService {
             )
         }
 
+        // Check if there's already a pending MoMo transaction for this order
+        const existingPendingTransaction =
+            await prisma.paymentTransaction.findFirst({
+                where: {
+                    orderId: order.id,
+                    paymentGateway: PAYMENT_GATEWAY.MOMO,
+                    status: TRANSACTION_STATUS.PENDING,
+                },
+                orderBy: { createdAt: 'desc' },
+            })
+
+        // If exists and still pending, return existing transaction
+        if (existingPendingTransaction) {
+            const gatewayResponse = existingPendingTransaction.gatewayResponse || {}
+            logger.info(
+                `Returning existing pending MoMo transaction for order ${order.orderCode}`
+            )
+
+            return {
+                payUrl: gatewayResponse.payUrl || null,
+                deeplink: gatewayResponse.deeplink || null,
+                qrCodeUrl: gatewayResponse.qrCodeUrl || null,
+                message: 'Payment URL already exists',
+                resultCode: gatewayResponse.resultCode || 0,
+                order: {
+                    id: order.id,
+                    orderCode: order.orderCode,
+                    finalPrice: amount,
+                    paymentStatus: order.paymentStatus,
+                },
+                transaction: existingPendingTransaction,
+            }
+        }
+
         const transactionId = generateTransactionId(
             order.orderCode,
             PAYMENT_GATEWAY.MOMO
