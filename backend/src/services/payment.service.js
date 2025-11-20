@@ -177,98 +177,119 @@ class PaymentService {
             where: { id: orderId },
             include: {
                 course: { select: { title: true } },
+                paymentTransactions: {
+                    where: {
+                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                        status: TRANSACTION_STATUS.PENDING,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                },
             },
         })
 
-        if (!order) {
-            throw new Error('Order not found')
-        }
-
-        if (order.userId !== userId) {
+        if (!order) throw new Error('Order not found')
+        if (order.userId !== userId)
             throw new Error('You are not authorized to pay for this order')
-        }
-
-        if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY) {
-            throw new Error('Order is not assigned to VNPay payment gateway')
-        }
-
-        if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+        if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY)
+            throw new Error('Order is not assigned to VNPay')
+        if (order.paymentStatus === PAYMENT_STATUS.PAID)
             throw new Error('Order has already been paid')
-        }
-
-        if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
+        if (order.paymentStatus === PAYMENT_STATUS.REFUNDED)
             throw new Error('Order has already been refunded')
-        }
-
-        if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
+        if (order.paymentStatus !== PAYMENT_STATUS.PENDING)
             throw new Error(
                 `Order cannot be paid in status ${order.paymentStatus}`
             )
-        }
 
         const amount = normalizeAmount(order.finalPrice)
+        if (amount <= 0) throw new Error('Order amount must be greater than 0')
 
-        if (amount <= 0) {
-            throw new Error(
-                'Order amount must be greater than 0 to process payment'
-            )
+        // === CASE 1: Đã có giao dịch PENDING và còn hiệu lực (dưới 15 phút) ===
+        const existingTxn = order.paymentTransactions[0]
+        const isStillValid =
+            existingTxn &&
+            dayjs().diff(dayjs(existingTxn.createdAt), 'minute') <= 14
+
+        if (existingTxn && isStillValid) {
+            const savedParams = existingTxn.gatewayResponse || {}
+            if (savedParams.vnp_SecureHash) {
+                const payUrl =
+                    vnpayConfig.apiUrl +
+                    '?' +
+                    qs.stringify(savedParams, { encode: false })
+
+                logger.info(
+                    `Reusing existing VNPay payment URL for order ${order.orderCode} (still valid)`
+                )
+
+                return {
+                    payUrl,
+                    txnRef: existingTxn.transactionId,
+                    message: 'Using existing valid payment URL',
+                    isReused: true,
+                    order: {
+                        id: order.id,
+                        orderCode: order.orderCode,
+                        finalPrice: amount,
+                        paymentStatus: order.paymentStatus,
+                    },
+                    transaction: existingTxn,
+                }
+            }
         }
 
-        //* Mark previous pending VNPay transactions as failed
-        await prisma.paymentTransaction.updateMany({
-            where: {
-                orderId: order.id,
-                paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                status: TRANSACTION_STATUS.PENDING,
-            },
-            data: {
-                status: TRANSACTION_STATUS.FAILED,
-                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
-                    PAYMENT_GATEWAY.VNPAY
-                ),
-            },
-        })
+        // === CASE 2: Không có hoặc đã hết hạn → Tạo mới ===
+        // Đánh FAIL tất cả pending cũ trước khi tạo mới
+        if (existingTxn) {
+            await prisma.paymentTransaction.updateMany({
+                where: {
+                    orderId: order.id,
+                    paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                    status: TRANSACTION_STATUS.PENDING,
+                },
+                data: {
+                    status: TRANSACTION_STATUS.FAILED,
+                    errorMessage: ERROR_MESSAGES.supersededByNewRequest(
+                        PAYMENT_GATEWAY.VNPAY
+                    ),
+                },
+            })
+        }
 
-        const createDate = formatDate(new Date())
+        // Tạo mới như cũ
         const txnRef = generateTransactionId(
             order.orderCode,
             PAYMENT_GATEWAY.VNPAY
         )
+        const createDate = formatDate(new Date())
         const orderInfo = `Thanh toan khoa hoc ${order.course?.title || order.orderCode}`
         const ipAddr = clientIp || '127.0.0.1'
 
-        // ===== 1. Build VNPay params (KHÔNG bao gồm vnp_SecureHash) =====
         let vnpParams = {
-            vnp_Version: vnpayConfig.version,
-            vnp_Command: vnpayConfig.command,
+            vnp_Version: vnpayConfig.version || '2.1.0',
+            vnp_Command: 'pay',
             vnp_TmnCode: vnpayConfig.tmnCode,
-            vnp_Amount: amount * 100, // VNPay requires amount in smallest currency unit (VND * 100)
-            vnp_CurrCode: vnpayConfig.currCode,
+            vnp_Amount: amount * 100,
+            vnp_CurrCode: 'VND',
             vnp_TxnRef: txnRef,
             vnp_OrderInfo: orderInfo,
             vnp_OrderType: 'other',
-            vnp_Locale: vnpayConfig.locale,
+            vnp_Locale: 'vn',
             vnp_ReturnUrl: vnpayConfig.returnUrl,
             vnp_IpAddr: ipAddr,
             vnp_CreateDate: createDate,
         }
 
-        // ===== 2. Tạo signature =====
         const signed = createSignature(vnpParams, vnpayConfig.hashSecret)
-
-        // ===== 3. Sort params =====
         vnpParams = sortObject(vnpParams)
+        vnpParams.vnp_SecureHash = signed
 
-        // ===== 4. Thêm signature vào params =====
-        vnpParams['vnp_SecureHash'] = signed
-
-        // ===== 5. Build URL =====
-        const paymentUrl =
+        const payUrl =
             vnpayConfig.apiUrl +
             '?' +
             qs.stringify(vnpParams, { encode: false })
 
-        // Create transaction record
         const transaction = await prisma.paymentTransaction.create({
             data: {
                 orderId: order.id,
@@ -277,19 +298,20 @@ class PaymentService {
                 amount: toDecimal(amount),
                 currency: 'VND',
                 status: TRANSACTION_STATUS.PENDING,
-                gatewayResponse: vnpParams,
+                gatewayResponse: vnpParams, // Lưu toàn bộ params để tái sử dụng
                 ipAddress: clientIp || null,
             },
         })
 
         logger.info(
-            `VNPay payment created for order ${order.orderCode}. TxnRef: ${txnRef}`
+            `New VNPay payment URL created for order ${order.orderCode}`
         )
 
         return {
-            payUrl: paymentUrl,
+            payUrl,
             txnRef,
-            message: 'VNPay payment URL created successfully',
+            message: 'New VNPay payment URL created',
+            isReused: false,
             order: {
                 id: order.id,
                 orderCode: order.orderCode,
@@ -372,7 +394,8 @@ class PaymentService {
 
         // If exists and still pending, return existing transaction
         if (existingPendingTransaction) {
-            const gatewayResponse = existingPendingTransaction.gatewayResponse || {}
+            const gatewayResponse =
+                existingPendingTransaction.gatewayResponse || {}
             logger.info(
                 `Returning existing pending MoMo transaction for order ${order.orderCode}`
             )
