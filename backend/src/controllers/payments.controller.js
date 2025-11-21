@@ -156,7 +156,11 @@ class PaymentsController {
             reason
         )
 
-        return ApiResponse.success(res, result, 'Refund processed successfully')
+        return ApiResponse.success(
+            res,
+            result,
+            result.message || 'Refund processed successfully'
+        )
     })
 }
 
