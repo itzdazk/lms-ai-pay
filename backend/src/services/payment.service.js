@@ -153,6 +153,9 @@ const parseVNPayRawQuery = (rawUrlOrQuery) => {
     }, {})
 }
 
+const buildRefundUnenrollmentReason = (orderCode, gateway) =>
+    `Refund processed via ${gateway} for order ${orderCode}`
+
 const ERROR_MESSAGES = {
     supersededByNewRequest: (gateway) =>
         `${gateway} payment attempt superseded by a newer request`,
@@ -607,6 +610,10 @@ class PaymentService {
 
     // ==================== Refund Methods ====================
     async refundOrder(orderId, adminUser, amountInput = null, reason = null) {
+        if (adminUser.role !== USER_ROLES.ADMIN) {
+            throw new Error('Only administrators can process refunds')
+        }
+
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             include: {
@@ -660,6 +667,58 @@ class PaymentService {
         )
     }
 
+    async #unenrollUserFromCourse(order, reason = '') {
+        if (!order?.userId || !order?.courseId) {
+            logger.warn(
+                `Cannot unenroll user – missing userId/courseId on order ${order?.id}`
+            )
+            return null
+        }
+
+        const enrollment = await prisma.enrollment.findUnique({
+            where: {
+                userId_courseId: {
+                    userId: order.userId,
+                    courseId: order.courseId,
+                },
+            },
+        })
+
+        if (!enrollment) {
+            logger.warn(
+                `No enrollment found to drop for user ${order.userId} and course ${order.courseId}`
+            )
+            return null
+        }
+
+        const [deletedEnrollment] = await prisma.$transaction([
+            prisma.enrollment.delete({
+                where: { id: enrollment.id },
+            }),
+            prisma.course.update({
+                where: { id: order.courseId },
+                data: {
+                    enrolledCount: {
+                        decrement: 1,
+                    },
+                },
+            }),
+        ]).catch((error) => {
+            logger.warn(
+                `Failed to delete enrollment or adjust count for course ${order.courseId}: ${error.message}`
+            )
+            throw error
+        })
+
+        logger.info(
+            `Enrollment for user ${order.userId} in course ${order.courseId} removed due to refund. ${
+                reason || ''
+            }`
+        )
+
+        return deletedEnrollment
+    }
+
     async #refundMoMoOrder(
         order,
         successfulTransaction,
@@ -684,19 +743,37 @@ class PaymentService {
             throw new Error('Refund amount exceeds remaining paid amount')
         }
 
-        const requestId = `refund-${order.orderCode}-${Date.now()}`
+        const timestamp = Date.now()
+        const requestId = `refund-${order.orderCode}-${timestamp}`
+        const refundOrderId = `${order.orderCode}-refund-${timestamp}`
+        const refundTransactionId = generateTransactionId(
+            order.orderCode,
+            PAYMENT_GATEWAY.MOMO,
+            `refund-${timestamp}`
+        )
         const description =
             reason ||
             `Refund for order ${order.orderCode} by admin ${adminUser.id}`
+
+        const gatewayTransId =
+            successfulTransaction.gatewayResponse?.gatewayTransactionId ||
+            successfulTransaction.gatewayResponse?.transId ||
+            null
+
+        if (!gatewayTransId) {
+            throw new Error(
+                'Missing MoMo gateway transaction ID for this order. Cannot process refund.'
+            )
+        }
 
         const signaturePayload = {
             accessKey: momoConfig.accessKey,
             amount: requestedAmount.toString(),
             description,
-            orderId: order.orderCode,
+            orderId: refundOrderId,
             partnerCode: momoConfig.partnerCode,
             requestId,
-            transId: successfulTransaction.transactionId,
+            transId: gatewayTransId,
         }
 
         const payload = {
@@ -705,9 +782,9 @@ class PaymentService {
             storeId: momoConfig.partnerCode,
             accessKey: momoConfig.accessKey,
             requestId,
-            orderId: order.orderCode,
+            orderId: refundOrderId,
             amount: requestedAmount.toString(),
-            transId: successfulTransaction.transactionId,
+            transId: gatewayTransId,
             lang: 'vi',
             description,
             signature: sign(signaturePayload, REFUND_SIGNATURE_KEYS),
@@ -760,15 +837,23 @@ class PaymentService {
             : PAYMENT_STATUS.PARTIALLY_REFUNDED
 
         const result = await prisma.$transaction(async (tx) => {
+            const gatewayRefundTransId = responseBody?.transId?.toString() || null
             const transactionRecord = await tx.paymentTransaction.create({
                 data: {
                     orderId: order.id,
                     paymentGateway: PAYMENT_GATEWAY.MOMO,
-                    transactionId: responseBody?.transId || requestId,
+                    transactionId: refundTransactionId,
                     amount: toDecimal(requestedAmount),
                     currency: 'VND',
                     status: TRANSACTION_STATUS.REFUNDED,
-                    gatewayResponse: responseBody,
+                    gatewayResponse: {
+                        ...responseBody,
+                        gatewayTransactionId:
+                            gatewayRefundTransId || gatewayTransId,
+                        adminId: adminUser.id,
+                        adminEmail: adminUser.email || null,
+                        reason: description,
+                    },
                     errorMessage: null,
                 },
             })
@@ -789,10 +874,23 @@ class PaymentService {
             `MoMo refund processed for order ${order.orderCode}. Amount: ${requestedAmount}, status: ${newStatus}`
         )
 
+        let unenrollment = null
+        if (isFullRefund) {
+            unenrollment = await this.#unenrollUserFromCourse(
+                order,
+                buildRefundUnenrollmentReason(order.orderCode, PAYMENT_GATEWAY.MOMO)
+            )
+        }
+
         return {
             order: result.updatedOrder,
             refundTransaction: result.transactionRecord,
             gatewayResponse: responseBody,
+            message: isFullRefund
+                ? 'MoMo refund completed successfully'
+                : 'MoMo partial refund completed successfully',
+            requiresManualAction: false,
+            unenrollment,
         }
     }
 
@@ -838,7 +936,9 @@ class PaymentService {
                     gatewayResponse: {
                         message: reason || 'Manual refund by admin',
                         adminId: adminUser.id,
+                        adminEmail: adminUser.email || null,
                         refundDate: new Date().toISOString(),
+                        requiresManualProcessing: true,
                     },
                 },
             })
@@ -859,11 +959,21 @@ class PaymentService {
             `VNPay refund processed for order ${order.orderCode}. Amount: ${requestedAmount}, status: ${newStatus}`
         )
 
+        let unenrollment = null
+        if (isFullRefund) {
+            unenrollment = await this.#unenrollUserFromCourse(
+                order,
+                buildRefundUnenrollmentReason(order.orderCode, PAYMENT_GATEWAY.VNPAY)
+            )
+        }
+
         return {
             order: result.updatedOrder,
             refundTransaction: result.transactionRecord,
             message:
                 'VNPay refund recorded. Please process refund manually in VNPay portal.',
+            requiresManualAction: true,
+            unenrollment,
         }
     }
 
