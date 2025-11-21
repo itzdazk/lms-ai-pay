@@ -263,7 +263,12 @@ class PaymentService {
             PAYMENT_GATEWAY.VNPAY
         )
         const createDate = formatDate(new Date())
-        const orderInfo = `Thanh toan khoa hoc ${order.course?.title || order.orderCode}`
+        const rawTitle = (order.course?.title || order.orderCode || 'Khoa hoc')
+            .replace(/\(/g, '')
+            .replace(/\)/g, '')
+            .trim()
+
+        const orderInfo = `Thanh toan khoa hoc ${rawTitle}`
         const ipAddr = clientIp || '127.0.0.1'
 
         let vnpParams = {
