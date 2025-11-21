@@ -111,6 +111,48 @@ const normalizeSignaturePayload = (payload) => ({
     accessKey: payload.accessKey ?? momoConfig.accessKey,
 })
 
+const extractRawQueryString = (rawUrlOrQuery) => {
+    if (!rawUrlOrQuery || typeof rawUrlOrQuery !== 'string') {
+        return ''
+    }
+
+    const questionMarkIndex = rawUrlOrQuery.indexOf('?')
+    if (questionMarkIndex === -1) {
+        return rawUrlOrQuery.includes('=') ? rawUrlOrQuery : ''
+    }
+
+    return rawUrlOrQuery.slice(questionMarkIndex + 1)
+}
+
+const parseVNPayRawQuery = (rawUrlOrQuery) => {
+    const rawQueryString = extractRawQueryString(rawUrlOrQuery)
+    if (!rawQueryString) {
+        return null
+    }
+
+    const entries = rawQueryString.split('&')
+    if (!entries.length) {
+        return null
+    }
+
+    return entries.reduce((acc, entry) => {
+        if (!entry) {
+            return acc
+        }
+
+        const [rawKey, ...rawValueParts] = entry.split('=')
+        if (!rawKey) {
+            return acc
+        }
+
+        const key = decodeURIComponent(rawKey)
+        const rawValue =
+            rawValueParts.length > 0 ? rawValueParts.join('=') : ''
+        acc[key] = rawValue
+        return acc
+    }, {})
+}
+
 const ERROR_MESSAGES = {
     supersededByNewRequest: (gateway) =>
         `${gateway} payment attempt superseded by a newer request`,
@@ -205,13 +247,9 @@ class PaymentService {
         const amount = normalizeAmount(order.finalPrice)
         if (amount <= 0) throw new Error('Order amount must be greater than 0')
 
-        // === CASE 1: Đã có giao dịch PENDING và còn hiệu lực (dưới 15 phút) ===
+        // === CASE 1: Đã có giao dịch PENDING → tái sử dụng để tránh trùng orderId ===
         const existingTxn = order.paymentTransactions[0]
-        const isStillValid =
-            existingTxn &&
-            dayjs().diff(dayjs(existingTxn.createdAt), 'minute') <= 14
-
-        if (existingTxn && isStillValid) {
+        if (existingTxn) {
             const savedParams = existingTxn.gatewayResponse || {}
             if (savedParams.vnp_SecureHash) {
                 const payUrl =
@@ -220,13 +258,13 @@ class PaymentService {
                     qs.stringify(savedParams, { encode: false })
 
                 logger.info(
-                    `Reusing existing VNPay payment URL for order ${order.orderCode} (still valid)`
+                    `Reusing existing VNPay payment URL for order ${order.orderCode} (pending transaction)`
                 )
 
                 return {
                     payUrl,
                     txnRef: existingTxn.transactionId,
-                    message: 'Using existing valid payment URL',
+                    message: 'Using existing pending payment URL',
                     isReused: true,
                     order: {
                         id: order.id,
@@ -240,33 +278,12 @@ class PaymentService {
         }
 
         // === CASE 2: Không có hoặc đã hết hạn → Tạo mới ===
-        // Đánh FAIL tất cả pending cũ trước khi tạo mới
-        if (existingTxn) {
-            await prisma.paymentTransaction.updateMany({
-                where: {
-                    orderId: order.id,
-                    paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                    status: TRANSACTION_STATUS.PENDING,
-                },
-                data: {
-                    status: TRANSACTION_STATUS.FAILED,
-                    errorMessage: ERROR_MESSAGES.supersededByNewRequest(
-                        PAYMENT_GATEWAY.VNPAY
-                    ),
-                },
-            })
-        }
-
-        // Tạo mới như cũ
         const txnRef = generateTransactionId(
             order.orderCode,
             PAYMENT_GATEWAY.VNPAY
         )
         const createDate = formatDate(new Date())
-        const rawTitle = (order.course?.title || order.orderCode || 'Khoa hoc')
-            .replace(/\(/g, '')
-            .replace(/\)/g, '')
-            .trim()
+        const rawTitle = (order.course?.title || order.orderCode || 'Khoa hoc').trim()
 
         const orderInfo = `Thanh toan khoa hoc ${rawTitle}`
         const ipAddr = clientIp || '127.0.0.1'
@@ -308,6 +325,22 @@ class PaymentService {
             },
         })
 
+        // Đánh FAIL các pending cũ sau khi tạo mới thành công (trừ giao dịch vừa tạo)
+        await prisma.paymentTransaction.updateMany({
+            where: {
+                orderId: order.id,
+                paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                status: TRANSACTION_STATUS.PENDING,
+                id: { not: transaction.id },
+            },
+            data: {
+                status: TRANSACTION_STATUS.FAILED,
+                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
+                    PAYMENT_GATEWAY.VNPAY
+                ),
+            },
+        })
+
         logger.info(
             `New VNPay payment URL created for order ${order.orderCode}`
         )
@@ -330,15 +363,15 @@ class PaymentService {
     /**
      * Handle VNPay callback (return URL)
      */
-    async handleVNPayCallback(query) {
-        return this.#processVNPayResult(query, 'callback')
+    async handleVNPayCallback(query, rawQueryString = '') {
+        return this.#processVNPayResult(query, 'callback', rawQueryString)
     }
 
     /**
      * Handle VNPay IPN (webhook)
      */
-    async handleVNPayWebhook(query) {
-        return this.#processVNPayResult(query, 'ipn')
+    async handleVNPayWebhook(query, rawQueryString = '') {
+        return this.#processVNPayResult(query, 'ipn', rawQueryString)
     }
 
     // ==================== MoMo Methods ====================
@@ -468,21 +501,6 @@ class PaymentService {
             CREATE_SIGNATURE_KEYS
         )
 
-        // Mark previous pending MoMo transactions as failed to avoid duplicates
-        await prisma.paymentTransaction.updateMany({
-            where: {
-                orderId: order.id,
-                paymentGateway: PAYMENT_GATEWAY.MOMO,
-                status: TRANSACTION_STATUS.PENDING,
-            },
-            data: {
-                status: TRANSACTION_STATUS.FAILED,
-                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
-                    PAYMENT_GATEWAY.MOMO
-                ),
-            },
-        })
-
         let responseBody = null
         try {
             const response = await fetch(momoConfig.endpoint, {
@@ -534,6 +552,22 @@ class PaymentService {
                 status: TRANSACTION_STATUS.PENDING,
                 gatewayResponse: responseBody,
                 ipAddress: clientIp || null,
+            },
+        })
+
+        // Mark previous pending MoMo transactions as failed (exclude the new one)
+        await prisma.paymentTransaction.updateMany({
+            where: {
+                orderId: order.id,
+                paymentGateway: PAYMENT_GATEWAY.MOMO,
+                status: TRANSACTION_STATUS.PENDING,
+                id: { not: transaction.id },
+            },
+            data: {
+                status: TRANSACTION_STATUS.FAILED,
+                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
+                    PAYMENT_GATEWAY.MOMO
+                ),
             },
         })
 
@@ -1209,23 +1243,29 @@ class PaymentService {
      * @param {String} source - 'ipn' (webhook) or 'callback' (return URL)
      * @returns {Object} Response data depending on source and payment status
      */
-    async #processVNPayResult(query, source) {
+    async #processVNPayResult(query, source, rawQuerySource = '') {
         // Ensure VNPay config is loaded (tmnCode, hashSecret, returnUrl, etc.)
         ensureVNPayConfig()
 
         // Clone query params to avoid mutating original object
         const vnpParams = { ...query }
+        const rawQueryParams = parseVNPayRawQuery(rawQuerySource)
         const secureHash = vnpParams.vnp_SecureHash
 
         // Remove signature fields before verification (they are not part of signed data)
         delete vnpParams.vnp_SecureHash
         delete vnpParams.vnp_SecureHashType
+        if (rawQueryParams) {
+            delete rawQueryParams.vnp_SecureHash
+            delete rawQueryParams.vnp_SecureHashType
+        }
 
         // Verify HMAC SHA512 signature using sorted params and secret key
         const isValid = verifyVNPaySignature(
             vnpParams,
             secureHash,
-            vnpayConfig.hashSecret
+            vnpayConfig.hashSecret,
+            rawQueryParams
         )
 
         // If signature is invalid → reject immediately (security check)
@@ -1303,46 +1343,78 @@ class PaymentService {
         // Determine if payment was successful (responseCode '00')
         const success = responseCode === '00'
 
-        // Find existing transaction record by VNPay transaction ID
-        let transactionRecord = await prisma.paymentTransaction.findUnique({
-            where: { transactionId: transactionId },
-        })
+        let transactionRecord = null
 
-        // Update existing transaction or create new one
-        if (transactionRecord) {
-            transactionRecord = await prisma.paymentTransaction.update({
-                where: { id: transactionRecord.id },
-                data: {
-                    status: success
-                        ? TRANSACTION_STATUS.SUCCESS
-                        : TRANSACTION_STATUS.FAILED,
-                    gatewayResponse: {
-                        vnpParams,
-                        vnp_TransactionNo: transactionNo, // Save VNPay's internal ID for reference
+        await prisma.$transaction(async (tx) => {
+            transactionRecord = await tx.paymentTransaction.findUnique({
+                where: { transactionId },
+            })
+
+            if (!transactionRecord) {
+                transactionRecord = await tx.paymentTransaction.findFirst({
+                    where: {
+                        orderId: order.id,
+                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                        status: TRANSACTION_STATUS.PENDING,
                     },
-                    errorMessage: success
-                        ? null
-                        : getResponseMessage(responseCode),
+                    orderBy: { createdAt: 'desc' },
+                })
+            }
+
+            if (!transactionRecord) {
+                transactionRecord = await tx.paymentTransaction.findFirst({
+                    where: {
+                        orderId: order.id,
+                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                })
+            }
+
+            const transactionData = {
+                orderId: order.id,
+                transactionId,
+                paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                amount: toDecimal(amount),
+                currency: 'VND',
+                status: success
+                    ? TRANSACTION_STATUS.SUCCESS
+                    : TRANSACTION_STATUS.FAILED,
+                gatewayResponse: {
+                    ...vnpParams,
+                    vnp_TransactionNo: transactionNo,
                 },
-            })
-        } else {
-            transactionRecord = await prisma.paymentTransaction.create({
-                data: {
-                    orderId: order.id,
-                    transactionId,
-                    paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                    amount: toDecimal(amount),
-                    currency: 'VND',
-                    status: success
-                        ? TRANSACTION_STATUS.SUCCESS
-                        : TRANSACTION_STATUS.FAILED,
-                    gatewayResponse: vnpParams,
-                    errorMessage: success
-                        ? null
-                        : getResponseMessage(responseCode),
-                },
-            })
-        }
+                errorMessage: success ? null : getResponseMessage(responseCode),
+            }
+
+            if (transactionRecord) {
+                transactionRecord = await tx.paymentTransaction.update({
+                    where: { id: transactionRecord.id },
+                    data: transactionData,
+                })
+            } else {
+                transactionRecord = await tx.paymentTransaction.create({
+                    data: transactionData,
+                })
+            }
+
+            if (success) {
+                await tx.paymentTransaction.updateMany({
+                    where: {
+                        orderId: order.id,
+                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                        status: TRANSACTION_STATUS.PENDING,
+                        id: { not: transactionRecord.id },
+                    },
+                    data: {
+                        status: TRANSACTION_STATUS.FAILED,
+                        errorMessage: ERROR_MESSAGES.supersededBySuccess(
+                            PAYMENT_GATEWAY.VNPAY
+                        ),
+                    },
+                })
+            }
+        })
 
         // ===== SUCCESS PATH =====
         if (success) {

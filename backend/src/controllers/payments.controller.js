@@ -88,7 +88,11 @@ class PaymentsController {
      * @access  Public (VNPay redirect)
      */
     vnpayCallback = asyncHandler(async (req, res) => {
-        const result = await paymentService.handleVNPayCallback(req.query)
+        const rawQueryString = req.originalUrl?.split('?')[1] || ''
+        const result = await paymentService.handleVNPayCallback(
+            req.query,
+            rawQueryString
+        )
 
         return ApiResponse.success(
             res,
@@ -115,7 +119,11 @@ class PaymentsController {
      */
     vnpayWebhook = async (req, res, next) => {
         try {
-            const result = await paymentService.handleVNPayWebhook(req.query)
+            const rawQueryString = req.originalUrl?.split('?')[1] || ''
+            const result = await paymentService.handleVNPayWebhook(
+                req.query,
+                rawQueryString
+            )
 
             // VNPay expects specific response format
             return res.status(200).json({

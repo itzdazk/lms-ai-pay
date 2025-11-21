@@ -39,6 +39,31 @@ function sortObject(obj) {
     }
     return sorted
 }
+
+const buildRawSignData = (rawParams) => {
+    if (!rawParams || typeof rawParams !== 'object') {
+        return null
+    }
+
+    const encodedKeys = Object.keys(rawParams)
+        .map((key) => ({
+            original: key,
+            encoded: encodeURIComponent(key),
+        }))
+        .sort((a, b) => {
+            if (a.encoded < b.encoded) return -1
+            if (a.encoded > b.encoded) return 1
+            return 0
+        })
+
+    return encodedKeys
+        .map(({ encoded, original }) => {
+            const rawValue =
+                rawParams[original] === undefined ? '' : rawParams[original]
+            return `${encoded}=${rawValue}`
+        })
+        .join('&')
+}
 /**
  * Create VNPay signature (HMAC SHA512)
  * Theo tài liệu VNPay: dùng querystring.stringify với { encode: false }
@@ -61,9 +86,15 @@ const createSignature = (params, secretKey) => {
  * @param {string} secretKey - Hash secret key
  * @returns {boolean} Is valid
  */
-const verifySignature = (params, secureHash, secretKey) => {
+const verifySignature = (
+    params,
+    secureHash,
+    secretKey,
+    rawParams = null
+) => {
     const vnpParams = sortObject(params)
-    const signData = qs.stringify(vnpParams, { encode: false })
+    const rawSignData = buildRawSignData(rawParams)
+    const signData = rawSignData || qs.stringify(vnpParams, { encode: false })
     const hmac = crypto.createHmac('sha512', secretKey)
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex')
     return signed === secureHash
@@ -150,6 +181,7 @@ export {
     createSignature,
     verifySignature,
     sortObject,
+    buildRawSignData,
     formatDate,
     parseDate,
     getResponseMessage,
