@@ -1,6 +1,6 @@
 // src/routes/admin-quizzes.routes.js
 import express from 'express'
-import quizzesController from '../controllers/quizzes.controller.js'
+import adminQuizzesController from '../controllers/admin-quizzes.controller.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
 import { isAdmin } from '../middlewares/role.middleware.js'
 import {
@@ -20,7 +20,7 @@ router.get(
     authenticate,
     isAdmin,
     getAdminQuizzesValidator,
-    quizzesController.getAdminQuizzes
+    adminQuizzesController.getAdminQuizzes
 )
 
 /**
@@ -33,7 +33,7 @@ router.get(
     authenticate,
     isAdmin,
     getAdminQuizSubmissionsValidator,
-    quizzesController.getAdminQuizSubmissions
+    adminQuizzesController.getAdminQuizSubmissions
 )
 
 export default router

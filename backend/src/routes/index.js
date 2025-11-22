@@ -4,6 +4,8 @@ import authRoutes from './auth.routes.js'
 import userRoutes from './users.routes.js'
 import courseRoutes from './course.routes.js'
 import quizzesRoutes from './quizzes.routes.js'
+import studentQuizzesRoutes from './student-quizzes.routes.js'
+import instructorQuizzesRoutes from './instructor-quizzes.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 import lessonsRoutes from './lessons.routes.js'
@@ -37,6 +39,7 @@ router.get('/', (req, res) => {
             tags: '/api/v1/tags',
             lessons: '/api/v1/lessons',
             quizzes: '/api/v1/quizzes',
+            studentQuizzes: '/api/v1/quizzes',
             instructorCourses: '/api/v1/instructor/courses',
             instructorLessons: '/api/v1/instructor/courses/:courseId/lessons',
             instructorQuizzes: '/api/v1/instructor/quizzes',
@@ -66,7 +69,9 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes)
 router.use('/users', userRoutes)
 router.use('/courses', courseRoutes)
-router.use('/', quizzesRoutes)
+router.use('/', quizzesRoutes) // Public quiz endpoints
+router.use('/', studentQuizzesRoutes) // Student quiz endpoints
+router.use('/instructor', instructorQuizzesRoutes) // Instructor quiz endpoints
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/lessons', lessonsRoutes)
@@ -78,7 +83,7 @@ router.use('/progress', progressRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
-router.use('/admin/quizzes', adminQuizzesRoutes)
+router.use('/admin/quizzes', adminQuizzesRoutes) // Admin quiz endpoints
 router.use('/payments', paymentsRoutes)
 router.use('/transactions', transactionsRoutes)
 
