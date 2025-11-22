@@ -64,6 +64,8 @@ const config = {
         process.env.VNPAY_URL ||
         'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
     VNPAY_RETURN_URL: process.env.VNPAY_RETURN_URL,
+    VNPAY_EXPIRATION_MINUTES:
+        parseInt(process.env.VNPAY_EXPIRATION_MINUTES, 10) || 10,
 
     // Payment - MoMo
     MOMO_PARTNER_CODE: process.env.MOMO_PARTNER_CODE,

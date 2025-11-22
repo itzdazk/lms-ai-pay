@@ -14,6 +14,7 @@ const vnpayConfig = {
     command: 'pay',
     currCode: 'VND',
     locale: 'vn',
+    expirationMinutes: parseInt(config.VNPAY_EXPIRATION_MINUTES) || 10,
 }
 
 /**
@@ -86,12 +87,7 @@ const createSignature = (params, secretKey) => {
  * @param {string} secretKey - Hash secret key
  * @returns {boolean} Is valid
  */
-const verifySignature = (
-    params,
-    secureHash,
-    secretKey,
-    rawParams = null
-) => {
+const verifySignature = (params, secureHash, secretKey, rawParams = null) => {
     const vnpParams = sortObject(params)
     const rawSignData = buildRawSignData(rawParams)
     const signData = rawSignData || qs.stringify(vnpParams, { encode: false })
@@ -115,6 +111,22 @@ const formatDate = (date) => {
     const seconds = String(d.getSeconds()).padStart(2, '0')
 
     return `${year}${month}${day}${hours}${minutes}${seconds}`
+}
+
+/**
+ * ⭐ NEW: Tạo expire date cho VNPay (createDate + expirationMinutes)
+ * @param {Date} createDate - Thời điểm tạo transaction
+ * @param {number} expirationMinutes - Số phút hết hạn (default từ config)
+ * @returns {string} Formatted expire date (yyyyMMddHHmmss)
+ */
+const formatExpireDate = (createDate = null, expirationMinutes = null) => {
+    const baseDate = createDate || new Date()
+    const minutes = expirationMinutes || vnpayConfig.expirationMinutes
+
+    // Thêm số phút vào createDate
+    const expireDate = new Date(baseDate.getTime() + minutes * 60 * 1000)
+
+    return formatDate(expireDate)
 }
 
 /**
@@ -183,6 +195,7 @@ export {
     sortObject,
     buildRawSignData,
     formatDate,
+    formatExpireDate,
     parseDate,
     getResponseMessage,
     normalizeAmount,

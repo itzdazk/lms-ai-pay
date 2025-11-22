@@ -18,6 +18,7 @@ import {
     getResponseMessage,
     normalizeAmount as vnpayNormalizeAmount,
     sortObject,
+    formatExpireDate,
 } from '../config/vnpay.config.js'
 import {
     momoConfig,
@@ -146,8 +147,7 @@ const parseVNPayRawQuery = (rawUrlOrQuery) => {
         }
 
         const key = decodeURIComponent(rawKey)
-        const rawValue =
-            rawValueParts.length > 0 ? rawValueParts.join('=') : ''
+        const rawValue = rawValueParts.length > 0 ? rawValueParts.join('=') : ''
         acc[key] = rawValue
         return acc
     }, {})
@@ -250,10 +250,11 @@ class PaymentService {
         const amount = normalizeAmount(order.finalPrice)
         if (amount <= 0) throw new Error('Order amount must be greater than 0')
 
-        // === CASE 1: Đã có giao dịch PENDING → tái sử dụng để tránh trùng orderId ===
         const existingTxn = order.paymentTransactions[0]
         if (existingTxn) {
             const savedParams = existingTxn.gatewayResponse || {}
+
+            // Return existing transaction
             if (savedParams.vnp_SecureHash) {
                 const payUrl =
                     vnpayConfig.apiUrl +
@@ -261,14 +262,13 @@ class PaymentService {
                     qs.stringify(savedParams, { encode: false })
 
                 logger.info(
-                    `Reusing existing VNPay payment URL for order ${order.orderCode} (pending transaction)`
+                    `Reusing existing VNPay payment URL for order ${order.orderCode}`
                 )
 
                 return {
                     payUrl,
                     txnRef: existingTxn.transactionId,
-                    message: 'Using existing pending payment URL',
-                    isReused: true,
+                    message: 'Payment URL already exists',
                     order: {
                         id: order.id,
                         orderCode: order.orderCode,
@@ -280,13 +280,22 @@ class PaymentService {
             }
         }
 
-        // === CASE 2: Không có hoặc đã hết hạn → Tạo mới ===
         const txnRef = generateTransactionId(
             order.orderCode,
             PAYMENT_GATEWAY.VNPAY
         )
-        const createDate = formatDate(new Date())
-        const rawTitle = (order.course?.title || order.orderCode || 'Khoa hoc').trim()
+        const createDate = new Date()
+        const formattedCreateDate = formatDate(createDate)
+        const formattedExpireDate = formatExpireDate(
+            //*
+            createDate,
+            vnpayConfig.expirationMinutes
+        )
+        const rawTitle = (
+            order.course?.title ||
+            order.orderCode ||
+            'Khoa hoc'
+        ).trim()
 
         const orderInfo = `Thanh toan khoa hoc ${rawTitle}`
         const ipAddr = clientIp || '127.0.0.1'
@@ -303,7 +312,8 @@ class PaymentService {
             vnp_Locale: 'vn',
             vnp_ReturnUrl: vnpayConfig.returnUrl,
             vnp_IpAddr: ipAddr,
-            vnp_CreateDate: createDate,
+            vnp_CreateDate: formattedCreateDate,
+            vnp_ExpireDate: formattedExpireDate,
         }
 
         const signed = createSignature(vnpParams, vnpayConfig.hashSecret)
@@ -328,22 +338,6 @@ class PaymentService {
             },
         })
 
-        // Đánh FAIL các pending cũ sau khi tạo mới thành công (trừ giao dịch vừa tạo)
-        await prisma.paymentTransaction.updateMany({
-            where: {
-                orderId: order.id,
-                paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                status: TRANSACTION_STATUS.PENDING,
-                id: { not: transaction.id },
-            },
-            data: {
-                status: TRANSACTION_STATUS.FAILED,
-                errorMessage: ERROR_MESSAGES.supersededByNewRequest(
-                    PAYMENT_GATEWAY.VNPAY
-                ),
-            },
-        })
-
         logger.info(
             `New VNPay payment URL created for order ${order.orderCode}`
         )
@@ -352,7 +346,6 @@ class PaymentService {
             payUrl,
             txnRef,
             message: 'New VNPay payment URL created',
-            isReused: false,
             order: {
                 id: order.id,
                 orderCode: order.orderCode,
@@ -691,24 +684,26 @@ class PaymentService {
             return null
         }
 
-        const [deletedEnrollment] = await prisma.$transaction([
-            prisma.enrollment.delete({
-                where: { id: enrollment.id },
-            }),
-            prisma.course.update({
-                where: { id: order.courseId },
-                data: {
-                    enrolledCount: {
-                        decrement: 1,
+        const [deletedEnrollment] = await prisma
+            .$transaction([
+                prisma.enrollment.delete({
+                    where: { id: enrollment.id },
+                }),
+                prisma.course.update({
+                    where: { id: order.courseId },
+                    data: {
+                        enrolledCount: {
+                            decrement: 1,
+                        },
                     },
-                },
-            }),
-        ]).catch((error) => {
-            logger.warn(
-                `Failed to delete enrollment or adjust count for course ${order.courseId}: ${error.message}`
-            )
-            throw error
-        })
+                }),
+            ])
+            .catch((error) => {
+                logger.warn(
+                    `Failed to delete enrollment or adjust count for course ${order.courseId}: ${error.message}`
+                )
+                throw error
+            })
 
         logger.info(
             `Enrollment for user ${order.userId} in course ${order.courseId} removed due to refund. ${
@@ -837,7 +832,8 @@ class PaymentService {
             : PAYMENT_STATUS.PARTIALLY_REFUNDED
 
         const result = await prisma.$transaction(async (tx) => {
-            const gatewayRefundTransId = responseBody?.transId?.toString() || null
+            const gatewayRefundTransId =
+                responseBody?.transId?.toString() || null
             const transactionRecord = await tx.paymentTransaction.create({
                 data: {
                     orderId: order.id,
@@ -878,7 +874,10 @@ class PaymentService {
         if (isFullRefund) {
             unenrollment = await this.#unenrollUserFromCourse(
                 order,
-                buildRefundUnenrollmentReason(order.orderCode, PAYMENT_GATEWAY.MOMO)
+                buildRefundUnenrollmentReason(
+                    order.orderCode,
+                    PAYMENT_GATEWAY.MOMO
+                )
             )
         }
 
@@ -963,7 +962,10 @@ class PaymentService {
         if (isFullRefund) {
             unenrollment = await this.#unenrollUserFromCourse(
                 order,
-                buildRefundUnenrollmentReason(order.orderCode, PAYMENT_GATEWAY.VNPAY)
+                buildRefundUnenrollmentReason(
+                    order.orderCode,
+                    PAYMENT_GATEWAY.VNPAY
+                )
             )
         }
 
@@ -1407,6 +1409,7 @@ class PaymentService {
                         transactionId: txnRef,
                     },
                     orderBy: { createdAt: 'desc' },
+                    take: 1,
                 },
             },
         })
@@ -1461,32 +1464,10 @@ class PaymentService {
             })
 
             if (!transactionRecord) {
-                transactionRecord = await tx.paymentTransaction.findFirst({
-                    where: {
-                        orderId: order.id,
-                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                        status: TRANSACTION_STATUS.PENDING,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                })
-            }
-
-            if (!transactionRecord) {
-                transactionRecord = await tx.paymentTransaction.findFirst({
-                    where: {
-                        orderId: order.id,
-                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                })
+                throw new Error(`Transaction ${transactionId} not found`)
             }
 
             const transactionData = {
-                orderId: order.id,
-                transactionId,
-                paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                amount: toDecimal(amount),
-                currency: 'VND',
                 status: success
                     ? TRANSACTION_STATUS.SUCCESS
                     : TRANSACTION_STATUS.FAILED,
@@ -1497,33 +1478,10 @@ class PaymentService {
                 errorMessage: success ? null : getResponseMessage(responseCode),
             }
 
-            if (transactionRecord) {
-                transactionRecord = await tx.paymentTransaction.update({
-                    where: { id: transactionRecord.id },
-                    data: transactionData,
-                })
-            } else {
-                transactionRecord = await tx.paymentTransaction.create({
-                    data: transactionData,
-                })
-            }
-
-            if (success) {
-                await tx.paymentTransaction.updateMany({
-                    where: {
-                        orderId: order.id,
-                        paymentGateway: PAYMENT_GATEWAY.VNPAY,
-                        status: TRANSACTION_STATUS.PENDING,
-                        id: { not: transactionRecord.id },
-                    },
-                    data: {
-                        status: TRANSACTION_STATUS.FAILED,
-                        errorMessage: ERROR_MESSAGES.supersededBySuccess(
-                            PAYMENT_GATEWAY.VNPAY
-                        ),
-                    },
-                })
-            }
+            transactionRecord = await tx.paymentTransaction.update({
+                where: { id: transactionRecord.id },
+                data: transactionData,
+            })
         })
 
         // ===== SUCCESS PATH =====
@@ -1607,20 +1565,43 @@ class PaymentService {
         }
 
         // ===== FAILURE PATH =====
-        // Only update order to FAILED if it's still PENDING and this is IPN
-        if (
-            order.paymentStatus === PAYMENT_STATUS.PENDING &&
-            source === 'ipn'
-        ) {
+        if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
             await prisma.order.update({
                 where: { id: order.id },
                 data: { paymentStatus: PAYMENT_STATUS.FAILED },
             })
+
+            logger.info(
+                `VNPay payment failed for order ${order.orderCode}. ResponseCode=${responseCode} - Order marked as FAILED`
+            )
         }
 
-        logger.warn(
-            `VNPay payment failed for order ${order.orderCode}. ResponseCode=${responseCode} (source: ${source})`
-        )
+        const failedOrder = await prisma.order.findUnique({
+            where: { id: order.id },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                    },
+                },
+                user: {
+                    select: {
+                        id: true,
+                    },
+                },
+            },
+        })
+
+        if (failedOrder && failedOrder.course && failedOrder.user) {
+            await notificationsService.notifyPaymentFailed(
+                failedOrder.user.id,
+                failedOrder.id,
+                failedOrder.courseId,
+                failedOrder.course.title,
+                getResponseMessage(responseCode)
+            )
+        }
 
         // IPN: Even on failure, return success code to confirm receipt
         if (source === 'ipn') {
