@@ -16,8 +16,9 @@ import notificationsService from './notifications.service.js'
 class VNPayExpirationHandlerService {
     /**
      * Tìm và hủy tất cả transaction VNPay đã hết hạn
+     * expirationMinutes = 5 for test expirationMinutes = 15 for production
      */
-    async handleExpiredTransactions(expirationMinutes = 15) {
+    async handleExpiredTransactions(expirationMinutes) {
         try {
             const expirationTime = new Date(
                 Date.now() - expirationMinutes * 60 * 1000
@@ -134,7 +135,7 @@ class VNPayExpirationHandlerService {
                 logger.info(
                     `Order ${order.orderCode} marked as FAILED - payment link expired`
                 )
-                // Send notification for expired payment (giống MoMo)
+                // Send notification for expired payment
                 const fullOrder = await tx.order.findUnique({
                     where: { id: order.id },
                     include: {

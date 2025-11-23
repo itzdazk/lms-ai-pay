@@ -114,7 +114,7 @@ const formatDate = (date) => {
 }
 
 /**
- * ⭐ NEW: Tạo expire date cho VNPay (createDate + expirationMinutes)
+ * Tạo expire date cho VNPay (createDate + expirationMinutes)
  * @param {Date} createDate - Thời điểm tạo transaction
  * @param {number} expirationMinutes - Số phút hết hạn (default từ config)
  * @returns {string} Formatted expire date (yyyyMMddHHmmss)
@@ -163,6 +163,7 @@ const getResponseMessage = (responseCode) => {
         11: 'Giao dịch không thành công do: Đã hết hạn chờ thanh toán. Xin quý khách vui lòng thực hiện lại giao dịch.',
         12: 'Giao dịch không thành công do: Thẻ/Tài khoản của khách hàng bị khóa.',
         13: 'Giao dịch không thành công do Quý khách nhập sai mật khẩu xác thực giao dịch (OTP). Xin quý khách vui lòng thực hiện lại giao dịch.',
+        15: 'Giao dịch không thành công do: Quá thời gian chờ xác thực OTP hoặc không đúng OTP. Xin quý khách vui lòng thực hiện lại giao dịch.',
         24: 'Giao dịch không thành công do: Khách hàng hủy giao dịch',
         51: 'Giao dịch không thành công do: Tài khoản của quý khách không đủ số dư để thực hiện giao dịch.',
         65: 'Giao dịch không thành công do: Tài khoản của Quý khách đã vượt quá hạn mức giao dịch trong ngày.',

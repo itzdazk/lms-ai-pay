@@ -34,7 +34,7 @@ class PaymentExpirationCron {
 
             try {
                 const result =
-                    await vnpayExpirationHandler.handleExpiredTransactions(15) // 15 phút timeout
+                    await vnpayExpirationHandler.handleExpiredTransactions(5) // 15 phút timeout
 
                 logger.info('VNPay expiration handler completed:', {
                     processed: result.processedCount,
