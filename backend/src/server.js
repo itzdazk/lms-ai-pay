@@ -3,6 +3,7 @@ import app from './app.js'
 import config from './config/app.config.js'
 import logger from './config/logger.config.js'
 import { connectDB, disconnectDB } from './config/database.config.js'
+import paymentExpirationCron from './cron/payment-expiration.cron.js'
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -17,6 +18,9 @@ const startServer = async () => {
     try {
         // Connect to database
         await connectDB() // Wait until completion -> continue
+
+        // Start cron jobs (VNPay expiration handler)
+        paymentExpirationCron.start()
 
         // Start server
         const server = app.listen(config.PORT, () => {
@@ -37,6 +41,7 @@ const startServer = async () => {
             logger.error(err.stack)
 
             server.close(async () => {
+                paymentExpirationCron.stop()
                 await disconnectDB()
                 process.exit(1)
             })
@@ -47,6 +52,7 @@ const startServer = async () => {
             logger.info('SIGTERM RECEIVED. Shutting down gracefully...')
             server.close(async () => {
                 logger.info('Process terminated!')
+                paymentExpirationCron.stop()
                 await disconnectDB()
                 process.exit(0)
             })
@@ -57,6 +63,7 @@ const startServer = async () => {
             logger.info('SIGINT RECEIVED. Shutting down gracefully...')
             server.close(async () => {
                 logger.info('Process terminated!')
+                paymentExpirationCron.stop()
                 await disconnectDB()
                 process.exit(0)
             })
