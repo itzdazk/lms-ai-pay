@@ -1,40 +1,38 @@
 // backend/src/cron/payment-expiration.cron.js
-import cron from 'node-cron'
 import logger from '../config/logger.config.js'
 import vnpayExpirationHandler from '../services/vnpay-expiration-handler.service.js'
 
 /**
- * INSTALL: npm install node-cron
  * Thêm vào server.js để start cron job
+ * Sử dụng setInterval để chạy mỗi 30 giây
  */
 
 /**
  * Cron job để tự động xử lý các transaction VNPay đã hết hạn
- * Chạy mỗi 5 phút
+ * Chạy mỗi 30 giây
  */
 class PaymentExpirationCron {
     constructor() {
-        this.job = null
+        this.intervalId = null
     }
 
     /**
      * Start cron job
-     * Schedule: Chạy mỗi 5 phút
+     * Schedule: Chạy mỗi 30 giây
      */
     start() {
-        if (this.job) {
+        if (this.intervalId) {
             logger.warn('Payment expiration cron job is already running')
             return
         }
 
-        // Chạy mỗi 5 phút: */5 * * * *
-        // Hoặc mỗi 10 phút: */10 * * * *
-        this.job = cron.schedule('*/2 * * * *', async () => {
+        // Chạy mỗi 30 giây (30000 milliseconds)
+        this.intervalId = setInterval(async () => {
             logger.info('Running VNPay expiration handler cron job...')
 
             try {
                 const result =
-                    await vnpayExpirationHandler.handleExpiredTransactions(5) // 15 phút timeout
+                    await vnpayExpirationHandler.handleExpiredTransactions(1) // 15 phút timeout
 
                 logger.info('VNPay expiration handler completed:', {
                     processed: result.processedCount,
@@ -45,10 +43,10 @@ class PaymentExpirationCron {
                     `VNPay expiration handler cron failed: ${error.message}`
                 )
             }
-        })
+        }, 30000) // 30 giây = 30000 milliseconds
 
         logger.info(
-            'Payment expiration cron job started (runs every 5 minutes)'
+            'Payment expiration cron job started (runs every 30 seconds)'
         )
     }
 
@@ -56,9 +54,9 @@ class PaymentExpirationCron {
      * Stop cron job
      */
     stop() {
-        if (this.job) {
-            this.job.stop()
-            this.job = null
+        if (this.intervalId) {
+            clearInterval(this.intervalId)
+            this.intervalId = null
             logger.info('Payment expiration cron job stopped')
         }
     }
