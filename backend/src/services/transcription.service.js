@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
 import { prisma } from '../config/database.config.js'
+import { TRANSCRIPT_STATUS } from '../config/constants.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -22,6 +23,7 @@ class TranscriptionService {
         this.outputDir = this._resolveOutputDir(
             config.WHISPER_OUTPUT_DIR || path.join('uploads', 'transcripts')
         )
+        this.activeJobs = new Map()
     }
 
     _resolveOutputDir(dirPath) {
@@ -35,6 +37,28 @@ class TranscriptionService {
         }
 
         return absolutePath
+    }
+
+    cancelTranscriptionJob(lessonId) {
+        const job = this.activeJobs.get(lessonId)
+        if (job) {
+            try {
+                if (process.platform === 'win32') {
+                    spawn('taskkill', ['/pid', job.pid, '/t', '/f'])
+                } else {
+                    job.kill('SIGTERM')
+                }
+                logger.info(
+                    `Cancelled running Whisper job for lesson ${lessonId}`
+                )
+            } catch (error) {
+                logger.error(
+                    `Failed to cancel Whisper job for lesson ${lessonId}: ${error.message}`
+                )
+            } finally {
+                this.activeJobs.delete(lessonId)
+            }
+        }
     }
 
     async transcribeLessonVideo({
@@ -85,6 +109,8 @@ class TranscriptionService {
             args.push('--fp16', 'False')
         }
 
+        this.cancelTranscriptionJob(lessonId)
+
         logger.info(
             `Starting Whisper transcription for lesson ${lessonId} (user ${userId}, source ${source})`
         )
@@ -93,6 +119,8 @@ class TranscriptionService {
             const whisperProcess = spawn(this.command, args, {
                 shell: process.platform === 'win32',
             })
+
+            this.activeJobs.set(lessonId, whisperProcess)
 
             whisperProcess.stdout.on('data', (data) => {
                 logger.debug(`[whisper stdout] ${data}`)
@@ -107,12 +135,33 @@ class TranscriptionService {
                 reject(error)
             })
 
-            whisperProcess.on('close', async (code) => {
+            whisperProcess.on('close', async (code, signal) => {
+                this.activeJobs.delete(lessonId)
+
+                if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+                    logger.info(
+                        `Whisper transcription cancelled for lesson ${lessonId}`
+                    )
+                    await prisma.lesson.update({
+                        where: { id: lessonId },
+                        data: {
+                            transcriptStatus: TRANSCRIPT_STATUS.CANCELLED,
+                        },
+                    })
+                    return reject(new Error('Whisper transcription cancelled'))
+                }
+
                 if (code !== 0) {
                     const error = new Error(
                         `Whisper process exited with code ${code}`
                     )
                     logger.error(error.message)
+                    await prisma.lesson.update({
+                        where: { id: lessonId },
+                        data: {
+                            transcriptStatus: TRANSCRIPT_STATUS.FAILED,
+                        },
+                    })
                     return reject(error)
                 }
 
@@ -137,7 +186,8 @@ class TranscriptionService {
                         where: { id: lessonId },
                         data: {
                             transcriptUrl,
-                            transcriptTitle: path.basename(absoluteVideoPath),
+                            transcriptJsonUrl,
+                            transcriptStatus: TRANSCRIPT_STATUS.COMPLETED,
                         },
                     })
 
@@ -151,6 +201,13 @@ class TranscriptionService {
                             'utf-8'
                         )
                         transcriptJsonUrl = `/uploads/transcripts/${jsonFilename}`
+                        
+                        // Update database with JSON URL after successful creation
+                        await prisma.lesson.update({
+                            where: { id: lessonId },
+                            data: { transcriptJsonUrl },
+                        })
+                        
                         logger.info(
                             `Generated transcript JSON for lesson ${lessonId}: ${transcriptJsonUrl}`
                         )
@@ -176,6 +233,12 @@ class TranscriptionService {
                         `Failed to finalize Whisper transcript for lesson ${lessonId}`,
                         error
                     )
+                    await prisma.lesson.update({
+                        where: { id: lessonId },
+                        data: {
+                            transcriptStatus: TRANSCRIPT_STATUS.FAILED,
+                        },
+                    })
                     reject(error)
                 }
             })

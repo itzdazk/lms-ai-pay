@@ -179,6 +179,8 @@ model Lesson {
   videoUrl      String?  @map("video_url") @db.VarChar(255)
   videoDuration Int?     @map("video_duration")
   transcriptUrl String?  @map("transcript_url") @db.VarChar(255)
+  transcriptStatus String  @default("idle") @map("transcript_status") @db.VarChar(20)
+  transcriptJsonUrl String? @map("transcript_json_url") @db.VarChar(255)
   lessonOrder   Int      @map("lesson_order")
   isPreview     Boolean  @default(false) @map("is_preview")
   isPublished   Boolean  @default(true) @map("is_published")

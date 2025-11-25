@@ -1,6 +1,6 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS } from '../config/constants.js'
+import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import path from 'path'
@@ -127,6 +127,8 @@ class LessonsService {
                 id: true,
                 title: true,
                 transcriptUrl: true,
+                transcriptJsonUrl: true,
+                transcriptStatus: true,
                 isPublished: true,
                 course: {
                     select: {
@@ -497,17 +499,10 @@ class LessonsService {
             }
         }
 
+        // Delete transcript files (both SRT and JSON)
         if (lesson.transcriptUrl) {
-            try {
-                const filename = path.basename(lesson.transcriptUrl)
-                const transcriptPath = path.join(transcriptsDir, filename)
-                if (fs.existsSync(transcriptPath)) {
-                    fs.unlinkSync(transcriptPath)
-                    logger.info(`Deleted transcript file: ${transcriptPath}`)
-                }
-            } catch (error) {
-                logger.error(`Error deleting transcript file: ${error.message}`)
-            }
+            const filename = path.basename(lesson.transcriptUrl)
+            this._deleteTranscriptFiles(filename)
         }
 
         // Get lesson order before deletion
@@ -598,18 +593,23 @@ class LessonsService {
 
         // Save new video URL
         const videoUrl = `/uploads/videos/${file.filename}`
-        const originalName = file.originalname
+
+        const shouldTranscribe = config.WHISPER_ENABLED !== false
 
         const updatedLesson = await prisma.lesson.update({
             where: { id: lessonId },
             data: {
                 videoUrl,
                 transcriptUrl: null,
-                transcriptTitle: originalName,
+                transcriptJsonUrl: null,
+                transcriptStatus: shouldTranscribe
+                    ? TRANSCRIPT_STATUS.PROCESSING
+                    : TRANSCRIPT_STATUS.IDLE,
             },
         })
 
-        if (config.WHISPER_ENABLED !== false) {
+        if (shouldTranscribe) {
+            transcriptionService.cancelTranscriptionJob(lessonId)
             setImmediate(() => {
                 transcriptionService
                     .transcribeLessonVideo({
@@ -622,6 +622,19 @@ class LessonsService {
                         logger.error(
                             `Whisper transcription failed for lesson ${lessonId}: ${error.message}`
                         )
+                        prisma.lesson
+                            .update({
+                                where: { id: lessonId },
+                                data: {
+                                    transcriptStatus:
+                                        TRANSCRIPT_STATUS.FAILED,
+                                },
+                            })
+                            .catch((statusError) =>
+                                logger.error(
+                                    `Failed to update transcript status for lesson ${lessonId}: ${statusError.message}`
+                                )
+                            )
                     })
             })
         }
@@ -667,6 +680,8 @@ class LessonsService {
             where: { id: lessonId },
             data: {
                 transcriptUrl,
+                transcriptJsonUrl: null, // Manual upload, clear auto-generated JSON
+                transcriptStatus: TRANSCRIPT_STATUS.COMPLETED, // Manual upload is always completed
             },
         })
 
