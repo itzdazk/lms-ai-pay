@@ -2,11 +2,37 @@
 import { prisma } from '../config/database.config.js'
 import { ENROLLMENT_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
+import config from '../config/app.config.js'
 import path from 'path'
 import fs from 'fs'
+import transcriptionService from './transcription.service.js'
 import { videosDir, transcriptsDir } from '../config/multer.config.js'
 
 class LessonsService {
+    _deleteTranscriptFiles(filename) {
+        if (!filename) return
+
+        try {
+            const transcriptPath = path.join(transcriptsDir, filename)
+            if (fs.existsSync(transcriptPath)) {
+                fs.unlinkSync(transcriptPath)
+                logger.info(`Deleted transcript file: ${transcriptPath}`)
+            }
+
+            const baseName = filename.replace(path.extname(filename), '')
+            const jsonPath = path.join(transcriptsDir, `${baseName}.json`)
+            if (fs.existsSync(jsonPath)) {
+                fs.unlinkSync(jsonPath)
+                logger.info(`Deleted transcript JSON file: ${jsonPath}`)
+            }
+        } catch (error) {
+            logger.error(
+                `Error deleting transcript artifacts: ${error.message}`,
+                { error: error.stack }
+            )
+        }
+    }
+
     /**
      * Generate slug from title
      */
@@ -524,7 +550,7 @@ class LessonsService {
     /**
      * Upload video to lesson
      */
-    async uploadVideo(courseId, lessonId, file) {
+    async uploadVideo(courseId, lessonId, file, userId) {
         // Check if lesson exists
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
@@ -533,6 +559,7 @@ class LessonsService {
                 courseId: true,
                 title: true,
                 videoUrl: true,
+                transcriptUrl: true,
             },
         })
 
@@ -563,17 +590,41 @@ class LessonsService {
             }
         }
 
+        // Delete old transcript because video changed
+        if (lesson.transcriptUrl) {
+            const transcriptFilename = path.basename(lesson.transcriptUrl)
+            this._deleteTranscriptFiles(transcriptFilename)
+        }
+
         // Save new video URL
         const videoUrl = `/uploads/videos/${file.filename}`
+        const originalName = file.originalname
 
         const updatedLesson = await prisma.lesson.update({
             where: { id: lessonId },
             data: {
                 videoUrl,
-                // TODO: Extract video duration from file (requires ffmpeg or similar)
-                // videoDuration: extractedDuration,
+                transcriptUrl: null,
+                transcriptTitle: originalName,
             },
         })
+
+        if (config.WHISPER_ENABLED !== false) {
+            setImmediate(() => {
+                transcriptionService
+                    .transcribeLessonVideo({
+                        videoPath: file.path,
+                        lessonId,
+                        userId,
+                        source: 'lesson-route-video-upload',
+                    })
+                    .catch((error) => {
+                        logger.error(
+                            `Whisper transcription failed for lesson ${lessonId}: ${error.message}`
+                        )
+                    })
+            })
+        }
 
         logger.info(`Video uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`)
 
@@ -605,21 +656,8 @@ class LessonsService {
 
         // Delete old transcript if exists
         if (lesson.transcriptUrl) {
-            try {
-                // Extract filename from URL (e.g., /uploads/transcripts/filename.pdf -> filename.pdf)
-                const filename = path.basename(lesson.transcriptUrl)
-                const oldTranscriptPath = path.join(transcriptsDir, filename)
-                
-                if (fs.existsSync(oldTranscriptPath)) {
-                    fs.unlinkSync(oldTranscriptPath)
-                    logger.info(`Deleted old transcript: ${oldTranscriptPath}`)
-                } else {
-                    logger.warn(`Old transcript file not found: ${oldTranscriptPath} (from URL: ${lesson.transcriptUrl})`)
-                }
-            } catch (error) {
-                // Log error but don't fail the upload
-                logger.error(`Error deleting old transcript: ${error.message}`, { error: error.stack })
-            }
+            const filename = path.basename(lesson.transcriptUrl)
+            this._deleteTranscriptFiles(filename)
         }
 
         // Save new transcript URL

@@ -6,6 +6,7 @@ import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import { USER_ROLES } from '../config/constants.js'
+import lessonsService from './lessons.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -77,8 +78,33 @@ class UploadService {
                 status: 'completed', // Hoặc 'processing' nếu cần xử lý thêm
             }
 
-            // Nếu là video bài học, cập nhật lesson
-            if (lessonId) {
+            // Nếu là video bài học, dùng lessons service để xử lý
+            if (type === 'lesson' && lessonId) {
+                const resolvedCourseId =
+                    courseId || (await this._getLessonCourseId(lessonId))
+
+                if (resolvedCourseId) {
+                    await lessonsService.uploadVideo(
+                        resolvedCourseId,
+                        lessonId,
+                        file,
+                        userId
+                    )
+                    logger.info(
+                        `Lesson video processed via lessons service for lesson ${lessonId}`
+                    )
+                } else {
+                    // fallback: chỉ cập nhật URL nếu không tìm được courseId
+                    await prisma.lesson.update({
+                        where: { id: lessonId },
+                        data: { videoUrl: fileUrl },
+                    })
+                    logger.warn(
+                        `Fallback lesson video update without courseId for lesson ${lessonId}`
+                    )
+                }
+            } else if (lessonId) {
+                // Legacy path nếu type không phải lesson nhưng vẫn có lessonId
                 await prisma.lesson.update({
                     where: { id: lessonId },
                     data: { videoUrl: fileUrl },
@@ -393,6 +419,17 @@ class UploadService {
         }
 
         return 'uploads'
+    }
+
+    async _getLessonCourseId(lessonId) {
+        if (!lessonId) return null
+
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: { courseId: true },
+        })
+
+        return lesson?.courseId || null
     }
 
     /**

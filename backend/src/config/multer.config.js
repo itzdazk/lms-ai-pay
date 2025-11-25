@@ -16,6 +16,18 @@ import {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+const sanitizeFilename = (value) => {
+    if (!value) return 'file'
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .toLowerCase()
+}
+
 // === ĐƯỜNG DẪN THƯ MỤC ===
 const uploadsDir = path.join(__dirname, '../../uploads')
 const avatarsDir = path.join(uploadsDir, 'avatars')
@@ -82,7 +94,7 @@ const videoStorage = multer.diskStorage({
         const lessonId = req.params.id || 'temp'
         const timestamp = Date.now()
         const ext = path.extname(file.originalname)
-        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const name = sanitizeFilename(path.basename(file.originalname, ext))
         const filename = `${timestamp}-lesson-${lessonId}-${name}${ext}`
         cb(null, filename)
     },
@@ -116,7 +128,7 @@ const transcriptStorage = multer.diskStorage({
         const lessonId = req.params.id || 'temp'
         const timestamp = Date.now()
         const ext = path.extname(file.originalname)
-        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const name = sanitizeFilename(path.basename(file.originalname, ext))
         const filename = `${timestamp}-lesson-${lessonId}-transcript${ext}`
         cb(null, filename)
     },
@@ -150,7 +162,7 @@ const thumbnailStorage = multer.diskStorage({
         const courseId = req.params.id || 'temp'
         const timestamp = Date.now()
         const ext = path.extname(file.originalname)
-        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const name = sanitizeFilename(path.basename(file.originalname, ext))
         const filename = `${timestamp}-course-${courseId}-thumb${ext}`
         cb(null, filename)
     },
@@ -184,7 +196,7 @@ const videoPreviewStorage = multer.diskStorage({
         const courseId = req.params.id || 'temp'
         const timestamp = Date.now()
         const ext = path.extname(file.originalname)
-        const name = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+        const name = sanitizeFilename(path.basename(file.originalname, ext))
         const filename = `${timestamp}-course-${courseId}-preview${ext}`
         cb(null, filename)
     },

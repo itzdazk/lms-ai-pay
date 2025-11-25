@@ -1,0 +1,232 @@
+// src/services/transcription.service.js
+import fs from 'fs'
+import path from 'path'
+import { spawn } from 'child_process'
+import { fileURLToPath } from 'url'
+import config from '../config/app.config.js'
+import logger from '../config/logger.config.js'
+import { prisma } from '../config/database.config.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+class TranscriptionService {
+    constructor() {
+        this.enabled = config.WHISPER_ENABLED !== false
+        this.command = config.WHISPER_COMMAND || 'whisper'
+        this.model = config.WHISPER_MODEL || 'small'
+        this.task = config.WHISPER_TASK || 'transcribe'
+        this.outputFormat = config.WHISPER_OUTPUT_FORMAT || 'all'
+        this.language = config.WHISPER_LANGUAGE || ''
+        this.forceFp16 = config.WHISPER_FP16 === true
+        this.outputDir = this._resolveOutputDir(
+            config.WHISPER_OUTPUT_DIR || path.join('uploads', 'transcripts')
+        )
+    }
+
+    _resolveOutputDir(dirPath) {
+        const absolutePath = path.isAbsolute(dirPath)
+            ? dirPath
+            : path.join(process.cwd(), dirPath)
+
+        if (!fs.existsSync(absolutePath)) {
+            fs.mkdirSync(absolutePath, { recursive: true })
+            logger.info(`Created transcript directory: ${absolutePath}`)
+        }
+
+        return absolutePath
+    }
+
+    async transcribeLessonVideo({
+        videoPath,
+        lessonId,
+        userId,
+        source = 'upload',
+    }) {
+        if (!this.enabled) {
+            logger.debug('Whisper transcription disabled via config')
+            return null
+        }
+
+        if (!videoPath || !lessonId) {
+            logger.warn(
+                'Missing videoPath or lessonId. Skip Whisper transcription.'
+            )
+            return null
+        }
+
+        const absoluteVideoPath = path.isAbsolute(videoPath)
+            ? videoPath
+            : path.resolve(__dirname, '../../', videoPath)
+        const baseName = path.basename(
+            absoluteVideoPath,
+            path.extname(absoluteVideoPath)
+        )
+
+        const args = [
+            absoluteVideoPath,
+            '--model',
+            this.model,
+            '--task',
+            this.task,
+            '--output_format',
+            this.outputFormat,
+            '--output_dir',
+            this.outputDir,
+            '--verbose',
+            'False',
+        ]
+
+        if (this.language) {
+            args.push('--language', this.language)
+        }
+
+        if (!this.forceFp16) {
+            args.push('--fp16', 'False')
+        }
+
+        logger.info(
+            `Starting Whisper transcription for lesson ${lessonId} (user ${userId}, source ${source})`
+        )
+
+        return new Promise((resolve, reject) => {
+            const whisperProcess = spawn(this.command, args, {
+                shell: process.platform === 'win32',
+            })
+
+            whisperProcess.stdout.on('data', (data) => {
+                logger.debug(`[whisper stdout] ${data}`)
+            })
+
+            whisperProcess.stderr.on('data', (data) => {
+                logger.debug(`[whisper stderr] ${data}`)
+            })
+
+            whisperProcess.on('error', (error) => {
+                logger.error('Whisper process failed to start:', error)
+                reject(error)
+            })
+
+            whisperProcess.on('close', async (code) => {
+                if (code !== 0) {
+                    const error = new Error(
+                        `Whisper process exited with code ${code}`
+                    )
+                    logger.error(error.message)
+                    return reject(error)
+                }
+
+                try {
+                    const transcriptFilename = `${baseName}.srt`
+                    const transcriptPath = path.join(
+                        this.outputDir,
+                        transcriptFilename
+                    )
+
+                    if (!fs.existsSync(transcriptPath)) {
+                        logger.warn(
+                            `Whisper finished but transcript file missing for lesson ${lessonId}`
+                        )
+                        return resolve(null)
+                    }
+
+                    const transcriptUrl = `/uploads/transcripts/${transcriptFilename}`
+                    let transcriptJsonUrl = null
+
+                    await prisma.lesson.update({
+                        where: { id: lessonId },
+                        data: {
+                            transcriptUrl,
+                            transcriptTitle: path.basename(absoluteVideoPath),
+                        },
+                    })
+
+                    try {
+                        const jsonFilename = `${baseName}.json`
+                        const jsonPath = path.join(this.outputDir, jsonFilename)
+                        const segments = this._convertSrtToJson(transcriptPath)
+                        fs.writeFileSync(
+                            jsonPath,
+                            JSON.stringify(segments, null, 2),
+                            'utf-8'
+                        )
+                        transcriptJsonUrl = `/uploads/transcripts/${jsonFilename}`
+                        logger.info(
+                            `Generated transcript JSON for lesson ${lessonId}: ${transcriptJsonUrl}`
+                        )
+                    } catch (jsonError) {
+                        logger.error(
+                            `Failed to convert transcript to JSON for lesson ${lessonId}: ${jsonError.message}`
+                        )
+                    }
+
+                    logger.info(
+                        `Whisper transcription completed for lesson ${lessonId}: ${transcriptUrl}`
+                    )
+
+                    resolve({
+                        lessonId,
+                        transcriptUrl,
+                        transcriptJsonUrl,
+                        transcriptPath,
+                        source,
+                    })
+                } catch (error) {
+                    logger.error(
+                        `Failed to finalize Whisper transcript for lesson ${lessonId}`,
+                        error
+                    )
+                    reject(error)
+                }
+            })
+        })
+    }
+
+    _convertSrtToJson(transcriptPath) {
+        const content = fs.readFileSync(transcriptPath, 'utf-8')
+        const blocks = content
+            .split(/\r?\n\r?\n/)
+            .map((block) => block.trim())
+            .filter(Boolean)
+
+        const segments = blocks
+            .map((block) => {
+                const lines = block
+                    .split(/\r?\n/)
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+
+                if (lines.length < 2) {
+                    return null
+                }
+
+                const timingLine = lines[1]
+                const text = lines.slice(2).join(' ')
+                const [startStr, endStr] = timingLine.split('-->')
+
+                if (!startStr || !endStr) {
+                    return null
+                }
+
+                return {
+                    index: Number(lines[0]) || 0,
+                    start: this._timestampToSeconds(startStr.trim()),
+                    end: this._timestampToSeconds(endStr.trim()),
+                    text: text,
+                }
+            })
+            .filter(Boolean)
+
+        return segments
+    }
+
+    _timestampToSeconds(timestamp) {
+        const [timePart, msPart] = timestamp.replace(',', '.').split('.')
+        const [hours, minutes, seconds] = timePart.split(':').map(Number)
+        const milliseconds = msPart ? Number(`0.${msPart}`) : 0
+        return hours * 3600 + minutes * 60 + seconds + milliseconds
+    }
+}
+
+export default new TranscriptionService()
+

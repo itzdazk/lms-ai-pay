@@ -87,6 +87,19 @@ const config = {
     OPENAI_MAX_TOKENS: parseInt(process.env.OPENAI_MAX_TOKENS, 10) || 2000,
     OPENAI_TEMPERATURE: parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7,
 
+    // AI - Whisper (Local)
+    WHISPER_ENABLED: process.env.WHISPER_ENABLED !== 'false',
+    WHISPER_AUTO_TRANSCRIBE:
+        process.env.WHISPER_AUTO_TRANSCRIBE !== 'false',
+    WHISPER_COMMAND: process.env.WHISPER_COMMAND || 'whisper',
+    WHISPER_MODEL: process.env.WHISPER_MODEL || 'small',
+    WHISPER_TASK: process.env.WHISPER_TASK || 'transcribe',
+    WHISPER_OUTPUT_FORMAT: process.env.WHISPER_OUTPUT_FORMAT || 'srt',
+    WHISPER_OUTPUT_DIR:
+        process.env.WHISPER_OUTPUT_DIR || 'uploads/transcripts',
+    WHISPER_LANGUAGE: process.env.WHISPER_LANGUAGE || '',
+    WHISPER_FP16: process.env.WHISPER_FP16 === 'true',
+
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
     LOG_MAX_FILES: process.env.LOG_MAX_FILES || '14d',
