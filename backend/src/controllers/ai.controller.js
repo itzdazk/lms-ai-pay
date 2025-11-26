@@ -236,6 +236,17 @@ class AIController {
 
         return ApiResponse.success(res, context, 'Search completed')
     })
+
+    /**
+     * @route   GET /api/v1/ai/ollama/status
+     * @desc    Get Ollama service status and available models
+     * @access  Private
+     */
+    getOllamaStatus = asyncHandler(async (req, res) => {
+        const ollamaService = (await import('../services/ollama.service.js')).default
+        const status = await ollamaService.getStatus()
+        return ApiResponse.success(res, status, 'Ollama status retrieved')
+    })
 }
 
 export default new AIController()

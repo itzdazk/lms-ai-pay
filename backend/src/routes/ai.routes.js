@@ -140,4 +140,11 @@ router.post(
  */
 router.get('/search', searchValidator, aiController.searchKnowledgeBase)
 
+/**
+ * @route   GET /api/v1/ai/ollama/status
+ * @desc    Get Ollama service status and available models
+ * @access  Private
+ */
+router.get('/ollama/status', aiController.getOllamaStatus)
+
 export default router
