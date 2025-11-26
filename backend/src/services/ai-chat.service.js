@@ -1,6 +1,7 @@
 // src/services/ai-chat.service.js
 import { prisma } from '../config/database.config.js'
 import knowledgeBaseService from './knowledge-base.service.js'
+import ollamaService from './ollama.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 
@@ -12,16 +13,59 @@ class AIChatService {
         try {
             const { courseId, lessonId, title } = data
 
+            // Validate courseId and lessonId exist (if provided)
+            let validCourseId = null
+            let validLessonId = null
+            let course = null
+            let lesson = null
+
+            if (courseId) {
+                course = await prisma.course.findUnique({
+                    where: { id: courseId },
+                    select: { id: true, title: true },
+                })
+                if (course) {
+                    validCourseId = courseId
+                } else {
+                    logger.warn(
+                        `Course ${courseId} not found, creating conversation without course context`
+                    )
+                }
+            }
+
+            if (lessonId) {
+                lesson = await prisma.lesson.findUnique({
+                    where: { id: lessonId },
+                    select: { id: true, title: true, courseId: true },
+                })
+                if (lesson) {
+                    validLessonId = lessonId
+                    // If lesson exists but courseId doesn't match, use lesson's courseId
+                    if (!validCourseId && lesson.courseId) {
+                        const lessonCourse = await prisma.course.findUnique({
+                            where: { id: lesson.courseId },
+                            select: { id: true, title: true },
+                        })
+                        if (lessonCourse) {
+                            validCourseId = lesson.courseId
+                            course = lessonCourse
+                        }
+                    }
+                } else {
+                    logger.warn(
+                        `Lesson ${lessonId} not found, creating conversation without lesson context`
+                    )
+                }
+            }
+
             // Auto-generate title nếu không có
             let conversationTitle = title
 
             if (!conversationTitle) {
-                if (courseId) {
-                    const course = await prisma.course.findUnique({
-                        where: { id: courseId },
-                        select: { title: true },
-                    })
-                    conversationTitle = `Chat về ${course?.title || 'khóa học'}`
+                if (course) {
+                    conversationTitle = `Chat về ${course.title}`
+                } else if (lesson) {
+                    conversationTitle = `Chat về ${lesson.title}`
                 } else {
                     conversationTitle = 'Trò chuyện chung'
                 }
@@ -29,20 +73,20 @@ class AIChatService {
 
             // Determine context type
             let contextType = 'GENERAL_CHAT'
-            if (lessonId) {
+            if (validLessonId) {
                 contextType = 'LESSON_HELP'
-            } else if (courseId) {
+            } else if (validCourseId) {
                 contextType = 'COURSE_OVERVIEW'
             }
 
             const conversation = await prisma.conversation.create({
                 data: {
                     userId,
-                    courseId: courseId || null,
-                    lessonId: lessonId || null,
+                    courseId: validCourseId,
+                    lessonId: validLessonId,
                     title: conversationTitle,
                     contextType,
-                    aiModel: config.OPENAI_MODEL || 'gpt-4',
+                    aiModel: config.OLLAMA_MODEL || 'llama3.1:latest', // Use Ollama model name
                     isActive: true,
                     isArchived: false,
                     lastMessageAt: new Date(),
@@ -102,17 +146,82 @@ class AIChatService {
                 },
             })
 
-            // 3. Build context từ knowledge base
+            // 3. Build context từ knowledge base (with timing)
+            const contextStartTime = Date.now()
             const context = await knowledgeBaseService.buildContext(
                 userId,
                 messageText,
                 conversationId
             )
+            const contextDuration = Date.now() - contextStartTime
+            logger.debug(`Knowledge base context built in ${contextDuration}ms`)
 
-            // 4. Generate response (NO AI - template based)
-            const responseData = this.generateResponse(context, messageText)
+            // 4. Get conversation history for context (use knowledge base service)
+            const conversationHistory =
+                await knowledgeBaseService.getConversationHistory(
+                    conversationId,
+                    10
+                )
 
-            // 5. Lưu AI response
+            // 5. Generate response using Ollama (with fallback to template)
+            let responseData
+            let usedOllama = false
+            const responseStartTime = Date.now()
+            try {
+                // Try Ollama first (even if no knowledge base results)
+                // Skip health check if we know Ollama is available (from cache)
+                if (ollamaService.enabled) {
+                    // Quick health check (cached, should be fast)
+                    const isOllamaAvailable = await ollamaService.checkHealth()
+                    if (isOllamaAvailable) {
+                        try {
+                            responseData = await this.generateOllamaResponse(
+                                messageText,
+                                conversationHistory,
+                                context
+                            )
+                            usedOllama = true
+                            const responseDuration = Date.now() - responseStartTime
+                            logger.info(
+                                `Ollama response generated in ${responseDuration}ms (hasKnowledgeBase: ${context.searchResults.totalResults > 0})`
+                            )
+                        } catch (ollamaError) {
+                            logger.error(
+                                'Ollama generation failed, falling back to template:',
+                                ollamaError.message
+                            )
+                            responseData = this.generateTemplateResponse(
+                                context,
+                                messageText
+                            )
+                        }
+                    } else {
+                        logger.warn(
+                            'Ollama not available, falling back to template response'
+                        )
+                        responseData = this.generateTemplateResponse(
+                            context,
+                            messageText
+                        )
+                    }
+                } else {
+                    // Ollama disabled, use template
+                    logger.debug('Ollama disabled, using template response')
+                    responseData = this.generateTemplateResponse(
+                        context,
+                        messageText
+                    )
+                }
+            } catch (error) {
+                logger.error(
+                    'Error generating response, using template fallback:',
+                    error.message
+                )
+                // Fallback to template response
+                responseData = this.generateTemplateResponse(context, messageText)
+            }
+
+            // 6. Lưu AI response
             const aiMessage = await prisma.chatMessage.create({
                 data: {
                     conversationId,
@@ -126,7 +235,7 @@ class AIChatService {
                 },
             })
 
-            // 6. Update conversation last message time
+            // 7. Update conversation last message time
             await prisma.conversation.update({
                 where: { id: conversationId },
                 data: { lastMessageAt: new Date() },
@@ -149,9 +258,84 @@ class AIChatService {
     }
 
     /**
-     * Generate response từ context (NO AI)
+     * Generate response using Ollama with knowledge base context
      */
-    generateResponse(context, query) {
+    async generateOllamaResponse(messageText, conversationHistory, context) {
+        try {
+            // Build system prompt with knowledge base
+            const systemPrompt = ollamaService.buildSystemPrompt(context)
+
+            // Generate response from Ollama
+            const aiResponse = await ollamaService.generateResponse(
+                messageText,
+                conversationHistory,
+                systemPrompt
+            )
+
+            // Extract sources from context
+            const sources = []
+            if (context.searchResults.transcripts.length > 0) {
+                sources.push(
+                    ...context.searchResults.transcripts.slice(0, 3).map((t) => ({
+                        type: 'transcript',
+                        lessonId: t.lessonId,
+                        lessonTitle: t.lessonTitle,
+                        courseId: t.courseId,
+                        courseTitle: t.courseTitle,
+                        timestamp: t.timestamp,
+                        videoUrl: t.videoUrl,
+                        excerpt: t.excerpt,
+                    }))
+                )
+            }
+            if (context.searchResults.lessons.length > 0) {
+                sources.push(
+                    ...context.searchResults.lessons.slice(0, 2).map((l) => ({
+                        type: 'lesson',
+                        lessonId: l.id,
+                        lessonTitle: l.title,
+                        courseId: l.courseId,
+                        courseTitle: l.course.title,
+                    }))
+                )
+            }
+
+            // Build suggested actions based on search results
+            const suggestedActions = []
+            if (context.searchResults.transcripts.length > 0) {
+                const topTranscript = context.searchResults.transcripts[0]
+                suggestedActions.push({
+                    type: 'watch_video',
+                    label: 'Xem video',
+                    url: topTranscript.videoUrl,
+                    timestamp: topTranscript.startTime,
+                })
+            }
+            if (context.searchResults.lessons.length > 0) {
+                suggestedActions.push({
+                    type: 'view_lesson',
+                    label: 'Xem bài học',
+                    lessonId: context.searchResults.lessons[0].id,
+                })
+            }
+
+            return {
+                text: aiResponse,
+                sources: sources.slice(0, 5), // Limit to 5 sources
+                suggestedActions,
+            }
+        } catch (error) {
+            logger.error('Error in generateOllamaResponse:', error)
+            throw error
+        }
+    }
+
+    // getConversationHistory moved to knowledgeBaseService to avoid duplication
+
+    /**
+     * Generate template response (fallback method)
+     */
+    generateTemplateResponse(context, query) {
         const { searchResults, userContext } = context
 
         // CASE 1: Tìm thấy trong TRANSCRIPT (Best case!)
@@ -362,23 +546,20 @@ class AIChatService {
     }
 
     /**
-     * Get messages trong conversation
+     * Get messages trong conversation (optimized: combine verification with count)
      */
     async getMessages(conversationId, userId, page = 1, limit = 50) {
         try {
-            // Verify ownership
-            const conversation = await prisma.conversation.findFirst({
-                where: {
-                    id: conversationId,
-                    userId,
-                },
-            })
-
-            if (!conversation) {
-                throw new Error('Conversation not found or access denied')
-            }
-
-            const messages = await prisma.chatMessage.findMany({
+            // Verify ownership and get messages in parallel
+            const [conversation, messages, total] = await Promise.all([
+                prisma.conversation.findFirst({
+                    where: {
+                        id: conversationId,
+                        userId,
+                    },
+                    select: { id: true }, // Only need id for verification
+                }),
+                prisma.chatMessage.findMany({
                 where: { conversationId },
                 orderBy: { createdAt: 'asc' },
                 skip: (page - 1) * limit,
@@ -393,11 +574,15 @@ class AIChatService {
                     feedbackText: true,
                     createdAt: true,
                 },
-            })
+            }),
+                prisma.chatMessage.count({
+                    where: { conversationId },
+                }),
+            ])
 
-            const total = await prisma.chatMessage.count({
-                where: { conversationId },
-            })
+            if (!conversation) {
+                throw new Error('Conversation not found or access denied')
+            }
 
             return {
                 messages,

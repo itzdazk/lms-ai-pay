@@ -4,28 +4,110 @@ import TranscriptParser from '../utils/transcript-parser.util.js'
 import logger from '../config/logger.config.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import fs from 'fs/promises'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 class KnowledgeBaseService {
+    constructor() {
+        // Cache parsed transcripts to avoid re-parsing (in-memory cache)
+        this.transcriptCache = new Map()
+        this.cacheMaxAge = 5 * 60 * 1000 // 5 minutes
+        
+        // Cache search results for same query (shared across users if same courses)
+        this.searchCache = new Map()
+        this.searchCacheMaxAge = 2 * 60 * 1000 // 2 minutes
+    }
+
+    /**
+     * Get cached transcript or parse and cache it
+     * Ưu tiên đọc JSON (nhanh hơn), fallback về parse SRT/VTT
+     */
+    async _getCachedTranscript(transcriptPath) {
+        const cacheKey = transcriptPath
+        const cached = this.transcriptCache.get(cacheKey)
+
+        if (cached && Date.now() - cached.timestamp < this.cacheMaxAge) {
+            return cached.segments
+        }
+
+        // Try to read JSON first (much faster than parsing SRT)
+        const jsonPath = transcriptPath.replace(/\.(srt|vtt|txt)$/i, '.json')
+        let segments = null
+
+        try {
+            // Check if JSON file exists
+            await fs.access(jsonPath)
+            // Read and parse JSON (native, very fast)
+            const jsonContent = await fs.readFile(jsonPath, 'utf-8')
+            const jsonData = JSON.parse(jsonContent)
+
+            // Convert JSON format to segments format
+            segments = Array.isArray(jsonData)
+                ? jsonData.map((item, index) => ({
+                      id: item.index || item.id || index + 1,
+                      startTime: item.start || item.startTime || null,
+                      endTime: item.end || item.endTime || null,
+                      text: item.text || '',
+                  }))
+                : []
+
+            logger.debug(
+                `Loaded transcript from JSON: ${jsonPath} (${segments.length} segments)`
+            )
+        } catch (jsonError) {
+            // JSON not found or invalid, fallback to parse SRT/VTT/TXT
+            try {
+                segments = await TranscriptParser.parse(transcriptPath)
+                logger.debug(
+                    `Parsed transcript from ${path.extname(transcriptPath)}: ${transcriptPath} (${segments.length} segments)`
+                )
+            } catch (parseError) {
+                logger.error(
+                    `Failed to load transcript from ${transcriptPath}:`,
+                    parseError
+                )
+                throw parseError
+            }
+        }
+
+        // Cache the result
+        this.transcriptCache.set(cacheKey, {
+            segments,
+            timestamp: Date.now(),
+        })
+
+        // Clean old cache entries if cache is too large
+        if (this.transcriptCache.size > 100) {
+            const now = Date.now()
+            for (const [key, value] of this.transcriptCache.entries()) {
+                if (now - value.timestamp > this.cacheMaxAge) {
+                    this.transcriptCache.delete(key)
+                }
+            }
+        }
+
+        return segments
+    }
+
     /**
      * Search trong courses mà user đã enroll
      */
-    async searchInCourses(query, userId) {
+    async searchInCourses(query, userId, enrolledCourseIds = null) {
         try {
-            const keywords = this.extractKeywords(query)
-
-            // Lấy courses mà user đã enroll
-            const enrolledCourses = await prisma.enrollment.findMany({
-                where: {
-                    userId,
-                    status: 'ACTIVE',
-                },
-                select: { courseId: true },
-            })
-
-            const courseIds = enrolledCourses.map((e) => e.courseId)
+            // Use provided courseIds or fetch if not provided (removed unused extractKeywords)
+            let courseIds = enrolledCourseIds
+            if (!courseIds || courseIds.length === 0) {
+                const enrolledCourses = await prisma.enrollment.findMany({
+                    where: {
+                        userId,
+                        status: 'ACTIVE',
+                    },
+                    select: { courseId: true },
+                })
+                courseIds = enrolledCourses.map((e) => e.courseId)
+            }
 
             if (courseIds.length === 0) {
                 return []
@@ -94,7 +176,12 @@ class KnowledgeBaseService {
     /**
      * Search trong lessons
      */
-    async searchInLessons(query, courseId = null, userId = null) {
+    async searchInLessons(
+        query,
+        courseId = null,
+        userId = null,
+        enrolledCourseIds = null
+    ) {
         try {
             const whereClause = {
                 isPublished: true,
@@ -108,10 +195,13 @@ class KnowledgeBaseService {
             // Nếu có courseId, chỉ search trong course đó
             if (courseId) {
                 whereClause.courseId = courseId
-            }
-
-            // Nếu có userId, chỉ search trong courses mà user đã enroll
-            if (userId && !courseId) {
+            } else if (userId && enrolledCourseIds && enrolledCourseIds.length > 0) {
+                // Use provided courseIds to avoid duplicate query
+                whereClause.courseId = {
+                    in: enrolledCourseIds,
+                }
+            } else if (userId && !courseId) {
+                // Fallback: fetch if not provided
                 const enrolledCourses = await prisma.enrollment.findMany({
                     where: { userId, status: 'ACTIVE' },
                     select: { courseId: true },
@@ -171,7 +261,8 @@ class KnowledgeBaseService {
         query,
         lessonId = null,
         courseId = null,
-        userId = null
+        userId = null,
+        enrolledCourseIds = null
     ) {
         try {
             // Lấy lessons có transcript
@@ -184,7 +275,13 @@ class KnowledgeBaseService {
                 whereClause.id = lessonId
             } else if (courseId) {
                 whereClause.courseId = courseId
+            } else if (userId && enrolledCourseIds && enrolledCourseIds.length > 0) {
+                // Use provided courseIds to avoid duplicate query
+                whereClause.courseId = {
+                    in: enrolledCourseIds,
+                }
             } else if (userId) {
+                // Fallback: fetch if not provided
                 const enrolledCourses = await prisma.enrollment.findMany({
                     where: { userId, status: 'ACTIVE' },
                     select: { courseId: true },
@@ -211,7 +308,7 @@ class KnowledgeBaseService {
                         },
                     },
                 },
-                take: 5,
+                take: 3, // Reduced from 5 to 3 for better performance
             })
 
             const results = []
@@ -226,9 +323,9 @@ class KnowledgeBaseService {
                         lesson.transcriptUrl
                     )
 
-                    // Parse transcript
+                    // Parse transcript (with caching)
                     const segments =
-                        await TranscriptParser.parse(transcriptPath)
+                        await this._getCachedTranscript(transcriptPath)
 
                     // Search keyword trong transcript
                     const matches = TranscriptParser.searchInTranscript(
@@ -286,7 +383,7 @@ class KnowledgeBaseService {
     }
 
     /**
-     * Lấy context của user (đang học gì, progress...)
+     * Lấy context của user (đang học gì, progress...) - Optimized with parallel queries
      */
     async getUserContext(userId) {
         try {
@@ -318,45 +415,47 @@ class KnowledgeBaseService {
                 }
             }
 
-            // Lấy lesson đang học (progress gần nhất)
-            const recentProgress = await prisma.progress.findFirst({
-                where: {
-                    userId,
-                    courseId: recentEnrollment.courseId,
-                },
-                orderBy: { updatedAt: 'desc' },
-                include: {
-                    lesson: {
-                        select: {
-                            id: true,
-                            title: true,
-                            slug: true,
-                            lessonOrder: true,
+            // Optimize: Fetch progress data in parallel
+            const [recentProgress, recentLessons] = await Promise.all([
+                // Lấy lesson đang học (progress gần nhất)
+                prisma.progress.findFirst({
+                    where: {
+                        userId,
+                        courseId: recentEnrollment.courseId,
+                    },
+                    orderBy: { updatedAt: 'desc' },
+                    include: {
+                        lesson: {
+                            select: {
+                                id: true,
+                                title: true,
+                                slug: true,
+                                lessonOrder: true,
+                            },
                         },
                     },
-                },
-            })
-
-            // Lấy các lessons đã hoàn thành gần đây
-            const recentLessons = await prisma.progress.findMany({
-                where: {
-                    userId,
-                    courseId: recentEnrollment.courseId,
-                    isCompleted: true,
-                },
-                orderBy: { completedAt: 'desc' },
-                take: 5,
-                include: {
-                    lesson: {
-                        select: {
-                            id: true,
-                            title: true,
-                            slug: true,
-                            lessonOrder: true,
+                }),
+                // Lấy các lessons đã hoàn thành gần đây
+                prisma.progress.findMany({
+                    where: {
+                        userId,
+                        courseId: recentEnrollment.courseId,
+                        isCompleted: true,
+                    },
+                    orderBy: { completedAt: 'desc' },
+                    take: 5,
+                    include: {
+                        lesson: {
+                            select: {
+                                id: true,
+                                title: true,
+                                slug: true,
+                                lessonOrder: true,
+                            },
                         },
                     },
-                },
-            })
+                }),
+            ])
 
             return {
                 currentCourse: {
@@ -400,22 +499,45 @@ class KnowledgeBaseService {
      */
     async buildContext(userId, query, conversationId = null) {
         try {
-            // 1. Get user context
-            const userContext = await this.getUserContext(userId)
+            // 1. Get user context and enrolled courses (optimize: fetch once)
+            const [userContext, enrolledCoursesData] = await Promise.all([
+                this.getUserContext(userId),
+                prisma.enrollment.findMany({
+                    where: { userId, status: 'ACTIVE' },
+                    select: { courseId: true },
+                }),
+            ])
 
-            // 2. Search trong courses, lessons, transcripts (parallel)
+            const enrolledCourseIds = enrolledCoursesData.map((e) => e.courseId).sort()
+            
+            // Check cache for search results (key: query + courseIds)
+            const cacheKey = `${query.toLowerCase()}:${enrolledCourseIds.join(',')}`
+            const cached = this.searchCache.get(cacheKey)
+            if (cached && Date.now() - cached.timestamp < this.searchCacheMaxAge) {
+                logger.debug(`Using cached search results for query: ${query}`)
+                return {
+                    ...cached.context,
+                    userContext, // Always use fresh user context
+                    conversationHistory: cached.context.conversationHistory,
+                }
+            }
+
+            // 2. Search trong courses, lessons, transcripts (parallel, reuse courseIds)
+            // Limit transcript search to 3 lessons max for performance
             const [courses, lessons, transcripts] = await Promise.all([
-                this.searchInCourses(query, userId),
+                this.searchInCourses(query, userId, enrolledCourseIds),
                 this.searchInLessons(
                     query,
                     userContext.currentCourse?.id,
-                    userId
+                    userId,
+                    enrolledCourseIds
                 ),
                 this.searchInTranscripts(
                     query,
                     userContext.currentLesson?.id,
                     userContext.currentCourse?.id,
-                    userId
+                    userId,
+                    enrolledCourseIds
                 ),
             ])
 
@@ -426,7 +548,7 @@ class KnowledgeBaseService {
                     await this.getConversationHistory(conversationId)
             }
 
-            return {
+            const context = {
                 userContext,
                 searchResults: {
                     courses,
@@ -438,6 +560,28 @@ class KnowledgeBaseService {
                 conversationHistory,
                 query,
             }
+
+            // Cache search results (without userContext which is user-specific)
+            this.searchCache.set(cacheKey, {
+                context: {
+                    searchResults: context.searchResults,
+                    conversationHistory: [], // Don't cache conversation history
+                    query: context.query,
+                },
+                timestamp: Date.now(),
+            })
+
+            // Clean old cache entries
+            if (this.searchCache.size > 50) {
+                const now = Date.now()
+                for (const [key, value] of this.searchCache.entries()) {
+                    if (now - value.timestamp > this.searchCacheMaxAge) {
+                        this.searchCache.delete(key)
+                    }
+                }
+            }
+
+            return context
         } catch (error) {
             logger.error('Error building context:', error)
             throw error
