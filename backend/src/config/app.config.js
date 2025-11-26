@@ -90,9 +90,9 @@ const config = {
     // AI - Ollama (Local LLM)
     OLLAMA_ENABLED: process.env.OLLAMA_ENABLED !== 'false',
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.1:latest', // Default to latest, can override with :8b, :70b, etc.
+    OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.1:8b', // Use 8b model for faster response (recommended for local)
     OLLAMA_TEMPERATURE: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
-    OLLAMA_MAX_TOKENS: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 2000,
+    OLLAMA_MAX_TOKENS: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 1000, // Reduced to 1000 for faster response
 
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',

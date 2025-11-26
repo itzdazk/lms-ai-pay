@@ -308,7 +308,7 @@ class KnowledgeBaseService {
                         },
                     },
                 },
-                take: 3, // Reduced from 5 to 3 for better performance
+                take: 2, // Reduced to 2 for faster performance
             })
 
             const results = []
@@ -523,7 +523,7 @@ class KnowledgeBaseService {
             }
 
             // 2. Search trong courses, lessons, transcripts (parallel, reuse courseIds)
-            // Limit transcript search to 3 lessons max for performance
+            // Limit transcript search to 2 lessons max for better performance
             const [courses, lessons, transcripts] = await Promise.all([
                 this.searchInCourses(query, userId, enrolledCourseIds),
                 this.searchInLessons(

@@ -106,7 +106,8 @@ class OllamaService {
             const startTime = Date.now()
             
             const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout for generation
+            // Increase timeout to 120s for complex queries (llama3.1 can be slow)
+            const timeoutId = setTimeout(() => controller.abort(), 120000) // 120s timeout for generation
             
             try {
                 const response = await fetch(`${this.baseUrl}/api/chat`, {
@@ -153,11 +154,12 @@ class OllamaService {
                 return data.message.content.trim()
             } catch (error) {
                 clearTimeout(timeoutId)
+                const errorDuration = Date.now() - startTime
                 if (error.name === 'AbortError') {
-                    logger.error('Ollama API timeout after 60s')
-                    throw new Error('Ollama API timeout - response took too long')
+                    logger.error(`Ollama API timeout after ${errorDuration}ms (60s limit)`)
+                    throw new Error(`Ollama API timeout - response took too long (${errorDuration}ms)`)
                 }
-                logger.error('Error generating Ollama response:', error)
+                logger.error(`Error generating Ollama response after ${errorDuration}ms:`, error.message, error.stack)
                 throw error
             }
         } catch (error) {
@@ -271,8 +273,8 @@ HƯỚNG DẪN:
 `
         }
 
-        // Add search results context (limit to avoid token overflow)
-        const MAX_SYSTEM_PROMPT_LENGTH = 3000 // Approximate character limit
+        // Add search results context (limit to avoid token overflow and slow response)
+        const MAX_SYSTEM_PROMPT_LENGTH = 1500 // Reduced to speed up generation (faster response)
         let currentLength = systemPrompt.length
 
         if (searchResults && searchResults.totalResults > 0) {

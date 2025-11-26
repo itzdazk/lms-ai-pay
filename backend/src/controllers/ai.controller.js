@@ -184,6 +184,12 @@ class AIController {
     sendMessage = asyncHandler(async (req, res) => {
         const { id } = req.params
         const { message } = req.body
+        const { stream } = req.query // Check if client wants streaming
+
+        // If streaming requested, use streaming endpoint
+        if (stream === 'true') {
+            return this.sendMessageStream(req, res)
+        }
 
         const result = await aiChatService.sendMessage(
             req.user.id,
@@ -192,6 +198,39 @@ class AIController {
         )
 
         return ApiResponse.success(res, result, 'Message sent successfully')
+    })
+
+    /**
+     * Send message with streaming response
+     */
+    sendMessageStream = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { message } = req.body
+
+        // Set headers for SSE (Server-Sent Events)
+        res.setHeader('Content-Type', 'text/event-stream')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.setHeader('Connection', 'keep-alive')
+        res.setHeader('X-Accel-Buffering', 'no') // Disable nginx buffering
+
+        try {
+            await aiChatService.sendMessageStream(
+                req.user.id,
+                parseInt(id),
+                message,
+                (chunk) => {
+                    // Send chunk to client
+                    res.write(`data: ${JSON.stringify({ chunk, done: false })}\n\n`)
+                }
+            )
+
+            // Send completion signal
+            res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+            res.end()
+        } catch (error) {
+            res.write(`data: ${JSON.stringify({ error: error.message, done: true })}\n\n`)
+            res.end()
+        }
     })
 
     /**

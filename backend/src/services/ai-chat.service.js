@@ -186,9 +186,11 @@ class AIChatService {
                                 `Ollama response generated in ${responseDuration}ms (hasKnowledgeBase: ${context.searchResults.totalResults > 0})`
                             )
                         } catch (ollamaError) {
+                            const errorDuration = Date.now() - responseStartTime
                             logger.error(
-                                'Ollama generation failed, falling back to template:',
-                                ollamaError.message
+                                `Ollama generation failed after ${errorDuration}ms, falling back to template:`,
+                                ollamaError.message,
+                                ollamaError.stack
                             )
                             responseData = this.generateTemplateResponse(
                                 context,
@@ -196,8 +198,9 @@ class AIChatService {
                             )
                         }
                     } else {
+                        const checkDuration = Date.now() - responseStartTime
                         logger.warn(
-                            'Ollama not available, falling back to template response'
+                            `Ollama not available (checked in ${checkDuration}ms), falling back to template response`
                         )
                         responseData = this.generateTemplateResponse(
                             context,
@@ -253,6 +256,168 @@ class AIChatService {
             }
         } catch (error) {
             logger.error('Error sending message:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Send message with streaming response (for better UX)
+     */
+    async sendMessageStream(userId, conversationId, messageText, onChunk) {
+        try {
+            // 1. Verify conversation belongs to user
+            const conversation = await prisma.conversation.findFirst({
+                where: {
+                    id: conversationId,
+                    userId,
+                },
+            })
+
+            if (!conversation) {
+                throw new Error('Conversation not found or access denied')
+            }
+
+            // 2. Lưu message của user
+            const userMessage = await prisma.chatMessage.create({
+                data: {
+                    conversationId,
+                    senderType: 'user',
+                    message: messageText,
+                    messageType: 'text',
+                },
+            })
+
+            // Send user message chunk
+            onChunk({
+                type: 'user_message',
+                data: userMessage,
+            })
+
+            // 3. Build context từ knowledge base (fast, with cache)
+            const context = await knowledgeBaseService.buildContext(
+                userId,
+                messageText,
+                conversationId
+            )
+
+            // 4. Get conversation history
+            const conversationHistory =
+                await knowledgeBaseService.getConversationHistory(
+                    conversationId,
+                    5 // Reduced from 10 to speed up
+                )
+
+            // 5. Generate streaming response using Ollama
+            let fullResponse = ''
+            let sources = []
+            let suggestedActions = []
+
+            try {
+                if (ollamaService.enabled) {
+                    const isOllamaAvailable = await ollamaService.checkHealth()
+                    if (isOllamaAvailable) {
+                        // Build system prompt
+                        const systemPrompt = ollamaService.buildSystemPrompt(context)
+
+                        // Stream response from Ollama
+                        for await (const chunk of ollamaService.generateResponseStream(
+                            messageText,
+                            conversationHistory,
+                            systemPrompt
+                        )) {
+                            fullResponse += chunk
+                            onChunk({
+                                type: 'ai_chunk',
+                                chunk: chunk,
+                            })
+                        }
+
+                        // Extract sources and actions
+                        if (context.searchResults.transcripts.length > 0) {
+                            sources.push(
+                                ...context.searchResults.transcripts.slice(0, 2).map((t) => ({
+                                    type: 'transcript',
+                                    lessonId: t.lessonId,
+                                    lessonTitle: t.lessonTitle,
+                                    courseId: t.courseId,
+                                    courseTitle: t.courseTitle,
+                                    timestamp: t.timestamp,
+                                }))
+                            )
+                        }
+                    } else {
+                        // Fallback to template if Ollama not available
+                        const templateResponse = this.generateTemplateResponse(
+                            context,
+                            messageText
+                        )
+                        fullResponse = templateResponse.text
+                        sources = templateResponse.sources || []
+                        suggestedActions = templateResponse.suggestedActions || []
+                        onChunk({
+                            type: 'ai_chunk',
+                            chunk: fullResponse,
+                        })
+                    }
+                } else {
+                    // Ollama disabled, use template
+                    const templateResponse = this.generateTemplateResponse(
+                        context,
+                        messageText
+                    )
+                    fullResponse = templateResponse.text
+                    sources = templateResponse.sources || []
+                    suggestedActions = templateResponse.suggestedActions || []
+                    onChunk({
+                        type: 'ai_chunk',
+                        chunk: fullResponse,
+                    })
+                }
+            } catch (error) {
+                logger.error('Error in streaming response:', error)
+                // Fallback to template
+                const templateResponse = this.generateTemplateResponse(
+                    context,
+                    messageText
+                )
+                fullResponse = templateResponse.text
+                sources = templateResponse.sources || []
+                suggestedActions = templateResponse.suggestedActions || []
+                onChunk({
+                    type: 'ai_chunk',
+                    chunk: fullResponse,
+                })
+            }
+
+            // 6. Lưu AI response
+            const aiMessage = await prisma.chatMessage.create({
+                data: {
+                    conversationId,
+                    senderType: 'ai',
+                    message: fullResponse,
+                    messageType: 'text',
+                    metadata: {
+                        sources,
+                        suggestedActions,
+                    },
+                },
+            })
+
+            // 7. Update conversation
+            await prisma.conversation.update({
+                where: { id: conversationId },
+                data: { lastMessageAt: new Date() },
+            })
+
+            // Send final message
+            onChunk({
+                type: 'ai_message',
+                data: aiMessage,
+            })
+
+            logger.info(`Streamed message in conversation ${conversationId}`)
+        } catch (error) {
+            logger.error('Error streaming message:', error)
             throw error
         }
     }
