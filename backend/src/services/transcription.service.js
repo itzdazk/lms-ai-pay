@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
+import { parse } from 'node-webvtt'
 import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
 import { prisma } from '../config/database.config.js'
@@ -245,9 +246,74 @@ class TranscriptionService {
         })
     }
 
+    /**
+     * Convert SRT format to WebVTT format for parsing
+     * SRT uses comma (,) for milliseconds, WebVTT uses dot (.)
+     * SRT doesn't have WEBVTT header
+     */
+    _convertSrtToWebVtt(srtContent) {
+        // Add WEBVTT header
+        let webvttContent = 'WEBVTT\n\n'
+        
+        // Replace comma with dot in timestamps (SRT format: 00:00:00,000 --> 00:00:05,000)
+        // WebVTT format: 00:00:00.000 --> 00:00:05.000
+        webvttContent += srtContent.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
+        
+        return webvttContent
+    }
+
+    /**
+     * Convert SRT file to JSON using node-webvtt
+     * @param {string} transcriptPath - Path to SRT file
+     * @returns {Array} Array of transcript segments with index, start, end, text
+     */
     _convertSrtToJson(transcriptPath) {
-        const content = fs.readFileSync(transcriptPath, 'utf-8')
-        const blocks = content
+        const srtContent = fs.readFileSync(transcriptPath, 'utf-8')
+        
+        try {
+            // Convert SRT to WebVTT format
+            const webvttContent = this._convertSrtToWebVtt(srtContent)
+            
+            // Parse using node-webvtt
+            const parsed = parse(webvttContent, { strict: false })
+            
+            if (!parsed.valid) {
+                logger.warn(
+                    `Invalid subtitle format, falling back to manual parsing. Errors: ${parsed.errors.join(', ')}`
+                )
+                // Fallback to manual parsing if node-webvtt fails
+                return this._convertSrtToJsonManual(srtContent)
+            }
+            
+            // Convert cues to our format
+            const segments = parsed.cues.map((cue, index) => ({
+                index: index + 1,
+                start: cue.start,
+                end: cue.end,
+                text: cue.text.trim(),
+            }))
+            
+            logger.debug(
+                `Successfully parsed ${segments.length} segments using node-webvtt`
+            )
+            
+            return segments
+        } catch (error) {
+            logger.error(
+                `Failed to parse SRT with node-webvtt: ${error.message}. Falling back to manual parsing.`
+            )
+            // Fallback to manual parsing if node-webvtt throws error
+            return this._convertSrtToJsonManual(srtContent)
+        }
+    }
+
+    /**
+     * Manual SRT parsing (fallback method)
+     * @param {string} srtContent - SRT file content
+     * @returns {Array} Array of transcript segments
+     */
+    _convertSrtToJsonManual(srtContent) {
+        const blocks = srtContent
             .split(/\r?\n\r?\n/)
             .map((block) => block.trim())
             .filter(Boolean)
@@ -283,6 +349,10 @@ class TranscriptionService {
         return segments
     }
 
+    /**
+     * Convert SRT timestamp to seconds
+     * SRT format: HH:MM:SS,mmm or HH:MM:SS.mmm
+     */
     _timestampToSeconds(timestamp) {
         const [timePart, msPart] = timestamp.replace(',', '.').split('.')
         const [hours, minutes, seconds] = timePart.split(':').map(Number)
