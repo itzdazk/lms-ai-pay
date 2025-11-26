@@ -87,6 +87,13 @@ const config = {
     OPENAI_MAX_TOKENS: parseInt(process.env.OPENAI_MAX_TOKENS, 10) || 2000,
     OPENAI_TEMPERATURE: parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7,
 
+    // AI - Ollama (Local LLM)
+    OLLAMA_ENABLED: process.env.OLLAMA_ENABLED !== 'false',
+    OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.1:latest', // Default to latest, can override with :8b, :70b, etc.
+    OLLAMA_TEMPERATURE: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
+    OLLAMA_MAX_TOKENS: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 2000,
+
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
     LOG_MAX_FILES: process.env.LOG_MAX_FILES || '14d',
