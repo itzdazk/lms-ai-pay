@@ -31,6 +31,14 @@ const ENROLLMENT_STATUS = {
     DROPPED: 'DROPPED',
 }
 
+const TRANSCRIPT_STATUS = {
+    IDLE: 'idle',
+    PROCESSING: 'processing',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+    CANCELLED: 'cancelled',
+}
+
 const PAYMENT_STATUS = {
     PENDING: 'PENDING',
     PAID: 'PAID',
@@ -187,6 +195,7 @@ export {
     COURSE_LEVEL,
     COURSE_STATUS,
     ENROLLMENT_STATUS,
+    TRANSCRIPT_STATUS,
     PAYMENT_STATUS,
     TRANSACTION_STATUS,
     PAYMENT_GATEWAY,

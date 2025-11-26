@@ -123,7 +123,8 @@ class LessonsController {
             const lesson = await lessonsService.uploadVideo(
                 parseInt(courseId),
                 parseInt(id),
-                req.file
+                req.file,
+                req.user.id
             )
 
             return ApiResponse.success(
