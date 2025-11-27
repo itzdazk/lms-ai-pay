@@ -18,6 +18,14 @@ class KnowledgeBaseService {
         // Cache search results for same query (shared across users if same courses)
         this.searchCache = new Map()
         this.searchCacheMaxAge = 2 * 60 * 1000 // 2 minutes
+
+        // Minimum relevance thresholds to filter out irrelevant results
+        // Results below these thresholds will be filtered out to save tokens and avoid confusion
+        this.MIN_RELEVANCE_THRESHOLD = {
+            TRANSCRIPT: 0.4,  // Transcripts need higher relevance (more specific)
+            LESSON: 0.35,     // Lessons can be slightly lower
+            COURSE: 0.3       // Courses can be lowest (broader context)
+        }
     }
 
     /**
@@ -247,6 +255,7 @@ class KnowledgeBaseService {
                         )
                     ),
                 }))
+                .filter((lesson) => lesson.relevanceScore >= this.MIN_RELEVANCE_THRESHOLD.LESSON)
                 .sort((a, b) => b.relevanceScore - a.relevanceScore)
         } catch (error) {
             logger.error('Error searching in lessons:', error)
@@ -273,8 +282,10 @@ class KnowledgeBaseService {
 
             if (lessonId) {
                 whereClause.id = lessonId
+                logger.debug(`Searching transcript for specific lessonId: ${lessonId}`)
             } else if (courseId) {
                 whereClause.courseId = courseId
+                logger.debug(`Searching transcript for specific courseId: ${courseId}`)
             } else if (userId && enrolledCourseIds && enrolledCourseIds.length > 0) {
                 // Use provided courseIds to avoid duplicate query
                 whereClause.courseId = {
@@ -300,6 +311,9 @@ class KnowledgeBaseService {
                     slug: true,
                     videoUrl: true,
                     transcriptUrl: true,
+                    transcriptJsonUrl: true,
+                    description: true,
+                    content: true,
                     course: {
                         select: {
                             id: true,
@@ -311,31 +325,39 @@ class KnowledgeBaseService {
                 take: 2, // Reduced to 2 for faster performance
             })
 
+            logger.debug(
+                `Found ${lessons.length} lessons with transcript for search: lessonId=${lessonId}, courseId=${courseId}`
+            )
+            
+            if (lessons.length === 0) {
+                logger.warn(
+                    `No lessons found with transcript. lessonId=${lessonId}, courseId=${courseId}, userId=${userId}`
+                )
+            }
+
             const results = []
 
             // Parse và search trong từng transcript
             for (const lesson of lessons) {
                 try {
-                    // Construct full path to transcript
-                    const uploadsDir = path.join(__dirname, '../../uploads')
-                    const transcriptPath = path.join(
-                        uploadsDir,
-                        lesson.transcriptUrl
-                    )
-
-                    // Parse transcript (with caching)
-                    const segments =
-                        await this._getCachedTranscript(transcriptPath)
-
-                    // Search keyword trong transcript
-                    const matches = TranscriptParser.searchInTranscript(
-                        segments,
-                        query,
-                        1 // context window: lấy 1 segment trước/sau
-                    )
-
-                    if (matches.length > 0) {
-                        matches.forEach((match) => {
+                    // Check if transcriptUrl exists
+                    if (!lesson.transcriptUrl) {
+                        logger.warn(
+                            `Lesson ${lesson.id} has no transcriptUrl. Trying to use content/description as fallback.`
+                        )
+                        
+                        // Fallback: Search in lesson content/description if no transcript
+                        const searchableText = [
+                            lesson.title,
+                            lesson.description,
+                            lesson.content,
+                        ]
+                            .filter(Boolean)
+                            .join(' ')
+                        
+                        const fallbackRelevanceScore = this.calculateRelevanceScore(query, searchableText)
+                        if (searchableText.toLowerCase().includes(query.toLowerCase()) && 
+                            fallbackRelevanceScore >= this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT) {
                             results.push({
                                 type: 'transcript',
                                 lessonId: lesson.id,
@@ -345,37 +367,210 @@ class KnowledgeBaseService {
                                 courseTitle: lesson.course.title,
                                 courseSlug: lesson.course.slug,
                                 videoUrl: lesson.videoUrl,
-                                timestamp: match.timestamp,
-                                startTime: match.startTime,
-                                text: match.text,
-                                contextText: match.contextText,
-                                excerpt: TranscriptParser.getExcerpt(
-                                    match.contextText,
-                                    200
-                                ),
-                                highlightedText:
-                                    TranscriptParser.highlightKeyword(
-                                        match.text,
-                                        query
-                                    ),
-                                relevanceScore: this.calculateRelevanceScore(
-                                    query,
-                                    match.text
-                                ),
+                                timestamp: null,
+                                startTime: null,
+                                text: lesson.description || lesson.content || '',
+                                contextText: searchableText,
+                                excerpt: TranscriptParser.getExcerpt(searchableText, 200),
+                                highlightedText: searchableText,
+                                relevanceScore: fallbackRelevanceScore,
                             })
+                        } else if (fallbackRelevanceScore < this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT) {
+                            logger.debug(
+                                `Filtered out fallback transcript for lesson ${lesson.id} ` +
+                                `(relevance score ${fallbackRelevanceScore.toFixed(2)} < threshold ${this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT})`
+                            )
+                        }
+                        continue
+                    }
+
+                    // Construct full path to transcript
+                    const uploadsDir = path.join(__dirname, '../../uploads')
+                    // transcriptUrl format: /uploads/transcripts/filename.srt
+                    // Remove leading /uploads/ if present
+                    const transcriptUrlPath = lesson.transcriptUrl.startsWith('/uploads/')
+                        ? lesson.transcriptUrl.substring('/uploads/'.length)
+                        : lesson.transcriptUrl
+                    const transcriptPath = path.join(uploadsDir, transcriptUrlPath)
+                    
+                    logger.debug(
+                        `Processing transcript for lesson ${lesson.id}: ${lesson.transcriptUrl} -> ${transcriptPath}`
+                    )
+
+                    // Check if file exists
+                    try {
+                        await fs.access(transcriptPath)
+                    } catch (fileError) {
+                        logger.error(
+                            `Transcript file not found for lesson ${lesson.id}: ${transcriptPath}. Error: ${fileError.message}`
+                        )
+                        // Try JSON file as fallback
+                        if (lesson.transcriptJsonUrl) {
+                            const jsonPath = path.join(
+                                uploadsDir,
+                                lesson.transcriptJsonUrl.startsWith('/uploads/')
+                                    ? lesson.transcriptJsonUrl.substring('/uploads/'.length)
+                                    : lesson.transcriptJsonUrl
+                            )
+                            try {
+                                await fs.access(jsonPath)
+                                logger.debug(`Using JSON transcript file: ${jsonPath}`)
+                                // Will be handled by _getCachedTranscript
+                            } catch (jsonError) {
+                                logger.error(
+                                    `JSON transcript file also not found: ${jsonPath}`
+                                )
+                                continue
+                            }
+                        } else {
+                            continue
+                        }
+                    }
+
+                    // Parse transcript (with caching)
+                    const segments =
+                        await this._getCachedTranscript(transcriptPath)
+
+                    // Check if user is asking for full transcript content or what they learned
+                    const isAskingForFullTranscript = /nội dung.*transcript|file transcript|transcript.*nội dung|toàn bộ.*transcript|full.*transcript/i.test(query)
+                    const isAskingWhatLearned = /học được gì|học được những gì|nội dung.*bài học|bài học.*nội dung|bài học này/i.test(query)
+                    
+                    if ((isAskingForFullTranscript || isAskingWhatLearned) && segments.length > 0) {
+                        // Return full transcript content for "what did I learn" queries
+                        const fullTranscriptText = segments.map(s => s.text).join(' ')
+                        const transcriptPreview = fullTranscriptText.length > 2000
+                            ? fullTranscriptText.substring(0, 2000) + '...'
+                            : fullTranscriptText
+                        
+                        logger.debug(
+                            `User asking for ${isAskingForFullTranscript ? 'full transcript' : 'what they learned'}. Returning ${segments.length} segments for lesson ${lesson.id}`
+                        )
+                        
+                        results.push({
+                            type: 'transcript',
+                            lessonId: lesson.id,
+                            lessonTitle: lesson.title,
+                            lessonSlug: lesson.slug,
+                            courseId: lesson.courseId,
+                            courseTitle: lesson.course.title,
+                            courseSlug: lesson.course.slug,
+                            videoUrl: lesson.videoUrl,
+                            timestamp: segments[0]?.startTime ? TranscriptParser.secondsToTime(segments[0].startTime) : null,
+                            startTime: segments[0]?.startTime || null,
+                            text: fullTranscriptText,
+                            contextText: fullTranscriptText,
+                            excerpt: transcriptPreview,
+                            highlightedText: fullTranscriptText,
+                            relevanceScore: 1.0, // High relevance for full transcript request
+                            isFullTranscript: true,
+                            totalSegments: segments.length,
                         })
+                    } else {
+                        // Search keyword trong transcript
+                        const matches = TranscriptParser.searchInTranscript(
+                            segments,
+                            query,
+                            2 // context window: lấy 2 segments trước/sau để có nhiều context hơn
+                        )
+
+                        logger.debug(
+                            `Found ${matches.length} matches in transcript for lesson ${lesson.id} with query: "${query}"`
+                        )
+
+                        if (matches.length > 0) {
+                            matches.forEach((match) => {
+                                results.push({
+                                    type: 'transcript',
+                                    lessonId: lesson.id,
+                                    lessonTitle: lesson.title,
+                                    lessonSlug: lesson.slug,
+                                    courseId: lesson.courseId,
+                                    courseTitle: lesson.course.title,
+                                    courseSlug: lesson.course.slug,
+                                    videoUrl: lesson.videoUrl,
+                                    timestamp: match.timestamp,
+                                    startTime: match.startTime,
+                                    text: match.text,
+                                    contextText: match.contextText,
+                                    excerpt: TranscriptParser.getExcerpt(
+                                        match.contextText,
+                                        500 // Increased excerpt length
+                                    ),
+                                    highlightedText:
+                                        TranscriptParser.highlightKeyword(
+                                            match.text,
+                                            query
+                                        ),
+                                    relevanceScore: this.calculateRelevanceScore(
+                                        query,
+                                        match.text
+                                    ),
+                                })
+                                // Filter by threshold - remove if below minimum
+                                const lastResult = results[results.length - 1]
+                                if (lastResult.relevanceScore < this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT) {
+                                    results.pop() // Remove if below threshold
+                                    logger.debug(
+                                        `Filtered out transcript match for lesson ${lesson.id} ` +
+                                        `(relevance score ${lastResult.relevanceScore.toFixed(2)} < threshold ${this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT})`
+                                    )
+                                }
+                            })
+                        } else if (segments.length > 0) {
+                            // If no matches but transcript exists, check if fallback meets threshold
+                            const firstSegments = segments.slice(0, 5)
+                            const fallbackText = firstSegments.map(s => s.text).join(' ')
+                            const fallbackScore = this.calculateRelevanceScore(query, fallbackText)
+                            
+                            // Only add fallback if it meets minimum threshold
+                            if (fallbackScore >= this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT) {
+                                logger.debug(
+                                    `No direct matches, but fallback meets threshold for lesson ${lesson.id} (score: ${fallbackScore.toFixed(2)})`
+                                )
+                                results.push({
+                                    type: 'transcript',
+                                    lessonId: lesson.id,
+                                    lessonTitle: lesson.title,
+                                    lessonSlug: lesson.slug,
+                                    courseId: lesson.courseId,
+                                    courseTitle: lesson.course.title,
+                                    courseSlug: lesson.course.slug,
+                                    videoUrl: lesson.videoUrl,
+                                    timestamp: firstSegments[0]?.startTime ? TranscriptParser.secondsToTime(firstSegments[0].startTime) : null,
+                                    startTime: firstSegments[0]?.startTime || null,
+                                    text: fallbackText,
+                                    contextText: fallbackText,
+                                    excerpt: TranscriptParser.getExcerpt(fallbackText, 500),
+                                    highlightedText: fallbackText,
+                                    relevanceScore: fallbackScore,
+                                })
+                            } else {
+                                logger.debug(
+                                    `No matches found and fallback below threshold for lesson ${lesson.id} ` +
+                                    `(score: ${fallbackScore.toFixed(2)} < ${this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT})`
+                                )
+                            }
+                        }
                     }
                 } catch (error) {
                     logger.error(
                         `Error parsing transcript for lesson ${lesson.id}:`,
-                        error
+                        error.message,
+                        error.stack
                     )
                     // Continue với lesson khác
                 }
             }
 
+            logger.debug(
+                `Transcript search completed. Found ${results.length} results for query: "${query}"`
+            )
+
             // Sort by relevance
-            return results.sort((a, b) => b.relevanceScore - a.relevanceScore)
+            // Filter by minimum relevance threshold before returning
+            return results
+                .filter((result) => result.relevanceScore >= this.MIN_RELEVANCE_THRESHOLD.TRANSCRIPT)
+                .sort((a, b) => b.relevanceScore - a.relevanceScore)
         } catch (error) {
             logger.error('Error searching in transcripts:', error)
             return []
@@ -499,19 +694,64 @@ class KnowledgeBaseService {
      */
     async buildContext(userId, query, conversationId = null) {
         try {
-            // 1. Get user context and enrolled courses (optimize: fetch once)
-            const [userContext, enrolledCoursesData] = await Promise.all([
+            // 1. Get user context, enrolled courses, and conversation context (optimize: fetch once)
+            const [userContext, enrolledCoursesData, conversation] = await Promise.all([
                 this.getUserContext(userId),
                 prisma.enrollment.findMany({
                     where: { userId, status: 'ACTIVE' },
                     select: { courseId: true },
                 }),
+                conversationId
+                    ? prisma.conversation.findUnique({
+                          where: { id: conversationId },
+                          select: {
+                              lessonId: true,
+                              courseId: true,
+                          },
+                      })
+                    : Promise.resolve(null),
             ])
 
             const enrolledCourseIds = enrolledCoursesData.map((e) => e.courseId).sort()
             
-            // Check cache for search results (key: query + courseIds)
-            const cacheKey = `${query.toLowerCase()}:${enrolledCourseIds.join(',')}`
+            // Priority: Use lessonId/courseId from conversation if available, otherwise use userContext
+            const targetLessonId = conversation?.lessonId || userContext.currentLesson?.id
+            const targetCourseId = conversation?.courseId || userContext.currentCourse?.id
+            
+            // Get lesson info if conversation has lessonId
+            let conversationLesson = null
+            if (conversation?.lessonId) {
+                try {
+                    conversationLesson = await prisma.lesson.findUnique({
+                        where: { id: conversation.lessonId },
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            description: true,
+                            content: true,
+                            courseId: true,
+                            course: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                },
+                            },
+                        },
+                    })
+                } catch (error) {
+                    logger.error(`Error fetching conversation lesson: ${error.message}`)
+                }
+            }
+            
+            logger.debug(
+                `Building context for query: "${query}", conversationId: ${conversationId}, ` +
+                `targetLessonId: ${targetLessonId}, targetCourseId: ${targetCourseId}, ` +
+                `conversationLessonId: ${conversation?.lessonId}, conversationCourseId: ${conversation?.courseId}`
+            )
+            
+            // Check cache for search results (key: query + courseIds + lessonId)
+            const cacheKey = `${query.toLowerCase()}:${enrolledCourseIds.join(',')}:${targetLessonId || ''}:${targetCourseId || ''}`
             const cached = this.searchCache.get(cacheKey)
             if (cached && Date.now() - cached.timestamp < this.searchCacheMaxAge) {
                 logger.debug(`Using cached search results for query: ${query}`)
@@ -524,18 +764,19 @@ class KnowledgeBaseService {
 
             // 2. Search trong courses, lessons, transcripts (parallel, reuse courseIds)
             // Limit transcript search to 2 lessons max for better performance
+            // IMPORTANT: Use conversation's lessonId/courseId if available
             const [courses, lessons, transcripts] = await Promise.all([
                 this.searchInCourses(query, userId, enrolledCourseIds),
                 this.searchInLessons(
                     query,
-                    userContext.currentCourse?.id,
+                    targetCourseId,
                     userId,
                     enrolledCourseIds
                 ),
                 this.searchInTranscripts(
                     query,
-                    userContext.currentLesson?.id,
-                    userContext.currentCourse?.id,
+                    targetLessonId,
+                    targetCourseId,
                     userId,
                     enrolledCourseIds
                 ),
@@ -548,8 +789,24 @@ class KnowledgeBaseService {
                     await this.getConversationHistory(conversationId)
             }
 
+            // Update userContext with conversation lesson if available
+            const enhancedUserContext = {
+                ...userContext,
+                // Override currentLesson with conversation lesson if available
+                currentLesson: conversationLesson
+                    ? {
+                          id: conversationLesson.id,
+                          title: conversationLesson.title,
+                          slug: conversationLesson.slug,
+                          description: conversationLesson.description,
+                          content: conversationLesson.content,
+                          courseId: conversationLesson.courseId,
+                      }
+                    : userContext.currentLesson,
+            }
+
             const context = {
-                userContext,
+                userContext: enhancedUserContext,
                 searchResults: {
                     courses,
                     lessons,
@@ -614,52 +871,120 @@ class KnowledgeBaseService {
     }
 
     /**
-     * Calculate relevance score (0-1)
+     * Calculate relevance score (0-1) - Improved algorithm
      */
     calculateRelevanceScore(query, text) {
-        if (!text) return 0
+        if (!text || !query) return 0
 
-        const queryLower = query.toLowerCase()
+        const queryLower = query.toLowerCase().trim()
         const textLower = text.toLowerCase()
 
-        // Exact match → high score
+        // 1. Exact phrase match → highest score (0.9-1.0)
         if (textLower.includes(queryLower)) {
             const position = textLower.indexOf(queryLower)
+            const textLength = textLower.length
             // Càng ở đầu càng cao điểm
-            const positionScore = 1 - position / textLower.length
-            return 0.8 + positionScore * 0.2
+            const positionScore = Math.max(0, 1 - position / Math.max(textLength, 1))
+            return 0.9 + positionScore * 0.1
         }
 
-        // Partial match → medium score
+        // 2. All keywords match (in order) → high score (0.7-0.9)
         const keywords = this.extractKeywords(query)
-        const matchedKeywords = keywords.filter((keyword) =>
+        if (keywords.length === 0) return 0.3 // No meaningful keywords
+
+        // Check if all keywords appear
+        const allKeywordsMatch = keywords.every(keyword =>
             textLower.includes(keyword.toLowerCase())
         )
 
-        return (matchedKeywords.length / keywords.length) * 0.6
+        if (allKeywordsMatch) {
+            // Check keyword proximity (keywords close together = higher score)
+            const keywordPositions = keywords
+                .map(keyword => textLower.indexOf(keyword.toLowerCase()))
+                .filter(pos => pos !== -1)
+                .sort((a, b) => a - b)
+
+            if (keywordPositions.length === keywords.length) {
+                // Calculate average distance between keywords
+                let totalDistance = 0
+                for (let i = 1; i < keywordPositions.length; i++) {
+                    totalDistance += keywordPositions[i] - keywordPositions[i - 1]
+                }
+                const avgDistance = totalDistance / Math.max(keywordPositions.length - 1, 1)
+                const proximityScore = Math.max(0, 1 - avgDistance / 100) // Closer = better
+                return 0.7 + proximityScore * 0.2
+            }
+            return 0.7
+        }
+
+        // 3. Partial keyword match → medium score (0.3-0.7)
+        const matchedKeywords = keywords.filter((keyword) =>
+            textLower.includes(keyword.toLowerCase())
+        )
+        const matchRatio = matchedKeywords.length / keywords.length
+
+        // Bonus for matching important keywords (longer keywords)
+        const importantKeywords = keywords.filter(k => k.length > 4)
+        const importantMatches = importantKeywords.filter(k =>
+            textLower.includes(k.toLowerCase())
+        )
+        const importantMatchRatio = importantKeywords.length > 0
+            ? importantMatches.length / importantKeywords.length
+            : 0
+
+        // Weighted score: base match ratio + important keyword bonus
+        const baseScore = matchRatio * 0.5
+        const importantBonus = importantMatchRatio * 0.2
+        return Math.min(0.7, baseScore + importantBonus)
+
+        // 4. No match → low score (0.0-0.3)
+        // Already handled by returning 0.3 if no keywords
     }
 
     /**
-     * Extract keywords từ query
+     * Extract keywords từ query - Improved version
      */
     extractKeywords(query) {
-        // Remove common words (stopwords)
+        if (!query) return []
+
+        // Extended stopwords list (Vietnamese + English)
         const stopwords = [
-            'là',
-            'gì',
-            'như',
-            'thế',
-            'nào',
-            'the',
-            'is',
-            'what',
-            'how',
+            // Vietnamese
+            'là', 'gì', 'như', 'thế', 'nào', 'của', 'cho', 'với', 'về', 'từ',
+            'trong', 'để', 'và', 'hoặc', 'nhưng', 'mà', 'có', 'không', 'được',
+            'bạn', 'tôi', 'anh', 'chị', 'em', 'ông', 'bà', 'cô', 'thầy',
+            'này', 'đó', 'đây', 'kia', 'một', 'hai', 'ba', 'nhiều', 'ít',
+            // English
+            'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+            'what', 'how', 'when', 'where', 'why', 'who', 'which',
+            'a', 'an', 'and', 'or', 'but', 'if', 'of', 'to', 'for',
+            'with', 'from', 'by', 'at', 'in', 'on', 'up', 'down',
+            'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they'
         ]
 
-        return query
+        // Remove punctuation and split
+        const words = query
             .toLowerCase()
+            .replace(/[.,!?;:()\[\]{}'"]/g, ' ')
             .split(/\s+/)
-            .filter((word) => word.length > 2 && !stopwords.includes(word))
+            .filter((word) => {
+                // Filter: length > 2, not stopword, not number only
+                return word.length > 2 && 
+                       !stopwords.includes(word) && 
+                       !/^\d+$/.test(word)
+            })
+
+        // Remove duplicates while preserving order
+        const uniqueWords = []
+        const seen = new Set()
+        for (const word of words) {
+            if (!seen.has(word)) {
+                seen.add(word)
+                uniqueWords.push(word)
+            }
+        }
+
+        return uniqueWords
     }
 }
 
