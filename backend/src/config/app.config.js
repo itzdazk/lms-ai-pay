@@ -107,6 +107,8 @@ const config = {
         process.env.WHISPER_OUTPUT_DIR || 'uploads/transcripts',
     WHISPER_LANGUAGE: process.env.WHISPER_LANGUAGE || '',
     WHISPER_FP16: process.env.WHISPER_FP16 === 'true',
+    // Queue settings - Limit concurrent transcriptions to prevent server overload
+    WHISPER_MAX_CONCURRENT: parseInt(process.env.WHISPER_MAX_CONCURRENT, 10) || 2, // Default: 2 concurrent jobs
 
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',

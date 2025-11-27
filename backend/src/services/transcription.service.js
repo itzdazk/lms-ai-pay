@@ -25,6 +25,11 @@ class TranscriptionService {
             config.WHISPER_OUTPUT_DIR || path.join('uploads', 'transcripts')
         )
         this.activeJobs = new Map()
+        
+        // Queue system to limit concurrent transcriptions
+        this.maxConcurrent = config.WHISPER_MAX_CONCURRENT || 2
+        this.queue = [] // Queue of pending transcription jobs
+        this.running = new Set() // Set of lessonIds currently being transcribed
     }
 
     _resolveOutputDir(dirPath) {
@@ -40,7 +45,11 @@ class TranscriptionService {
         return absolutePath
     }
 
+    /**
+     * Cancel transcription job (both running and queued)
+     */
     cancelTranscriptionJob(lessonId) {
+        // Cancel running job
         const job = this.activeJobs.get(lessonId)
         if (job) {
             try {
@@ -58,10 +67,117 @@ class TranscriptionService {
                 )
             } finally {
                 this.activeJobs.delete(lessonId)
+                this.running.delete(lessonId)
             }
+        }
+        
+        // Remove from queue if pending
+        const queueIndex = this.queue.findIndex(job => job.lessonId === lessonId)
+        if (queueIndex !== -1) {
+            this.queue.splice(queueIndex, 1)
+            logger.info(
+                `Removed lesson ${lessonId} from transcription queue`
+            )
         }
     }
 
+    /**
+     * Get queue status
+     */
+    getQueueStatus() {
+        return {
+            queueLength: this.queue.length,
+            running: this.running.size,
+            maxConcurrent: this.maxConcurrent,
+            activeJobs: Array.from(this.activeJobs.keys()),
+        }
+    }
+
+    /**
+     * Process next job in queue
+     */
+    async _processQueue() {
+        // Don't process if at max capacity
+        if (this.running.size >= this.maxConcurrent) {
+            return
+        }
+
+        // Don't process if queue is empty
+        if (this.queue.length === 0) {
+            return
+        }
+
+        // Get next job from queue
+        const job = this.queue.shift()
+        const { videoPath, lessonId, userId, source, resolve, reject } = job
+
+        // Mark as running
+        this.running.add(lessonId)
+
+        logger.info(
+            `Processing transcription queue job for lesson ${lessonId} (${this.running.size}/${this.maxConcurrent} running, ${this.queue.length} queued)`
+        )
+
+        try {
+            // Execute transcription
+            // Note: _executeTranscription will remove from running set when process completes
+            const result = await this._executeTranscription({
+                videoPath,
+                lessonId,
+                userId,
+                source,
+            })
+            resolve(result)
+        } catch (error) {
+            // On error, remove from running set and process next job
+            this.running.delete(lessonId)
+            reject(error)
+        } finally {
+            // Process next job in queue (only if not already processing)
+            // Note: running set is removed in _executeTranscription's close handler when process completes
+            setImmediate(() => this._processQueue())
+        }
+    }
+
+    /**
+     * Add transcription job to queue
+     */
+    async queueTranscription({ videoPath, lessonId, userId, source = 'upload' }) {
+        return new Promise((resolve, reject) => {
+            // Check if already in queue or running
+            const inQueue = this.queue.some(job => job.lessonId === lessonId)
+            const isRunning = this.running.has(lessonId)
+
+            if (inQueue || isRunning) {
+                logger.warn(
+                    `Transcription job for lesson ${lessonId} already queued or running. Skipping.`
+                )
+                return resolve(null)
+            }
+
+            // Add to queue
+            this.queue.push({
+                videoPath,
+                lessonId,
+                userId,
+                source,
+                resolve,
+                reject,
+            })
+
+            logger.info(
+                `Added transcription job to queue for lesson ${lessonId} (${this.queue.length} in queue, ${this.running.size}/${this.maxConcurrent} running)`
+            )
+
+            // Try to process immediately
+            setImmediate(() => this._processQueue())
+        })
+    }
+
+    /**
+     * Public method: Queue transcription job
+     * This is the main entry point - jobs are queued and processed with concurrency limit
+     */
     async transcribeLessonVideo({
         videoPath,
         lessonId,
@@ -80,6 +196,27 @@ class TranscriptionService {
             return null
         }
 
+        // Cancel any existing job for this lesson
+        this.cancelTranscriptionJob(lessonId)
+
+        // Add to queue (will be processed with concurrency limit)
+        return this.queueTranscription({
+            videoPath,
+            lessonId,
+            userId,
+            source,
+        })
+    }
+
+    /**
+     * Execute transcription (internal method, called by queue processor)
+     */
+    async _executeTranscription({
+        videoPath,
+        lessonId,
+        userId,
+        source = 'upload',
+    }) {
         const absoluteVideoPath = path.isAbsolute(videoPath)
             ? videoPath
             : path.resolve(__dirname, '../../', videoPath)
@@ -110,8 +247,6 @@ class TranscriptionService {
             args.push('--fp16', 'False')
         }
 
-        this.cancelTranscriptionJob(lessonId)
-
         logger.info(
             `Starting Whisper transcription for lesson ${lessonId} (user ${userId}, source ${source})`
         )
@@ -138,6 +273,7 @@ class TranscriptionService {
 
             whisperProcess.on('close', async (code, signal) => {
                 this.activeJobs.delete(lessonId)
+                const wasRunning = this.running.delete(lessonId)
 
                 if (signal === 'SIGTERM' || signal === 'SIGKILL') {
                     logger.info(
@@ -149,6 +285,10 @@ class TranscriptionService {
                             transcriptStatus: TRANSCRIPT_STATUS.CANCELLED,
                         },
                     })
+                    // Process next job in queue after cancellation
+                    if (wasRunning) {
+                        setImmediate(() => this._processQueue())
+                    }
                     return reject(new Error('Whisper transcription cancelled'))
                 }
 
@@ -163,6 +303,10 @@ class TranscriptionService {
                             transcriptStatus: TRANSCRIPT_STATUS.FAILED,
                         },
                     })
+                    // Process next job in queue after failure
+                    if (wasRunning) {
+                        setImmediate(() => this._processQueue())
+                    }
                     return reject(error)
                 }
 
@@ -229,6 +373,11 @@ class TranscriptionService {
                         transcriptPath,
                         source,
                     })
+                    
+                    // Process next job in queue after successful completion
+                    if (wasRunning) {
+                        setImmediate(() => this._processQueue())
+                    }
                 } catch (error) {
                     logger.error(
                         `Failed to finalize Whisper transcript for lesson ${lessonId}`,
@@ -241,6 +390,11 @@ class TranscriptionService {
                         },
                     })
                     reject(error)
+                    
+                    // Process next job in queue after error
+                    if (wasRunning) {
+                        setImmediate(() => this._processQueue())
+                    }
                 }
             })
         })
