@@ -87,6 +87,29 @@ const config = {
     OPENAI_MAX_TOKENS: parseInt(process.env.OPENAI_MAX_TOKENS, 10) || 2000,
     OPENAI_TEMPERATURE: parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7,
 
+
+    // AI - Ollama (Local LLM)
+    OLLAMA_ENABLED: process.env.OLLAMA_ENABLED !== 'false',
+    OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.1:8b', // Use 8b model for faster response (recommended for local)
+    OLLAMA_TEMPERATURE: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
+    OLLAMA_MAX_TOKENS: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 1000, // Reduced to 1000 for faster response
+
+    // AI - Whisper (Local)
+    WHISPER_ENABLED: process.env.WHISPER_ENABLED !== 'false',
+    WHISPER_AUTO_TRANSCRIBE:
+        process.env.WHISPER_AUTO_TRANSCRIBE !== 'false',
+    WHISPER_COMMAND: process.env.WHISPER_COMMAND || 'whisper',
+    WHISPER_MODEL: process.env.WHISPER_MODEL || 'small',
+    WHISPER_TASK: process.env.WHISPER_TASK || 'transcribe',
+    WHISPER_OUTPUT_FORMAT: process.env.WHISPER_OUTPUT_FORMAT || 'srt',
+    WHISPER_OUTPUT_DIR:
+        process.env.WHISPER_OUTPUT_DIR || 'uploads/transcripts',
+    WHISPER_LANGUAGE: process.env.WHISPER_LANGUAGE || '',
+    WHISPER_FP16: process.env.WHISPER_FP16 === 'true',
+    // Queue settings - Limit concurrent transcriptions to prevent server overload
+    WHISPER_MAX_CONCURRENT: parseInt(process.env.WHISPER_MAX_CONCURRENT, 10) || 2, // Default: 2 concurrent jobs
+
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
     LOG_MAX_FILES: process.env.LOG_MAX_FILES || '14d',

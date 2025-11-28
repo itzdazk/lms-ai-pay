@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import os from 'os'
+import transcriptionService from './transcription.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -205,13 +206,38 @@ class HealthService {
     }
 
     /**
+     * Check transcription queue health
+     */
+    checkTranscriptionQueueHealth() {
+        try {
+            const queueStatus = transcriptionService.getQueueStatus()
+            
+            return {
+                isHealthy: true,
+                status: 'operational',
+                timestamp: new Date().toISOString(),
+                queue: queueStatus,
+            }
+        } catch (error) {
+            logger.error('Transcription queue health check failed:', error)
+            return {
+                isHealthy: false,
+                status: 'error',
+                error: error.message,
+                timestamp: new Date().toISOString(),
+            }
+        }
+    }
+
+    /**
      * Check full system health (all services)
      */
     async checkFullHealth() {
-        const [basicHealth, dbHealth, storageHealth] = await Promise.all([
+        const [basicHealth, dbHealth, storageHealth, transcriptionHealth] = await Promise.all([
             this.checkBasicHealth(),
             this.checkDatabaseHealth(),
             this.checkStorageHealth(),
+            Promise.resolve(this.checkTranscriptionQueueHealth()),
         ])
 
         return {
@@ -219,6 +245,7 @@ class HealthService {
             api: basicHealth,
             database: dbHealth,
             storage: storageHealth,
+            transcription: transcriptionHealth,
             overall: {
                 isHealthy: dbHealth.isHealthy && storageHealth.isHealthy,
                 status:
