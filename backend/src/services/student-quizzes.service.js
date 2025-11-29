@@ -210,7 +210,7 @@ class StudentQuizzesService extends QuizzesService {
     /**
      * Submit quiz answers (student)
      */
-    async submitQuiz({ quizId, userId, userRole, answers }) {
+    async submitQuiz({ quizId, userId, userRole, answers, startedAt }) {
         const quiz = await this.fetchQuizWithContext(quizId);
 
         this.assertQuizVisibility(quiz);
@@ -232,6 +232,19 @@ class StudentQuizzesService extends QuizzesService {
             );
         }
 
+        // Validate time limit if quiz has time limit and startedAt is provided
+        if (quiz.timeLimitMinutes && startedAt) {
+            const startTime = new Date(startedAt);
+            const now = new Date();
+            const timeElapsedMinutes = (now - startTime) / 1000 / 60;
+
+            if (timeElapsedMinutes > quiz.timeLimitMinutes) {
+                throw this.buildForbiddenError(
+                    `Time limit exceeded. Quiz time limit is ${quiz.timeLimitMinutes} minutes.`
+                );
+            }
+        }
+
         const grading = this.gradeQuiz(quiz, answers);
         const isPassed = grading.score >= quiz.passingScore;
 
@@ -242,6 +255,7 @@ class StudentQuizzesService extends QuizzesService {
                 answers: grading.gradedAnswers,
                 score: grading.score.toFixed(2),
                 isPassed,
+                startedAt: startedAt ? new Date(startedAt) : null,
             },
             select: {
                 id: true,
@@ -250,6 +264,7 @@ class StudentQuizzesService extends QuizzesService {
                 answers: true,
                 score: true,
                 isPassed: true,
+                startedAt: true,
                 submittedAt: true,
             },
         });

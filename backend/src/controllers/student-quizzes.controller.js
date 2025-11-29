@@ -13,12 +13,14 @@ class StudentQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
         const answers = req.body.answers;
+        const startedAt = req.body.startedAt; // ISO 8601 string from client
 
         const submission = await studentQuizzesService.submitQuiz({
             quizId,
             userId,
             userRole,
             answers,
+            startedAt,
         });
 
         return ApiResponse.created(

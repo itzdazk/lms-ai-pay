@@ -41,6 +41,10 @@ const submitQuizValidator = [
         .optional()
         .isInt({ min: 0 })
         .withMessage('timeSpent must be a non-negative integer when provided'),
+    body('startedAt')
+        .optional()
+        .isISO8601()
+        .withMessage('startedAt must be a valid ISO 8601 date string'),
     validate,
 ];
 
@@ -103,6 +107,10 @@ const createLessonQuizValidator = [
         .optional({ nullable: true })
         .isInt({ min: 0 })
         .withMessage('Attempts allowed must be greater than or equal to 0'),
+    body('timeLimitMinutes')
+        .optional({ nullable: true })
+        .isInt({ min: 1 })
+        .withMessage('Time limit must be a positive integer (minutes)'),
     body('isPublished')
         .optional()
         .isBoolean()
@@ -133,6 +141,10 @@ const createCourseQuizValidator = [
         .optional({ nullable: true })
         .isInt({ min: 0 })
         .withMessage('Attempts allowed must be greater than or equal to 0'),
+    body('timeLimitMinutes')
+        .optional({ nullable: true })
+        .isInt({ min: 1 })
+        .withMessage('Time limit must be a positive integer (minutes)'),
     body('isPublished')
         .optional()
         .isBoolean()
