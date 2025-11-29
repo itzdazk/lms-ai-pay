@@ -36,7 +36,72 @@ class AIQuizGenerationService {
             }
         }
 
-        // 1. Get lesson content
+        // ƯU TIÊN: Check quiz đã lưu trong database (đã được instructor review)
+        // Quiz trong DB là source of truth - chất lượng tốt hơn vì đã được review
+        const existingQuiz = await prisma.quiz.findFirst({
+            where: {
+                lessonId,
+                isPublished: true
+            },
+            orderBy: {
+                updatedAt: 'desc' // Lấy quiz mới nhất
+            }
+        })
+
+        if (existingQuiz && existingQuiz.questions) {
+            try {
+                // Parse questions from JSONB
+                const questions = Array.isArray(existingQuiz.questions) 
+                    ? existingQuiz.questions 
+                    : typeof existingQuiz.questions === 'object' && existingQuiz.questions.questions
+                        ? existingQuiz.questions.questions
+                        : []
+                
+                if (questions.length > 0) {
+                    // Format questions từ DB (đã được review, chất lượng tốt)
+                    const formattedQuestions = questions
+                        .filter(q => {
+                            // Filter by explanation requirement
+                            if (includeExplanation && !q.explanation) return false
+                            return true
+                        })
+                        .slice(0, numQuestions)
+                        .map((q, index) => ({
+                            id: index + 1,
+                            question: q.question || q.text || '',
+                            type: q.type || 'multiple_choice',
+                            options: q.options || {},
+                            correctAnswer: q.correctAnswer || q.correct_answer || 'A',
+                            explanation: q.explanation || '',
+                            source: 'database' // Đánh dấu là từ DB (đã được review)
+                        }))
+                    
+                    if (formattedQuestions.length > 0) {
+                        logger.info(`✅ Using reviewed quiz from database for lesson ${lessonId} (${formattedQuestions.length} questions)`)
+                        
+                        // Cache the result
+                        if (useCache) {
+                            const cacheKey = `quiz:lesson:${lessonId}:${numQuestions}:${difficulty}:${includeExplanation}`
+                            this.questionCache.set(cacheKey, {
+                                questions: formattedQuestions,
+                                timestamp: Date.now()
+                            })
+                        }
+                        
+                        return formattedQuestions
+                    }
+                }
+            } catch (error) {
+                logger.warn(`Failed to parse existing quiz for lesson ${lessonId}:`, error)
+                // Fallback to generation
+            }
+        }
+        
+        // Nếu không có quiz trong DB → Generate mới (preview/suggest only)
+        // Instructor sẽ review và chọn lưu sau
+        logger.info(`📝 No quiz found in database for lesson ${lessonId}, generating new questions...`)
+
+        // 1. Get lesson content (nếu không có quiz trong DB, generate mới)
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
             include: {
@@ -58,10 +123,16 @@ class AIQuizGenerationService {
         const content = await this._extractLessonContent(lesson)
 
         // Limit content length to prevent timeout (max 5000 chars)
+        // Nếu quá dài, lấy phần đầu + phần cuối để giữ được context quan trọng
         const maxContentLength = 5000
-        const truncatedContent = content.length > maxContentLength
-            ? content.substring(0, maxContentLength) + '\n\n[... Nội dung đã được rút gọn ...]'
-            : content
+        let truncatedContent = content
+        if (content.length > maxContentLength) {
+            const headLength = Math.floor(maxContentLength * 0.7) // 70% phần đầu
+            const tailLength = maxContentLength - headLength - 50 // Phần còn lại cho phần cuối
+            truncatedContent = content.substring(0, headLength) + 
+                '\n\n[... Nội dung đã được rút gọn ...]\n\n' +
+                content.substring(content.length - tailLength)
+        }
 
         // 3. Build prompt for AI
         const prompt = this._buildQuizGenerationPrompt(truncatedContent, {
@@ -83,6 +154,11 @@ class AIQuizGenerationService {
 
         // 6. Validate and format questions
         const validatedQuestions = this._validateAndFormatQuestions(questions, numQuestions)
+        
+        // Đánh dấu là generated (chưa được review)
+        validatedQuestions.forEach(q => {
+            q.source = 'ai_generated' // Đánh dấu là AI generated (cần review)
+        })
 
         // Cache the result (if enabled)
         if (useCache && validatedQuestions.length > 0) {
@@ -96,6 +172,7 @@ class AIQuizGenerationService {
             this._cleanCache()
         }
 
+        logger.info(`✨ Generated ${validatedQuestions.length} new questions for lesson ${lessonId} (preview only - instructor should review before saving)`)
         return validatedQuestions
     }
 
@@ -105,33 +182,37 @@ class AIQuizGenerationService {
     async _extractLessonContent(lesson) {
         let content = ''
 
-        // Add lesson description
+        // ƯU TIÊN TRANSCRIPT - Nội dung chính thường nằm trong video transcript
+        // Transcript là nội dung text được extract từ video (speech-to-text)
+        // Đây là nguồn thông tin quan trọng nhất cho quiz generation
+        let hasTranscript = false
+        if (lesson.transcriptUrl) {
+            try {
+                // Lấy TOÀN BỘ transcript (không giới hạn số segments)
+                // Vì nội dung chính nằm trong video, cần lấy đầy đủ để có quiz chất lượng
+                const transcriptText = await knowledgeBaseService.getFullTranscriptText(lesson.transcriptUrl)
+                if (transcriptText && transcriptText.trim().length > 0) {
+                    content += `Nội dung bài học (từ video transcript):\n${transcriptText}\n\n`
+                    hasTranscript = true
+                }
+            } catch (error) {
+                logger.warn('Failed to load transcript:', error)
+                // Fallback: Nếu không có transcript, dùng description/content
+            }
+        }
+
+        // Thêm description và content để có context tốt hơn
+        // Description thường có tóm tắt và mục tiêu bài học
+        // Content có thể có code examples hoặc notes quan trọng
         if (lesson.description) {
             content += `Mô tả bài học: ${lesson.description}\n\n`
         }
 
-        // Add lesson text content
         if (lesson.content) {
-            content += `Nội dung bài học:\n${lesson.content}\n\n`
+            content += `Nội dung bổ sung:\n${lesson.content}\n\n`
         }
 
-        // Add transcript if available
-        if (lesson.transcriptUrl) {
-            try {
-                // Use public method from KnowledgeBaseService
-                const transcriptText = await knowledgeBaseService.getTranscriptText(
-                    lesson.transcriptUrl,
-                    20 // First 20 segments
-                )
-                if (transcriptText) {
-                    content += `Transcript bài học:\n${transcriptText}\n\n`
-                }
-            } catch (error) {
-                logger.warn('Failed to load transcript:', error)
-            }
-        }
-
-        // Add course context
+        // Add course context (luôn thêm để có context)
         if (lesson.course) {
             content += `Khóa học: ${lesson.course.title}\n`
             if (lesson.course.description) {
@@ -150,6 +231,12 @@ class AIQuizGenerationService {
 
         return `Dựa trên nội dung bài học sau đây, hãy tạo ${numQuestions} câu hỏi quiz dạng Multiple Choice.
 
+⚠️ QUAN TRỌNG: Bạn PHẢI tập trung vào các điểm QUAN TRỌNG NHẤT, TRỌNG TÂM của bài học:
+- Ưu tiên các khái niệm cốt lõi, kiến thức nền tảng
+- Tập trung vào các điểm chính mà học viên cần nắm vững
+- Tránh các chi tiết phụ, ví dụ nhỏ không quan trọng
+- Mỗi câu hỏi phải kiểm tra kiến thức quan trọng, không phải chi tiết vụn vặt
+
 Yêu cầu:
 - Độ khó: ${difficulty === 'easy' ? 'Dễ' : difficulty === 'hard' ? 'Khó' : 'Trung bình'}
 - Loại câu hỏi: Multiple Choice (4 lựa chọn A, B, C, D)
@@ -158,6 +245,7 @@ ${includeExplanation ? '- Mỗi câu hỏi phải có giải thích cho đáp á
 - Câu hỏi phải liên quan trực tiếp đến nội dung bài học
 - Câu hỏi phải rõ ràng, dễ hiểu
 - Đáp án sai phải hợp lý, không quá dễ đoán
+- Ưu tiên các câu hỏi về kiến thức quan trọng, trọng tâm của bài học
 
 Nội dung bài học:
 ${content}
@@ -191,6 +279,9 @@ Nếu bạn không trả về đúng format này, hệ thống sẽ không thể
 
 Nhiệm vụ của bạn:
 - Tạo câu hỏi quiz Multiple Choice dựa trên nội dung bài học
+- TẬP TRUNG vào các điểm QUAN TRỌNG NHẤT, TRỌNG TÂM của bài học
+- Ưu tiên các khái niệm cốt lõi, kiến thức nền tảng mà học viên cần nắm vững
+- Tránh các chi tiết phụ, ví dụ nhỏ không quan trọng
 - Đảm bảo câu hỏi chính xác, rõ ràng, và phù hợp với độ khó yêu cầu
 - Tạo đáp án sai hợp lý, không quá dễ đoán
 - Cung cấp giải thích chi tiết cho đáp án đúng
@@ -198,6 +289,7 @@ Nhiệm vụ của bạn:
 Lưu ý:
 - Chỉ tạo câu hỏi dựa trên nội dung được cung cấp
 - Không tạo câu hỏi về kiến thức ngoài phạm vi bài học
+- Mỗi câu hỏi phải kiểm tra kiến thức quan trọng, không phải chi tiết vụn vặt
 - Đảm bảo format JSON chính xác, không có markdown code blocks
 - Trả về chỉ JSON thuần túy, không có text giải thích thêm`
     }
@@ -326,14 +418,10 @@ Lưu ý:
             orderBy: {
                 lessonOrder: 'asc'
             },
-            include: {
-                course: {
-                    select: {
-                        id: true,
-                        title: true,
-                        description: true
-                    }
-                }
+            select: {
+                id: true,
+                lessonOrder: true,
+                title: true
             }
         })
 
@@ -341,35 +429,101 @@ Lưu ý:
             throw new Error('No lessons found in course')
         }
 
-        // Extract content from all lessons
-        let allContent = ''
+        // CÁCH TIẾP CẬN TỐI ƯU: Chỉ tổng hợp từ quiz ĐÃ LƯU trong DB (đã được instructor review)
+        // Nguyên tắc:
+        // - Quiz trong DB là source of truth (chất lượng tốt, đã được review)
+        // - Không generate mới cho course quiz (tránh chất lượng không đảm bảo)
+        // - Nếu lesson chưa có quiz → Skip (instructor cần tạo quiz cho lesson đó trước)
+        
+        const questionsPerLesson = Math.max(1, Math.floor(numQuestions / lessons.length))
+        const allQuestions = []
+        const lessonsWithoutQuiz = []
+        
+        // Lấy quiz từ database của từng lesson
         for (const lesson of lessons) {
-            const lessonContent = await this._extractLessonContent(lesson)
-            allContent += `\n\n=== Bài ${lesson.lessonOrder}: ${lesson.title} ===\n\n${lessonContent}`
+            try {
+                // Chỉ lấy quiz đã lưu trong DB (đã được review)
+                const existingQuiz = await prisma.quiz.findFirst({
+                    where: {
+                        lessonId: lesson.id,
+                        isPublished: true
+                    },
+                    orderBy: {
+                        updatedAt: 'desc'
+                    }
+                })
+                
+                if (existingQuiz && existingQuiz.questions) {
+                    try {
+                        const questions = Array.isArray(existingQuiz.questions) 
+                            ? existingQuiz.questions 
+                            : typeof existingQuiz.questions === 'object' && existingQuiz.questions.questions
+                                ? existingQuiz.questions.questions
+                                : []
+                        
+                        if (questions.length > 0) {
+                            // Format và filter questions
+                            const formattedQuestions = questions
+                                .filter(q => includeExplanation ? q.explanation : true)
+                                .slice(0, questionsPerLesson)
+                                .map((q, index) => ({
+                                    id: allQuestions.length + index + 1,
+                                    question: q.question || q.text || '',
+                                    type: q.type || 'multiple_choice',
+                                    options: q.options || {},
+                                    correctAnswer: q.correctAnswer || q.correct_answer || 'A',
+                                    explanation: q.explanation || '',
+                                    lessonId: lesson.id,
+                                    lessonOrder: lesson.lessonOrder,
+                                    lessonTitle: lesson.title,
+                                    source: 'database' // Đánh dấu là từ DB (đã được review)
+                                }))
+                            
+                            allQuestions.push(...formattedQuestions)
+                            logger.debug(
+                                `✅ Added ${formattedQuestions.length} questions from lesson ${lesson.id} (${lesson.title}) - reviewed quiz`
+                            )
+                        } else {
+                            lessonsWithoutQuiz.push(lesson.title)
+                        }
+                    } catch (error) {
+                        logger.warn(`Failed to parse quiz for lesson ${lesson.id}:`, error)
+                        lessonsWithoutQuiz.push(lesson.title)
+                    }
+                } else {
+                    lessonsWithoutQuiz.push(lesson.title)
+                }
+            } catch (error) {
+                logger.warn(`Failed to get quiz for lesson ${lesson.id}:`, error)
+                lessonsWithoutQuiz.push(lesson.title)
+            }
         }
-
-        // Limit content length
-        const maxContentLength = 5000
-        const truncatedContent = allContent.length > maxContentLength
-            ? allContent.substring(0, maxContentLength) + '\n\n[... Nội dung đã được rút gọn ...]'
-            : allContent
-
-        // Generate questions
-        const prompt = this._buildQuizGenerationPrompt(truncatedContent, {
-            numQuestions,
-            difficulty,
-            questionTypes: ['multiple_choice'],
-            includeExplanation
-        })
-
-        const generatedText = await this._generateWithRetry(
-            prompt,
-            [],
-            this._buildSystemPrompt()
-        )
-
-        const questions = this._parseAIResponse(generatedText)
-        const validatedQuestions = this._validateAndFormatQuestions(questions, numQuestions)
+        
+        // Nếu không đủ câu hỏi, thông báo
+        if (allQuestions.length < numQuestions) {
+            logger.warn(
+                `⚠️ Only found ${allQuestions.length}/${numQuestions} questions. ` +
+                `Lessons without quiz: ${lessonsWithoutQuiz.join(', ')}`
+            )
+        }
+        
+        // Re-index IDs
+        const validatedQuestions = allQuestions.slice(0, numQuestions).map((q, index) => ({
+            ...q,
+            id: index + 1
+        }))
+        
+        // Thêm metadata về lessons thiếu quiz (để frontend có thể hiển thị)
+        if (lessonsWithoutQuiz.length > 0) {
+            validatedQuestions.metadata = {
+                totalRequested: numQuestions,
+                totalFound: validatedQuestions.length,
+                lessonsWithoutQuiz: lessonsWithoutQuiz,
+                message: lessonsWithoutQuiz.length > 0 
+                    ? `Một số lessons chưa có quiz: ${lessonsWithoutQuiz.join(', ')}. Vui lòng tạo quiz cho các lessons này trước.`
+                    : null
+            }
+        }
 
         // Cache the result (if enabled)
         if (useCache && validatedQuestions.length > 0) {
@@ -407,4 +561,5 @@ Lưu ý:
 }
 
 export default new AIQuizGenerationService()
+
 
