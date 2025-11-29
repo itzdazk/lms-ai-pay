@@ -1,7 +1,7 @@
 // src/routes/admin-quizzes.routes.js
 import express from 'express'
 import adminQuizzesController from '../controllers/admin-quizzes.controller.js'
-import { authenticate } from '../middlewares/auth.middleware.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isAdmin } from '../middlewares/role.middleware.js'
 import {
     getAdminQuizzesValidator,

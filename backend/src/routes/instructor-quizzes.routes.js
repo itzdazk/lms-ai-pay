@@ -1,7 +1,8 @@
 // src/routes/instructor-quizzes.routes.js
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import instructorQuizzesController from '../controllers/instructor-quizzes.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
+import { authenticate } from '../middlewares/authenticate.middleware.js';
 import { isInstructor } from '../middlewares/role.middleware.js';
 import { isCourseInstructorOrAdmin } from '../middlewares/role.middleware.js';
 import {
@@ -12,7 +13,22 @@ import {
     getQuizAnalyticsValidator,
     publishQuizValidator,
     updateQuizValidator,
+    generateQuizFromLessonValidator,
+    generateQuizFromCourseValidator,
 } from '../validators/quizzes.validator.js';
+
+// Rate limiting cho AI generation (10 requests per 15 minutes)
+const aiGenerationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 phút
+    max: 10, // 10 requests per window
+    message: {
+        success: false,
+        message: 'Too many AI generation requests. Please try again later.',
+        retryAfter: '15 minutes'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 const router = express.Router();
 
@@ -106,6 +122,36 @@ router.get(
     isInstructor,
     getQuizAnalyticsValidator,
     instructorQuizzesController.getQuizAnalytics
+);
+
+/**
+ * @route   POST /api/v1/instructor/quizzes/generate-from-lesson
+ * @desc    Generate quiz questions from lesson using AI
+ * @access  Private (Instructor/Admin)
+ * @body    { lessonId, numQuestions?, difficulty?, includeExplanation?, useCache? }
+ */
+router.post(
+    '/quizzes/generate-from-lesson',
+    authenticate,
+    isInstructor,
+    aiGenerationLimiter, // Rate limiting
+    generateQuizFromLessonValidator,
+    instructorQuizzesController.generateQuizFromLesson
+);
+
+/**
+ * @route   POST /api/v1/instructor/quizzes/generate-from-course
+ * @desc    Generate quiz questions from course using AI
+ * @access  Private (Instructor/Admin)
+ * @body    { courseId, numQuestions?, difficulty?, includeExplanation?, useCache? }
+ */
+router.post(
+    '/quizzes/generate-from-course',
+    authenticate,
+    isInstructor,
+    aiGenerationLimiter, // Rate limiting
+    generateQuizFromCourseValidator,
+    instructorQuizzesController.generateQuizFromCourse
 );
 
 export default router;

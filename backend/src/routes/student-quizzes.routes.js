@@ -1,7 +1,7 @@
 // src/routes/student-quizzes.routes.js
 import express from 'express';
 import studentQuizzesController from '../controllers/student-quizzes.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
+import { authenticate } from '../middlewares/authenticate.middleware.js';
 import { isStudent } from '../middlewares/role.middleware.js';
 import {
     submitQuizValidator,

@@ -246,6 +246,52 @@ const getAdminQuizSubmissionsValidator = [
     validate,
 ];
 
+const generateQuizFromLessonValidator = [
+    body('lessonId')
+        .isInt({ min: 1 })
+        .withMessage('Lesson ID must be a positive integer'),
+    body('numQuestions')
+        .optional()
+        .isInt({ min: 1, max: 20 })
+        .withMessage('Number of questions must be between 1 and 20'),
+    body('difficulty')
+        .optional()
+        .isIn(['easy', 'medium', 'hard'])
+        .withMessage('Difficulty must be one of: easy, medium, hard'),
+    body('includeExplanation')
+        .optional()
+        .isBoolean()
+        .withMessage('includeExplanation must be a boolean'),
+    body('useCache')
+        .optional()
+        .isBoolean()
+        .withMessage('useCache must be a boolean'),
+    validate,
+];
+
+const generateQuizFromCourseValidator = [
+    body('courseId')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    body('numQuestions')
+        .optional()
+        .isInt({ min: 1, max: 30 })
+        .withMessage('Number of questions must be between 1 and 30'),
+    body('difficulty')
+        .optional()
+        .isIn(['easy', 'medium', 'hard'])
+        .withMessage('Difficulty must be one of: easy, medium, hard'),
+    body('includeExplanation')
+        .optional()
+        .isBoolean()
+        .withMessage('includeExplanation must be a boolean'),
+    body('useCache')
+        .optional()
+        .isBoolean()
+        .withMessage('useCache must be a boolean'),
+    validate,
+];
+
 export {
     getQuizByIdValidator,
     getLessonQuizzesValidator,
@@ -263,6 +309,8 @@ export {
     getQuizAnalyticsValidator,
     getAdminQuizzesValidator,
     getAdminQuizSubmissionsValidator,
+    generateQuizFromLessonValidator,
+    generateQuizFromCourseValidator,
 };
 
 

@@ -1,8 +1,10 @@
 // src/controllers/instructor-quizzes.controller.js
 import { asyncHandler } from '../middlewares/error.middleware.js';
-import { PAGINATION } from '../config/constants.js';
+import { PAGINATION, HTTP_STATUS } from '../config/constants.js';
 import ApiResponse from '../utils/response.util.js';
 import quizzesService from '../services/quizzes.service.js';
+import aiQuizGenerationService from '../services/ai-quiz-generation.service.js';
+import { prisma } from '../config/database.config.js';
 
 class InstructorQuizzesController {
     /**
@@ -176,6 +178,141 @@ class InstructorQuizzesController {
             res,
             analytics,
             'Quiz analytics retrieved successfully'
+        );
+    });
+
+    /**
+     * POST /api/v1/instructor/quizzes/generate-from-lesson
+     * Generate quiz questions from lesson using AI
+     */
+    generateQuizFromLesson = asyncHandler(async (req, res) => {
+        const { lessonId } = req.body;
+        const {
+            numQuestions = 5,
+            difficulty = 'medium',
+            includeExplanation = true,
+            useCache = true
+        } = req.body;
+
+        // Verify lesson ownership
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            include: {
+                course: {
+                    select: {
+                        instructorId: true
+                    }
+                }
+            }
+        });
+
+        if (!lesson) {
+            return ApiResponse.error(
+                res,
+                'Lesson not found',
+                HTTP_STATUS.NOT_FOUND
+            );
+        }
+
+        if (lesson.course.instructorId !== req.user.id && req.user.role !== 'admin') {
+            return ApiResponse.error(
+                res,
+                'Unauthorized: You do not have permission to generate quiz for this lesson',
+                HTTP_STATUS.FORBIDDEN
+            );
+        }
+
+        // Generate questions
+        const questions = await aiQuizGenerationService.generateQuizFromLesson(
+            lessonId,
+            {
+                numQuestions: parseInt(numQuestions),
+                difficulty,
+                includeExplanation,
+                useCache
+            }
+        );
+
+        return ApiResponse.success(
+            res,
+            {
+                lessonId,
+                questions,
+                count: questions.length,
+                metadata: {
+                    difficulty,
+                    includeExplanation,
+                    generatedAt: new Date().toISOString()
+                }
+            },
+            'Quiz questions generated successfully',
+            HTTP_STATUS.OK
+        );
+    });
+
+    /**
+     * POST /api/v1/instructor/quizzes/generate-from-course
+     * Generate quiz questions from course using AI
+     */
+    generateQuizFromCourse = asyncHandler(async (req, res) => {
+        const { courseId } = req.body;
+        const {
+            numQuestions = 10,
+            difficulty = 'medium',
+            includeExplanation = true,
+            useCache = true
+        } = req.body;
+
+        // Verify course ownership
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                instructorId: true,
+                title: true
+            }
+        });
+
+        if (!course) {
+            return ApiResponse.error(
+                res,
+                'Course not found',
+                HTTP_STATUS.NOT_FOUND
+            );
+        }
+
+        if (course.instructorId !== req.user.id && req.user.role !== 'admin') {
+            return ApiResponse.error(
+                res,
+                'Unauthorized: You do not have permission to generate quiz for this course',
+                HTTP_STATUS.FORBIDDEN
+            );
+        }
+
+        // Generate questions
+        const questions = await aiQuizGenerationService.generateQuizFromCourse(
+            courseId,
+            {
+                numQuestions: parseInt(numQuestions),
+                difficulty,
+                includeExplanation,
+                useCache
+            }
+        );
+
+        return ApiResponse.success(
+            res,
+            {
+                courseId,
+                questions,
+                count: questions.length,
+                metadata: {
+                    difficulty,
+                    includeExplanation,
+                    generatedAt: new Date().toISOString()
+                }
+            },
+            'Quiz questions generated successfully',
+            HTTP_STATUS.OK
         );
     });
 }

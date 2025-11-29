@@ -986,6 +986,30 @@ class KnowledgeBaseService {
 
         return uniqueWords
     }
+
+    /**
+     * Get transcript text from transcript URL (public method)
+     * Used by AI quiz generation service
+     * @param {string} transcriptUrl - Transcript file URL
+     * @param {number} maxSegments - Maximum number of segments to return (default: 20)
+     * @returns {Promise<string>} Transcript text
+     */
+    async getTranscriptText(transcriptUrl, maxSegments = 20) {
+        try {
+            const segments = await this._getCachedTranscript(transcriptUrl)
+            if (!segments || segments.length === 0) {
+                return ''
+            }
+            
+            return segments
+                .slice(0, maxSegments)
+                .map(seg => seg.text)
+                .join(' ')
+        } catch (error) {
+            logger.warn('Failed to get transcript text:', error)
+            return ''
+        }
+    }
 }
 
 export default new KnowledgeBaseService()
