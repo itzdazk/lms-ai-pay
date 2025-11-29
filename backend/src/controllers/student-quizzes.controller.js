@@ -2,7 +2,7 @@
 import { asyncHandler } from '../middlewares/error.middleware.js';
 import { PAGINATION } from '../config/constants.js';
 import ApiResponse from '../utils/response.util.js';
-import quizzesService from '../services/quizzes.service.js';
+import studentQuizzesService from '../services/student-quizzes.service.js';
 
 class StudentQuizzesController {
     /**
@@ -14,7 +14,7 @@ class StudentQuizzesController {
         const userRole = req.user.role;
         const answers = req.body.answers;
 
-        const submission = await quizzesService.submitQuiz({
+        const submission = await studentQuizzesService.submitQuiz({
             quizId,
             userId,
             userRole,
@@ -42,7 +42,7 @@ class StudentQuizzesController {
             ? parseInt(req.query.limit, 10)
             : Math.min(10, PAGINATION.MAX_LIMIT);
 
-        const result = await quizzesService.getQuizSubmissions({
+        const result = await studentQuizzesService.getQuizSubmissions({
             quizId,
             userId,
             userRole,
@@ -71,7 +71,7 @@ class StudentQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const submission = await quizzesService.getQuizSubmissionById({
+        const submission = await studentQuizzesService.getQuizSubmissionById({
             quizId,
             submissionId,
             userId,
@@ -93,7 +93,7 @@ class StudentQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const summary = await quizzesService.getQuizAttemptsSummary({
+        const summary = await studentQuizzesService.getQuizAttemptsSummary({
             quizId,
             userId,
             userRole,
@@ -114,7 +114,7 @@ class StudentQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const latestResult = await quizzesService.getLatestQuizResult({
+        const latestResult = await studentQuizzesService.getLatestQuizResult({
             quizId,
             userId,
             userRole,

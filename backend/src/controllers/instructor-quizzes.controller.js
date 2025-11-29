@@ -2,7 +2,7 @@
 import { asyncHandler } from '../middlewares/error.middleware.js';
 import { PAGINATION, HTTP_STATUS } from '../config/constants.js';
 import ApiResponse from '../utils/response.util.js';
-import quizzesService from '../services/quizzes.service.js';
+import instructorQuizzesService from '../services/instructor-quizzes.service.js';
 import aiQuizGenerationService from '../services/ai-quiz-generation.service.js';
 import { prisma } from '../config/database.config.js';
 
@@ -15,7 +15,7 @@ class InstructorQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const quiz = await quizzesService.createQuizForLesson({
+        const quiz = await instructorQuizzesService.createQuizForLesson({
             lessonId,
             userId,
             userRole,
@@ -37,7 +37,7 @@ class InstructorQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const quiz = await quizzesService.createQuizForCourse({
+        const quiz = await instructorQuizzesService.createQuizForCourse({
             courseId,
             userId,
             userRole,
@@ -59,7 +59,7 @@ class InstructorQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const quiz = await quizzesService.updateQuiz({
+        const quiz = await instructorQuizzesService.updateQuiz({
             quizId,
             userId,
             userRole,
@@ -81,7 +81,7 @@ class InstructorQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        await quizzesService.deleteQuiz({
+        await instructorQuizzesService.deleteQuiz({
             quizId,
             userId,
             userRole,
@@ -99,7 +99,7 @@ class InstructorQuizzesController {
         const userRole = req.user.role;
         const { isPublished } = req.body;
 
-        const quiz = await quizzesService.setQuizPublishStatus({
+        const quiz = await instructorQuizzesService.setQuizPublishStatus({
             quizId,
             userId,
             userRole,
@@ -138,7 +138,7 @@ class InstructorQuizzesController {
                 ? false
                 : undefined;
 
-        const result = await quizzesService.getInstructorQuizSubmissions({
+        const result = await instructorQuizzesService.getInstructorQuizSubmissions({
             quizId,
             userId,
             userRole,
@@ -168,7 +168,7 @@ class InstructorQuizzesController {
         const userId = req.user.id;
         const userRole = req.user.role;
 
-        const analytics = await quizzesService.getQuizAnalytics({
+        const analytics = await instructorQuizzesService.getQuizAnalytics({
             quizId,
             userId,
             userRole,

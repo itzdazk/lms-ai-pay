@@ -2,7 +2,7 @@
 import { asyncHandler } from '../middlewares/error.middleware.js';
 import { PAGINATION } from '../config/constants.js';
 import ApiResponse from '../utils/response.util.js';
-import quizzesService from '../services/quizzes.service.js';
+import adminQuizzesService from '../services/admin-quizzes.service.js';
 
 class AdminQuizzesController {
     /**
@@ -36,7 +36,7 @@ class AdminQuizzesController {
                     : undefined,
         };
 
-        const result = await quizzesService.getAdminQuizzes({
+        const result = await adminQuizzesService.getAdminQuizzes({
             page,
             limit,
             filters,
@@ -77,7 +77,7 @@ class AdminQuizzesController {
                 ? false
                 : undefined;
 
-        const result = await quizzesService.getAdminQuizSubmissions({
+        const result = await adminQuizzesService.getAdminQuizSubmissions({
             quizId,
             page,
             limit,
