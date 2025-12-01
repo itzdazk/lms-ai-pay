@@ -6,7 +6,6 @@ import {
     TRANSACTION_STATUS,
     PAYMENT_STATUS,
 } from '../config/constants.js'
-import { parseDate } from '../config/vnpay.config.js'
 import notificationsService from './notifications.service.js'
 
 /**
@@ -16,22 +15,24 @@ import notificationsService from './notifications.service.js'
 class VNPayExpirationHandlerService {
     /**
      * Tìm và hủy tất cả transaction VNPay đã hết hạn
-     * expirationMinutes = 5 for test expirationMinutes = 15 for production
+     * @param {number} expirationMinutes - Số phút timeout (default: 15)
+     * @returns {Promise<Object>} Kết quả xử lý
      */
-    async handleExpiredTransactions(expirationMinutes) {
+    async handleExpiredTransactions(expirationMinutes = 15) {
         try {
+            const now = new Date() // JS Date tự động là local time
             const expirationTime = new Date(
-                Date.now() - expirationMinutes * 60 * 1000
+                now.getTime() - expirationMinutes * 60 * 1000
             )
 
-            // Tìm tất cả transaction VNPay PENDING đã quá hạn
+            // Query transactions (PostgreSQL tự động so sánh theo UTC)
             const expiredTransactions =
                 await prisma.paymentTransaction.findMany({
                     where: {
                         paymentGateway: PAYMENT_GATEWAY.VNPAY,
                         status: TRANSACTION_STATUS.PENDING,
                         createdAt: {
-                            lt: expirationTime,
+                            lt: expirationTime, // PostgreSQL tự động convert sang UTC
                         },
                     },
                     include: {
@@ -42,8 +43,12 @@ class VNPayExpirationHandlerService {
                                 paymentStatus: true,
                                 courseId: true,
                                 userId: true,
+                                createdAt: true,
                             },
                         },
+                    },
+                    orderBy: {
+                        createdAt: 'asc', // Xử lý cũ nhất trước
                     },
                 })
 
@@ -57,7 +62,7 @@ class VNPayExpirationHandlerService {
             }
 
             logger.info(
-                `Found ${expiredTransactions.length} expired VNPay transactions to process`
+                `Found ${expiredTransactions.length} expired VNPay transactions`
             )
 
             const results = {
@@ -69,13 +74,29 @@ class VNPayExpirationHandlerService {
             // Process từng transaction
             for (const transaction of expiredTransactions) {
                 try {
+                    const age = now - new Date(transaction.createdAt)
+                    const ageMinutes = Math.floor(age / 60000)
+
+                    logger.info(
+                        `   Processing transaction ${transaction.transactionId}`
+                    )
+                    logger.info(`      Order: ${transaction.order.orderCode}`)
+                    logger.info(
+                        `      Created: ${new Date(transaction.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`
+                    )
+                    logger.info(`      Age: ${ageMinutes} minutes`)
+
                     await this.#handleSingleExpiredTransaction(transaction)
+
                     results.processedCount++
                     results.transactions.push({
                         transactionId: transaction.transactionId,
                         orderCode: transaction.order.orderCode,
+                        ageMinutes,
                         status: 'processed',
                     })
+
+                    logger.info(`    Processed successfully`)
                 } catch (error) {
                     results.failedCount++
                     results.transactions.push({
@@ -84,20 +105,18 @@ class VNPayExpirationHandlerService {
                         status: 'failed',
                         error: error.message,
                     })
-                    logger.error(
-                        `Failed to process expired transaction ${transaction.transactionId}: ${error.message}`
-                    )
+                    logger.error(`    Failed: ${error.message}`)
                 }
             }
 
-            logger.info(
-                `Processed ${results.processedCount} expired VNPay transactions, ${results.failedCount} failed`
-            )
+            logger.info(' VNPay Expiration Check Completed')
+            logger.info(`    Processed: ${results.processedCount}`)
+            logger.info(`    Failed: ${results.failedCount}`)
 
             return results
         } catch (error) {
             logger.error(
-                `Error handling expired VNPay transactions: ${error.message}`
+                ` Error handling expired VNPay transactions: ${error.message}`
             )
             throw error
         }
@@ -105,10 +124,12 @@ class VNPayExpirationHandlerService {
 
     /**
      * Xử lý một transaction đã hết hạn
+     * @private
      */
     async #handleSingleExpiredTransaction(transaction) {
         return await prisma.$transaction(async (tx) => {
             const order = transaction.order
+
             // 1. Update transaction status to FAILED
             await tx.paymentTransaction.update({
                 where: { id: transaction.id },
@@ -119,23 +140,25 @@ class VNPayExpirationHandlerService {
                     gatewayResponse: {
                         ...(transaction.gatewayResponse || {}),
                         expiredAt: new Date().toISOString(),
-                        expiredReason: 'AUTO_EXPIRED_BY_SYSTEM',
+                        expiredReason: 'AUTO_EXPIRED_BY_CRONJOB',
+                        expirationMinutes: 15,
                     },
                 },
             })
 
+            // 2. Update order status nếu vẫn PENDING
             if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
                 await tx.order.update({
                     where: { id: order.id },
                     data: {
                         paymentStatus: PAYMENT_STATUS.FAILED,
+                        notes: 'Payment failed - link expired after 15 minutes',
                     },
                 })
 
-                logger.info(
-                    `Order ${order.orderCode} marked as FAILED - payment link expired`
-                )
-                // Send notification for expired payment
+                logger.info(`      Order ${order.orderCode} → FAILED (expired)`)
+
+                // 3. Send notification
                 const fullOrder = await tx.order.findUnique({
                     where: { id: order.id },
                     include: {
@@ -148,56 +171,34 @@ class VNPayExpirationHandlerService {
                     },
                 })
 
-                if (fullOrder && fullOrder.course) {
-                    await notificationsService.notifyPaymentFailed(
-                        order.userId,
-                        order.id,
-                        order.courseId,
-                        fullOrder.course.title,
-                        'Link thanh toán đã hết hạn'
-                    )
+                if (fullOrder?.course) {
+                    // Fire-and-forget notification (không block transaction)
+                    setImmediate(() => {
+                        notificationsService
+                            .notifyPaymentFailed(
+                                order.userId,
+                                order.id,
+                                order.courseId,
+                                fullOrder.course.title,
+                                'Link thanh toán đã hết hạn (15 phút)'
+                            )
+                            .catch((err) => {
+                                logger.error(
+                                    `Failed to send notification: ${err.message}`
+                                )
+                            })
+                    })
                 }
             } else {
                 logger.info(
-                    `Skipping order ${order.orderCode} - already ${order.paymentStatus}`
+                    `      Order ${order.orderCode} already ${order.paymentStatus} - skipped`
                 )
             }
-
-            logger.info(
-                `Marked VNPay transaction ${transaction.transactionId} as FAILED due to expiration`
-            )
         })
     }
 
     /**
-     * Kiểm tra xem một transaction có hết hạn không (dựa vào vnp_CreateDate)
-     * @param {Object} gatewayResponse - Response từ VNPay
-     * @param {number} expirationMinutes - Số phút timeout
-     * @returns {boolean}
-     */
-    isTransactionExpired(gatewayResponse, expirationMinutes = 15) {
-        if (!gatewayResponse?.vnp_CreateDate) {
-            return false
-        }
-
-        try {
-            const createDate = parseDate(gatewayResponse.vnp_CreateDate)
-            if (!createDate) return false
-
-            const expirationTime = new Date(
-                createDate.getTime() + expirationMinutes * 60 * 1000
-            )
-            return new Date() > expirationTime
-        } catch (error) {
-            logger.error(
-                `Error checking transaction expiration: ${error.message}`
-            )
-            return false
-        }
-    }
-
-    /**
-     * Manual check một order cụ thể
+     * Manual check một order cụ thể (for testing)
      */
     async checkAndFailOrderIfExpired(orderCode, expirationMinutes = 15) {
         try {
@@ -228,7 +229,6 @@ class VNPayExpirationHandlerService {
                 }
             }
 
-            // Chỉ có tối đa 1 transaction
             const transaction = order.paymentTransactions[0]
 
             if (!transaction) {
@@ -240,31 +240,67 @@ class VNPayExpirationHandlerService {
                 }
             }
 
+            const now = new Date()
             const expirationTime = new Date(
-                Date.now() - expirationMinutes * 60 * 1000
+                now.getTime() - expirationMinutes * 60 * 1000
             )
 
-            if (transaction.createdAt >= expirationTime) {
+            if (new Date(transaction.createdAt) >= expirationTime) {
+                const age = now - new Date(transaction.createdAt)
+                const ageMinutes = Math.floor(age / 60000)
+
                 return {
                     orderCode: order.orderCode,
                     paymentStatus: order.paymentStatus,
-                    message: 'Transaction not yet expired',
+                    message: `Transaction not yet expired (age: ${ageMinutes} minutes)`,
                     changed: false,
                 }
             }
 
-            // implified - không cần array
-            await this.#handleSingleExpiredTransaction(transaction)
+            await this.#handleSingleExpiredTransaction({
+                ...transaction,
+                order: {
+                    id: order.id,
+                    orderCode: order.orderCode,
+                    paymentStatus: order.paymentStatus,
+                    courseId: order.courseId,
+                    userId: order.userId,
+                },
+            })
 
             return {
                 orderCode: order.orderCode,
                 transactionId: transaction.transactionId,
-                message: 'Order marked as FAILED',
+                message: 'Order marked as FAILED due to expiration',
                 changed: true,
             }
         } catch (error) {
             logger.error(`Error checking order ${orderCode}: ${error.message}`)
             throw error
+        }
+    }
+
+    /**
+     * Get expiration statistics (for monitoring)
+     */
+    async getExpirationStats() {
+        const stats = await prisma.paymentTransaction.groupBy({
+            by: ['status'],
+            where: {
+                paymentGateway: PAYMENT_GATEWAY.VNPAY,
+                createdAt: {
+                    gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24h
+                },
+            },
+            _count: true,
+        })
+
+        return {
+            last24Hours: stats.reduce((acc, item) => {
+                acc[item.status] = item._count
+                return acc
+            }, {}),
+            timestamp: new Date().toISOString(),
         }
     }
 }
