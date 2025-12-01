@@ -5,6 +5,7 @@ import {
     COURSE_STATUS,
     PAYMENT_GATEWAY,
     PENDING_TIME,
+    TRANSACTION_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import notificationsService from './notifications.service.js'
@@ -584,10 +585,27 @@ class OrdersService {
      * @returns {Promise<object>} Cancelled order
      */
     async cancelOrder(orderId, userId) {
+        // 1. Fetch order với transactions
         const order = await prisma.order.findFirst({
             where: {
                 id: orderId,
                 userId,
+            },
+            include: {
+                paymentTransactions: {
+                    where: {
+                        status: TRANSACTION_STATUS.PENDING,
+                    },
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                },
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                    },
+                },
             },
         })
 
@@ -595,23 +613,105 @@ class OrdersService {
             throw new Error('Order not found')
         }
 
+        // 2. Validate order status
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             throw new Error(
-                `Cannot cancel order with status: ${order.paymentStatus}`
+                `Cannot cancel order with status: ${order.paymentStatus}. Only PENDING orders can be cancelled.`
             )
         }
 
-        const cancelledOrder = await prisma.order.update({
-            where: { id: orderId },
-            data: {
-                paymentStatus: PAYMENT_STATUS.FAILED,
-                notes: 'Cancelled by user',
-            },
+        // 3. Kiểm tra nếu đã có transaction SUCCESS
+        const hasSuccessfulTransaction =
+            await prisma.paymentTransaction.findFirst({
+                where: {
+                    orderId: order.id,
+                    status: TRANSACTION_STATUS.SUCCESS,
+                },
+            })
+
+        if (hasSuccessfulTransaction) {
+            throw new Error(
+                'Cannot cancel order - payment has already been processed successfully'
+            )
+        }
+
+        // 4. Cancel cả Order VÀ tất cả Transactions
+        const result = await prisma.$transaction(async (tx) => {
+            // 4.1. Update all PENDING transactions → FAILED
+            const updatedTransactionsCount =
+                await tx.paymentTransaction.updateMany({
+                    where: {
+                        orderId: order.id,
+                        status: TRANSACTION_STATUS.PENDING,
+                    },
+                    data: {
+                        status: TRANSACTION_STATUS.FAILED,
+                        errorMessage: 'Order cancelled by user',
+                        gatewayResponse: {
+                            cancelledAt: new Date().toISOString(),
+                            cancelledBy: 'user',
+                            cancelReason: 'USER_CANCELLED',
+                        },
+                    },
+                })
+
+            logger.info(
+                `Cancelled ${updatedTransactionsCount.count} pending transaction(s) for order ${order.orderCode}`
+            )
+
+            // 4.2. Update Order → FAILED
+            const cancelledOrder = await tx.order.update({
+                where: { id: orderId },
+                data: {
+                    paymentStatus: PAYMENT_STATUS.FAILED,
+                    notes: 'Cancelled by user',
+                },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                        },
+                    },
+                    paymentTransactions: {
+                        where: {
+                            status: TRANSACTION_STATUS.FAILED,
+                        },
+                        orderBy: {
+                            updatedAt: 'desc',
+                        },
+                        take: 5, // Lấy 5 transaction gần nhất
+                    },
+                },
+            })
+
+            return {
+                order: cancelledOrder,
+                cancelledTransactionsCount: updatedTransactionsCount.count,
+            }
         })
 
-        logger.info(`Order cancelled: ${order.orderCode} by user ${userId}`)
+        logger.info(
+            `Order cancelled: ${order.orderCode} by user ${userId} (${result.cancelledTransactionsCount} transactions cancelled)`
+        )
 
-        return cancelledOrder
+        // 5. Send notification (fire-and-forget)
+        setImmediate(() => {
+            notificationsService
+                .notifyOrderCancelled(
+                    userId,
+                    order.id,
+                    order.courseId,
+                    order.course?.title || 'Unknown Course'
+                )
+                .catch((err) => {
+                    logger.error(
+                        `Failed to send cancellation notification: ${err.message}`
+                    )
+                })
+        })
+
+        return result.order
     }
 
     /**

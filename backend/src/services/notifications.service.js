@@ -4,7 +4,10 @@ import logger from '../config/logger.config.js'
 
 class NotificationsService {
     async getNotifications(userId, options = {}) {
-        const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1
+        const page =
+            Number.isInteger(options.page) && options.page > 0
+                ? options.page
+                : 1
         const limit =
             Number.isInteger(options.limit) && options.limit > 0
                 ? Math.min(options.limit, 100)
@@ -95,7 +98,9 @@ class NotificationsService {
             },
         })
 
-        logger.info(`Notification ${notificationId} marked as read by user ${userId}`)
+        logger.info(
+            `Notification ${notificationId} marked as read by user ${userId}`
+        )
 
         return updated
     }
@@ -147,9 +152,7 @@ class NotificationsService {
             },
         })
 
-        logger.info(
-            `User ${userId} deleted ${result.count} notifications`
-        )
+        logger.info(`User ${userId} deleted ${result.count} notifications`)
     }
 
     async createNotification(data) {
@@ -203,6 +206,24 @@ class NotificationsService {
         }
     }
 
+    async notifyOrderCancelled(userId, orderId, courseId, courseTitle) {
+        try {
+            await this.createNotification({
+                userId,
+                type: 'ORDER_CANCELLED',
+                title: 'Đơn hàng đã bị hủy',
+                message: `Đơn hàng của bạn cho khóa học "${courseTitle}" đã được hủy thành công.`,
+                relatedId: orderId,
+                relatedType: 'ORDER',
+            })
+        } catch (error) {
+            logger.error(
+                `Failed to create order cancellation notification: ${error.message}`,
+                error
+            )
+        }
+    }
+
     async notifyPaymentFailed(userId, orderId, courseId, courseTitle, reason) {
         try {
             await this.createNotification({
@@ -221,7 +242,13 @@ class NotificationsService {
         }
     }
 
-    async notifyLessonCompleted(userId, lessonId, courseId, lessonTitle, courseTitle) {
+    async notifyLessonCompleted(
+        userId,
+        lessonId,
+        courseId,
+        lessonTitle,
+        courseTitle
+    ) {
         try {
             await this.createNotification({
                 userId,
@@ -259,4 +286,3 @@ class NotificationsService {
 }
 
 export default new NotificationsService()
-
