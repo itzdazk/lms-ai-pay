@@ -11,8 +11,11 @@ import {
     messageIdValidator,
     searchValidator,
 } from '../validators/ai.validator.js'
+import aiRecommendationRoutes from './ai-recommendation.routes.js'
 
 const router = express.Router()
+
+router.use('/', aiRecommendationRoutes)
 
 // All routes require authentication
 router.use(authenticate)

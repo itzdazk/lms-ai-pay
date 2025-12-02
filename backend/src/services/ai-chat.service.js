@@ -168,7 +168,7 @@ class AIChatService {
             let usedOllama = false
             let fallbackReason = null
             const responseStartTime = Date.now()
-            
+
             try {
                 // Try Ollama first (even if no knowledge base results)
                 if (ollamaService.enabled) {
@@ -176,33 +176,47 @@ class AIChatService {
                     const healthCheckStart = Date.now()
                     const isOllamaAvailable = await ollamaService.checkHealth()
                     const healthCheckDuration = Date.now() - healthCheckStart
-                    
+
                     if (isOllamaAvailable) {
                         try {
                             // Set timeout for Ollama generation
                             const generationTimeout = 120000 // 120s
                             const timeoutPromise = new Promise((_, reject) => {
-                                setTimeout(() => reject(new Error('Ollama generation timeout')), generationTimeout)
+                                setTimeout(
+                                    () =>
+                                        reject(
+                                            new Error(
+                                                'Ollama generation timeout'
+                                            )
+                                        ),
+                                    generationTimeout
+                                )
                             })
 
-                            const generationPromise = this.generateOllamaResponse(
-                                messageText,
-                                conversationHistory,
-                                context
-                            )
+                            const generationPromise =
+                                this.generateOllamaResponse(
+                                    messageText,
+                                    conversationHistory,
+                                    context
+                                )
 
-                            responseData = await Promise.race([generationPromise, timeoutPromise])
+                            responseData = await Promise.race([
+                                generationPromise,
+                                timeoutPromise,
+                            ])
                             usedOllama = true
-                            const responseDuration = Date.now() - responseStartTime
+                            const responseDuration =
+                                Date.now() - responseStartTime
                             logger.info(
                                 `Ollama response generated in ${responseDuration}ms ` +
-                                `(health check: ${healthCheckDuration}ms, ` +
-                                `hasKnowledgeBase: ${context.searchResults.totalResults > 0})`
+                                    `(health check: ${healthCheckDuration}ms, ` +
+                                    `hasKnowledgeBase: ${context.searchResults.totalResults > 0})`
                             )
                         } catch (ollamaError) {
                             const errorDuration = Date.now() - responseStartTime
-                            fallbackReason = ollamaError.message || 'Unknown error'
-                            
+                            fallbackReason =
+                                ollamaError.message || 'Unknown error'
+
                             // Log error with context
                             if (ollamaError.message?.includes('timeout')) {
                                 logger.warn(
@@ -215,7 +229,7 @@ class AIChatService {
                                     ollamaError.stack
                                 )
                             }
-                            
+
                             // Fallback to template with error context
                             responseData = this.generateTemplateResponse(
                                 context,
@@ -358,7 +372,8 @@ class AIChatService {
                     const isOllamaAvailable = await ollamaService.checkHealth()
                     if (isOllamaAvailable) {
                         // Build system prompt
-                        const systemPrompt = ollamaService.buildSystemPrompt(context)
+                        const systemPrompt =
+                            ollamaService.buildSystemPrompt(context)
 
                         // Stream response from Ollama
                         try {
@@ -378,33 +393,38 @@ class AIChatService {
                             // Extract sources and actions from context
                             if (context.searchResults.transcripts.length > 0) {
                                 sources.push(
-                                    ...context.searchResults.transcripts.slice(0, 3).map((t) => ({
-                                        type: 'transcript',
-                                        lessonId: t.lessonId,
-                                        lessonTitle: t.lessonTitle,
-                                        courseId: t.courseId,
-                                        courseTitle: t.courseTitle,
-                                        timestamp: t.timestamp,
-                                        videoUrl: t.videoUrl,
-                                        excerpt: t.excerpt,
-                                    }))
+                                    ...context.searchResults.transcripts
+                                        .slice(0, 3)
+                                        .map((t) => ({
+                                            type: 'transcript',
+                                            lessonId: t.lessonId,
+                                            lessonTitle: t.lessonTitle,
+                                            courseId: t.courseId,
+                                            courseTitle: t.courseTitle,
+                                            timestamp: t.timestamp,
+                                            videoUrl: t.videoUrl,
+                                            excerpt: t.excerpt,
+                                        }))
                                 )
                             }
                             if (context.searchResults.lessons.length > 0) {
                                 sources.push(
-                                    ...context.searchResults.lessons.slice(0, 2).map((l) => ({
-                                        type: 'lesson',
-                                        lessonId: l.id,
-                                        lessonTitle: l.title,
-                                        courseId: l.courseId,
-                                        courseTitle: l.course?.title,
-                                    }))
+                                    ...context.searchResults.lessons
+                                        .slice(0, 2)
+                                        .map((l) => ({
+                                            type: 'lesson',
+                                            lessonId: l.id,
+                                            lessonTitle: l.title,
+                                            courseId: l.courseId,
+                                            courseTitle: l.course?.title,
+                                        }))
                                 )
                             }
 
                             // Build suggested actions
                             if (context.searchResults.transcripts.length > 0) {
-                                const topTranscript = context.searchResults.transcripts[0]
+                                const topTranscript =
+                                    context.searchResults.transcripts[0]
                                 suggestedActions.push({
                                     type: 'watch_video',
                                     label: 'Xem video',
@@ -416,29 +436,43 @@ class AIChatService {
                                 suggestedActions.push({
                                     type: 'view_lesson',
                                     label: 'Xem bài học',
-                                    lessonId: context.searchResults.lessons[0].id,
+                                    lessonId:
+                                        context.searchResults.lessons[0].id,
                                 })
                             }
                         } catch (streamError) {
                             streamingError = streamError
-                            logger.error('Error during Ollama streaming:', streamError)
+                            logger.error(
+                                'Error during Ollama streaming:',
+                                streamError
+                            )
                             // Continue to fallback
                         }
                     }
 
                     // Fallback to template if Ollama not available or streaming failed
-                    if (!isOllamaAvailable || streamingError || !fullResponse.trim()) {
-                        logger.warn('Falling back to template response (Ollama unavailable or streaming failed)')
+                    if (
+                        !isOllamaAvailable ||
+                        streamingError ||
+                        !fullResponse.trim()
+                    ) {
+                        logger.warn(
+                            'Falling back to template response (Ollama unavailable or streaming failed)'
+                        )
                         const templateResponse = this.generateTemplateResponse(
                             context,
                             messageText
                         )
                         fullResponse = templateResponse.text
                         sources = templateResponse.sources || []
-                        suggestedActions = templateResponse.suggestedActions || []
-                        
+                        suggestedActions =
+                            templateResponse.suggestedActions || []
+
                         // Send as single chunk if not already streaming
-                        if (!fullResponse.includes('\n') || fullResponse.length < 100) {
+                        if (
+                            !fullResponse.includes('\n') ||
+                            fullResponse.length < 100
+                        ) {
                             onChunk({
                                 type: 'ai_chunk',
                                 chunk: fullResponse,
@@ -530,16 +564,18 @@ class AIChatService {
             const sources = []
             if (context.searchResults.transcripts.length > 0) {
                 sources.push(
-                    ...context.searchResults.transcripts.slice(0, 3).map((t) => ({
-                        type: 'transcript',
-                        lessonId: t.lessonId,
-                        lessonTitle: t.lessonTitle,
-                        courseId: t.courseId,
-                        courseTitle: t.courseTitle,
-                        timestamp: t.timestamp,
-                        videoUrl: t.videoUrl,
-                        excerpt: t.excerpt,
-                    }))
+                    ...context.searchResults.transcripts
+                        .slice(0, 3)
+                        .map((t) => ({
+                            type: 'transcript',
+                            lessonId: t.lessonId,
+                            lessonTitle: t.lessonTitle,
+                            courseId: t.courseId,
+                            courseTitle: t.courseTitle,
+                            timestamp: t.timestamp,
+                            videoUrl: t.videoUrl,
+                            excerpt: t.excerpt,
+                        }))
                 )
             }
             if (context.searchResults.lessons.length > 0) {
@@ -617,11 +653,15 @@ class AIChatService {
             return this.generateCourseResponse(searchResults.courses, query)
         }
 
-        // CASE 4: Không tìm thấy gì - nhưng nếu đang hỏi về nội dung bài học và có currentLesson, 
+        // CASE 4: Không tìm thấy gì - nhưng nếu đang hỏi về nội dung bài học và có currentLesson,
         // thì trả về thông tin từ lesson content/description
-        const isAskingAboutContent = /nội dung|content|bài học này|lesson/i.test(query)
+        const isAskingAboutContent =
+            /nội dung|content|bài học này|lesson/i.test(query)
         if (isAskingAboutContent && userContext.currentLesson) {
-            return this.generateLessonContentResponse(userContext.currentLesson, query)
+            return this.generateLessonContentResponse(
+                userContext.currentLesson,
+                query
+            )
         }
 
         // CASE 5: Không tìm thấy gì
@@ -803,9 +843,10 @@ class AIChatService {
         }
 
         if (currentLesson.content) {
-            const contentPreview = currentLesson.content.length > 500
-                ? currentLesson.content.substring(0, 500) + '...'
-                : currentLesson.content
+            const contentPreview =
+                currentLesson.content.length > 500
+                    ? currentLesson.content.substring(0, 500) + '...'
+                    : currentLesson.content
             text += `**Nội dung:**\n${contentPreview}\n\n`
         }
 
@@ -837,8 +878,10 @@ class AIChatService {
         let text = `😔 **Xin lỗi, tôi không tìm thấy thông tin về "${query}"**\n\n`
 
         // Check if query is asking about lesson content
-        const isAskingAboutContent = /nội dung|content|bài học|lesson/i.test(query)
-        
+        const isAskingAboutContent = /nội dung|content|bài học|lesson/i.test(
+            query
+        )
+
         if (isAskingAboutContent && userContext.currentLesson) {
             text += `Tôi không tìm thấy transcript cho bài học hiện tại. `
             text += `Bạn có thể xem lại video bài học hoặc mô tả bài học để biết thêm chi tiết.\n\n`
@@ -886,21 +929,21 @@ class AIChatService {
                     select: { id: true }, // Only need id for verification
                 }),
                 prisma.chatMessage.findMany({
-                where: { conversationId },
-                orderBy: { createdAt: 'asc' },
-                skip: (page - 1) * limit,
-                take: limit,
-                select: {
-                    id: true,
-                    senderType: true,
-                    message: true,
-                    messageType: true,
-                    metadata: true,
-                    isHelpful: true,
-                    feedbackText: true,
-                    createdAt: true,
-                },
-            }),
+                    where: { conversationId },
+                    orderBy: { createdAt: 'asc' },
+                    skip: (page - 1) * limit,
+                    take: limit,
+                    select: {
+                        id: true,
+                        senderType: true,
+                        message: true,
+                        messageType: true,
+                        metadata: true,
+                        isHelpful: true,
+                        feedbackText: true,
+                        createdAt: true,
+                    },
+                }),
                 prisma.chatMessage.count({
                     where: { conversationId },
                 }),
