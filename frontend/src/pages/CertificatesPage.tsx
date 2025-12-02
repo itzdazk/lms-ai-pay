@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Badge } from '../components/ui/badge';
 import {
   Award,
@@ -56,12 +56,12 @@ export function CertificatesPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+            <DarkOutlineButton asChild>
               <Link to="/courses">Khám phá thêm khóa học</Link>
-            </Button>
-            <Button variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+            </DarkOutlineButton>
+            <DarkOutlineButton>
               Tải danh sách chứng chỉ
-            </Button>
+            </DarkOutlineButton>
           </div>
         </div>
 
@@ -87,12 +87,12 @@ export function CertificatesPage() {
             <Award className="h-20 w-20 text-gray-600 mx-auto mb-6" />
             <h2 className="text-2xl mb-2 text-white">Chưa có chứng chỉ nào</h2>
             <p className="text-gray-400 mb-6">Hoàn thành các khóa học để nhận chứng chỉ</p>
-            <Button asChild variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+            <DarkOutlineButton asChild>
               <Link to="/courses">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Khám phá khóa học
               </Link>
-            </Button>
+            </DarkOutlineButton>
           </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -160,23 +160,22 @@ export function CertificatesPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
+                      <DarkOutlineButton
                         size="sm"
-                        className="flex-1 border-[#2D2D2D] !text-white hover:bg-white/10"
+                        className="flex-1"
                         asChild
                       >
                         <Link to={`/certificate/${course.id}`}>
                           <Eye className="h-3 w-3 mr-1" />
                           Xem
                         </Link>
-                      </Button>
-                      <Button variant="outline" size="sm" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+                      </DarkOutlineButton>
+                      <DarkOutlineButton size="sm">
                         <Download className="h-3 w-3" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+                      </DarkOutlineButton>
+                      <DarkOutlineButton size="sm">
                         <Share2 className="h-3 w-3" />
-                      </Button>
+                      </DarkOutlineButton>
                     </div>
                   </CardContent>
                 </Card>
@@ -235,24 +234,20 @@ export function CertificatesPage() {
                 Khám phá thêm khóa học để nhận thêm chứng chỉ và nâng cao kỹ năng
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button
+                <DarkOutlineButton
                   size="lg"
                   asChild
-                  variant="outline"
-                  className="border-[#2D2D2D] !text-white hover:bg-white/10"
                 >
                   <Link to="/courses">
                     <BookOpen className="h-4 w-4 mr-2" />
                     Khám phá khóa học
                   </Link>
-                </Button>
-                <Button
+                </DarkOutlineButton>
+                <DarkOutlineButton
                   size="lg"
-                  variant="outline"
-                  className="border-[#2D2D2D] !text-white hover:bg-white/10"
                 >
                   Chia sẻ thành tích
-                </Button>
+                </DarkOutlineButton>
               </div>
             </CardContent>
           </Card>

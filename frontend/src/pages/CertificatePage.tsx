@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import {
@@ -32,9 +32,9 @@ export function CertificatePage() {
           <p className="text-gray-400 mb-8">
             Bạn cần hoàn thành khóa học để nhận chứng chỉ
           </p>
-          <Button asChild variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+          <DarkOutlineButton asChild>
             <Link to="/dashboard">Quay lại Dashboard</Link>
-          </Button>
+          </DarkOutlineButton>
         </div>
       </div>
     );
@@ -62,26 +62,26 @@ export function CertificatePage() {
       <div className="container mx-auto px-4 py-4">
         {/* Header Actions */}
         <div className="max-w-5xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 no-print bg-[#0F0F0F] border border-[#2D2D2D] rounded-2xl p-4">
-          <Button variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10" asChild>
+          <DarkOutlineButton asChild>
             <Link to="/dashboard">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Quay lại Dashboard
             </Link>
-          </Button>
+          </DarkOutlineButton>
 
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10" onClick={handleDownload}>
+            <DarkOutlineButton onClick={handleDownload}>
               <Download className="h-4 w-4 mr-2" />
               Tải xuống
-            </Button>
-            <Button variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10" onClick={handlePrint}>
+            </DarkOutlineButton>
+            <DarkOutlineButton onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               In
-            </Button>
-            <Button variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+            </DarkOutlineButton>
+            <DarkOutlineButton>
               <Share2 className="h-4 w-4 mr-2" />
               Chia sẻ
-            </Button>
+            </DarkOutlineButton>
           </div>
         </div>
 
@@ -210,30 +210,27 @@ export function CertificatePage() {
                 <h3 className="text-lg text-white">Chia sẻ thành tích của bạn</h3>
               </div>
               <div className="flex flex-wrap justify-center gap-3">
-                <Button
-                  variant="outline"
+                <DarkOutlineButton
                   onClick={() => handleShare('LinkedIn')}
-                    className="gap-2 border-[#2D2D2D] !text-white hover:bg-white/10"
+                  className="gap-2"
                 >
                   <Linkedin className="h-4 w-4 text-[#0077B5]" />
                   LinkedIn
-                </Button>
-                <Button
-                  variant="outline"
+                </DarkOutlineButton>
+                <DarkOutlineButton
                   onClick={() => handleShare('Facebook')}
-                  className="gap-2 border-[#2D2D2D] !text-white hover:bg-white/10"
+                  className="gap-2"
                 >
                   <Facebook className="h-4 w-4 text-[#1877F2]" />
                   Facebook
-                </Button>
-                <Button
-                  variant="outline"
+                </DarkOutlineButton>
+                <DarkOutlineButton
                   onClick={() => handleShare('Twitter')}
-                  className="gap-2 border-[#2D2D2D] !text-white hover:bg-white/10"
+                  className="gap-2"
                 >
                   <Twitter className="h-4 w-4 text-[#1DA1F2]" />
                   Twitter
-                </Button>
+                </DarkOutlineButton>
               </div>
             </div>
           </Card>
@@ -264,12 +261,12 @@ export function CertificatePage() {
             <p className="text-gray-400 mb-4">
               Tiếp tục phát triển kỹ năng của bạn với các khóa học khác
             </p>
-            <Button asChild variant="outline" className="border-[#2D2D2D] !text-white hover:bg-white/10">
+            <DarkOutlineButton asChild>
               <Link to="/courses">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Khám phá khóa học
               </Link>
-            </Button>
+            </DarkOutlineButton>
           </Card>
         </div>
       </div>

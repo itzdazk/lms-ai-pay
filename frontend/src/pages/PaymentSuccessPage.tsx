@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { CheckCircle, Download, ArrowRight } from 'lucide-react';
 import { getCourseById } from '../lib/mockData';
@@ -40,27 +40,24 @@ export function PaymentSuccessPage() {
                 Bạn có thể bắt đầu học ngay bây giờ hoặc truy cập từ Dashboard của bạn.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button
+                <DarkOutlineButton
                   asChild
                   size="lg"
-                  variant="outline"
-                  className="border-[#2D2D2D] !text-white hover:bg-white/10 gap-2"
+                  className="gap-2"
                 >
                   <Link to={course ? `/learn/${course.id}` : '/dashboard'}>
                     Bắt đầu học ngay
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
-                </Button>
-                <Button
+                </DarkOutlineButton>
+                <DarkOutlineButton
                   asChild
-                  variant="outline"
                   size="lg"
-                  className="border-[#2D2D2D] !text-white hover:bg-white/10"
                 >
                   <Link to="/dashboard">
                     Về Dashboard
                   </Link>
-                </Button>
+                </DarkOutlineButton>
               </div>
             </div>
 
@@ -68,13 +65,10 @@ export function PaymentSuccessPage() {
               <p className="text-sm text-gray-400 mb-4">
                 Bạn sẽ nhận được email xác nhận thanh toán trong vài phút tới.
               </p>
-              <Button
-                variant="outline"
-                className="border-[#2D2D2D] !text-white hover:bg-white/10"
-              >
+              <DarkOutlineButton>
                 <Download className="h-4 w-4 mr-2" />
                 Tải hóa đơn
-              </Button>
+              </DarkOutlineButton>
             </div>
           </CardContent>
         </Card>

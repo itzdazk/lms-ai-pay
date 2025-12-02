@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -46,8 +47,8 @@ export function CourseDetailPage() {
     <div className="bg-background">
       {/* Hero Section */}
       <section className="bg-background border-b border-gray-200">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
-          <div className="mb-6">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-2 pb-7">
+          <div className="mb-3">
             <Button
               variant="outline"
               className="border-2 border-[#2D2D2D] !text-white bg-black hover:bg-[#1F1F1F] rounded-lg"
@@ -173,16 +174,15 @@ export function CourseDetailPage() {
                         <span className="font-semibold">{enrollment.progress_percentage}%</span>
                       </div>
                       <Progress value={enrollment.progress_percentage} />
-                      <Button
+                      <DarkOutlineButton
                         asChild
-                        variant="outline"
-                        className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                        className="w-full"
                         size="lg"
                       >
                         <Link to={`/learn/${course.id}`}>
                           Tiếp tục học
                         </Link>
-                      </Button>
+                      </DarkOutlineButton>
                     </div>
                   ) : (
                     <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white" size="lg">
@@ -193,10 +193,10 @@ export function CourseDetailPage() {
                   )}
 
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1 border-[#2D2D2D] !text-white hover:bg-white/10">
+                    <DarkOutlineButton className="flex-1">
                       <Share2 className="h-4 w-4 mr-2" />
                       Chia sẻ
-                    </Button>
+                    </DarkOutlineButton>
                   </div>
 
                   {/* Course Includes */}
@@ -233,14 +233,14 @@ export function CourseDetailPage() {
       </section>
 
       {/* Main Content */}
-      <section className="container mx-auto px-4 md:px-6 lg:px-8 py-12 bg-background">
+      <section className="container mx-auto px-4 md:px-6 lg:px-8 py-7 bg-background">
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="w-full justify-start bg-[#1A1A1A] border border-[#2D2D2D]">
-                <TabsTrigger value="overview" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">Tổng quan</TabsTrigger>
-                <TabsTrigger value="curriculum" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">Nội dung</TabsTrigger>
-                <TabsTrigger value="reviews" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">Đánh giá</TabsTrigger>
+                <TabsTrigger value="overview" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Tổng quan</TabsTrigger>
+                <TabsTrigger value="curriculum" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Nội dung</TabsTrigger>
+                <TabsTrigger value="reviews" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Đánh giá</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -316,7 +316,7 @@ export function CourseDetailPage() {
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-2">
-                            {courseLessons.map((lesson, index) => (
+                            {courseLessons.map((lesson) => (
                               <div
                                 key={lesson.id}
                                 className="flex items-center justify-between p-3 hover:bg-[#1F1F1F] rounded-lg cursor-pointer"

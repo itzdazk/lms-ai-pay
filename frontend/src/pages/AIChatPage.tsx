@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   Send,
   Bot,
@@ -182,8 +182,8 @@ export function AIChatPage() {
                 </div>
                 <Tabs defaultValue="general" className="w-auto">
                   <TabsList className="bg-[#1A1A1A] border border-[#2D2D2D]">
-                    <TabsTrigger value="general" className="text-xs !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">Tổng quát</TabsTrigger>
-                    <TabsTrigger value="course" className="text-xs !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
+                    <TabsTrigger value="general" className="text-xs !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Tổng quát</TabsTrigger>
+                    <TabsTrigger value="course" className="text-xs !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">
                       <BookOpen className="h-3 w-3 mr-1" />
                       Khóa học
                     </TabsTrigger>
@@ -277,7 +277,7 @@ export function AIChatPage() {
                         <Button
                           key={index}
                           variant="outline"
-                          className="h-auto py-3 px-4 text-left justify-start whitespace-normal border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F] hover:text-white"
+                          className="h-auto py-3 px-4 text-left justify-start whitespace-normal !bg-black border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F] hover:text-white"
                           onClick={() => handleSuggestedQuestion(question)}
                         >
                           <Sparkles className="h-4 w-4 mr-2 flex-shrink-0 text-purple-500" />

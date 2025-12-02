@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -17,14 +17,13 @@ import {
   ArrowRight,
   ChevronLeft
 } from 'lucide-react';
-import { getQuizById, calculateQuizScore, getQuizAttempts, currentUser, getCourseById } from '../lib/mockData';
+import { getQuizById, calculateQuizScore, getQuizAttempts, currentUser } from '../lib/mockData';
 import { toast } from 'sonner';
 
 type QuizState = 'start' | 'taking' | 'results';
 
 export function QuizPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const quiz = getQuizById(id || '');
   const [state, setState] = useState<QuizState>('start');
   const [answers, setAnswers] = useState<number[]>([]);
@@ -65,7 +64,6 @@ export function QuizPage() {
     );
   }
 
-  const course = getCourseById(quiz.course_id);
   const attempts = getQuizAttempts(currentUser.id, quiz.id);
   const attemptsLeft = quiz.max_attempts - attempts.length;
 
@@ -124,7 +122,7 @@ export function QuizPage() {
             <CardContent className="px-4 py-3.5">
               <Button
                 variant="outline"
-                className="w-full bg-[#1A1A1A] border-2 border-[#2D2D2D] !rounded-lg hover:bg-[#2D2D2D] !text-white"
+                className="w-full !bg-black border-2 border-[#2D2D2D] !rounded-lg hover:!bg-gray-800 !text-white"
                 asChild
               >
                 <Link to={`/learn/${quiz.course_id}`}>
@@ -221,7 +219,7 @@ export function QuizPage() {
               <Button 
                 size="lg" 
                 variant="outline"
-                className="w-full bg-[#1A1A1A] border-[#2D2D2D] hover:bg-[#2D2D2D] !text-white" 
+                className="w-full !bg-black hover:!bg-gray-900 border-[#2D2D2D] !text-white" 
                 onClick={handleStartQuiz}
                 disabled={attemptsLeft <= 0}
               >
@@ -469,7 +467,7 @@ export function QuizPage() {
               {!passed && attemptsLeft > 1 && (
                 <Button
                   variant="outline"
-                  className="flex-1 bg-[#1A1A1A] border-2 border-[#2D2D2D] !rounded-lg hover:bg-[#2D2D2D] !text-white"
+                  className="flex-1 !bg-gray-800 dark:!bg-black border-2 border-[#2D2D2D] !rounded-lg  !text-white"
                   onClick={handleRetry}
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
@@ -478,7 +476,7 @@ export function QuizPage() {
               )}
               <Button
                 variant="outline"
-                className="flex-1 bg-[#1A1A1A] border-2 border-[#2D2D2D] !rounded-lg hover:bg-[#2D2D2D] !text-white"
+                className="flex-1 !bg-gray-800 dark:!bg-black border-2 border-[#2D2D2D] !rounded-lg !text-white"
                 asChild
               >
                 <Link to={`/learn/${quiz.course_id}`}>

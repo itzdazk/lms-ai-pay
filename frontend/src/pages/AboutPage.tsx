@@ -83,10 +83,10 @@ export function AboutPage() {
         />
         <div className="absolute inset-0 bg-background/85" />
         <div className="container mx-auto px-4 py-12 md:py-28 text-center relative z-10">
-          <h1 className="text-4xl md:text-5xl mb-6 text-white drop-shadow-lg">
+          <h1 className="text-4xl md:text-5xl mb-6 text-black dark:text-white drop-shadow-lg">
             Nền tảng học tập thế hệ mới
           </h1>
-          <p className="text-xl text-gray-200 max-w-3xl mx-auto drop-shadow">
+          <p className="text-xl text-black dark:text-gray-200 max-w-3xl mx-auto drop-shadow">
             EduLearn là nền tảng học tập trực tuyến tích hợp AI, giúp hàng triệu người 
             học viên phát triển kỹ năng và đạt được mục tiêu nghề nghiệp.
           </p>
@@ -245,13 +245,15 @@ export function AboutPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
               href="/courses" 
-              className="inline-flex items-center justify-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors"
+              className="inline-flex items-center justify-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors dark:border dark:border-white/20"
             >
               Khám phá khóa học
             </a>
             <a 
               href="/register" 
-              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-100 transition-colors dark:border-[#2D2D2D] dark:text-white dark:hover:bg-white/10"
+              className="inline-flex items-center justify-center px-6 py-3
+               border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-100
+                transition-colors dark:border-[#2D2D2D] dark:text-white dark:hover:bg-white/10"
             >
               Đăng ký miễn phí
             </a>

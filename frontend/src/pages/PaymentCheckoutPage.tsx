@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
@@ -277,9 +278,8 @@ export function PaymentCheckoutPage() {
                     </label>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                  <DarkOutlineButton
+                    className="w-full"
                     size="lg"
                     onClick={handlePayment}
                     disabled={isProcessing || !agreeTerms}
@@ -295,7 +295,7 @@ export function PaymentCheckoutPage() {
                         Thanh toán {formatPrice(finalPrice)}
                       </>
                     )}
-                  </Button>
+                  </DarkOutlineButton>
 
                   <p className="text-xs text-center text-gray-500">
                     Bạn sẽ được chuyển đến trang thanh toán an toàn

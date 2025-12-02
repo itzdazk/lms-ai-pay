@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
@@ -29,7 +30,6 @@ export function VideoPlayerPage() {
   const course = getCourseById(id || '');
   const [selectedLesson, setSelectedLesson] = useState(mockLessons[0]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(35);
 
   if (!course) {
     return (
@@ -66,12 +66,12 @@ export function VideoPlayerPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild className="border-[#2D2D2D] !text-white hover:bg-white/10">
+              <DarkOutlineButton size="sm" asChild>
                 <Link to="/ai-chat">
                   <MessageCircle className="h-4 w-4 mr-2" />
                   AI Tutor
                 </Link>
-              </Button>
+              </DarkOutlineButton>
             </div>
           </div>
         </div>
@@ -100,7 +100,7 @@ export function VideoPlayerPage() {
                     <div className="h-1 bg-white/30 rounded-full overflow-hidden cursor-pointer group">
                       <div 
                         className="h-full bg-white transition-all group-hover:bg-white/90"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `35%` }}
                       />
                     </div>
                   </div>
@@ -162,12 +162,12 @@ export function VideoPlayerPage() {
             {/* Tabs */}
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="w-full bg-[#1A1A1A] border border-[#2D2D2D]">
-                <TabsTrigger value="overview" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">Tổng quan</TabsTrigger>
-                <TabsTrigger value="transcript" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
+                <TabsTrigger value="overview" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Tổng quan</TabsTrigger>
+                <TabsTrigger value="transcript" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">
                   <FileText className="h-4 w-4 mr-2" />
                   Transcript
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
+                <TabsTrigger value="notes" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">
                   <BookOpen className="h-4 w-4 mr-2" />
                   Ghi chú
                 </TabsTrigger>
@@ -246,7 +246,7 @@ export function VideoPlayerPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-1">
-                        {courseLessons.map((lesson, index) => (
+                        {courseLessons.map((lesson) => (
                           <div
                             key={lesson.id}
                             onClick={() => setSelectedLesson(lesson)}
@@ -280,26 +280,24 @@ export function VideoPlayerPage() {
                 </Accordion>
 
                 <div className="mt-4 pt-4 border-t border-[#2D2D2D] space-y-2">
-                  <Button
-                    variant="outline"
-                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                  <DarkOutlineButton
+                    className="w-full"
                     asChild
                   >
                     <Link to="/ai-chat">
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Hỏi AI Tutor
                     </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                  </DarkOutlineButton>
+                  <DarkOutlineButton
+                    className="w-full"
                     asChild
                   >
                     <Link to="/quiz/1">
                       <ClipboardList className="h-4 w-4 mr-2" />
                       Làm Quiz
                     </Link>
-                  </Button>
+                  </DarkOutlineButton>
                 </div>
               </CardContent>
             </Card>
