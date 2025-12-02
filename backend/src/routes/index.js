@@ -3,6 +3,9 @@ import express from 'express'
 import authRoutes from './auth.routes.js'
 import userRoutes from './users.routes.js'
 import courseRoutes from './course.routes.js'
+import quizzesRoutes from './quizzes.routes.js'
+import studentQuizzesRoutes from './student-quizzes.routes.js'
+import instructorQuizzesRoutes from './instructor-quizzes.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 import lessonsRoutes from './lessons.routes.js'
@@ -17,6 +20,7 @@ import ordersRoutes from './orders.routes.js'
 import adminOrderRoutes from './admin-order.routes.js'
 import paymentsRoutes from './payments.routes.js'
 import transactionsRoutes from './transactions.routes.js'
+import adminQuizzesRoutes from './admin-quizzes.routes.js'
 import searchRoutes from './search.routes.js'
 import notificationsRoutes from './notifications.routes.js'
 import uploadRoutes from './upload.routes.js'
@@ -41,8 +45,11 @@ router.get('/', (req, res) => {
             categories: '/api/v1/categories',
             tags: '/api/v1/tags',
             lessons: '/api/v1/lessons',
+            quizzes: '/api/v1/quizzes',
+            studentQuizzes: '/api/v1/quizzes',
             instructorCourses: '/api/v1/instructor/courses',
             instructorLessons: '/api/v1/instructor/courses/:courseId/lessons',
+            instructorQuizzes: '/api/v1/instructor/quizzes',
             adminCourses: '/api/v1/admin/courses',
             enrollments: '/api/v1/enrollments',
             progress: '/api/v1/progress',
@@ -51,13 +58,13 @@ router.get('/', (req, res) => {
             adminOrders: '/api/v1/admin/orders',
             payments: '/api/v1/payments',
             transactions: '/api/v1/transactions',
+            adminQuizzes: '/api/v1/admin/quizzes',
             search: '/api/v1/search',
             notifications: '/api/v1/notifications',
             uploads: '/api/v1/uploads',
             health: '/api/v1/health',
             adminDashboard: '/api/v1/dashboard/admin',
             ai: '/api/v1/ai',
-
             // More endpoints will be available when routes are enabled
         },
     })
@@ -76,6 +83,9 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes)
 router.use('/users', userRoutes)
 router.use('/courses', courseRoutes)
+router.use('/', quizzesRoutes) // Public quiz endpoints
+router.use('/', studentQuizzesRoutes) // Student quiz endpoints
+router.use('/instructor', instructorQuizzesRoutes) // Instructor quiz endpoints
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/lessons', lessonsRoutes)
@@ -88,6 +98,7 @@ router.use('/dashboard/student', studentDashboardRoutes)
 router.use('/dashboard/instructor', instructorDashboardRoutes)
 router.use('/orders', ordersRoutes)
 router.use('/admin/orders', adminOrderRoutes)
+router.use('/admin/quizzes', adminQuizzesRoutes) // Admin quiz endpoints
 router.use('/payments', paymentsRoutes)
 router.use('/transactions', transactionsRoutes)
 router.use('/search', searchRoutes)
