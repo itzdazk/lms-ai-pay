@@ -130,6 +130,33 @@ class VNPayExpirationHandlerService {
         return await prisma.$transaction(async (tx) => {
             const order = transaction.order
 
+            const currentOrder = await tx.order.findUnique({
+                where: { id: order.id },
+                select: { paymentStatus: true },
+            })
+
+            if (currentOrder.paymentStatus !== PAYMENT_STATUS.PENDING) {
+                logger.info(
+                    `      Order ${order.orderCode} already ${currentOrder.paymentStatus} - skipping expiration`
+                )
+
+                // Vẫn update transaction nếu nó PENDING
+                await tx.paymentTransaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: TRANSACTION_STATUS.FAILED,
+                        errorMessage: 'Order already cancelled/processed',
+                        gatewayResponse: {
+                            ...(transaction.gatewayResponse || {}),
+                            skippedAt: new Date().toISOString(),
+                            skipReason: `ORDER_ALREADY_${currentOrder.paymentStatus}`,
+                        },
+                    },
+                })
+
+                return
+            }
+
             // 1. Update transaction status to FAILED
             await tx.paymentTransaction.update({
                 where: { id: transaction.id },
