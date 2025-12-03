@@ -1,6 +1,7 @@
 // src/validators/upload.validator.js
 import { query, param } from 'express-validator'
 import { validate } from '../middlewares/validate.middleware.js'
+import { HTTP_STATUS, UPLOAD_TYPES } from '../config/constants.js'
 
 /**
  * Validator for file upload
@@ -13,13 +14,15 @@ const uploadFileValidator = [
         .isString()
         .withMessage('Type must be a string')
         .isIn([
-            'avatar',
-            'thumbnail',
-            'general',
-            'lesson',
-            'preview',
-            'transcript',
-            'material',
+            UPLOAD_TYPES.IMAGE.AVATAR,
+            UPLOAD_TYPES.IMAGE.THUMBNAIL,
+            UPLOAD_TYPES.IMAGE.GENERAL,
+            UPLOAD_TYPES.VIDEO.LESSON,
+            UPLOAD_TYPES.VIDEO.PREVIEW,
+            UPLOAD_TYPES.VIDEO.GENERAL,
+            UPLOAD_TYPES.DOCUMENT.TRANSCRIPT,
+            UPLOAD_TYPES.DOCUMENT.MATERIAL,
+            UPLOAD_TYPES.DOCUMENT.GENERAL,
         ])
         .withMessage('Invalid file type'),
 
@@ -38,7 +41,7 @@ const uploadFileValidator = [
     // Custom validation for file
     (req, res, next) => {
         if (!req.file) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'No file uploaded',
             })

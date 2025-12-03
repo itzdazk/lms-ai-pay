@@ -6,6 +6,7 @@ import {
     USER_ROLES,
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
@@ -181,7 +182,9 @@ class InstructorCourseService {
         })
 
         if (existingCourse) {
-            throw new Error('Course with this slug already exists')
+            const error = new Error('Course with this slug already exists')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Verify category exists
@@ -190,7 +193,9 @@ class InstructorCourseService {
         })
 
         if (!category) {
-            throw new Error('Category not found')
+            const error = new Error('Category not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // Create course with tags
@@ -305,7 +310,16 @@ class InstructorCourseService {
         })
 
         if (!existingCourse) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership
+        if (existingCourse.instructorId !== instructorId) {
+            const error = new Error('You do not have permission to manage this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         const {
@@ -371,7 +385,9 @@ class InstructorCourseService {
             })
 
             if (slugExists) {
-                throw new Error('Course with this slug already exists')
+                const error = new Error('Course with this slug already exists')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
             }
 
             updateData.slug = newSlug
@@ -384,7 +400,9 @@ class InstructorCourseService {
             })
 
             if (!category) {
-                throw new Error('Category not found')
+                const error = new Error('Category not found')
+                error.statusCode = HTTP_STATUS.NOT_FOUND
+                throw error
             }
         }
 
@@ -510,14 +528,25 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership
+        if (course.instructorId !== instructorId) {
+            const error = new Error('You do not have permission to manage this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Check if course has enrollments
         if (course._count.enrollments > 0) {
-            throw new Error(
+            const error = new Error(
                 'Cannot delete course with active enrollments. Please archive it instead.'
             )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Delete course (cascade will handle related records)
@@ -542,7 +571,9 @@ class InstructorCourseService {
     async changeCourseStatus(courseId, instructorId, status) {
         // Validate status
         if (!Object.values(COURSE_STATUS).includes(status)) {
-            throw new Error('Invalid status')
+            const error = new Error('Invalid status')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Check if course exists and belongs to instructor
@@ -567,15 +598,26 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership FIRST before any validation
+        if (course.instructorId !== instructorId) {
+            const error = new Error('You do not have permission to manage this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Validate publishing requirements
         if (status === COURSE_STATUS.PUBLISHED) {
             if (course._count.lessons === 0) {
-                throw new Error(
+                const error = new Error(
                     'Cannot publish course without any published lessons'
                 )
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
             }
 
             // Additional validation can be added here
@@ -707,7 +749,11 @@ class InstructorCourseService {
             },
         })
 
-        if (!course) throw new Error('Course not found')
+        if (!course) {
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
 
         const thumbnailUrl = `/uploads/thumbnails/${file.filename}`
 
@@ -763,7 +809,11 @@ class InstructorCourseService {
             },
         })
 
-        if (!course) throw new Error('Course not found')
+        if (!course) {
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
 
         const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
 
@@ -817,7 +867,16 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership
+        if (course.instructorId !== instructorId) {
+            const error = new Error('You do not have permission to manage this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Verify all tags exist
@@ -830,7 +889,9 @@ class InstructorCourseService {
         })
 
         if (tags.length !== tagIds.length) {
-            throw new Error('One or more tags not found')
+            const error = new Error('One or more tags not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // Get existing tags
@@ -847,7 +908,9 @@ class InstructorCourseService {
         )
 
         if (newTagIds.length === 0) {
-            throw new Error('All tags are already associated with this course')
+            const error = new Error('All tags are already associated with this course')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Add new tags
@@ -909,7 +972,16 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership
+        if (course.instructorId !== instructorId) {
+            const error = new Error('You do not have permission to manage this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Check if tag exists in course
@@ -923,7 +995,9 @@ class InstructorCourseService {
         })
 
         if (!courseTag) {
-            throw new Error('Tag is not associated with this course')
+            const error = new Error('Tag is not associated with this course')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // Remove tag
@@ -988,7 +1062,16 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership
+        if (course.instructorId !== instructorId) {
+            const error = new Error('You do not have permission to manage this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Get course overview stats

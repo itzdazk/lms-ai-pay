@@ -2,7 +2,7 @@
 import { prisma } from '../config/database.config.js'
 import BcryptUtil from '../utils/bcrypt.util.js'
 import logger from '../config/logger.config.js'
-import { USER_ROLES, USER_STATUS } from '../config/constants.js'
+import { USER_ROLES, USER_STATUS, HTTP_STATUS } from '../config/constants.js'
 import path from 'path'
 import fs from 'fs'
 
@@ -147,7 +147,9 @@ class UsersService {
         })
 
         if (!user) {
-            throw new Error('User not found')
+            const error = new Error('User not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // Verify current password
@@ -157,16 +159,38 @@ class UsersService {
         )
 
         if (!isPasswordValid) {
-            throw new Error('Current password is incorrect')
+            const error = new Error('Current password is incorrect')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Hash new password
         const newPasswordHash = await BcryptUtil.hash(newPassword)
 
+        // Double-check user still exists before updating (race condition protection)
+        const userStillExists = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true },
+        })
+
+        if (!userStillExists) {
+            const error = new Error('User not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
         // Update password
-        await prisma.user.update({
+        const updatedUser = await prisma.user.update({
             where: { id: userId },
             data: { passwordHash: newPasswordHash },
+        }).catch((error) => {
+            if (error.code === 'P2025') {
+                // Record not found
+                const notFoundError = new Error('User not found')
+                notFoundError.statusCode = HTTP_STATUS.NOT_FOUND
+                throw notFoundError
+            }
+            throw error
         })
 
         logger.info(`Password changed for user: ${user.userName} (${user.id})`)

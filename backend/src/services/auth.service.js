@@ -2,7 +2,7 @@
 import { prisma } from '../config/database.config.js'
 import BcryptUtil from '../utils/bcrypt.util.js'
 import JWTUtil from '../utils/jwt.util.js'
-import { USER_STATUS, USER_ROLES } from '../config/constants.js'
+import { USER_STATUS, USER_ROLES, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import emailService from './email.service.js'
 
@@ -28,10 +28,14 @@ class AuthService {
 
         if (existingUser) {
             if (existingUser.email === email) {
-                throw new Error('Email already exists')
+                const error = new Error('Email already exists')
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
             }
             if (existingUser.userName === userName) {
-                throw new Error('userName already exists')
+                const error = new Error('userName already exists')
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
             }
         }
 
@@ -118,12 +122,16 @@ class AuthService {
         })
 
         if (!user) {
-            throw new Error('Invalid email or password')
+            const error = new Error('Invalid email or password')
+            error.statusCode = HTTP_STATUS.UNAUTHORIZED
+            throw error
         }
 
         // Check if user is active
         if (user.status !== USER_STATUS.ACTIVE) {
-            throw new Error('Your account is not active')
+            const error = new Error('Your account is not active')
+            error.statusCode = HTTP_STATUS.UNAUTHORIZED
+            throw error
         }
 
         // Verify password
@@ -133,7 +141,9 @@ class AuthService {
         )
 
         if (!isPasswordValid) {
-            throw new Error('Invalid email or password')
+            const error = new Error('Invalid email or password')
+            error.statusCode = HTTP_STATUS.UNAUTHORIZED
+            throw error
         }
 
         // Update last login

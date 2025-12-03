@@ -4,6 +4,7 @@ import knowledgeBaseService from './knowledge-base.service.js'
 import ollamaService from './ollama.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
+import { HTTP_STATUS, AI_INTERACTION_TYPES } from '../config/constants.js'
 
 class AIChatService {
     /**
@@ -27,9 +28,9 @@ class AIChatService {
                 if (course) {
                     validCourseId = courseId
                 } else {
-                    logger.warn(
-                        `Course ${courseId} not found, creating conversation without course context`
-                    )
+                    const error = new Error('Course not found')
+                    error.statusCode = HTTP_STATUS.NOT_FOUND
+                    throw error
                 }
             }
 
@@ -52,9 +53,9 @@ class AIChatService {
                         }
                     }
                 } else {
-                    logger.warn(
-                        `Lesson ${lessonId} not found, creating conversation without lesson context`
-                    )
+                    const error = new Error('Lesson not found')
+                    error.statusCode = HTTP_STATUS.NOT_FOUND
+                    throw error
                 }
             }
 
@@ -72,11 +73,11 @@ class AIChatService {
             }
 
             // Determine context type
-            let contextType = 'GENERAL_CHAT'
+            let contextType = AI_INTERACTION_TYPES.GENERAL_CHAT
             if (validLessonId) {
-                contextType = 'LESSON_HELP'
+                contextType = AI_INTERACTION_TYPES.LESSON_HELP
             } else if (validCourseId) {
-                contextType = 'COURSE_OVERVIEW'
+                contextType = AI_INTERACTION_TYPES.COURSE_OVERVIEW
             }
 
             const conversation = await prisma.conversation.create({
@@ -133,7 +134,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             // 2. Lưu message của user
@@ -328,7 +331,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             // 2. Lưu message của user
@@ -950,7 +955,9 @@ class AIChatService {
             ])
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             return {
@@ -984,7 +991,9 @@ class AIChatService {
             })
 
             if (!message) {
-                throw new Error('Message not found or access denied')
+                const error = new Error('Message not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             const updated = await prisma.chatMessage.update({
@@ -1075,7 +1084,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             await prisma.conversation.update({
@@ -1103,7 +1114,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             // Cascade delete messages (handled by Prisma)

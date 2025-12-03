@@ -1,6 +1,6 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS } from '../config/constants.js'
+import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import path from 'path'
@@ -71,7 +71,9 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // Only return published lessons for non-instructors
@@ -107,11 +109,15 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         if (!lesson.videoUrl) {
-            throw new Error('Video not available for this lesson')
+            const error = new Error('Video not available for this lesson')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         return lesson
@@ -145,11 +151,15 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         if (!lesson.transcriptUrl) {
-            throw new Error('Transcript not available for this lesson')
+            const error = new Error('Transcript not available for this lesson')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         return lesson

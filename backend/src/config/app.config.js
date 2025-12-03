@@ -1,6 +1,18 @@
 // src/config/app.config.js
 import dotenv from 'dotenv'
-dotenv.config()
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+import { JWT_EXPIRY } from './constants.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+// Load .env.test in test environment, otherwise load .env
+if (process.env.NODE_ENV === 'test') {
+    dotenv.config({ path: resolve(__dirname, '../../.env.test') })
+} else {
+    dotenv.config()
+}
 
 const config = {
     // Server
@@ -16,9 +28,9 @@ const config = {
     // node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
     JWT_SECRET:
         process.env.JWT_SECRET || 'your-jwt-secret-change-in-production',
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || JWT_EXPIRY.ACCESS_TOKEN,
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
-    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || JWT_EXPIRY.REFRESH_TOKEN,
 
     // Cookie
     COOKIE_SECRET: process.env.COOKIE_SECRET || 'your-cookie-secret',

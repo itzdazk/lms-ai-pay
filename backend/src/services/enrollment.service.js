@@ -4,6 +4,7 @@ import {
     ENROLLMENT_STATUS,
     COURSE_STATUS,
     PAYMENT_STATUS,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import ordersService from './orders.service.js'
@@ -177,7 +178,9 @@ class EnrollmentService {
         })
 
         if (!enrollment) {
-            throw new Error('Enrollment not found')
+            const error = new Error('Enrollment not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         logger.info(
@@ -338,11 +341,15 @@ class EnrollmentService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available for enrollment')
+            const error = new Error('Course is not available for enrollment')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Check if already enrolled
@@ -356,7 +363,9 @@ class EnrollmentService {
         })
 
         if (existingEnrollment) {
-            throw new Error('You are already enrolled in this course')
+            const error = new Error('You are already enrolled in this course')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Calculate final price
@@ -453,9 +462,11 @@ class EnrollmentService {
 
         // If course is PAID, create order automatically
         if (!paymentGateway) {
-            throw new Error(
+            const error = new Error(
                 'Payment gateway is required for paid courses. Please provide paymentGateway (VNPay or MoMo).'
             )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Create order automatically
@@ -510,13 +521,23 @@ class EnrollmentService {
             },
         })
 
-        if (!order) throw new Error('Order not found')
-        if (order.paymentStatus !== PAYMENT_STATUS.PAID)
-            throw new Error(
+        if (!order) {
+            const error = new Error('Order not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+        if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
+            const error = new Error(
                 `Cannot enroll from unpaid order. Status: ${order.paymentStatus}`
             )
-        if (order.course.status !== COURSE_STATUS.PUBLISHED)
-            throw new Error('Course is not available for enrollment')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+        if (order.course.status !== COURSE_STATUS.PUBLISHED) {
+            const error = new Error('Course is not available for enrollment')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
 
         // Check if already enrolled (idempotent)
         const existingEnrollment = await prisma.enrollment.findUnique({

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
-import { USER_ROLES } from '../config/constants.js'
+import { USER_ROLES, HTTP_STATUS, UPLOAD_TYPES, UPLOAD_STATUS } from '../config/constants.js'
 import lessonsService from './lessons.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -75,11 +75,11 @@ class UploadService {
                 courseId,
                 lessonId,
                 uploadedAt: new Date(),
-                status: 'completed', // Hoặc 'processing' nếu cần xử lý thêm
+                status: UPLOAD_STATUS.COMPLETED, // Hoặc UPLOAD_STATUS.PROCESSING nếu cần xử lý thêm
             }
 
             // Nếu là video bài học, dùng lessons service để xử lý
-            if (type === 'lesson' && lessonId) {
+            if (type === UPLOAD_TYPES.VIDEO.LESSON && lessonId) {
                 const resolvedCourseId =
                     courseId || (await this._getLessonCourseId(lessonId))
 
@@ -115,7 +115,7 @@ class UploadService {
             }
 
             // Nếu là video preview khóa học, cập nhật course
-            if (type === 'preview' && courseId) {
+            if (type === UPLOAD_TYPES.VIDEO.PREVIEW && courseId) {
                 await prisma.course.update({
                     where: { id: courseId },
                     data: { videoPreviewUrl: fileUrl },
@@ -167,7 +167,7 @@ class UploadService {
             }
 
             // Nếu là transcript, cập nhật lesson
-            if (type === 'transcript' && lessonId) {
+            if (type === UPLOAD_TYPES.DOCUMENT.TRANSCRIPT && lessonId) {
                 await prisma.lesson.update({
                     where: { id: lessonId },
                     data: { transcriptUrl: fileUrl },
@@ -219,7 +219,9 @@ class UploadService {
             }
 
             if (!fileFound) {
-                throw new Error('File not found')
+                const error = new Error('File not found')
+                error.statusCode = HTTP_STATUS.NOT_FOUND
+                throw error
             }
 
             // Kiểm tra quyền: chỉ owner hoặc admin mới được xóa
@@ -231,9 +233,11 @@ class UploadService {
                 fileUserId &&
                 fileUserId !== userId
             ) {
-                throw new Error(
+                const error = new Error(
                     'You do not have permission to delete this file'
                 )
+                error.statusCode = HTTP_STATUS.FORBIDDEN
+                throw error
             }
 
             // Xóa file vật lý
@@ -280,7 +284,7 @@ class UploadService {
                     fileInfo = {
                         id: fileId,
                         exists: true,
-                        status: 'completed', // Hoặc 'processing' nếu đang xử lý
+                        status: UPLOAD_STATUS.COMPLETED, // Hoặc UPLOAD_STATUS.PROCESSING nếu đang xử lý
                         size: stats.size,
                         uploadedAt: stats.birthtime,
                         url: `${config.SERVER_URL}/uploads/${path.basename(dir)}/${fileId}`,
@@ -305,7 +309,9 @@ class UploadService {
             return fileInfo
         } catch (error) {
             logger.error('Error checking upload status:', error)
-            throw new Error('Failed to check upload status')
+            const err = new Error('Failed to check upload status')
+            err.statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR
+            throw err
         }
     }
 
@@ -402,19 +408,19 @@ class UploadService {
      */
     _getUploadFolder(type, category) {
         if (category === 'image') {
-            if (type === 'avatar') return 'avatars'
-            if (type === 'thumbnail') return 'thumbnails'
+            if (type === UPLOAD_TYPES.IMAGE.AVATAR) return 'avatars'
+            if (type === UPLOAD_TYPES.IMAGE.THUMBNAIL) return 'thumbnails'
             return 'thumbnails' // general images go to thumbnails
         }
 
         if (category === 'video') {
-            if (type === 'lesson') return 'videos'
-            if (type === 'preview') return 'video-previews'
+            if (type === UPLOAD_TYPES.VIDEO.LESSON) return 'videos'
+            if (type === UPLOAD_TYPES.VIDEO.PREVIEW) return 'video-previews'
             return 'videos'
         }
 
         if (category === 'document') {
-            if (type === 'transcript') return 'transcripts'
+            if (type === UPLOAD_TYPES.DOCUMENT.TRANSCRIPT) return 'transcripts'
             return 'transcripts' // general documents go to transcripts
         }
 

@@ -2,6 +2,7 @@
 import aiRecommendationService from '../services/ai-recommendation.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
+import { HTTP_STATUS } from '../config/constants.js'
 
 class AIRecommendationController {
     /**
@@ -26,7 +27,7 @@ class AIRecommendationController {
             res,
             recommendations,
             'Recommendations retrieved successfully',
-            200,
+            HTTP_STATUS.OK,
             {
                 total: recommendations.length,
                 limit: parseInt(limit),
@@ -53,7 +54,7 @@ class AIRecommendationController {
             res,
             similarCourses,
             'Similar courses retrieved successfully',
-            200,
+            HTTP_STATUS.OK,
             {
                 total: similarCourses.length,
                 limit: parseInt(limit),

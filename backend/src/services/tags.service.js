@@ -1,6 +1,6 @@
 // src/services/tags.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS } from '../config/constants.js'
+import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
 class TagsService {
@@ -81,7 +81,9 @@ class TagsService {
         })
 
         if (!tag) {
-            throw new Error('Tag not found')
+            const error = new Error('Tag not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         return tag
@@ -98,7 +100,9 @@ class TagsService {
         })
 
         if (!tag) {
-            throw new Error('Tag not found')
+            const error = new Error('Tag not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         const { page = 1, limit = 20, level, sort = 'newest' } = query
@@ -213,7 +217,9 @@ class TagsService {
         })
 
         if (existingTag) {
-            throw new Error('Tag with this slug already exists')
+            const error = new Error('Tag with this slug already exists')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         // Check if name already exists
@@ -222,7 +228,9 @@ class TagsService {
         })
 
         if (existingTagByName) {
-            throw new Error('Tag with this name already exists')
+            const error = new Error('Tag with this name already exists')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
         }
 
         const tag = await prisma.tag.create({
@@ -248,7 +256,9 @@ class TagsService {
         })
 
         if (!existingTag) {
-            throw new Error('Tag not found')
+            const error = new Error('Tag not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // If slug is being updated, check for uniqueness
@@ -258,7 +268,9 @@ class TagsService {
             })
 
             if (slugExists) {
-                throw new Error('Tag with this slug already exists')
+                const error = new Error('Tag with this slug already exists')
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
             }
         }
 
@@ -269,7 +281,9 @@ class TagsService {
             })
 
             if (nameExists) {
-                throw new Error('Tag with this name already exists')
+                const error = new Error('Tag with this name already exists')
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
             }
         }
 
@@ -300,7 +314,9 @@ class TagsService {
         })
 
         if (!tag) {
-            throw new Error('Tag not found')
+            const error = new Error('Tag not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
         // Note: We allow deleting tags even if they have courses
