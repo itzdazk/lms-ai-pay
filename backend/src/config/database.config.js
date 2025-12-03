@@ -1,4 +1,15 @@
 // src/config/database.config.js
+// Load .env.test first if in test environment (before PrismaClient is created)
+import dotenv from 'dotenv'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+if (process.env.NODE_ENV === 'test') {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
+    dotenv.config({ path: resolve(__dirname, '../../.env.test') })
+}
+
 import { PrismaClient } from '@prisma/client'
 import logger from './logger.config.js'
 

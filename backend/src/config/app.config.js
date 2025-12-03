@@ -1,6 +1,17 @@
 // src/config/app.config.js
 import dotenv from 'dotenv'
-dotenv.config()
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+// Load .env.test in test environment, otherwise load .env
+if (process.env.NODE_ENV === 'test') {
+    dotenv.config({ path: resolve(__dirname, '../../.env.test') })
+} else {
+    dotenv.config()
+}
 
 const config = {
     // Server

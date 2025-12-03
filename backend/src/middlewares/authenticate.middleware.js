@@ -34,6 +34,11 @@ const authenticate = async (req, res, next) => {
             return ApiResponse.unauthorized(res, error.message)
         }
 
+        // Validate decoded token has userId
+        if (!decoded || !decoded.userId) {
+            return ApiResponse.unauthorized(res, 'Invalid token payload')
+        }
+
         // Check if user exists and is active (giữ nguyên)
         const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
