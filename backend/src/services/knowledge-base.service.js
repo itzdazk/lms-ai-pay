@@ -986,6 +986,96 @@ class KnowledgeBaseService {
 
         return uniqueWords
     }
+
+    /**
+     * Get transcript text from transcript URL (public method)
+     * Used by AI quiz generation service
+     * @param {string} transcriptUrl - Transcript file URL
+     * @param {number} maxSegments - Maximum number of segments to return (default: 20)
+     * @returns {Promise<string>} Transcript text
+     */
+    async getTranscriptText(transcriptUrl, maxSegments = 20) {
+        try {
+            const segments = await this._getCachedTranscript(transcriptUrl)
+            if (!segments || segments.length === 0) {
+                return ''
+            }
+            
+            return segments
+                .slice(0, maxSegments)
+                .map(seg => seg.text)
+                .join(' ')
+        } catch (error) {
+            logger.warn('Failed to get transcript text:', error)
+            return ''
+        }
+    }
+
+    /**
+     * Get full transcript text (all segments) from transcript URL (public method)
+     * Used by AI quiz generation service when transcript is the primary content source
+     * @param {string} transcriptUrl - Transcript file URL
+     * @returns {Promise<string>} Full transcript text
+     */
+    async getFullTranscriptText(transcriptUrl) {
+        try {
+            const segments = await this._getCachedTranscript(transcriptUrl)
+            if (!segments || segments.length === 0) {
+                return ''
+            }
+            
+            // Return all segments (no limit)
+            return segments.map(seg => seg.text).join(' ')
+        } catch (error) {
+            logger.warn('Failed to get full transcript text:', error)
+            return ''
+        }
+    }
+
+    /**
+     * Get representative transcript text (sampled segments) from transcript URL
+     * Lấy segments đại diện từ transcript để đảm bảo bao phủ toàn bộ nội dung
+     * Thay vì chỉ lấy đầu + cuối, lấy segments cách đều nhau
+     * @param {string} transcriptUrl - Transcript file URL
+     * @param {number} maxSegments - Maximum number of segments to return
+     * @returns {Promise<string>} Representative transcript text
+     */
+    async getRepresentativeTranscriptText(transcriptUrl, maxSegments = 50) {
+        try {
+            const segments = await this._getCachedTranscript(transcriptUrl)
+            if (!segments || segments.length === 0) {
+                return ''
+            }
+
+            // Nếu số segments ít hơn maxSegments, lấy tất cả
+            if (segments.length <= maxSegments) {
+                return segments.map(seg => seg.text).join(' ')
+            }
+
+            // Lấy segments cách đều nhau để đại diện cho toàn bộ transcript
+            // Ví dụ: 100 segments, maxSegments=20 → lấy segments 0, 5, 10, 15, 20, ..., 95
+            const step = Math.floor(segments.length / maxSegments)
+            const sampledSegments = []
+            
+            for (let i = 0; i < segments.length; i += step) {
+                sampledSegments.push(segments[i])
+                if (sampledSegments.length >= maxSegments) break
+            }
+
+            // Đảm bảo luôn có segment đầu và cuối
+            if (sampledSegments[0] !== segments[0]) {
+                sampledSegments.unshift(segments[0])
+            }
+            if (sampledSegments[sampledSegments.length - 1] !== segments[segments.length - 1]) {
+                sampledSegments.push(segments[segments.length - 1])
+            }
+
+            return sampledSegments.map(seg => seg.text).join(' ')
+        } catch (error) {
+            logger.warn('Failed to get representative transcript text:', error)
+            return ''
+        }
+    }
 }
 
 export default new KnowledgeBaseService()

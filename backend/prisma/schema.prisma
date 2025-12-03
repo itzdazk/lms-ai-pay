@@ -350,6 +350,7 @@ model Quiz {
   questions       Json
   passingScore    Int      @default(70) @map("passing_score")
   attemptsAllowed Int      @default(1) @map("attempts_allowed")
+  timeLimitMinutes Int?    @map("time_limit_minutes")
   isPublished     Boolean  @default(true) @map("is_published")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -372,13 +373,15 @@ model QuizSubmission {
   quizId      Int      @map("quiz_id")
   quiz        Quiz     @relation(fields: [quizId], references: [id])
   answers     Json
-  score       Decimal? @db.Decimal(5, 2)
-  isPassed    Boolean? @map("is_passed")
-  submittedAt DateTime @default(now()) @map("submitted_at") @db.Timestamptz
+  score       Decimal?  @db.Decimal(5, 2)
+  isPassed    Boolean?  @map("is_passed")
+  startedAt   DateTime? @map("started_at") @db.Timestampz
+  submittedAt DateTime  @default(now()) @map("submitted_at") @db.Timestampz
 
   @@index([userId])
   @@index([quizId])
   @@index([submittedAt])
+  @@index([startedAt])
   @@map("quiz_submissions")
 }
 
