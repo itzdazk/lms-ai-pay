@@ -392,7 +392,10 @@ describe('Instructor Quizzes API', () => {
             const response = await request(app)
                 .delete(`/api/v1/instructor/quizzes/${quizToDelete.id}`)
                 .set('Authorization', `Bearer ${instructorToken}`)
-                .expect(204);
+                .expect(200);
+
+            expect(response.body.success).toBe(true);
+            expect(response.body.message).toContain('deleted successfully');
 
             // Verify deleted
             const deleted = await prisma.quiz.findUnique({

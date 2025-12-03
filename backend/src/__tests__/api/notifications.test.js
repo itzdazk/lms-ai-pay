@@ -426,7 +426,10 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .delete(`/api/v1/notifications/${notification.id}`)
                 .set('Authorization', `Bearer ${userToken}`)
-                .expect(204);
+                .expect(200);
+
+            expect(response.body.success).toBe(true);
+            expect(response.body.message).toContain('deleted successfully');
 
             // Verify deleted
             const deleted = await prisma.notification.findUnique({
@@ -481,7 +484,10 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .delete('/api/v1/notifications')
                 .set('Authorization', `Bearer ${userToken}`)
-                .expect(204);
+                .expect(200);
+
+            expect(response.body.success).toBe(true);
+            expect(response.body.message).toContain('deleted successfully');
 
             // Verify deleted
             const count = await prisma.notification.count({
@@ -502,10 +508,13 @@ describe('Notifications API', () => {
                 },
             });
 
-            await request(app)
+            const response = await request(app)
                 .delete('/api/v1/notifications')
                 .set('Authorization', `Bearer ${userToken}`)
-                .expect(204);
+                .expect(200);
+
+            expect(response.body.success).toBe(true);
+            expect(response.body.message).toContain('deleted successfully');
 
             // Verify other user's notification still exists
             const otherUserCount = await prisma.notification.count({
