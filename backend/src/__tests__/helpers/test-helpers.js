@@ -89,6 +89,21 @@ export async function createTestCategory(data = {}) {
 }
 
 /**
+ * Create a test tag
+ */
+export async function createTestTag(data = {}) {
+    const defaultData = {
+        name: `Test Tag ${Date.now()}`,
+        slug: `test-tag-${Date.now()}`,
+        description: 'Test tag description',
+    };
+
+    return prisma.tag.create({
+        data: { ...defaultData, ...data },
+    });
+}
+
+/**
  * Create a test course
  */
 export async function createTestCourse(instructorId, data = {}) {
@@ -109,6 +124,28 @@ export async function createTestCourse(instructorId, data = {}) {
     };
 
     return prisma.course.create({
+        data: { ...defaultData, ...data },
+    });
+}
+
+/**
+ * Create a test lesson
+ */
+export async function createTestLesson(courseId, data = {}) {
+    const defaultData = {
+        title: `Test Lesson ${Date.now()}`,
+        slug: `test-lesson-${Date.now()}`,
+        description: 'Test lesson description',
+        content: 'Test lesson content',
+        courseId,
+        lessonOrder: 1,
+        videoUrl: 'https://example.com/video.mp4',
+        videoDuration: 600, // 10 minutes in seconds
+        isPublished: true,
+        isPreview: false,
+    };
+
+    return prisma.lesson.create({
         data: { ...defaultData, ...data },
     });
 }
@@ -184,6 +221,16 @@ export async function cleanupTestData() {
                 OR: [
                     { name: { contains: 'Test Category' } },
                     { slug: { contains: 'test-category' } },
+                ],
+            },
+        });
+
+        // Delete test tags
+        await prisma.tag.deleteMany({
+            where: {
+                OR: [
+                    { name: { contains: 'Test Tag' } },
+                    { slug: { contains: 'test-tag' } },
                 ],
             },
         });
