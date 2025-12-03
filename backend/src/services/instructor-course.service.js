@@ -6,6 +6,7 @@ import {
     USER_ROLES,
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
@@ -182,7 +183,7 @@ class InstructorCourseService {
 
         if (existingCourse) {
             const error = new Error('Course with this slug already exists')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -193,7 +194,7 @@ class InstructorCourseService {
 
         if (!category) {
             const error = new Error('Category not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -310,14 +311,14 @@ class InstructorCourseService {
 
         if (!existingCourse) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership
         if (existingCourse.instructorId !== instructorId) {
             const error = new Error('You do not have permission to manage this course')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -385,7 +386,7 @@ class InstructorCourseService {
 
             if (slugExists) {
                 const error = new Error('Course with this slug already exists')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
             }
 
@@ -400,7 +401,7 @@ class InstructorCourseService {
 
             if (!category) {
                 const error = new Error('Category not found')
-                error.statusCode = 404
+                error.statusCode = HTTP_STATUS.NOT_FOUND
                 throw error
             }
         }
@@ -528,14 +529,14 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership
         if (course.instructorId !== instructorId) {
             const error = new Error('You do not have permission to manage this course')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -544,7 +545,7 @@ class InstructorCourseService {
             const error = new Error(
                 'Cannot delete course with active enrollments. Please archive it instead.'
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -571,7 +572,7 @@ class InstructorCourseService {
         // Validate status
         if (!Object.values(COURSE_STATUS).includes(status)) {
             const error = new Error('Invalid status')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -598,14 +599,14 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership FIRST before any validation
         if (course.instructorId !== instructorId) {
             const error = new Error('You do not have permission to manage this course')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -615,7 +616,7 @@ class InstructorCourseService {
                 const error = new Error(
                     'Cannot publish course without any published lessons'
                 )
-                error.statusCode = 400
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
 
@@ -750,7 +751,7 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -810,7 +811,7 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -867,14 +868,14 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership
         if (course.instructorId !== instructorId) {
             const error = new Error('You do not have permission to manage this course')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -889,7 +890,7 @@ class InstructorCourseService {
 
         if (tags.length !== tagIds.length) {
             const error = new Error('One or more tags not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -908,7 +909,7 @@ class InstructorCourseService {
 
         if (newTagIds.length === 0) {
             const error = new Error('All tags are already associated with this course')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -972,14 +973,14 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership
         if (course.instructorId !== instructorId) {
             const error = new Error('You do not have permission to manage this course')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -995,7 +996,7 @@ class InstructorCourseService {
 
         if (!courseTag) {
             const error = new Error('Tag is not associated with this course')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -1062,14 +1063,14 @@ class InstructorCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership
         if (course.instructorId !== instructorId) {
             const error = new Error('You do not have permission to manage this course')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 

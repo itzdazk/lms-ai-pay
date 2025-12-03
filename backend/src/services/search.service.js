@@ -1,6 +1,6 @@
 // backend/src/services/search.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS, USER_STATUS, USER_ROLES } from '../config/constants.js'
+import { COURSE_STATUS, USER_STATUS, USER_ROLES, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
 class SearchService {
@@ -418,7 +418,7 @@ class SearchService {
     async processVoiceSearch(transcript) {
         if (!transcript || transcript.trim().length === 0) {
             const error = new Error('Transcript is required for voice search')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 

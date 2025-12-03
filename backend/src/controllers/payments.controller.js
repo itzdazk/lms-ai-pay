@@ -2,6 +2,7 @@ import paymentService from '../services/payment.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
 import logger from '../config/logger.config.js'
+import { HTTP_STATUS } from '../config/constants.js'
 
 class PaymentsController {
     // ==================== MoMo Methods ====================
@@ -47,13 +48,13 @@ class PaymentsController {
                 req.body,
                 req.ip
             )
-            return res.status(200).json({
+            return res.status(HTTP_STATUS.OK).json({
                 resultCode: 0,
                 message: 'Success',
                 data: result,
             })
         } catch (error) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 resultCode: -1,
                 message: error.message || 'Webhook processing failed',
             })
@@ -126,12 +127,12 @@ class PaymentsController {
             )
 
             // VNPay expects specific response format
-            return res.status(200).json({
+            return res.status(HTTP_STATUS.OK).json({
                 RspCode: result.RspCode || '00',
                 Message: result.Message || 'Confirm Success',
             })
         } catch (error) {
-            return res.status(200).json({
+            return res.status(HTTP_STATUS.OK).json({
                 RspCode: '99',
                 Message: error.message || 'Webhook processing failed',
             })

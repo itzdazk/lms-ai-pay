@@ -1,6 +1,7 @@
 // src/middlewares/lesson.middleware.js
 import { prisma } from '../config/database.config.js'
 import ApiResponse from '../utils/response.util.js'
+import { HTTP_STATUS } from '../config/constants.js'
 
 /**
  * Check if lesson exists and belongs to course
@@ -36,7 +37,7 @@ const checkLessonExists = async (req, res, next) => {
         req.lesson = lesson
         next()
     } catch (error) {
-        return ApiResponse.error(res, 'Error checking lesson', 500)
+        return ApiResponse.error(res, 'Error checking lesson', HTTP_STATUS.INTERNAL_SERVER_ERROR)
     }
 }
 

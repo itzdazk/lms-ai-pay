@@ -1,6 +1,7 @@
 // src/validators/upload.validator.js
 import { query, param } from 'express-validator'
 import { validate } from '../middlewares/validate.middleware.js'
+import { HTTP_STATUS } from '../config/constants.js'
 
 /**
  * Validator for file upload
@@ -38,7 +39,7 @@ const uploadFileValidator = [
     // Custom validation for file
     (req, res, next) => {
         if (!req.file) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'No file uploaded',
             })

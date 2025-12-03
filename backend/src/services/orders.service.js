@@ -6,6 +6,7 @@ import {
     PAYMENT_GATEWAY,
     PENDING_TIME,
     TRANSACTION_STATUS,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import notificationsService from './notifications.service.js'
@@ -64,7 +65,7 @@ class OrdersService {
             const error = new Error(
                 `Invalid payment gateway. Must be one of: ${validGateways.join(', ')}`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -82,13 +83,13 @@ class OrdersService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
             const error = new Error('Course is not available for enrollment')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -101,7 +102,7 @@ class OrdersService {
             const error = new Error(
                 'Cannot create order for free course. Please use free enrollment instead.'
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -117,7 +118,7 @@ class OrdersService {
 
         if (existingEnrollment) {
             const error = new Error('You are already enrolled in this course')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -357,7 +358,7 @@ class OrdersService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -365,7 +366,7 @@ class OrdersService {
         // Note: Add admin check if needed
         if (order.userId !== userId) {
             const error = new Error('Unauthorized access to this order')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -415,7 +416,7 @@ class OrdersService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -423,7 +424,7 @@ class OrdersService {
         // Note: Add admin check if needed
         if (order.userId !== userId) {
             const error = new Error('Unauthorized access to this order')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -453,7 +454,7 @@ class OrdersService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -492,7 +493,7 @@ class OrdersService {
             const error = new Error(
                 `Cannot update order to PAID. Current status: ${order.paymentStatus}`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -633,7 +634,7 @@ class OrdersService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -642,7 +643,7 @@ class OrdersService {
             const error = new Error(
                 `Cannot cancel order with status: ${order.paymentStatus}. Only PENDING orders can be cancelled.`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -659,7 +660,7 @@ class OrdersService {
             const error = new Error(
                 'Cannot cancel order - payment has already been processed successfully'
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 

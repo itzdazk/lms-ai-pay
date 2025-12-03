@@ -1,6 +1,6 @@
 // src/services/course.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS, COURSE_LEVEL } from '../config/constants.js'
+import { COURSE_STATUS, COURSE_LEVEL, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
 class CourseService {
@@ -331,7 +331,7 @@ class CourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -437,7 +437,7 @@ class CourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -481,7 +481,7 @@ class CourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -558,7 +558,7 @@ class CourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -622,7 +622,7 @@ class CourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 

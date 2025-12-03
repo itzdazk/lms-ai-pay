@@ -1,6 +1,6 @@
 // src/services/tags.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS } from '../config/constants.js'
+import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
 class TagsService {
@@ -82,7 +82,7 @@ class TagsService {
 
         if (!tag) {
             const error = new Error('Tag not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -101,7 +101,7 @@ class TagsService {
 
         if (!tag) {
             const error = new Error('Tag not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -218,7 +218,7 @@ class TagsService {
 
         if (existingTag) {
             const error = new Error('Tag with this slug already exists')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -229,7 +229,7 @@ class TagsService {
 
         if (existingTagByName) {
             const error = new Error('Tag with this name already exists')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -257,7 +257,7 @@ class TagsService {
 
         if (!existingTag) {
             const error = new Error('Tag not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -269,7 +269,7 @@ class TagsService {
 
             if (slugExists) {
                 const error = new Error('Tag with this slug already exists')
-                error.statusCode = 400
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
         }
@@ -282,7 +282,7 @@ class TagsService {
 
             if (nameExists) {
                 const error = new Error('Tag with this name already exists')
-                error.statusCode = 400
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
         }
@@ -315,7 +315,7 @@ class TagsService {
 
         if (!tag) {
             const error = new Error('Tag not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 

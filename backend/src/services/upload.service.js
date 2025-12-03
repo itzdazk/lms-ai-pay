@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
-import { USER_ROLES } from '../config/constants.js'
+import { USER_ROLES, HTTP_STATUS } from '../config/constants.js'
 import lessonsService from './lessons.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -220,7 +220,7 @@ class UploadService {
 
             if (!fileFound) {
                 const error = new Error('File not found')
-                error.statusCode = 404
+                error.statusCode = HTTP_STATUS.NOT_FOUND
                 throw error
             }
 
@@ -236,7 +236,7 @@ class UploadService {
                 const error = new Error(
                     'You do not have permission to delete this file'
                 )
-                error.statusCode = 403
+                error.statusCode = HTTP_STATUS.FORBIDDEN
                 throw error
             }
 
@@ -310,7 +310,7 @@ class UploadService {
         } catch (error) {
             logger.error('Error checking upload status:', error)
             const err = new Error('Failed to check upload status')
-            err.statusCode = 500
+            err.statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR
             throw err
         }
     }

@@ -2,7 +2,7 @@
 import { prisma } from '../config/database.config.js'
 import BcryptUtil from '../utils/bcrypt.util.js'
 import logger from '../config/logger.config.js'
-import { USER_ROLES, USER_STATUS } from '../config/constants.js'
+import { USER_ROLES, USER_STATUS, HTTP_STATUS } from '../config/constants.js'
 import path from 'path'
 import fs from 'fs'
 
@@ -148,7 +148,7 @@ class UsersService {
 
         if (!user) {
             const error = new Error('User not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -160,7 +160,7 @@ class UsersService {
 
         if (!isPasswordValid) {
             const error = new Error('Current password is incorrect')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -175,7 +175,7 @@ class UsersService {
 
         if (!userStillExists) {
             const error = new Error('User not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -187,7 +187,7 @@ class UsersService {
             if (error.code === 'P2025') {
                 // Record not found
                 const notFoundError = new Error('User not found')
-                notFoundError.statusCode = 404
+                notFoundError.statusCode = HTTP_STATUS.NOT_FOUND
                 throw notFoundError
             }
             throw error

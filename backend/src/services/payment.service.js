@@ -6,6 +6,7 @@ import {
     TRANSACTION_STATUS,
     USER_ROLES,
     PAGINATION,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
@@ -235,41 +236,41 @@ class PaymentService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
         if (order.userId !== userId) {
             const error = new Error('You are not authorized to pay for this order')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
         if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY) {
             const error = new Error('Order is not assigned to VNPay')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
             const error = new Error('Order has already been paid')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
             const error = new Error('Order has already been refunded')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
                 `Order cannot be paid in status ${order.paymentStatus}`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
         const amount = normalizeAmount(order.finalPrice)
         if (amount <= 0) {
             const error = new Error('Order amount must be greater than 0')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -406,31 +407,31 @@ class PaymentService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (order.userId !== userId) {
             const error = new Error('You are not authorized to pay for this order')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
         if (order.paymentGateway !== PAYMENT_GATEWAY.MOMO) {
             const error = new Error('Order is not assigned to MoMo payment gateway')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
             const error = new Error('Order has already been paid')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
         if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
             const error = new Error('Order has already been refunded')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -438,7 +439,7 @@ class PaymentService {
             const error = new Error(
                 `Order cannot be paid in status ${order.paymentStatus}`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -640,7 +641,7 @@ class PaymentService {
     async refundOrder(orderId, adminUser, amountInput = null, reason = null) {
         if (adminUser.role !== USER_ROLES.ADMIN) {
             const error = new Error('Only administrators can process refunds')
-            error.statusCode = 403
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -659,13 +660,13 @@ class PaymentService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
             const error = new Error('Only paid orders can be refunded')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -675,7 +676,7 @@ class PaymentService {
             const error = new Error(
                 'No successful transaction found for this order to refund'
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 

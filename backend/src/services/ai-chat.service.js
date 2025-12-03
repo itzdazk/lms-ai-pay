@@ -4,6 +4,7 @@ import knowledgeBaseService from './knowledge-base.service.js'
 import ollamaService from './ollama.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
+import { HTTP_STATUS } from '../config/constants.js'
 
 class AIChatService {
     /**
@@ -28,7 +29,7 @@ class AIChatService {
                     validCourseId = courseId
                 } else {
                     const error = new Error('Course not found')
-                    error.statusCode = 404
+                    error.statusCode = HTTP_STATUS.NOT_FOUND
                     throw error
                 }
             }
@@ -53,7 +54,7 @@ class AIChatService {
                     }
                 } else {
                     const error = new Error('Lesson not found')
-                    error.statusCode = 404
+                    error.statusCode = HTTP_STATUS.NOT_FOUND
                     throw error
                 }
             }

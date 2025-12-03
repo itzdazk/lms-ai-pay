@@ -1,6 +1,6 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS } from '../config/constants.js'
+import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import path from 'path'
@@ -72,7 +72,7 @@ class LessonsService {
 
         if (!lesson) {
             const error = new Error('Lesson not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -110,13 +110,13 @@ class LessonsService {
 
         if (!lesson) {
             const error = new Error('Lesson not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (!lesson.videoUrl) {
             const error = new Error('Video not available for this lesson')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -152,13 +152,13 @@ class LessonsService {
 
         if (!lesson) {
             const error = new Error('Lesson not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (!lesson.transcriptUrl) {
             const error = new Error('Transcript not available for this lesson')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 

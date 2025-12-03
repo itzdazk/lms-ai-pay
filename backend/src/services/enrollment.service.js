@@ -4,6 +4,7 @@ import {
     ENROLLMENT_STATUS,
     COURSE_STATUS,
     PAYMENT_STATUS,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import ordersService from './orders.service.js'
@@ -178,7 +179,7 @@ class EnrollmentService {
 
         if (!enrollment) {
             const error = new Error('Enrollment not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -341,13 +342,13 @@ class EnrollmentService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
             const error = new Error('Course is not available for enrollment')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -363,7 +364,7 @@ class EnrollmentService {
 
         if (existingEnrollment) {
             const error = new Error('You are already enrolled in this course')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -464,7 +465,7 @@ class EnrollmentService {
             const error = new Error(
                 'Payment gateway is required for paid courses. Please provide paymentGateway (VNPay or MoMo).'
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -522,19 +523,19 @@ class EnrollmentService {
 
         if (!order) {
             const error = new Error('Order not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
             const error = new Error(
                 `Cannot enroll from unpaid order. Status: ${order.paymentStatus}`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.course.status !== COURSE_STATUS.PUBLISHED) {
             const error = new Error('Course is not available for enrollment')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 

@@ -1,6 +1,7 @@
 // src/services/notifications.service.js
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
+import { HTTP_STATUS } from '../config/constants.js'
 
 class NotificationsService {
     async getNotifications(userId, options = {}) {
@@ -69,7 +70,7 @@ class NotificationsService {
 
         if (!notification) {
             const error = new Error('Notification not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -86,7 +87,7 @@ class NotificationsService {
 
         if (!notification) {
             const error = new Error('Notification not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -140,7 +141,7 @@ class NotificationsService {
 
         if (!notification) {
             const error = new Error('Notification not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 

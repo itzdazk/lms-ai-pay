@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url'
 
 import config from './config/app.config.js'
 import logger from './config/logger.config.js'
+import { HTTP_STATUS } from './config/constants.js'
 import { notFound, errorHandler } from './middlewares/error.middleware.js'
 import routes from './routes/index.js'
 
@@ -160,7 +161,7 @@ app.use('/api/', limiter)
 
 // Root endpoint
 app.get('/', (req, res) => {
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         success: true,
         message: 'LMS AI Pay API',
         version: config.API_VERSION,
@@ -174,7 +175,7 @@ app.get('/', (req, res) => {
 
 // Favicon handler (to avoid 404 errors)
 app.get('/favicon.ico', (req, res) => {
-    res.status(204).end()
+    res.status(HTTP_STATUS.NO_CONTENT).end()
 })
 
 // Serve static files (uploads)

@@ -1,6 +1,6 @@
 // src/services/category.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS } from '../config/constants.js'
+import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
 class CategoryService {
@@ -25,7 +25,7 @@ class CategoryService {
 
         if (existingCategory) {
             const error = new Error('Category with this slug already exists')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -37,7 +37,7 @@ class CategoryService {
 
             if (!parentCategory) {
                 const error = new Error('Parent category not found')
-                error.statusCode = 400
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
         }
@@ -79,7 +79,7 @@ class CategoryService {
 
         if (!existingCategory) {
             const error = new Error('Category not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -91,7 +91,7 @@ class CategoryService {
 
             if (slugExists) {
                 const error = new Error('Category with this slug already exists')
-                error.statusCode = 400
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
         }
@@ -101,7 +101,7 @@ class CategoryService {
             // Prevent setting itself as parent
             if (updateData.parentId === categoryId) {
                 const error = new Error('Category cannot be its own parent')
-                error.statusCode = 400
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
 
@@ -113,14 +113,14 @@ class CategoryService {
 
                 if (!parentCategory) {
                     const error = new Error('Parent category not found')
-                    error.statusCode = 400
+                    error.statusCode = HTTP_STATUS.BAD_REQUEST
                     throw error
                 }
 
                 // Prevent circular reference (child cannot become parent of its parent)
                 if (parentCategory.parentId === categoryId) {
                     const error = new Error('Circular reference not allowed')
-                    error.statusCode = 400
+                    error.statusCode = HTTP_STATUS.BAD_REQUEST
                     throw error
                 }
             }
@@ -171,7 +171,7 @@ class CategoryService {
 
         if (!category) {
             const error = new Error('Category not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -180,7 +180,7 @@ class CategoryService {
             const error = new Error(
                 `Cannot delete category with ${category._count.courses} active courses. Please reassign courses first.`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -189,7 +189,7 @@ class CategoryService {
             const error = new Error(
                 `Cannot delete category with ${category._count.children} subcategories. Please delete subcategories first.`
             )
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
@@ -330,7 +330,7 @@ class CategoryService {
 
         if (!category) {
             const error = new Error('Category not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -365,7 +365,7 @@ class CategoryService {
 
         if (!category) {
             const error = new Error('Category not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
@@ -468,7 +468,7 @@ class CategoryService {
 
         if (!category) {
             const error = new Error('Category not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 

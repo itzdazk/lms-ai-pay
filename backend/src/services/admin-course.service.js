@@ -6,6 +6,7 @@ import {
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
     USER_ROLES,
+    HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
@@ -241,14 +242,14 @@ class AdminCourseService {
 
         if (!course) {
             const error = new Error('Course not found')
-            error.statusCode = 404
+            error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Only published courses can be featured
         if (isFeatured && course.status !== COURSE_STATUS.PUBLISHED) {
             const error = new Error('Only published courses can be marked as featured')
-            error.statusCode = 400
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 

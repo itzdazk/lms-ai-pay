@@ -1,5 +1,6 @@
 // src/routes/index.js
 import express from 'express'
+import { HTTP_STATUS } from '../config/constants.js'
 import authRoutes from './auth.routes.js'
 import userRoutes from './users.routes.js'
 import courseRoutes from './course.routes.js'
@@ -32,7 +33,7 @@ const router = express.Router()
 
 // Root API endpoint
 router.get('/', (req, res) => {
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         success: true,
         message: 'LMS AI Pay API',
         version: 'v1',
@@ -72,7 +73,7 @@ router.get('/', (req, res) => {
 
 // Health check for API
 router.get('/health', (req, res) => {
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         success: true,
         message: 'API is running',
         timestamp: new Date().toISOString(),
