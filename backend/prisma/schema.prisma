@@ -340,20 +340,20 @@ model Notification {
 // 11. QUIZZES
 // =====================================================
 model Quiz {
-  id              Int      @id @default(autoincrement())
-  lessonId        Int?     @map("lesson_id")
-  lesson          Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  courseId        Int?     @map("course_id")
-  course          Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title           String   @db.VarChar(200)
-  description     String?  @db.Text
-  questions       Json
-  passingScore    Int      @default(70) @map("passing_score")
-  attemptsAllowed Int      @default(1) @map("attempts_allowed")
-  timeLimitMinutes Int?    @map("time_limit_minutes")
-  isPublished     Boolean  @default(true) @map("is_published")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id               Int      @id @default(autoincrement())
+  lessonId         Int?     @map("lesson_id")
+  lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  courseId         Int?     @map("course_id")
+  course           Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title            String   @db.VarChar(200)
+  description      String?  @db.Text
+  questions        Json
+  passingScore     Int      @default(70) @map("passing_score")
+  attemptsAllowed  Int      @default(1) @map("attempts_allowed")
+  timeLimitMinutes Int?     @map("time_limit_minutes")
+  isPublished      Boolean  @default(true) @map("is_published")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   submissions QuizSubmission[]
 
@@ -367,16 +367,16 @@ model Quiz {
 // 11.1. QUIZ_SUBMISSIONS
 // =====================================================
 model QuizSubmission {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  quizId      Int      @map("quiz_id")
-  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  quizId      Int       @map("quiz_id")
+  quiz        Quiz      @relation(fields: [quizId], references: [id])
   answers     Json
   score       Decimal?  @db.Decimal(5, 2)
   isPassed    Boolean?  @map("is_passed")
-  startedAt   DateTime? @map("started_at") @db.Timestampz
-  submittedAt DateTime  @default(now()) @map("submitted_at") @db.Timestampz
+  startedAt   DateTime? @map("started_at") @db.Timestamptz
+  submittedAt DateTime  @default(now()) @map("submitted_at") @db.Timestamptz
 
   @@index([userId])
   @@index([quizId])
