@@ -1,6 +1,6 @@
 // src/config/database.config.js
-import { PrismaClient } from '@prisma/client';
-import logger from './logger.config.js';
+import { PrismaClient } from '@prisma/client'
+import logger from './logger.config.js'
 
 const prisma = new PrismaClient({
     log: [
@@ -47,6 +47,7 @@ prisma.$on('info', (e) => {
 const connectDB = async () => {
     try {
         await prisma.$connect()
+        await prisma.$executeRaw`SET TIME ZONE 'Asia/Ho_Chi_Minh'`
         logger.info('Database connected successfully')
         return true
     } catch (error) {
@@ -66,5 +67,4 @@ const disconnectDB = async () => {
     }
 }
 
-export { prisma, connectDB, disconnectDB };
-
+export { prisma, connectDB, disconnectDB }
