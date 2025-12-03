@@ -24,7 +24,9 @@ class CategoryService {
         })
 
         if (existingCategory) {
-            throw new Error('Category with this slug already exists')
+            const error = new Error('Category with this slug already exists')
+            error.statusCode = 400
+            throw error
         }
 
         // If parentId is provided, check if parent exists
@@ -34,7 +36,9 @@ class CategoryService {
             })
 
             if (!parentCategory) {
-                throw new Error('Parent category not found')
+                const error = new Error('Parent category not found')
+                error.statusCode = 400
+                throw error
             }
         }
 
@@ -74,7 +78,9 @@ class CategoryService {
         })
 
         if (!existingCategory) {
-            throw new Error('Category not found')
+            const error = new Error('Category not found')
+            error.statusCode = 404
+            throw error
         }
 
         // If slug is being updated, check for uniqueness
@@ -84,7 +90,9 @@ class CategoryService {
             })
 
             if (slugExists) {
-                throw new Error('Category with this slug already exists')
+                const error = new Error('Category with this slug already exists')
+                error.statusCode = 400
+                throw error
             }
         }
 
@@ -92,7 +100,9 @@ class CategoryService {
         if (updateData.parentId !== undefined) {
             // Prevent setting itself as parent
             if (updateData.parentId === categoryId) {
-                throw new Error('Category cannot be its own parent')
+                const error = new Error('Category cannot be its own parent')
+                error.statusCode = 400
+                throw error
             }
 
             // If parentId is not null, check if parent exists
@@ -102,12 +112,16 @@ class CategoryService {
                 })
 
                 if (!parentCategory) {
-                    throw new Error('Parent category not found')
+                    const error = new Error('Parent category not found')
+                    error.statusCode = 400
+                    throw error
                 }
 
                 // Prevent circular reference (child cannot become parent of its parent)
                 if (parentCategory.parentId === categoryId) {
-                    throw new Error('Circular reference not allowed')
+                    const error = new Error('Circular reference not allowed')
+                    error.statusCode = 400
+                    throw error
                 }
             }
         }
@@ -156,21 +170,27 @@ class CategoryService {
         })
 
         if (!category) {
-            throw new Error('Category not found')
+            const error = new Error('Category not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Check if category has courses
         if (category._count.courses > 0) {
-            throw new Error(
+            const error = new Error(
                 `Cannot delete category with ${category._count.courses} active courses. Please reassign courses first.`
             )
+            error.statusCode = 400
+            throw error
         }
 
         // Check if category has children
         if (category._count.children > 0) {
-            throw new Error(
+            const error = new Error(
                 `Cannot delete category with ${category._count.children} subcategories. Please delete subcategories first.`
             )
+            error.statusCode = 400
+            throw error
         }
 
         await prisma.category.delete({
@@ -309,7 +329,9 @@ class CategoryService {
         })
 
         if (!category) {
-            throw new Error('Category not found')
+            const error = new Error('Category not found')
+            error.statusCode = 404
+            throw error
         }
 
         return {
@@ -342,7 +364,9 @@ class CategoryService {
         })
 
         if (!category) {
-            throw new Error('Category not found')
+            const error = new Error('Category not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Build where clause
@@ -443,7 +467,9 @@ class CategoryService {
         })
 
         if (!category) {
-            throw new Error('Category not found')
+            const error = new Error('Category not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Reuse getCoursesByCategory method

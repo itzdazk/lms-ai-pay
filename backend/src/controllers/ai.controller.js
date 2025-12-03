@@ -20,12 +20,11 @@ class AIController {
             limit: parseInt(limit),
         })
 
-        return ApiResponse.success(
+        return ApiResponse.paginated(
             res,
             result.conversations,
-            'Conversations retrieved successfully',
-            200,
-            result.pagination
+            result.pagination,
+            'Conversations retrieved successfully'
         )
     })
 
@@ -101,11 +100,7 @@ class AIController {
 
         await aiChatService.deleteConversation(parseInt(id), req.user.id)
 
-        return ApiResponse.success(
-            res,
-            null,
-            'Conversation deleted successfully'
-        )
+        return ApiResponse.success(res, null, 'Conversation deleted successfully')
     })
 
     /**
@@ -133,16 +128,23 @@ class AIController {
     activateConversation = asyncHandler(async (req, res) => {
         const { id } = req.params
 
-        await prisma.conversation.update({
-            where: {
-                id: parseInt(id),
-                userId: req.user.id,
-            },
-            data: {
-                isArchived: false,
-                isActive: true,
-            },
-        })
+        try {
+            await prisma.conversation.update({
+                where: {
+                    id: parseInt(id),
+                    userId: req.user.id,
+                },
+                data: {
+                    isArchived: false,
+                    isActive: true,
+                },
+            })
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return ApiResponse.notFound(res, 'Conversation not found')
+            }
+            throw error
+        }
 
         return ApiResponse.success(
             res,
@@ -167,12 +169,11 @@ class AIController {
             parseInt(limit)
         )
 
-        return ApiResponse.success(
+        return ApiResponse.paginated(
             res,
             result.messages,
-            'Messages retrieved successfully',
-            200,
-            result.pagination
+            result.pagination,
+            'Messages retrieved successfully'
         )
     })
 

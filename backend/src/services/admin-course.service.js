@@ -240,12 +240,16 @@ class AdminCourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Only published courses can be featured
         if (isFeatured && course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Only published courses can be marked as featured')
+            const error = new Error('Only published courses can be marked as featured')
+            error.statusCode = 400
+            throw error
         }
 
         // Update featured status

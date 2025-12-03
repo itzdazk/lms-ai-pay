@@ -71,7 +71,9 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            const error = new Error('Lesson not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Only return published lessons for non-instructors
@@ -107,11 +109,15 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            const error = new Error('Lesson not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (!lesson.videoUrl) {
-            throw new Error('Video not available for this lesson')
+            const error = new Error('Video not available for this lesson')
+            error.statusCode = 404
+            throw error
         }
 
         return lesson
@@ -145,11 +151,15 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            const error = new Error('Lesson not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (!lesson.transcriptUrl) {
-            throw new Error('Transcript not available for this lesson')
+            const error = new Error('Transcript not available for this lesson')
+            error.statusCode = 404
+            throw error
         }
 
         return lesson

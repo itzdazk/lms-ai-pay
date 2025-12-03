@@ -111,7 +111,7 @@ class NotificationsController {
 
         await notificationsService.deleteNotification(userId, notificationId)
 
-        return ApiResponse.noContent(res)
+        return ApiResponse.success(res, null, 'Notification deleted successfully')
     })
 
     deleteAllNotifications = asyncHandler(async (req, res) => {
@@ -119,7 +119,7 @@ class NotificationsController {
 
         await notificationsService.deleteAllNotifications(userId)
 
-        return ApiResponse.noContent(res)
+        return ApiResponse.success(res, null, 'All notifications deleted successfully')
     })
 }
 

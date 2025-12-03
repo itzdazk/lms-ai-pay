@@ -219,7 +219,9 @@ class UploadService {
             }
 
             if (!fileFound) {
-                throw new Error('File not found')
+                const error = new Error('File not found')
+                error.statusCode = 404
+                throw error
             }
 
             // Kiểm tra quyền: chỉ owner hoặc admin mới được xóa
@@ -231,9 +233,11 @@ class UploadService {
                 fileUserId &&
                 fileUserId !== userId
             ) {
-                throw new Error(
+                const error = new Error(
                     'You do not have permission to delete this file'
                 )
+                error.statusCode = 403
+                throw error
             }
 
             // Xóa file vật lý
@@ -305,7 +309,9 @@ class UploadService {
             return fileInfo
         } catch (error) {
             logger.error('Error checking upload status:', error)
-            throw new Error('Failed to check upload status')
+            const err = new Error('Failed to check upload status')
+            err.statusCode = 500
+            throw err
         }
     }
 

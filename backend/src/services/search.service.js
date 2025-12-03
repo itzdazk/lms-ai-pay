@@ -417,7 +417,9 @@ class SearchService {
      */
     async processVoiceSearch(transcript) {
         if (!transcript || transcript.trim().length === 0) {
-            throw new Error('Transcript is required for voice search')
+            const error = new Error('Transcript is required for voice search')
+            error.statusCode = 400
+            throw error
         }
 
         // Clean up transcript

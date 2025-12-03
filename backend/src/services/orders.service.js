@@ -61,9 +61,11 @@ class OrdersService {
         // Validate payment gateway
         const validGateways = Object.values(PAYMENT_GATEWAY)
         if (!validGateways.includes(paymentGateway)) {
-            throw new Error(
+            const error = new Error(
                 `Invalid payment gateway. Must be one of: ${validGateways.join(', ')}`
             )
+            error.statusCode = 400
+            throw error
         }
 
         // Check if course exists and is published
@@ -79,11 +81,15 @@ class OrdersService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available for enrollment')
+            const error = new Error('Course is not available for enrollment')
+            error.statusCode = 400
+            throw error
         }
 
         // Calculate prices
@@ -92,9 +98,11 @@ class OrdersService {
 
         // Check if course is paid (finalPrice > 0)
         if (finalPrice <= 0) {
-            throw new Error(
+            const error = new Error(
                 'Cannot create order for free course. Please use free enrollment instead.'
             )
+            error.statusCode = 400
+            throw error
         }
 
         // Check if user is already enrolled
@@ -108,7 +116,9 @@ class OrdersService {
         })
 
         if (existingEnrollment) {
-            throw new Error('You are already enrolled in this course')
+            const error = new Error('You are already enrolled in this course')
+            error.statusCode = 400
+            throw error
         }
 
         // Check if user has pending order for this course
@@ -346,13 +356,17 @@ class OrdersService {
         })
 
         if (!order) {
-            throw new Error('Order not found')
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Check if order belongs to user (unless user is admin)
         // Note: Add admin check if needed
         if (order.userId !== userId) {
-            throw new Error('Unauthorized access to this order')
+            const error = new Error('Unauthorized access to this order')
+            error.statusCode = 403
+            throw error
         }
 
         return order
@@ -400,13 +414,17 @@ class OrdersService {
         })
 
         if (!order) {
-            throw new Error('Order not found')
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Check if order belongs to user (unless user is admin)
         // Note: Add admin check if needed
         if (order.userId !== userId) {
-            throw new Error('Unauthorized access to this order')
+            const error = new Error('Unauthorized access to this order')
+            error.statusCode = 403
+            throw error
         }
 
         return order
@@ -434,7 +452,9 @@ class OrdersService {
         })
 
         if (!order) {
-            throw new Error('Order not found')
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Check if order is already paid
@@ -469,9 +489,11 @@ class OrdersService {
 
         // Check if order is pending
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
-            throw new Error(
+            const error = new Error(
                 `Cannot update order to PAID. Current status: ${order.paymentStatus}`
             )
+            error.statusCode = 400
+            throw error
         }
 
         // Update order to PAID within a transaction
@@ -610,14 +632,18 @@ class OrdersService {
         })
 
         if (!order) {
-            throw new Error('Order not found')
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
         }
 
         // 2. Validate order status
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
-            throw new Error(
+            const error = new Error(
                 `Cannot cancel order with status: ${order.paymentStatus}. Only PENDING orders can be cancelled.`
             )
+            error.statusCode = 400
+            throw error
         }
 
         // 3. Kiểm tra nếu đã có transaction SUCCESS
@@ -630,9 +656,11 @@ class OrdersService {
             })
 
         if (hasSuccessfulTransaction) {
-            throw new Error(
+            const error = new Error(
                 'Cannot cancel order - payment has already been processed successfully'
             )
+            error.statusCode = 400
+            throw error
         }
 
         // 4. Cancel cả Order VÀ tất cả Transactions

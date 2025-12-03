@@ -27,9 +27,9 @@ class AIChatService {
                 if (course) {
                     validCourseId = courseId
                 } else {
-                    logger.warn(
-                        `Course ${courseId} not found, creating conversation without course context`
-                    )
+                    const error = new Error('Course not found')
+                    error.statusCode = 404
+                    throw error
                 }
             }
 
@@ -52,9 +52,9 @@ class AIChatService {
                         }
                     }
                 } else {
-                    logger.warn(
-                        `Lesson ${lessonId} not found, creating conversation without lesson context`
-                    )
+                    const error = new Error('Lesson not found')
+                    error.statusCode = 404
+                    throw error
                 }
             }
 
@@ -133,7 +133,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             // 2. Lưu message của user
@@ -328,7 +330,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             // 2. Lưu message của user
@@ -950,7 +954,9 @@ class AIChatService {
             ])
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             return {
@@ -984,7 +990,9 @@ class AIChatService {
             })
 
             if (!message) {
-                throw new Error('Message not found or access denied')
+                const error = new Error('Message not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             const updated = await prisma.chatMessage.update({
@@ -1075,7 +1083,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             await prisma.conversation.update({
@@ -1103,7 +1113,9 @@ class AIChatService {
             })
 
             if (!conversation) {
-                throw new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
             }
 
             // Cascade delete messages (handled by Prisma)

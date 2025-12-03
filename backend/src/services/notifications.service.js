@@ -68,7 +68,9 @@ class NotificationsService {
         })
 
         if (!notification) {
-            throw new Error('Notification not found')
+            const error = new Error('Notification not found')
+            error.statusCode = 404
+            throw error
         }
 
         return notification
@@ -83,7 +85,9 @@ class NotificationsService {
         })
 
         if (!notification) {
-            throw new Error('Notification not found')
+            const error = new Error('Notification not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (notification.isRead) {
@@ -135,7 +139,9 @@ class NotificationsService {
         })
 
         if (!notification) {
-            throw new Error('Notification not found')
+            const error = new Error('Notification not found')
+            error.statusCode = 404
+            throw error
         }
 
         await prisma.notification.delete({

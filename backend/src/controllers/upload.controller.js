@@ -100,9 +100,9 @@ class UploadController {
         const userId = req.user.id
         const userRole = req.user.role
 
-        const result = await uploadService.deleteFile(fileId, userId, userRole)
+        await uploadService.deleteFile(fileId, userId, userRole)
 
-        return ApiResponse.success(res, result, 'File deleted successfully')
+        return ApiResponse.success(res, null, 'File deleted successfully')
     })
 
     /**

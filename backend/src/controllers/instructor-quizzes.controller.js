@@ -87,7 +87,7 @@ class InstructorQuizzesController {
             userRole,
         });
 
-        return ApiResponse.noContent(res);
+        return ApiResponse.success(res, null, 'Quiz deleted successfully');
     });
 
     /**

@@ -233,22 +233,45 @@ class PaymentService {
             },
         })
 
-        if (!order) throw new Error('Order not found')
-        if (order.userId !== userId)
-            throw new Error('You are not authorized to pay for this order')
-        if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY)
-            throw new Error('Order is not assigned to VNPay')
-        if (order.paymentStatus === PAYMENT_STATUS.PAID)
-            throw new Error('Order has already been paid')
-        if (order.paymentStatus === PAYMENT_STATUS.REFUNDED)
-            throw new Error('Order has already been refunded')
-        if (order.paymentStatus !== PAYMENT_STATUS.PENDING)
-            throw new Error(
+        if (!order) {
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
+        }
+        if (order.userId !== userId) {
+            const error = new Error('You are not authorized to pay for this order')
+            error.statusCode = 403
+            throw error
+        }
+        if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY) {
+            const error = new Error('Order is not assigned to VNPay')
+            error.statusCode = 400
+            throw error
+        }
+        if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+            const error = new Error('Order has already been paid')
+            error.statusCode = 400
+            throw error
+        }
+        if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
+            const error = new Error('Order has already been refunded')
+            error.statusCode = 400
+            throw error
+        }
+        if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
+            const error = new Error(
                 `Order cannot be paid in status ${order.paymentStatus}`
             )
+            error.statusCode = 400
+            throw error
+        }
 
         const amount = normalizeAmount(order.finalPrice)
-        if (amount <= 0) throw new Error('Order amount must be greater than 0')
+        if (amount <= 0) {
+            const error = new Error('Order amount must be greater than 0')
+            error.statusCode = 400
+            throw error
+        }
 
         const existingTxn = order.paymentTransactions[0]
         if (existingTxn) {
@@ -382,29 +405,41 @@ class PaymentService {
         })
 
         if (!order) {
-            throw new Error('Order not found')
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (order.userId !== userId) {
-            throw new Error('You are not authorized to pay for this order')
+            const error = new Error('You are not authorized to pay for this order')
+            error.statusCode = 403
+            throw error
         }
 
         if (order.paymentGateway !== PAYMENT_GATEWAY.MOMO) {
-            throw new Error('Order is not assigned to MoMo payment gateway')
+            const error = new Error('Order is not assigned to MoMo payment gateway')
+            error.statusCode = 400
+            throw error
         }
 
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
-            throw new Error('Order has already been paid')
+            const error = new Error('Order has already been paid')
+            error.statusCode = 400
+            throw error
         }
 
         if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
-            throw new Error('Order has already been refunded')
+            const error = new Error('Order has already been refunded')
+            error.statusCode = 400
+            throw error
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
-            throw new Error(
+            const error = new Error(
                 `Order cannot be paid in status ${order.paymentStatus}`
             )
+            error.statusCode = 400
+            throw error
         }
 
         const amount = normalizeAmount(order.finalPrice)
@@ -604,7 +639,9 @@ class PaymentService {
     // ==================== Refund Methods ====================
     async refundOrder(orderId, adminUser, amountInput = null, reason = null) {
         if (adminUser.role !== USER_ROLES.ADMIN) {
-            throw new Error('Only administrators can process refunds')
+            const error = new Error('Only administrators can process refunds')
+            error.statusCode = 403
+            throw error
         }
 
         const order = await prisma.order.findUnique({
@@ -621,19 +658,25 @@ class PaymentService {
         })
 
         if (!order) {
-            throw new Error('Order not found')
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
-            throw new Error('Only paid orders can be refunded')
+            const error = new Error('Only paid orders can be refunded')
+            error.statusCode = 400
+            throw error
         }
 
         const successfulTransaction = order.paymentTransactions[0]
 
         if (!successfulTransaction || !successfulTransaction.transactionId) {
-            throw new Error(
+            const error = new Error(
                 'No successful transaction found for this order to refund'
             )
+            error.statusCode = 400
+            throw error
         }
 
         // Route to appropriate refund handler
