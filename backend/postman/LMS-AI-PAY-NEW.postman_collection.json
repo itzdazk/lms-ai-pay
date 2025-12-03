@@ -1,0 +1,3447 @@
+{
+	"info": {
+		"_postman_id": "lms-ai-pay-new-2025",
+		"name": "LMS AI Pay - Complete API Collection",
+		"description": "Complete API collection for LMS AI Pay system with seed data examples",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "API Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Database Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/db",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health",
+								"db"
+							]
+						}
+					}
+				},
+				{
+					"name": "Storage Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/storage",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health",
+								"storage"
+							]
+						}
+					}
+				},
+				{
+					"name": "Full Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/full",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health",
+								"full"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register - Student",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userName\": \"student1\",\n  \"email\": \"student1@2200freefonts.com\",\n  \"password\": \"Student@123\",\n  \"fullName\": \"Phạm Thị D\",\n  \"role\": \"STUDENT\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/register",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Register - Instructor",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userName\": \"instructor1\",\n  \"email\": \"instructor1@2200freefonts.com\",\n  \"password\": \"Instructor@123\",\n  \"fullName\": \"Nguyễn Văn A\",\n  \"role\": \"INSTRUCTOR\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/register",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Login - Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.accessToken) {",
+									"        pm.environment.set(\"admin_token\", jsonData.data.accessToken);",
+									"        pm.environment.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@2200freefonts.com\",\n  \"password\": \"Admin@123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/login",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Login - Instructor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.accessToken) {",
+									"        pm.environment.set(\"instructor_token\", jsonData.data.accessToken);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"instructor1@2200freefonts.com\",\n  \"password\": \"Instructor@123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/login",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Login - Student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.accessToken) {",
+									"        pm.environment.set(\"student_token\", jsonData.data.accessToken);",
+									"        pm.environment.set(\"access_token\", jsonData.data.accessToken);",
+									"        pm.environment.set(\"user_id\", jsonData.data.user.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"student1@2200freefonts.com\",\n  \"password\": \"Student@123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/login",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{auth_url}}/me",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"me"
+							]
+						}
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/refresh-token",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"refresh-token"
+							]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{auth_url}}/logout",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"logout"
+							]
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"student1@2200freefonts.com\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/forgot-password",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"forgot-password"
+							]
+						}
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset_token_here\",\n  \"password\": \"NewPassword@123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/reset-password",
+							"host": [
+								"{{auth_url}}"
+							],
+							"path": [
+								"reset-password"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{users_url}}/profile",
+							"host": [
+								"{{users_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Updated Name\",\n  \"phone\": \"0987654321\",\n  \"bio\": \"Updated bio\"\n}"
+						},
+						"url": {
+							"raw": "{{users_url}}/profile",
+							"host": [
+								"{{users_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"Student@123\",\n  \"newPassword\": \"NewPassword@123\"\n}"
+						},
+						"url": {
+							"raw": "{{users_url}}/change-password",
+							"host": [
+								"{{users_url}}"
+							],
+							"path": [
+								"change-password"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Users (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{users_url}}/?page=1&limit=20",
+							"host": [
+								"{{users_url}}"
+							],
+							"path": [
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User By ID (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{users_url}}/{{user_id}}",
+							"host": [
+								"{{users_url}}"
+							],
+							"path": [
+								"{{user_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Courses",
+			"item": [
+				{
+					"name": "Get All Courses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/?page=1&limit=20&search=javascript",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": "javascript"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Featured Courses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/featured?limit=10",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"featured"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Trending Courses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/trending?limit=10",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"trending"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course By Slug",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/slug/complete-web-development-bootcamp",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"slug",
+								"complete-web-development-bootcamp"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/{{course_id}}",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"{{course_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course Lessons",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{courses_url}}/{{course_id}}/lessons",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"{{course_id}}",
+								"lessons"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course Instructor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/{{course_id}}/instructor",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"{{course_id}}",
+								"instructor"
+							]
+						}
+					}
+				},
+				{
+					"name": "Increment Course View",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{courses_url}}/{{course_id}}/view",
+							"host": [
+								"{{courses_url}}"
+							],
+							"path": [
+								"{{course_id}}",
+								"view"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Category By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Courses By Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/1/courses?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"1",
+								"courses"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tags",
+			"item": [
+				{
+					"name": "Get All Tags",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tags?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tags"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Tag By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tags/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tags",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Courses By Tag",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tags/1/courses?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tags",
+								"1",
+								"courses"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Lessons",
+			"item": [
+				{
+					"name": "Get Lesson By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/lessons/{{lesson_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lessons",
+								"{{lesson_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lesson Video",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/lessons/{{lesson_id}}/video",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lessons",
+								"{{lesson_id}}",
+								"video"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lesson Transcript",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/lessons/{{lesson_id}}/transcript",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lessons",
+								"{{lesson_id}}",
+								"transcript"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Enrollments",
+			"item": [
+				{
+					"name": "Enroll in Course",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": {{course_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/enrollments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"enrollments"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Enrollments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/enrollments?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"enrollments"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Active Enrollments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/enrollments/active?limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"enrollments",
+								"active"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Check Enrollment",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/enrollments/check/{{course_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"enrollments",
+								"check",
+								"{{course_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Progress",
+			"item": [
+				{
+					"name": "Get Course Progress",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/progress/courses/{{course_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"progress",
+								"courses",
+								"{{course_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lesson Progress",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/progress/lessons/{{lesson_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"progress",
+								"lessons",
+								"{{lesson_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Start Lesson",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/progress/lessons/{{lesson_id}}/start",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"progress",
+								"lessons",
+								"{{lesson_id}}",
+								"start"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Progress",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"position\": 120,\n  \"watchDuration\": 300\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/progress/lessons/{{lesson_id}}/update",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"progress",
+								"lessons",
+								"{{lesson_id}}",
+								"update"
+							]
+						}
+					}
+				},
+				{
+					"name": "Complete Lesson",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/progress/lessons/{{lesson_id}}/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"progress",
+								"lessons",
+								"{{lesson_id}}",
+								"complete"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": {{course_id}},\n  \"paymentGateway\": \"VNPAY\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/orders?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Order By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/orders/{{order_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"{{order_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Cancel Order",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/orders/{{order_id}}/cancel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"{{order_id}}",
+								"cancel"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "Create VNPay Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderId\": {{order_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/vnpay/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"vnpay",
+								"create"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create MoMo Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderId\": {{order_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/momo/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"momo",
+								"create"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Quizzes",
+			"item": [
+				{
+					"name": "Get Quiz By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/quizzes/{{quiz_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"quizzes",
+								"{{quiz_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course Quizzes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/courses/{{course_id}}/quizzes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"courses",
+								"{{course_id}}",
+								"quizzes"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lesson Quizzes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/lessons/{{lesson_id}}/quizzes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lessons",
+								"{{lesson_id}}",
+								"quizzes"
+							]
+						}
+					}
+				},
+				{
+					"name": "Submit Quiz",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"answers\": [\n    {\n      \"questionId\": 1,\n      \"selectedOptionId\": 1\n    },\n    {\n      \"questionId\": 2,\n      \"selectedOptionId\": 3\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/quizzes/{{quiz_id}}/submit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"quizzes",
+								"{{quiz_id}}",
+								"submit"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Search",
+			"item": [
+				{
+					"name": "Search Courses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/search/courses?q=javascript&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"search",
+								"courses"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "javascript"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Search Suggestions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/search/suggestions?q=react",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"search",
+								"suggestions"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "react"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications/unread/count",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications",
+								"unread",
+								"count"
+							]
+						}
+					}
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications/1/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications",
+								"1",
+								"read"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Student Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/student",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"student"
+							]
+						}
+					}
+				},
+				{
+					"name": "Instructor Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/instructor",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"instructor"
+							]
+						}
+					}
+				},
+				{
+					"name": "Admin Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/admin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"admin"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Instructor Courses",
+			"item": [
+				{
+					"name": "Get Instructor Courses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"statistics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Course",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New Course Title\",\n  \"description\": \"Course description\",\n  \"shortDescription\": \"Short description\",\n  \"price\": 499000,\n  \"categoryId\": 1,\n  \"level\": \"BEGINNER\",\n  \"durationHours\": 10,\n  \"language\": \"vi\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Update Course",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Course Title\",\n  \"description\": \"Updated description\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Delete Course",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Course Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Change Course Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"status"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"PUBLISHED\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Add Tags to Course",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/tags",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"tags"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tagIds\": [\n    1,\n    2,\n    3\n  ]\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Instructor Lessons",
+			"item": [
+				{
+					"name": "Create Lesson",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/lessons",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"lessons"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New Lesson\",\n  \"description\": \"Lesson description\",\n  \"order\": 1,\n  \"duration\": 30\n}"
+						}
+					}
+				},
+				{
+					"name": "Update Lesson",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/lessons/{{lesson_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"lessons",
+								"{{lesson_id}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Lesson\",\n  \"description\": \"Updated description\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Delete Lesson",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/lessons/{{lesson_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"lessons",
+								"{{lesson_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Publish Lesson",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/lessons/{{lesson_id}}/publish",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"lessons",
+								"{{lesson_id}}",
+								"publish"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isPublished\": true\n}"
+						}
+					}
+				},
+				{
+					"name": "Reorder Lesson",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/lessons/{{lesson_id}}/order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"lessons",
+								"{{lesson_id}}",
+								"order"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newOrder\": 2\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Instructor Quizzes",
+			"item": [
+				{
+					"name": "Create Lesson Quiz",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/lessons/{{lesson_id}}/quizzes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"lessons",
+								"{{lesson_id}}",
+								"quizzes"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Quiz Title\",\n  \"description\": \"Quiz description\",\n  \"timeLimit\": 30,\n  \"passingScore\": 70\n}"
+						}
+					}
+				},
+				{
+					"name": "Create Course Quiz",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/courses/{{course_id}}/quizzes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"courses",
+								"{{course_id}}",
+								"quizzes"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Course Quiz\",\n  \"description\": \"Quiz description\",\n  \"timeLimit\": 60,\n  \"passingScore\": 70\n}"
+						}
+					}
+				},
+				{
+					"name": "Update Quiz",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/{{quiz_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"{{quiz_id}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Quiz\",\n  \"timeLimit\": 45\n}"
+						}
+					}
+				},
+				{
+					"name": "Delete Quiz",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/{{quiz_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"{{quiz_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Publish Quiz",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/{{quiz_id}}/publish",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"{{quiz_id}}",
+								"publish"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isPublished\": true\n}"
+						}
+					}
+				},
+				{
+					"name": "Get Quiz Submissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/{{quiz_id}}/submissions?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"{{quiz_id}}",
+								"submissions"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Quiz Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/{{quiz_id}}/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"{{quiz_id}}",
+								"analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Quiz from Lesson (AI)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/generate-from-lesson",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"generate-from-lesson"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"lessonId\": \"{{lesson_id}}\",\n  \"numQuestions\": 10,\n  \"difficulty\": \"MEDIUM\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Generate Quiz from Course (AI)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/instructor/quizzes/generate-from-course",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"instructor",
+								"quizzes",
+								"generate-from-course"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": \"{{course_id}}\",\n  \"numQuestions\": 20,\n  \"difficulty\": \"MEDIUM\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Instructor Dashboard",
+			"item": [
+				{
+					"name": "Get Instructor Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/instructor/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"instructor",
+								"stats"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Instructor Revenue",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/instructor/revenue",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"instructor",
+								"revenue"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Instructor Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/instructor/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"instructor",
+								"analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Instructor Students",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/instructor/students?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"instructor",
+								"students"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Courses",
+			"item": [
+				{
+					"name": "Get All Courses (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/courses?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"courses"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Platform Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/courses/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"courses",
+								"analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Toggle Course Featured",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/courses/{{course_id}}/featured",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"courses",
+								"{{course_id}}",
+								"featured"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isFeatured\": true\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Orders",
+			"item": [
+				{
+					"name": "Get Order Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/orders/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"orders",
+								"stats"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Revenue Trend",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/orders/revenue-trend",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"orders",
+								"revenue-trend"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Orders (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/orders?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Quizzes",
+			"item": [
+				{
+					"name": "Get All Quizzes (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/quizzes?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"quizzes"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Quiz Submissions (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/quizzes/{{quiz_id}}/submissions?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"quizzes",
+								"{{quiz_id}}",
+								"submissions"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Dashboard",
+			"item": [
+				{
+					"name": "Get System Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/admin/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"admin",
+								"stats"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Users Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/admin/users-analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"admin",
+								"users-analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Courses Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/admin/courses-analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"admin",
+								"courses-analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Revenue Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/admin/revenue",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"admin",
+								"revenue"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Recent Activities",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard/admin/activities",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"admin",
+								"activities"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Student Quizzes",
+			"item": [
+				{
+					"name": "Get Quiz Submissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/quizzes/{{quiz_id}}/submissions?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"quizzes",
+								"{{quiz_id}}",
+								"submissions"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Quiz Submission Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/quizzes/{{quiz_id}}/submissions/{{submission_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"quizzes",
+								"{{quiz_id}}",
+								"submissions",
+								"{{submission_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Quiz Attempts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/quizzes/{{quiz_id}}/attempts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"quizzes",
+								"{{quiz_id}}",
+								"attempts"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Latest Quiz Result",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/quizzes/{{quiz_id}}/result/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"quizzes",
+								"{{quiz_id}}",
+								"result",
+								"latest"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{
+					"name": "Get Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Transaction By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/{{transaction_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"transactions",
+								"{{transaction_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Upload",
+			"item": [
+				{
+					"name": "Upload Image",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/uploads/image?type=avatar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"uploads",
+								"image"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "avatar"
+								}
+							]
+						},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Upload Video",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/uploads/video?type=lesson",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"uploads",
+								"video"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "lesson"
+								}
+							]
+						},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "video",
+									"type": "file",
+									"src": []
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Upload Document",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/uploads/document?type=transcript",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"uploads",
+								"document"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "transcript"
+								}
+							]
+						},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "document",
+									"type": "file",
+									"src": []
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Files",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/uploads/user/files?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"uploads",
+								"user",
+								"files"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete File",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{instructor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/uploads/{{file_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"uploads",
+								"{{file_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "AI Conversations",
+			"item": [
+				{
+					"name": "Get Conversations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Conversation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": \"{{course_id}}\",\n  \"title\": \"New Conversation\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Get Conversation",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations/{{conversation_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations",
+								"{{conversation_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Conversation",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations/{{conversation_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations",
+								"{{conversation_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Archive Conversation",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations/{{conversation_id}}/archive",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations",
+								"{{conversation_id}}",
+								"archive"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations/{{conversation_id}}/messages?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations",
+								"{{conversation_id}}",
+								"messages"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/conversations/{{conversation_id}}/messages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"conversations",
+								"{{conversation_id}}",
+								"messages"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"What is React?\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Search Knowledge Base",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/search?q=react&courseId={{course_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "react"
+								},
+								{
+									"key": "courseId",
+									"value": "{{course_id}}"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Ollama Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/ollama/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"ollama",
+								"status"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "AI",
+			"item": [
+				{
+					"name": "Get Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/recommendations?limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"recommendations"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Similar Courses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ai/recommendations/similar/{{course_id}}?limit=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"recommendations",
+								"similar",
+								"{{course_id}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": []
+}

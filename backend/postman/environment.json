@@ -1,0 +1,265 @@
+{
+  "id": "lms-ai-pay-env",
+  "name": "LMS AI Pay - Local",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api/v1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "auth_url",
+      "value": "http://localhost:5000/api/v1/auth",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "users_url",
+      "value": "http://localhost:5000/api/v1/users",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "courses_url",
+      "value": "http://localhost:5000/api/v1/courses",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "categories_url",
+      "value": "http://localhost:5000/api/v1/categories",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "tags_url",
+      "value": "http://localhost:5000/api/v1/tags",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "lessons_url",
+      "value": "http://localhost:5000/api/v1/lessons",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "enrollments_url",
+      "value": "http://localhost:5000/api/v1/enrollments",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "progress_url",
+      "value": "http://localhost:5000/api/v1/progress",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "orders_url",
+      "value": "http://localhost:5000/api/v1/orders",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "payments_url",
+      "value": "http://localhost:5000/api/v1/payments",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "quizzes_url",
+      "value": "http://localhost:5000/api/v1/quizzes",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "notifications_url",
+      "value": "http://localhost:5000/api/v1/notifications",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "search_url",
+      "value": "http://localhost:5000/api/v1/search",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "upload_url",
+      "value": "http://localhost:5000/api/v1/uploads",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "dashboard_url",
+      "value": "http://localhost:5000/api/v1/dashboard",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "ai_url",
+      "value": "http://localhost:5000/api/v1/ai",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "health_check_url",
+      "value": "http://localhost:5000/api/v1/health",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "categories_url",
+      "value": "http://localhost:5000/api/v1/categories",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "tags_url",
+      "value": "http://localhost:5000/api/v1/tags",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "lessons_url",
+      "value": "http://localhost:5000/api/v1/lessons",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "enrollments_url",
+      "value": "http://localhost:5000/api/v1/enrollments",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "progress_url",
+      "value": "http://localhost:5000/api/v1/progress",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "orders_url",
+      "value": "http://localhost:5000/api/v1/orders",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "payments_url",
+      "value": "http://localhost:5000/api/v1/payments",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "quizzes_url",
+      "value": "http://localhost:5000/api/v1/quizzes",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "notifications_url",
+      "value": "http://localhost:5000/api/v1/notifications",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "search_url",
+      "value": "http://localhost:5000/api/v1/search",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "upload_url",
+      "value": "http://localhost:5000/api/v1/uploads",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "dashboard_url",
+      "value": "http://localhost:5000/api/v1/dashboard",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "ai_url",
+      "value": "http://localhost:5000/api/v1/ai",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "health_check_url",
+      "value": "http://localhost:5000/api/v1/health",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "instructor_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "student_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "course_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "lesson_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "quiz_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "enrollment_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ]
+}
+
