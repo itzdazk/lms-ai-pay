@@ -99,21 +99,21 @@ export function AdminDashboard() {
         <TabsList className="w-full justify-start bg-[#1A1A1A] border border-[#2D2D2D] rounded-xl p-1">
           <TabsTrigger
             value="users"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] rounded-lg px-4 py-2"
+            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
           >
             <Users className="h-4 w-4 mr-2" />
             Người dùng
           </TabsTrigger>
           <TabsTrigger
             value="courses"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] rounded-lg px-4 py-2"
+            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
           >
             <BookOpen className="h-4 w-4 mr-2" />
             Khóa học
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] rounded-lg px-4 py-2"
+            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
           >
             <BarChart3 className="h-4 w-4 mr-2" />
             Phân tích

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Input } from '../components/ui/input';
@@ -68,7 +69,7 @@ export function InstructorDashboard() {
     });
   };
 
-  const handleDeleteCourse = (courseId: string, title: string) => {
+  const handleDeleteCourse = (_courseId: string, title: string) => {
     if (confirm(`Bạn có chắc muốn xóa khóa học "${title}"?`)) {
       toast.success('Khóa học đã được xóa');
     }
@@ -185,20 +186,16 @@ export function InstructorDashboard() {
             </div>
 
             <DialogFooter>
-              <Button
-                variant="outline"
+              <DarkOutlineButton
                 onClick={() => setIsCreateDialogOpen(false)}
-                className="border-[#2D2D2D] !text-white hover:bg-white/10"
               >
                 Hủy
-              </Button>
-              <Button
+              </DarkOutlineButton>
+              <DarkOutlineButton
                 onClick={handleCreateCourse}
-                variant="outline"
-                className="border-[#2D2D2D] !text-white hover:bg-white/10"
               >
                 Tạo khóa học
-              </Button>
+              </DarkOutlineButton>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -261,21 +258,21 @@ export function InstructorDashboard() {
         <TabsList className="w-full justify-start bg-[#1A1A1A] border border-[#2D2D2D] rounded-xl p-1">
           <TabsTrigger
             value="courses"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] rounded-lg px-4 py-2"
+            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
           >
             <BookOpen className="h-4 w-4 mr-2" />
             Khóa học
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] rounded-lg px-4 py-2"
+            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
           >
             <BarChart3 className="h-4 w-4 mr-2" />
             Phân tích
           </TabsTrigger>
           <TabsTrigger
             value="revenue"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] rounded-lg px-4 py-2"
+            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
           >
             <DollarSign className="h-4 w-4 mr-2" />
             Doanh thu

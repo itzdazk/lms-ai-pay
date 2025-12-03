@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Progress } from '../components/ui/progress';
 import { Badge } from '../components/ui/badge';
 import {
@@ -126,20 +126,19 @@ export function StudentDashboard() {
               </div>
               <div className="grid md:grid-cols-3 gap-3">
                 {quickActions.map(action => (
-                  <Button
+                  <DarkOutlineButton
                     key={action.label}
                     asChild
-                    variant="outline"
-                    className="justify-start gap-3 border-[#2D2D2D] bg-[#1A1A1A] !text-white hover:bg-white/10 py-8"
+                    className="justify-start gap-3 !bg-black py-8"
                   >
                     <Link to={action.href}>
                       <action.icon className="h-4 w-4 text-blue-400" />
                       <div className="text-left">
-                        <p className="text-sm font-semibold text-white">{action.label}</p>
+                        <p className="text-sm font-semibold text-black dark:text-white">{action.label}</p>
                         <p className="text-xs text-gray-400">{action.description}</p>
                       </div>
                     </Link>
-                  </Button>
+                  </DarkOutlineButton>
                 ))}
               </div>
             </div>
@@ -176,9 +175,9 @@ export function StudentDashboard() {
             ))}
           </CardContent>
           <CardContent className="pt-2 border-t border-[#2D2D2D]">
-            <Button variant="outline" className="w-full border-[#2D2D2D] !text-white hover:bg-white/10">
+            <DarkOutlineButton className="w-full">
               Xem toàn bộ lịch
-            </Button>
+            </DarkOutlineButton>
           </CardContent>
         </Card>
       </section>
@@ -233,7 +232,7 @@ export function StudentDashboard() {
       {/* Continue Watching */}
       {activeCourses.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-white">Tiếp tục học</h2>
+          <h2 className="text-2xl font-bold mb-4 text-black dark:text-white">Tiếp tục học</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeCourses.slice(0, 3).map(course => {
               const enrollment = getEnrollment(currentUser.id, course.id);
@@ -262,13 +261,12 @@ export function StudentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <Progress value={enrollment?.progress_percentage || 0} className="mb-4" />
-                    <Button
+                    <DarkOutlineButton
                       asChild
-                      variant="outline"
-                      className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                      className="w-full"
                     >
                       <Link to={`/learn/${course.id}`}>Tiếp tục học</Link>
-                    </Button>
+                    </DarkOutlineButton>
                   </CardContent>
                 </Card>
               );
@@ -281,10 +279,10 @@ export function StudentDashboard() {
       <div className="grid lg:grid-cols-[2fr,1fr] gap-6">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white">Khóa học của tôi</h2>
-            <Button variant="outline" asChild className="border-[#2D2D2D] !text-white hover:bg-white/10">
+            <h2 className="text-2xl font-bold text-black dark:text-white">Khóa học của tôi</h2>
+            <DarkOutlineButton asChild>
               <Link to="/courses">Xem tất cả</Link>
-            </Button>
+            </DarkOutlineButton>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             {enrolledCourses.map(course => {
@@ -317,16 +315,15 @@ export function StudentDashboard() {
                   <CardContent>
                     <Progress value={enrollment?.progress_percentage || 0} className="mb-4" />
                     <div className="flex gap-2">
-                      <Button asChild variant="outline" className="flex-1 border-[#2D2D2D] !text-white hover:bg-white/10">
+                      <DarkOutlineButton asChild className="flex-1">
                         <Link to={`/courses/${course.id}`}>Xem chi tiết</Link>
-                      </Button>
-                    <Button
+                      </DarkOutlineButton>
+                    <DarkOutlineButton
                       asChild
-                      variant="outline"
-                      className="flex-1 border-[#2D2D2D] !text-white hover:bg-white/10"
+                      className="flex-1"
                     >
                         <Link to={`/learn/${course.id}`}>Học tiếp</Link>
-                      </Button>
+                      </DarkOutlineButton>
                     </div>
                   </CardContent>
                 </Card>
@@ -354,9 +351,9 @@ export function StudentDashboard() {
                     ? `${completedCourses[0].title}`
                     : 'Hãy hoàn thành khóa học để nhận chứng chỉ đầu tiên.'}
                 </p>
-                <Button variant="outline" className="mt-3 border-[#2D2D2D] !text-white hover:bg-white/10 w-full">
+                <DarkOutlineButton className="mt-3 w-full">
                   Xem chứng chỉ
-                </Button>
+                </DarkOutlineButton>
               </div>
               <div className="rounded-xl border border-[#2D2D2D] p-4 bg-black/40">
                 <p className="text-white font-semibold">Tiến độ tổng quan</p>
@@ -381,9 +378,9 @@ export function StudentDashboard() {
                 <div key={course.id} className="rounded-xl border border-[#2D2D2D] p-4 bg-black/40">
                   <p className="text-white font-semibold">{course.title}</p>
                   <p className="text-sm text-gray-400 mt-1">{course.level}</p>
-                  <Button asChild variant="outline" className="mt-3 w-full border-[#2D2D2D] !text-white hover:bg-white/10">
+                  <DarkOutlineButton asChild className="mt-3 w-full">
                     <Link to={`/courses/${course.id}`}>Xem khóa học</Link>
-                  </Button>
+                  </DarkOutlineButton>
                 </div>
               ))}
             </CardContent>

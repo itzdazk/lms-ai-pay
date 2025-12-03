@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -46,14 +46,13 @@ export function ProfilePage() {
                       {formData.fullName.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
-                  <Button
+                  <DarkOutlineButton
                     size="icon"
-                    variant="outline"
-                    className="absolute bottom-0 right-0 rounded-full border-[#2D2D2D] !text-white bg-black hover:bg-white/10"
+                    className="absolute bottom-0 right-0 rounded-full bg-black"
                     title="Đổi avatar"
                   >
                     <Camera className="h-4 w-4" />
-                  </Button>
+                  </DarkOutlineButton>
                 </div>
                 <CardTitle className="text-white">{formData.fullName}</CardTitle>
                 <CardDescription className="text-gray-400">{formData.email}</CardDescription>
@@ -145,15 +144,14 @@ export function ProfilePage() {
                     />
                   </div>
 
-                  <Button
+                  <DarkOutlineButton
                     type="submit"
-                    variant="outline"
-                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                    className="w-full"
                     disabled={isSaving}
                   >
                     <Save className="h-4 w-4 mr-2" />
                     {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </Button>
+                  </DarkOutlineButton>
                 </form>
               </CardContent>
             </Card>
@@ -208,14 +206,13 @@ export function ProfilePage() {
                     </div>
                   </div>
 
-                  <Button
+                  <DarkOutlineButton
                     type="submit"
-                    variant="outline"
-                    className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                    className="w-full"
                   >
                     <Lock className="h-4 w-4 mr-2" />
                     Đổi mật khẩu
-                  </Button>
+                  </DarkOutlineButton>
                 </form>
               </CardContent>
             </Card>

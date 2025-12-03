@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -19,10 +19,10 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black py-8 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black py-8 px-4">
       <div className="w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8">
         {/* Logo */}
-        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
+        <Link to="/" className="flex items-center justify-center gap-2 mb-6">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black border border-white/30">
             <BookOpen className="h-7 w-7 text-white" />
           </div>
@@ -80,13 +80,12 @@ export function LoginPage() {
                   Ghi nhớ đăng nhập
                 </label>
               </div>
-              <Button
+              <DarkOutlineButton
                 type="submit"
-                variant="outline"
-                className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                className="w-full"
               >
                 Đăng nhập
-              </Button>
+              </DarkOutlineButton>
             </form>
           </CardContent>
           <CardFooter>

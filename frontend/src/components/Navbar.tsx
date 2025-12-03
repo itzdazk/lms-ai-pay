@@ -17,7 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from './ui/sheet';
-import { Bell, Search, BookOpen, User, Settings, LogOut, LayoutDashboard, Menu, X, Mic, MessageCircle, Sun, Moon } from 'lucide-react';
+import { Bell, Search, BookOpen, User, Settings, LogOut, LayoutDashboard, Menu, Mic, MessageCircle, Sun, Moon } from 'lucide-react';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { useTheme } from '../contexts/ThemeContext';

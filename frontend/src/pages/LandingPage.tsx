@@ -32,7 +32,7 @@ export function LandingPage() {
                   Khám phá khóa học
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-accent" asChild>
+              <Button size="lg" variant="outline" className="border-border text-foreground hover:!bg-gray-300" asChild>
                 <Link to="/register">
                   Đăng ký miễn phí
                 </Link>

@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { XCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { getCourseById } from '../lib/mockData';
@@ -42,29 +42,25 @@ export function PaymentFailurePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {course && (
-                  <Button
+                  <DarkOutlineButton
                     asChild
                     size="lg"
-                    variant="outline"
-                    className="border-[#2D2D2D] !text-white hover:bg-white/10"
                   >
                     <Link to={`/checkout/${course.id}`}>
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Thử lại thanh toán
                     </Link>
-                  </Button>
+                  </DarkOutlineButton>
                 )}
-                <Button
+                <DarkOutlineButton
                   asChild
-                  variant="outline"
                   size="lg"
-                  className="border-[#2D2D2D] !text-white hover:bg-white/10"
                 >
                   <Link to="/courses">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Quay lại khóa học
                   </Link>
-                </Button>
+                </DarkOutlineButton>
               </div>
             </div>
 

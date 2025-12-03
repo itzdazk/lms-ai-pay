@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -27,7 +27,7 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black py-8 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black py-8 px-4">
       <div className="w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
@@ -61,14 +61,13 @@ export function ForgotPasswordPage() {
                   />
                 </div>
               </div>
-              <Button
+              <DarkOutlineButton
                 type="submit"
-                variant="outline"
-                className="w-full border-[#2D2D2D] !text-white hover:bg-white/10"
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? 'Đang gửi...' : 'Gửi email khôi phục'}
-              </Button>
+              </DarkOutlineButton>
             </form>
           </CardContent>
           <CardFooter>
