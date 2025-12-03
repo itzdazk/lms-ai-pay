@@ -38,6 +38,8 @@ build/
 # Testing
 coverage/
 .nyc_output/
+test-results/
+*.test.js.snap
 
 # Prisma
 prisma/migrations/*_migration.sql

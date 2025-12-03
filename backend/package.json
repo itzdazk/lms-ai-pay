@@ -10,16 +10,21 @@
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
         "prisma:seed": "node prisma/seed.js",
-        "prisma:seed-progress": "node prisma/seed-progress-test.js",
         "prisma:studio": "prisma studio",
-        "test": "jest --coverage",
-        "test:watch": "jest --watch",
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+        "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+        "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPatterns=__tests__/utils --coverage",
+        "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPatterns=__tests__/api --coverage",
+        "test:api": "node scripts/test-api.js",
+        "test:api:ci": "newman run postman/LMS-AI-PAY-NEW.postman_collection.json -e postman/environment.json --reporters cli,json --reporter-json-export test-results/newman-report.json",
+        "test:module": "node scripts/test-module.js",
+        "test:all": "npm run test && npm run test:api",
+        "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --ci --maxWorkers=2",
         "lint": "eslint src/**/*.js",
         "format": "prettier --write \"src/**/*.js\""
     },
     "prisma": {
-        "seed": "node prisma/seed.js",
-        "seed-progress": "node prisma/seed-progress-test.js"
+        "seed": "node prisma/seed.js"
     },
     "keywords": [
         "elearning",
@@ -65,6 +70,8 @@
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
         "jest": "^30.2.0",
+        "newman": "^6.2.1",
+        "newman-reporter-htmlextra": "^1.23.1",
         "nodemon": "^3.1.10",
         "prettier": "^3.6.2",
         "prisma": "^6.18.0",
