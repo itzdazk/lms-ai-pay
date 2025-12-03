@@ -28,10 +28,14 @@ class AuthService {
 
         if (existingUser) {
             if (existingUser.email === email) {
-                throw new Error('Email already exists')
+                const error = new Error('Email already exists')
+                error.statusCode = 400
+                throw error
             }
             if (existingUser.userName === userName) {
-                throw new Error('userName already exists')
+                const error = new Error('userName already exists')
+                error.statusCode = 400
+                throw error
             }
         }
 
@@ -118,12 +122,16 @@ class AuthService {
         })
 
         if (!user) {
-            throw new Error('Invalid email or password')
+            const error = new Error('Invalid email or password')
+            error.statusCode = 401
+            throw error
         }
 
         // Check if user is active
         if (user.status !== USER_STATUS.ACTIVE) {
-            throw new Error('Your account is not active')
+            const error = new Error('Your account is not active')
+            error.statusCode = 401
+            throw error
         }
 
         // Verify password
@@ -133,7 +141,9 @@ class AuthService {
         )
 
         if (!isPasswordValid) {
-            throw new Error('Invalid email or password')
+            const error = new Error('Invalid email or password')
+            error.statusCode = 401
+            throw error
         }
 
         // Update last login

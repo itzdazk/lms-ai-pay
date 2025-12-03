@@ -330,7 +330,9 @@ class CourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Only return published courses
@@ -434,7 +436,9 @@ class CourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         // Only return published courses or provide limited info for unpublished
@@ -476,7 +480,9 @@ class CourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
@@ -551,7 +557,9 @@ class CourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
@@ -613,7 +621,9 @@ class CourseService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            const error = new Error('Course not found')
+            error.statusCode = 404
+            throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
