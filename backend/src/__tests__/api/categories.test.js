@@ -98,15 +98,19 @@ describe('Categories API', () => {
             });
 
             const response = await request(app)
-                .get('/api/v1/categories?isActive=false')
+                .get(`/api/v1/categories?isActive=false&limit=100`)
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(
-                response.body.data.some(
-                    (cat) => cat.id === inactiveCategory.id
-                )
-            ).toBe(true);
+            expect(response.body.data).toBeDefined();
+            expect(Array.isArray(response.body.data)).toBe(true);
+            
+            // Check if inactive category is in the results
+            const foundCategory = response.body.data.find(
+                (cat) => cat.id === inactiveCategory.id
+            );
+            expect(foundCategory).toBeDefined();
+            expect(foundCategory.isActive).toBe(false);
         });
 
         it('should search categories by name', async () => {

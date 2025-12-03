@@ -8,9 +8,10 @@ import { USER_ROLES, USER_STATUS } from '../../config/constants.js';
  * Create a test user
  */
 export async function createTestUser(data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const defaultData = {
-        userName: `testuser_${Date.now()}`,
-        email: `test_${Date.now()}@test.com`,
+        userName: `testuser_${uniqueId}`,
+        email: `test_${uniqueId}@test.com`,
         password: 'Test@123456',
         fullName: 'Test User',
         role: USER_ROLES.STUDENT,
@@ -41,22 +42,26 @@ export async function createTestUser(data = {}) {
 /**
  * Create a test admin user
  */
-export async function createTestAdmin() {
+export async function createTestAdmin(data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     return createTestUser({
-        userName: `admin_${Date.now()}`,
-        email: `admin_${Date.now()}@test.com`,
+        userName: `admin_${uniqueId}`,
+        email: `admin_${uniqueId}@test.com`,
         role: USER_ROLES.ADMIN,
+        ...data,
     });
 }
 
 /**
  * Create a test instructor
  */
-export async function createTestInstructor() {
+export async function createTestInstructor(data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     return createTestUser({
-        userName: `instructor_${Date.now()}`,
-        email: `instructor_${Date.now()}@test.com`,
+        userName: `instructor_${uniqueId}`,
+        email: `instructor_${uniqueId}@test.com`,
         role: USER_ROLES.INSTRUCTOR,
+        ...data,
     });
 }
 
@@ -76,15 +81,22 @@ export function generateTestToken(user) {
  * Create a test category
  */
 export async function createTestCategory(data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const defaultData = {
-        name: `Test Category ${Date.now()}`,
-        slug: `test-category-${Date.now()}`,
+        name: `Test Category ${uniqueId}`,
+        slug: `test-category-${uniqueId}`,
         description: 'Test category description',
         isActive: true,
     };
 
+    // Ensure slug is always unique even if overridden
+    const finalData = { ...defaultData, ...data };
+    if (data.slug && data.slug !== defaultData.slug) {
+        finalData.slug = `${data.slug}-${uniqueId}`;
+    }
+
     return prisma.category.create({
-        data: { ...defaultData, ...data },
+        data: finalData,
     });
 }
 
@@ -92,14 +104,21 @@ export async function createTestCategory(data = {}) {
  * Create a test tag
  */
 export async function createTestTag(data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const defaultData = {
-        name: `Test Tag ${Date.now()}`,
-        slug: `test-tag-${Date.now()}`,
+        name: `Test Tag ${uniqueId}`,
+        slug: `test-tag-${uniqueId}`,
         description: 'Test tag description',
     };
 
+    // Ensure slug is always unique even if overridden
+    const finalData = { ...defaultData, ...data };
+    if (data.slug && data.slug !== defaultData.slug) {
+        finalData.slug = `${data.slug}-${uniqueId}`;
+    }
+
     return prisma.tag.create({
-        data: { ...defaultData, ...data },
+        data: finalData,
     });
 }
 
@@ -107,9 +126,10 @@ export async function createTestTag(data = {}) {
  * Create a test course
  */
 export async function createTestCourse(instructorId, data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const defaultData = {
-        title: `Test Course ${Date.now()}`,
-        slug: `test-course-${Date.now()}`,
+        title: `Test Course ${uniqueId}`,
+        slug: `test-course-${uniqueId}`,
         description: 'Test course description',
         shortDescription: 'Short description',
         price: 499000,
@@ -123,8 +143,14 @@ export async function createTestCourse(instructorId, data = {}) {
         isFeatured: false,
     };
 
+    // Ensure slug is always unique even if overridden
+    const finalData = { ...defaultData, ...data };
+    if (data.slug && data.slug !== defaultData.slug) {
+        finalData.slug = `${data.slug}-${uniqueId}`;
+    }
+
     return prisma.course.create({
-        data: { ...defaultData, ...data },
+        data: finalData,
     });
 }
 
@@ -132,9 +158,10 @@ export async function createTestCourse(instructorId, data = {}) {
  * Create a test lesson
  */
 export async function createTestLesson(courseId, data = {}) {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const defaultData = {
-        title: `Test Lesson ${Date.now()}`,
-        slug: `test-lesson-${Date.now()}`,
+        title: `Test Lesson ${uniqueId}`,
+        slug: `test-lesson-${uniqueId}`,
         description: 'Test lesson description',
         content: 'Test lesson content',
         courseId,
@@ -145,8 +172,14 @@ export async function createTestLesson(courseId, data = {}) {
         isPreview: false,
     };
 
+    // Ensure slug is always unique even if overridden
+    const finalData = { ...defaultData, ...data };
+    if (data.slug && data.slug !== defaultData.slug) {
+        finalData.slug = `${data.slug}-${uniqueId}`;
+    }
+
     return prisma.lesson.create({
-        data: { ...defaultData, ...data },
+        data: finalData,
     });
 }
 
