@@ -2,6 +2,7 @@
 import jwt from 'jsonwebtoken';
 import config from '../config/app.config.js';
 import logger from '../config/logger.config.js';
+import { JWT_EXPIRY } from '../config/constants.js';
 
 class JWTUtil {
     /**
@@ -10,7 +11,7 @@ class JWTUtil {
     static generateAccessToken(payload) {
         try {
             return jwt.sign(payload, config.JWT_SECRET, {
-                expiresIn: config.JWT_EXPIRES_IN,
+                expiresIn: JWT_EXPIRY.ACCESS_TOKEN,
                 issuer: 'elearning-api',
             })
         } catch (error) {
@@ -25,7 +26,7 @@ class JWTUtil {
     static generateRefreshToken(payload) {
         try {
             return jwt.sign(payload, config.JWT_REFRESH_SECRET, {
-                expiresIn: config.JWT_REFRESH_EXPIRES_IN,
+                expiresIn: JWT_EXPIRY.REFRESH_TOKEN,
                 issuer: 'elearning-api',
             })
         } catch (error) {
@@ -92,7 +93,7 @@ class JWTUtil {
         return jwt.sign(
             { userId, type: 'email_verification' },
             config.JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: JWT_EXPIRY.EMAIL_VERIFICATION }
         )
     }
 
@@ -101,7 +102,7 @@ class JWTUtil {
      */
     static generatePasswordResetToken(userId) {
         return jwt.sign({ userId, type: 'password_reset' }, config.JWT_SECRET, {
-            expiresIn: '1h',
+            expiresIn: JWT_EXPIRY.PASSWORD_RESET,
         })
     }
 

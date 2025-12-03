@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url'
 
 import config from './config/app.config.js'
 import logger from './config/logger.config.js'
-import { HTTP_STATUS } from './config/constants.js'
+import { HTTP_STATUS, RATE_LIMITS } from './config/constants.js'
 import { notFound, errorHandler } from './middlewares/error.middleware.js'
 import routes from './routes/index.js'
 
@@ -151,8 +151,8 @@ app.use(
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX_REQUESTS,
+    windowMs: config.RATE_LIMIT_WINDOW_MS || RATE_LIMITS.PUBLIC.windowMs,
+    max: config.RATE_LIMIT_MAX_REQUESTS || RATE_LIMITS.PUBLIC.max,
     message: 'Too many requests from this IP, please try again later',
     standardHeaders: true,
     legacyHeaders: false,

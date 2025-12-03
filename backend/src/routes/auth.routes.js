@@ -11,6 +11,7 @@ import {
 } from '../validators/auth.validator.js'
 import rateLimit from 'express-rate-limit'
 import config from '../config/app.config.js'
+import { RATE_LIMITS } from '../config/constants.js'
 
 const router = express.Router()
 
@@ -20,8 +21,8 @@ const authLimiter =
     config.NODE_ENV === 'development' || config.NODE_ENV === 'test'
         ? (req, res, next) => next() // Skip rate limiting in development and test
         : rateLimit({
-              windowMs: 15 * 60 * 1000, // 15 minutes
-              max: 5,
+              windowMs: RATE_LIMITS.AUTH.windowMs,
+              max: RATE_LIMITS.AUTH.max,
               message:
                   'Too many authentication attempts, please try again later',
           })

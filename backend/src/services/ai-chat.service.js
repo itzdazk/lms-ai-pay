@@ -4,7 +4,7 @@ import knowledgeBaseService from './knowledge-base.service.js'
 import ollamaService from './ollama.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
-import { HTTP_STATUS } from '../config/constants.js'
+import { HTTP_STATUS, AI_INTERACTION_TYPES } from '../config/constants.js'
 
 class AIChatService {
     /**
@@ -73,11 +73,11 @@ class AIChatService {
             }
 
             // Determine context type
-            let contextType = 'GENERAL_CHAT'
+            let contextType = AI_INTERACTION_TYPES.GENERAL_CHAT
             if (validLessonId) {
-                contextType = 'LESSON_HELP'
+                contextType = AI_INTERACTION_TYPES.LESSON_HELP
             } else if (validCourseId) {
-                contextType = 'COURSE_OVERVIEW'
+                contextType = AI_INTERACTION_TYPES.COURSE_OVERVIEW
             }
 
             const conversation = await prisma.conversation.create({

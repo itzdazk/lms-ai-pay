@@ -2,7 +2,7 @@
 import express from 'express'
 import uploadController from '../controllers/upload.controller.js'
 import { authenticate } from '../middlewares/authenticate.middleware.js'
-import { USER_ROLES } from '../config/constants.js'
+import { USER_ROLES, UPLOAD_TYPES } from '../config/constants.js'
 import {
     uploadAvatar,
     uploadVideo,
@@ -28,9 +28,9 @@ router.post(
         const type = req.query.type || 'general'
 
         // Chọn multer middleware dựa trên type
-        if (type === 'avatar') {
+        if (type === UPLOAD_TYPES.IMAGE.AVATAR) {
             return uploadAvatar.single('image')(req, res, next)
-        } else if (type === 'thumbnail') {
+        } else if (type === UPLOAD_TYPES.IMAGE.THUMBNAIL) {
             return uploadThumbnail(req, res, next)
         } else {
             // General image - dùng thumbnail middleware
@@ -57,7 +57,7 @@ router.post(
         const type = req.query.type || 'general'
 
         // Chọn multer middleware dựa trên type
-        if (type === 'preview') {
+        if (type === UPLOAD_TYPES.VIDEO.PREVIEW) {
             return uploadVideoPreview(req, res, next)
         } else {
             // Lesson video hoặc general

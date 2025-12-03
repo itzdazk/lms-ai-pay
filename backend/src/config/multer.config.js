@@ -11,6 +11,7 @@ import {
     MAX_IMAGE_SIZE,
     MAX_VIDEO_SIZE,
     MAX_FILE_SIZE,
+    UPLOAD_TYPES,
 } from './constants.js'
 
 const __filename = fileURLToPath(import.meta.url)
