@@ -65,7 +65,7 @@ const config = {
         'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
     VNPAY_RETURN_URL: process.env.VNPAY_RETURN_URL,
     VNPAY_EXPIRATION_MINUTES:
-        parseInt(process.env.VNPAY_EXPIRATION_MINUTES, 10) || 10,
+        parseInt(process.env.VNPAY_EXPIRATION_MINUTES, 10) || 15,
 
     // Payment - MoMo
     MOMO_PARTNER_CODE: process.env.MOMO_PARTNER_CODE,
@@ -87,7 +87,6 @@ const config = {
     OPENAI_MAX_TOKENS: parseInt(process.env.OPENAI_MAX_TOKENS, 10) || 2000,
     OPENAI_TEMPERATURE: parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7,
 
-
     // AI - Ollama (Local LLM)
     OLLAMA_ENABLED: process.env.OLLAMA_ENABLED !== 'false',
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
@@ -97,18 +96,17 @@ const config = {
 
     // AI - Whisper (Local)
     WHISPER_ENABLED: process.env.WHISPER_ENABLED !== 'false',
-    WHISPER_AUTO_TRANSCRIBE:
-        process.env.WHISPER_AUTO_TRANSCRIBE !== 'false',
+    WHISPER_AUTO_TRANSCRIBE: process.env.WHISPER_AUTO_TRANSCRIBE !== 'false',
     WHISPER_COMMAND: process.env.WHISPER_COMMAND || 'whisper',
     WHISPER_MODEL: process.env.WHISPER_MODEL || 'small',
     WHISPER_TASK: process.env.WHISPER_TASK || 'transcribe',
     WHISPER_OUTPUT_FORMAT: process.env.WHISPER_OUTPUT_FORMAT || 'srt',
-    WHISPER_OUTPUT_DIR:
-        process.env.WHISPER_OUTPUT_DIR || 'uploads/transcripts',
+    WHISPER_OUTPUT_DIR: process.env.WHISPER_OUTPUT_DIR || 'uploads/transcripts',
     WHISPER_LANGUAGE: process.env.WHISPER_LANGUAGE || '',
     WHISPER_FP16: process.env.WHISPER_FP16 === 'true',
     // Queue settings - Limit concurrent transcriptions to prevent server overload
-    WHISPER_MAX_CONCURRENT: parseInt(process.env.WHISPER_MAX_CONCURRENT, 10) || 2, // Default: 2 concurrent jobs
+    WHISPER_MAX_CONCURRENT:
+        parseInt(process.env.WHISPER_MAX_CONCURRENT, 10) || 2, // Default: 2 concurrent jobs
 
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',

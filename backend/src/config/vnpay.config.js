@@ -14,7 +14,7 @@ const vnpayConfig = {
     command: 'pay',
     currCode: 'VND',
     locale: 'vn',
-    expirationMinutes: parseInt(config.VNPAY_EXPIRATION_MINUTES) || 10,
+    expirationMinutes: parseInt(config.VNPAY_EXPIRATION_MINUTES) || 15,
 }
 
 /**
