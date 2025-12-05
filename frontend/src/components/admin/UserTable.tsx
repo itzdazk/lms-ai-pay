@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
+  DarkOutlineTable,
+  DarkOutlineTableBody,
+  DarkOutlineTableCell,
+  DarkOutlineTableHead,
+  DarkOutlineTableHeader,
+  DarkOutlineTableRow,
+} from '../ui/dark-outline-table';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -39,11 +39,11 @@ export function UserTable({
 }: UserTableProps) {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return 'destructive';
-      case 'instructor':
+      case 'INSTRUCTOR':
         return 'default';
-      case 'student':
+      case 'STUDENT':
         return 'secondary';
       default:
         return 'outline';
@@ -52,11 +52,11 @@ export function UserTable({
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'ACTIVE':
         return 'default';
-      case 'inactive':
+      case 'INACTIVE':
         return 'secondary';
-      case 'suspended':
+      case 'BANNED':
         return 'destructive';
       default:
         return 'outline';
@@ -65,11 +65,11 @@ export function UserTable({
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return 'Quản trị viên';
-      case 'instructor':
+      case 'INSTRUCTOR':
         return 'Giảng viên';
-      case 'student':
+      case 'STUDENT':
         return 'Học viên';
       default:
         return role;
@@ -78,11 +78,11 @@ export function UserTable({
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'ACTIVE':
         return 'Hoạt động';
-      case 'inactive':
+      case 'INACTIVE':
         return 'Không hoạt động';
-      case 'suspended':
+      case 'BANNED':
         return 'Đã khóa';
       default:
         return status;
@@ -97,7 +97,7 @@ export function UserTable({
     );
   }
 
-  if (users.length === 0) {
+  if (!users || users.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         Không có người dùng nào
@@ -106,19 +106,19 @@ export function UserTable({
   }
 
   return (
-    <div className="rounded-md border border-[#2D2D2D]">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-[#1F1F1F] hover:bg-[#1F1F1F]">
-            <TableHead className="text-white">Người dùng</TableHead>
-            <TableHead className="text-white">Email</TableHead>
-            <TableHead className="text-white">Vai trò</TableHead>
-            <TableHead className="text-white">Trạng thái</TableHead>
-            <TableHead className="text-white">Ngày tạo</TableHead>
-            <TableHead className="text-white text-right">Thao tác</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <div className="rounded-md border border-gray-300 dark:border-[#2D2D2D]">
+      <DarkOutlineTable>
+        <DarkOutlineTableHeader>
+          <DarkOutlineTableRow>
+            <DarkOutlineTableHead>Người dùng</DarkOutlineTableHead>
+            <DarkOutlineTableHead>Email</DarkOutlineTableHead>
+            <DarkOutlineTableHead>Vai trò</DarkOutlineTableHead>
+            <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
+            <DarkOutlineTableHead>Ngày tạo</DarkOutlineTableHead>
+            <DarkOutlineTableHead className="text-right">Thao tác</DarkOutlineTableHead>
+          </DarkOutlineTableRow>
+        </DarkOutlineTableHeader>
+        <DarkOutlineTableBody>
           {users.map((user) => {
             const initials = user.fullName
               .split(' ')
@@ -128,39 +128,36 @@ export function UserTable({
               .slice(0, 2);
 
             return (
-              <TableRow
-                key={user.id}
-                className="border-[#2D2D2D] hover:bg-[#1F1F1F]"
-              >
-                <TableCell>
+              <DarkOutlineTableRow key={user.id}>
+                <DarkOutlineTableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.avatar} alt={user.fullName} />
+                      <AvatarImage src={user.avatarUrl || user.avatar} alt={user.fullName} />
                       <AvatarFallback className="bg-blue-600 text-white">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium text-white">{user.fullName}</p>
-                      <p className="text-sm text-gray-400">@{user.userName}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user.fullName}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">@{user.userName}</p>
                     </div>
                   </div>
-                </TableCell>
-                <TableCell className="text-gray-300">{user.email}</TableCell>
-                <TableCell>
+                </DarkOutlineTableCell>
+                <DarkOutlineTableCell>{user.email}</DarkOutlineTableCell>
+                <DarkOutlineTableCell>
                   <Badge variant={getRoleBadgeVariant(user.role)}>
                     {getRoleLabel(user.role)}
                   </Badge>
-                </TableCell>
-                <TableCell>
+                </DarkOutlineTableCell>
+                <DarkOutlineTableCell>
                   <Badge variant={getStatusBadgeVariant(user.status)}>
                     {getStatusLabel(user.status)}
                   </Badge>
-                </TableCell>
-                <TableCell className="text-gray-400">
+                </DarkOutlineTableCell>
+                <DarkOutlineTableCell>
                   {formatDate(user.createdAt)}
-                </TableCell>
-                <TableCell className="text-right">
+                </DarkOutlineTableCell>
+                <DarkOutlineTableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -190,7 +187,7 @@ export function UserTable({
                         onClick={() => onChangeStatus(user)}
                         className="text-white hover:bg-[#2D2D2D] cursor-pointer"
                       >
-                        {user.status === 'active' ? (
+                        {user.status === 'ACTIVE' ? (
                           <>
                             <UserX className="h-4 w-4 mr-2" />
                             Khóa tài khoản
@@ -211,12 +208,12 @@ export function UserTable({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                </DarkOutlineTableCell>
+              </DarkOutlineTableRow>
             );
           })}
-        </TableBody>
-      </Table>
+        </DarkOutlineTableBody>
+      </DarkOutlineTable>
     </div>
   );
 }
