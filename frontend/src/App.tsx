@@ -38,6 +38,20 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+          {/* Admin Routes - No Navbar/Footer */}
+          <Route
+            path="/admin-dashboard"
+            element={<AdminDashboard />}
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <Routes>
+                <Route path="/users" element={<UsersPage />} />
+              </Routes>
+            }
+          />
+
           {/* Main Routes - With Navbar/Footer */}
           <Route
             path="/*"
@@ -51,7 +65,6 @@ export default function App() {
                     <Route path="/courses/:id" element={<CourseDetailPage />} />
                     <Route path="/dashboard" element={<StudentDashboard />} />
                     <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
-                    <Route path="/admin-dashboard" element={<AdminDashboard />} />
                     <Route path="/learn/:id" element={<VideoPlayerPage />} />
                     <Route path="/ai-chat" element={<AIChatPage />} />
                     <Route path="/checkout/:id" element={<PaymentCheckoutPage />} />
@@ -63,7 +76,6 @@ export default function App() {
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/admin/users" element={<UsersPage />} />
                   </Routes>
                 </main>
                 <Footer />
