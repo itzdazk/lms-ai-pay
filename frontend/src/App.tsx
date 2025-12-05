@@ -22,6 +22,8 @@ import { CertificatePage } from './pages/CertificatePage';
 import { CertificatesPage } from './pages/CertificatesPage';
 import { AboutPage } from './pages/AboutPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { UsersPage } from './pages/admin/UsersPage';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
@@ -60,6 +62,8 @@ export default function App() {
                     <Route path="/certificates" element={<CertificatesPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/admin/users" element={<UsersPage />} />
                   </Routes>
                 </main>
                 <Footer />
