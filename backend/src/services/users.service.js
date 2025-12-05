@@ -5,6 +5,7 @@ import logger from '../config/logger.config.js'
 import { USER_ROLES, USER_STATUS, HTTP_STATUS } from '../config/constants.js'
 import path from 'path'
 import fs from 'fs'
+import { avatarsDir } from '../config/multer.config.js'
 
 class UsersService {
     /**
@@ -113,14 +114,15 @@ class UsersService {
         // Delete old avatar file if exists
         if (currentUser?.avatarUrl) {
             try {
-                const oldAvatarPath = path.join(
-                    process.cwd(),
-                    'backend',
-                    currentUser.avatarUrl
-                )
+                // Extract filename from avatarUrl (e.g., /uploads/avatars/filename.webp -> filename.webp)
+                const filename = path.basename(currentUser.avatarUrl)
+                const oldAvatarPath = path.join(avatarsDir, filename)
+                
                 if (fs.existsSync(oldAvatarPath)) {
                     fs.unlinkSync(oldAvatarPath)
                     logger.info(`Old avatar deleted: ${currentUser.avatarUrl}`)
+                } else {
+                    logger.warn(`Old avatar file not found: ${oldAvatarPath}`)
                 }
             } catch (error) {
                 logger.warn(`Failed to delete old avatar: ${error.message}`)
