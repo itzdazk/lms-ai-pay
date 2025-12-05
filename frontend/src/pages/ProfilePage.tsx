@@ -220,9 +220,9 @@ export function ProfilePage() {
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Vai trò</p>
                     <p className="text-white font-medium">
-                      {user.role === 'student'
+                      {user.role === 'STUDENT'
                         ? 'Học viên'
-                        : user.role === 'instructor'
+                        : user.role === 'INSTRUCTOR'
                         ? 'Giảng viên'
                         : 'Quản trị viên'}
                     </p>

@@ -31,9 +31,9 @@ export function LoginPage() {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
-        if (user.role === 'admin') {
+        if (user.role === 'ADMIN') {
           navigate('/admin-dashboard');
-        } else if (user.role === 'instructor') {
+        } else if (user.role === 'INSTRUCTOR') {
           navigate('/instructor-dashboard');
         } else {
           navigate('/dashboard');

@@ -204,7 +204,7 @@ class UsersService {
      * Get users list (Admin only)
      */
     async getUsers(query) {
-        const { page = 1, limit = 20, role, status, search } = query
+        const { page = 1, limit = 20, role, status, search, sortBy = 'createdAt', sortOrder = 'desc' } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
@@ -231,6 +231,12 @@ class UsersService {
             ]
         }
 
+        // Build orderBy clause
+        const validSortFields = ['createdAt', 'fullName', 'email', 'updatedAt', 'lastLoginAt']
+        const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt'
+        const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc'
+        const orderBy = { [sortField]: sortDirection }
+
         // Get users and total count
         const [users, total] = await Promise.all([
             prisma.user.findMany({
@@ -252,7 +258,7 @@ class UsersService {
                     createdAt: true,
                     updatedAt: true,
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy,
             }),
             prisma.user.count({ where }),
         ])

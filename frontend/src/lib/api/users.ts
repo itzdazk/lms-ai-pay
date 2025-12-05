@@ -20,8 +20,8 @@ export interface GetUsersParams {
   page?: number;
   limit?: number;
   search?: string;
-  role?: 'admin' | 'instructor' | 'student';
-  status?: 'active' | 'inactive' | 'suspended';
+  role?: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
+  status?: 'ACTIVE' | 'INACTIVE' | 'BANNED';
   sortBy?: 'createdAt' | 'fullName' | 'email';
   sortOrder?: 'asc' | 'desc';
 }
@@ -34,11 +34,11 @@ export interface UpdateUserRequest {
 }
 
 export interface ChangeRoleRequest {
-  role: 'admin' | 'instructor' | 'student';
+  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
 }
 
 export interface ChangeStatusRequest {
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
 }
 
 export const usersApi = {
@@ -90,11 +90,38 @@ export const usersApi = {
 
   // Admin: Get users list
   async getUsers(params?: GetUsersParams): Promise<PaginatedResponse<User>> {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<User>>>(
-      '/users',
-      { params }
-    );
-    return response.data.data;
+    // Use URLSearchParams to avoid sending empty strings
+    const searchParams = new URLSearchParams();
+    
+    if (params) {
+      if (params.page) searchParams.append('page', params.page.toString());
+      if (params.limit) searchParams.append('limit', params.limit.toString());
+      if (params.search && params.search.trim()) {
+        searchParams.append('search', params.search.trim());
+      }
+      if (params.role) searchParams.append('role', params.role);
+      if (params.status) searchParams.append('status', params.status);
+      if (params.sortBy) searchParams.append('sortBy', params.sortBy);
+      if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
+    }
+    
+    const queryString = searchParams.toString();
+    const url = queryString ? `/users?${queryString}` : '/users';
+    
+    // Backend returns: { success: true, data: { users: [...], pagination: {...} } }
+    const response = await apiClient.get<ApiResponse<{ users: User[]; pagination: any }>>(url);
+    const backendData = response.data.data;
+    
+    // Transform to PaginatedResponse format: { data: [...], pagination: {...} }
+    return {
+      data: backendData.users || [],
+      pagination: backendData.pagination || {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   },
 
   // Admin: Get user by ID
@@ -110,7 +137,7 @@ export const usersApi = {
   },
 
   // Admin: Change user role
-  async changeUserRole(id: string, role: 'admin' | 'instructor' | 'student'): Promise<User> {
+  async changeUserRole(id: string, role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'): Promise<User> {
     const response = await apiClient.patch<ApiResponse<User>>(
       `/users/${id}/role`,
       { role }
@@ -121,7 +148,7 @@ export const usersApi = {
   // Admin: Change user status
   async changeUserStatus(
     id: string,
-    status: 'active' | 'inactive' | 'suspended'
+    status: 'ACTIVE' | 'INACTIVE' | 'BANNED'
   ): Promise<User> {
     const response = await apiClient.patch<ApiResponse<User>>(
       `/users/${id}/status`,
