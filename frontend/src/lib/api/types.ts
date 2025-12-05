@@ -39,8 +39,10 @@ export interface User {
   userName: string;
   email: string;
   fullName: string;
+  phone?: string;
   role: 'admin' | 'instructor' | 'student';
-  avatar?: string;
+  avatar?: string; // Legacy field name (for backward compatibility)
+  avatarUrl?: string; // Backend field name
   bio?: string;
   status: 'active' | 'inactive' | 'suspended';
   emailVerified: boolean;
