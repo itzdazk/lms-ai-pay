@@ -1,21 +1,58 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { DarkOutlineButton } from '../components/ui/buttons';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'sonner';
 
 export function LoginPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { email, password, rememberMe });
-    window.location.href = '/dashboard';
+    setErrors({});
+    setIsLoading(true);
+
+    try {
+      await login(email, password);
+      toast.success('Đăng nhập thành công!');
+      
+      // Redirect based on user role
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.role === 'admin') {
+          navigate('/admin-dashboard');
+        } else if (user.role === 'instructor') {
+          navigate('/instructor-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+      toast.error(errorMessage);
+      
+      // Set field-specific errors if available
+      if (error.response?.status === 401) {
+        setErrors({ password: 'Email hoặc mật khẩu không đúng' });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -83,8 +120,16 @@ export function LoginPage() {
               <DarkOutlineButton
                 type="submit"
                 className="w-full"
+                disabled={isLoading}
               >
-                Đăng nhập
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang đăng nhập...
+                  </>
+                ) : (
+                  'Đăng nhập'
+                )}
               </DarkOutlineButton>
             </form>
           </CardContent>
