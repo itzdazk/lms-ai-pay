@@ -1,14 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
-import { Badge } from '../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Label } from '../components/ui/label';
+import { Tabs, TabsContent } from '../components/ui/tabs';
+import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { DarkOutlineInput } from '../components/ui/dark-outline-input';
-import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../components/ui/dark-outline-select-trigger';
 import {
   DarkOutlineTable,
   DarkOutlineTableHeader,
@@ -18,57 +15,26 @@ import {
   DarkOutlineTableCell,
 } from '../components/ui/dark-outline-table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
-import {
   BookOpen,
   Users,
   DollarSign,
   TrendingUp,
-  Plus,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Eye,
   Star,
   BarChart3,
   Loader2,
-  Search
 } from 'lucide-react';
 import { coursesApi } from '../lib/api/courses';
 import { useAuth } from '../contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { toast } from 'sonner';
-import type { Course, Category } from '../lib/api/types';
+import type { Course } from '../lib/api/types';
+import { CoursesPage } from './instructor/CoursesPage';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(price);
-}
-
-function formatDuration(minutes: number): string {
-  if (!minutes) return '0 phút';
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0) {
-    return mins > 0 ? `${hours}h ${mins}p` : `${hours}h`;
-  }
-  return `${mins}p`;
-}
-
-function formatDate(dateString: string): string {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
 }
 
 function translateErrorMessage(message: string): string {
@@ -123,7 +89,6 @@ export function InstructorDashboard() {
     totalRevenue: 0,
     avgRating: 0,
   });
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -204,7 +169,6 @@ export function InstructorDashboard() {
   // Load data
   useEffect(() => {
     if (currentUser) {
-      loadCategories();
     }
   }, [currentUser]);
 
@@ -239,12 +203,6 @@ export function InstructorDashboard() {
       });
     }
   }, [pagination.page]); // Only trigger on page change, not on courses update
-
-  // Memoize courses to preserve order and prevent re-sorting
-  const memoizedCourses = useMemo(() => {
-    // Return a new array reference to preserve order
-    return [...courses];
-  }, [courses]);
 
   // Transform backend course data to frontend format
   const transformCourse = (course: any): Course => {
@@ -322,21 +280,6 @@ export function InstructorDashboard() {
     }
   };
 
-  const loadCategories = async () => {
-    try {
-      const categoriesData = await coursesApi.getCategories();
-      // Backend returns id as number, but we need to keep it as string for Select component
-      // Transform to ensure consistency
-      const transformedCategories = categoriesData.map(cat => ({
-        ...cat,
-        id: typeof cat.id === 'number' ? String(cat.id) : cat.id,
-      }));
-      setCategories(transformedCategories);
-    } catch (error: any) {
-      console.error('Error loading categories:', error);
-    }
-  };
-
   const loadStats = async () => {
     try {
       // Get stats from API
@@ -369,9 +312,10 @@ export function InstructorDashboard() {
       const draftCourses = allCourses.filter((c: Course) => c.status === 'draft').length;
       const totalStudents = allCourses.reduce((sum: number, c: Course) => sum + (c.enrolledCount || 0), 0);
       const totalRevenue = statsData?.totalRevenue || 0;
+      const coursesWithRatings = allCourses.filter((c: Course) => (c.ratingCount || 0) > 0);
       const avgRating = statsData?.averageRating || 
-        (allCourses.length > 0 
-          ? allCourses.reduce((sum: number, c: Course) => sum + (c.ratingAvg || 0), 0) / allCourses.length 
+        (coursesWithRatings.length > 0 
+          ? coursesWithRatings.reduce((sum: number, c: Course) => sum + (c.ratingAvg || 0), 0) / coursesWithRatings.length 
           : 0);
       
       setStats({
@@ -389,8 +333,9 @@ export function InstructorDashboard() {
         const publishedCourses = courses.filter((c: Course) => c.status === 'published').length;
         const draftCourses = courses.filter((c: Course) => c.status === 'draft').length;
         const totalStudents = courses.reduce((sum: number, c: Course) => sum + (c.enrolledCount || 0), 0);
-        const avgRating = courses.length > 0 
-          ? courses.reduce((sum: number, c: Course) => sum + (c.ratingAvg || 0), 0) / courses.length 
+        const coursesWithRatings = courses.filter((c: Course) => (c.ratingCount || 0) > 0);
+        const avgRating = coursesWithRatings.length > 0 
+          ? coursesWithRatings.reduce((sum: number, c: Course) => sum + (c.ratingAvg || 0), 0) / coursesWithRatings.length 
           : 0;
         
         setStats({
@@ -403,19 +348,6 @@ export function InstructorDashboard() {
         });
       }
     }
-  };
-
-
-  const handleEditCourse = (course: Course) => {
-    // Save scroll position before navigating
-    const scrollContainer = document.querySelector('main') || window;
-    const scrollPosition = scrollContainer === window 
-      ? window.scrollY 
-      : (scrollContainer as HTMLElement).scrollTop;
-    sessionStorage.setItem('instructorDashboardScroll', scrollPosition.toString());
-    
-    // Navigate to edit page
-    navigate(`/instructor/courses/${course.id}/edit`);
   };
 
 
@@ -459,121 +391,6 @@ export function InstructorDashboard() {
     } finally {
       setActionLoading(false);
     }
-  };
-
-  const handleSearch = (value: string) => {
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
-    setFilters({ ...filters, search: value, page: 1 });
-  };
-
-  const handleFilterChange = (key: string, value: any) => {
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
-    setFilters({ ...filters, [key]: value === 'all' ? undefined : value, page: 1 });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
-    setFilters({ ...filters, page: newPage });
-  };
-
-  const renderPagination = () => {
-    const pages: (number | string)[] = [];
-    const totalPages = pagination.totalPages;
-    const currentPage = pagination.page;
-
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      if (currentPage > 3) {
-        pages.push('...');
-      }
-      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-        pages.push(i);
-      }
-      if (currentPage < totalPages - 2) {
-        pages.push('...');
-      }
-      pages.push(totalPages);
-    }
-
-    return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <DarkOutlineButton
-          onClick={() => handlePageChange(1)}
-          disabled={currentPage === 1 || loading}
-          size="sm"
-        >
-          &lt;&lt;
-        </DarkOutlineButton>
-        <DarkOutlineButton
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1 || loading}
-          size="sm"
-        >
-          &lt;
-        </DarkOutlineButton>
-        {pages.map((page, index) => {
-          if (page === '...') {
-            return (
-              <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
-                ...
-              </span>
-            );
-          }
-          const pageNum = page as number;
-          return (
-            <DarkOutlineButton
-              key={pageNum}
-              onClick={() => handlePageChange(pageNum)}
-              disabled={loading}
-              size="sm"
-              className={
-                currentPage === pageNum
-                  ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
-                  : ''
-              }
-            >
-              {pageNum}
-            </DarkOutlineButton>
-          );
-        })}
-        <DarkOutlineButton
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages || loading}
-          size="sm"
-        >
-          &gt;
-        </DarkOutlineButton>
-        <DarkOutlineButton
-          onClick={() => handlePageChange(totalPages)}
-          disabled={currentPage === totalPages || loading}
-          size="sm"
-        >
-          &gt;&gt;
-        </DarkOutlineButton>
-      </div>
-    );
   };
 
   return (
@@ -630,7 +447,7 @@ export function InstructorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl flex items-center gap-2 text-white">
-              {stats.avgRating}
+              {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '-'}
               <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
             </div>
             <p className="text-xs text-gray-500 mt-1">Từ học viên</p>
@@ -640,366 +457,24 @@ export function InstructorDashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="courses" className="space-y-6">
-        <TabsList className="w-full justify-start bg-[#1A1A1A] border border-[#2D2D2D] rounded-xl p-1">
-          <TabsTrigger
-            value="courses"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
-          >
+        <DarkTabsList>
+          <DarkTabsTrigger value="courses" variant="blue">
             <BookOpen className="h-4 w-4 mr-2" />
             Khóa học
-          </TabsTrigger>
-          <TabsTrigger
-            value="analytics"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
-          >
+          </DarkTabsTrigger>
+          <DarkTabsTrigger value="analytics" variant="blue">
             <BarChart3 className="h-4 w-4 mr-2" />
             Phân tích
-          </TabsTrigger>
-          <TabsTrigger
-            value="revenue"
-            className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black rounded-lg px-4 py-2"
-          >
+          </DarkTabsTrigger>
+          <DarkTabsTrigger value="revenue" variant="blue">
             <DollarSign className="h-4 w-4 mr-2" />
             Doanh thu
-          </TabsTrigger>
-        </TabsList>
+          </DarkTabsTrigger>
+        </DarkTabsList>
 
         {/* Courses Tab */}
         <TabsContent value="courses" className="space-y-4">
-          {/* Filters */}
-          <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-            <CardHeader>
-              <CardTitle className="text-white">Bộ lọc</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Trạng thái</Label>
-                  <Select
-                    value={filters.status || 'all'}
-                    onValueChange={(value) => handleFilterChange('status', value)}
-                  >
-                    <DarkOutlineSelectTrigger>
-                      <SelectValue placeholder="Tất cả trạng thái" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="all">Tất cả trạng thái</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="DRAFT">Bản nháp</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="PUBLISHED">Đã xuất bản</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="ARCHIVED">Đã lưu trữ</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Danh mục</Label>
-                  <Select
-                    value={filters.categoryId ? String(filters.categoryId) : 'all'}
-                    onValueChange={(value) => {
-                      console.log('Category selected:', value);
-                      handleFilterChange('categoryId', value === 'all' ? undefined : value);
-                    }}
-                  >
-                    <DarkOutlineSelectTrigger className="w-full !data-[placeholder]:text-gray-500 dark:!data-[placeholder]:text-gray-400 [&_*[data-slot=select-value]]:!text-black [&_*[data-slot=select-value]]:opacity-100 [&_*[data-slot=select-value][data-placeholder]]:!text-gray-500 dark:[&_*[data-slot=select-value]]:!text-white dark:[&_*[data-slot=select-value]]:opacity-100 dark:[&_*[data-slot=select-value][data-placeholder]]:!text-gray-400">
-                      <SelectValue placeholder="Tất cả danh mục" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="all">Tất cả danh mục</DarkOutlineSelectItem>
-                      {categories.map((category) => {
-                        const categoryIdStr = String(category.id);
-                        return (
-                          <DarkOutlineSelectItem key={category.id} value={categoryIdStr}>
-                            {category.name}
-                          </DarkOutlineSelectItem>
-                        );
-                      })}
-                    </DarkOutlineSelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Cấp độ</Label>
-                  <Select
-                    value={filters.level || 'all'}
-                    onValueChange={(value) => handleFilterChange('level', value)}
-                  >
-                    <DarkOutlineSelectTrigger>
-                      <SelectValue placeholder="Tất cả cấp độ" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="all">Tất cả cấp độ</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="beginner">Cơ bản</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="intermediate">Trung bình</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="advanced">Nâng cao</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Sắp xếp</Label>
-                  <Select
-                    value={filters.sort || 'newest'}
-                    onValueChange={(value) => {
-                      const mainContainer = document.querySelector('main');
-                      if (mainContainer) {
-                        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-                      } else {
-                        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-                      }
-                      isPageChangingRef.current = true;
-                      handleFilterChange('sort', value);
-                    }}
-                  >
-                    <DarkOutlineSelectTrigger>
-                      <SelectValue placeholder="Mới nhất" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="newest">Mới nhất</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="oldest">Cũ nhất</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="popular">Phổ biến</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="rating">Đánh giá</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Số lượng/trang</Label>
-                  <Select
-                    value={filters.limit?.toString() || '10'}
-                    onValueChange={(value) => handleFilterChange('limit', parseInt(value))}
-                  >
-                    <DarkOutlineSelectTrigger>
-                      <SelectValue />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="5">5</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="10">10</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="20">20</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="50">50</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="100">100</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Thao tác</Label>
-                  <DarkOutlineButton
-                    onClick={() => {
-                      const mainContainer = document.querySelector('main');
-                      if (mainContainer) {
-                        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-                      } else {
-                        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-                      }
-                      isPageChangingRef.current = true;
-                      setFilters({
-                        page: 1,
-                        limit: 10,
-                        search: '',
-                        status: undefined,
-                        categoryId: undefined,
-                        level: undefined,
-                        sort: 'newest',
-                      });
-                    }}
-                    className="w-full"
-                  >
-                    Xóa bộ lọc
-                  </DarkOutlineButton>
-                </div>
-              </div>
-
-              {/* Search */}
-              <div className="space-y-2">
-                <Label className="text-gray-400 text-sm">Tìm kiếm</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <DarkOutlineInput
-                    type="text"
-                    placeholder="Tìm kiếm theo tên khóa học..."
-                    value={filters.search}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Courses Table */}
-          <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-white">Quản lý khóa học</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Danh sách tất cả khóa học của bạn
-                  </CardDescription>
-                </div>
-                <DarkOutlineButton 
-                  size="lg"
-                  onClick={() => {
-                    // Save scroll position before navigating
-                    const scrollContainer = document.querySelector('main') || window;
-                    const scrollPosition = scrollContainer === window 
-                      ? window.scrollY 
-                      : (scrollContainer as HTMLElement).scrollTop;
-                    sessionStorage.setItem('instructorDashboardScroll', scrollPosition.toString());
-                    navigate('/instructor/courses/create');
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tạo khóa học mới
-                </DarkOutlineButton>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                  <span className="ml-2 text-gray-400">Đang tải...</span>
-                </div>
-              ) : courses.length === 0 ? (
-                <div className="text-center py-12">
-                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-400">Chưa có khóa học nào</p>
-                  <p className="text-xs text-gray-500 mt-2">Tạo khóa học mới để bắt đầu</p>
-                </div>
-              ) : (
-                <>
-                  <DarkOutlineTable>
-                    <DarkOutlineTableHeader>
-                      <DarkOutlineTableRow>
-                        <DarkOutlineTableHead>Khóa học</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Học viên</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Đánh giá</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Doanh thu</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Hoàn thành</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Ngày tạo</DarkOutlineTableHead>
-                        <DarkOutlineTableHead className="text-right">Thao tác</DarkOutlineTableHead>
-                      </DarkOutlineTableRow>
-                    </DarkOutlineTableHeader>
-                    <DarkOutlineTableBody>
-                      {memoizedCourses.map(course => {
-                        const price = course.discountPrice || course.originalPrice || 0;
-                        const revenue = price * (course.enrolledCount || 0);
-                        const durationMinutes = (course.durationMinutes || 0);
-                        const lessonsCount = course.lessonsCount || 0;
-                        return (
-                          <DarkOutlineTableRow key={course.id}>
-                            <DarkOutlineTableCell>
-                              <div className="flex items-center gap-3">
-                                {course.thumbnail ? (
-                                  <img
-                                    src={course.thumbnail}
-                                    alt={course.title}
-                                    className="w-16 h-10 object-cover rounded"
-                                  />
-                                ) : (
-                                  <div className="w-16 h-10 bg-gray-200 dark:bg-[#2D2D2D] rounded flex items-center justify-center">
-                                    <BookOpen className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="font-medium line-clamp-1 text-gray-900 dark:text-white">{course.title}</p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">{lessonsCount} bài • {formatDuration(durationMinutes)}</p>
-                                </div>
-                              </div>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                              {course.status === 'published' ? (
-                                <Badge className="bg-green-600">Đã xuất bản</Badge>
-                              ) : course.status === 'draft' ? (
-                                <Badge variant="outline" className="border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300">Bản nháp</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="bg-gray-600 text-white">Đã lưu trữ</Badge>
-                              )}
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                <span className="text-gray-900 dark:text-gray-300">{(course.enrolledCount || 0).toLocaleString()}</span>
-                              </div>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-gray-900 dark:text-gray-300">{course.ratingAvg ? course.ratingAvg.toFixed(1) : '0.0'} ({(course.ratingCount || 0)})</span>
-                              </div>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                              <span className="text-gray-900 dark:text-gray-300">{formatPrice(revenue)}</span>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                              <span className="text-gray-900 dark:text-gray-300">0%</span>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                              <span className="text-gray-900 dark:text-gray-300">{formatDate(course.createdAt)}</span>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-[#1F1F1F]">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-[#1A1A1A] border-[#2D2D2D]">
-                                  <DropdownMenuItem asChild className="text-white hover:bg-[#1F1F1F]">
-                                    <Link to={`/courses/${course.id}`}>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Xem
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    className="text-white hover:bg-[#1F1F1F]"
-                                    onClick={() => handleEditCourse(course)}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Chỉnh sửa
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    className="text-white hover:bg-[#1F1F1F]"
-                                    onClick={() => {
-                                      setSelectedCourse(course);
-                                      // Convert status to lowercase for state (backend returns uppercase)
-                                      const statusLower = (course.status || 'draft').toLowerCase() as 'draft' | 'published' | 'archived';
-                                      setNewStatus(statusLower);
-                                      setIsStatusDialogOpen(true);
-                                    }}
-                                  >
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    Đổi trạng thái
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-400 hover:bg-[#1F1F1F]"
-                                    onClick={() => {
-                                      setSelectedCourse(course);
-                                      setIsDeleteDialogOpen(true);
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Xóa
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </DarkOutlineTableCell>
-                          </DarkOutlineTableRow>
-                        );
-                      })}
-                    </DarkOutlineTableBody>
-                  </DarkOutlineTable>
-
-                  {/* Pagination */}
-                  {pagination.totalPages > 1 && (
-                    <div className="flex justify-center mt-6 pt-4 border-t border-gray-300 dark:border-[#2D2D2D]">
-                      {renderPagination()}
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <CoursesPage />
         </TabsContent>
 
         {/* Analytics Tab */}
@@ -1061,7 +536,9 @@ export function InstructorDashboard() {
                             <p className="font-medium line-clamp-1 text-gray-900 dark:text-white">{course.title}</p>
                             <div className="flex items-center gap-1 text-sm">
                               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-gray-600 dark:text-gray-300">{course.ratingAvg ? course.ratingAvg.toFixed(1) : '0.0'}</span>
+                                  <span className="text-gray-600 dark:text-gray-300">
+                                    {course.ratingCount > 0 && course.ratingAvg ? course.ratingAvg.toFixed(1) : '-'}
+                                  </span>
                                   <span className="text-gray-500">({course.ratingCount || 0})</span>
                             </div>
                           </div>
