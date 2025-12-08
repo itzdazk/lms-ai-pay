@@ -12,7 +12,6 @@ import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectIt
 import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Course, Category, Tag } from '../../lib/api/types';
-import { coursesApi } from '../../lib/api/courses';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,6 @@ interface CourseFormProps {
   onSubmit: (data: Partial<Course>, thumbnailFile?: File, previewFile?: File) => Promise<void>;
   onCancel?: () => void;
   loading?: boolean;
-  onPreview?: (courseId: string) => void;
 }
 
 export function CourseForm({
@@ -55,7 +53,6 @@ export function CourseForm({
   onSubmit,
   onCancel,
   loading = false,
-  onPreview,
 }: CourseFormProps) {
   const [formData, setFormData] = useState<CourseFormData>({
     title: '',
@@ -303,58 +300,31 @@ export function CourseForm({
     try {
       setPreviewLoading(true);
 
-      // If course already exists, just open preview
-      if (course?.id) {
-        const previewUrl = `/courses/${course.id}`;
-        window.open(previewUrl, '_blank');
-        return;
-      }
+      // Always prepare preview data from current form data
+      const previewData = {
+        ...prepareSubmitData(),
+        // Get category name
+        categoryName: categories.find(c => String(c.id) === formData.categoryId)?.name || '',
+        // Get tag names
+        tagNames: tags
+          .filter(tag => formData.tags.includes(String(tag.id)))
+          .map(tag => tag.name),
+        // Include preview images/videos
+        thumbnailPreview: thumbnailPreview || null,
+        previewVideoPreview: previewVideoPreview || null,
+      };
 
-      // If creating new course, save it first as draft
-      const submitData: any = prepareSubmitData();
-      
-      // Create course
-      const newCourse = await coursesApi.createInstructorCourse(submitData);
-      
-      if (!newCourse || !newCourse.id) {
-        throw new Error('Course creation failed: No course ID returned');
-      }
-      
-      const courseId = String(newCourse.id);
-      
-      // Upload thumbnail if provided
-      if (thumbnailFile) {
-        await coursesApi.uploadCourseThumbnail(courseId, thumbnailFile);
-      }
-      
-      // Upload preview video if provided
-      if (previewFile) {
-        await coursesApi.uploadCoursePreview(courseId, previewFile);
-      }
-      
-      // Add tags if provided
-      if (submitData.tags && Array.isArray(submitData.tags) && submitData.tags.length > 0) {
-        const tagIds = submitData.tags
-          .map((tagId: any) => parseInt(String(tagId)))
-          .filter((id: number) => !isNaN(id) && id > 0);
-        if (tagIds.length > 0) {
-          await coursesApi.addCourseTags(courseId, tagIds);
-        }
-      }
-
-      // Notify parent component about the new course (for CourseCreatePage to update)
-      if (onPreview) {
-        onPreview(courseId);
-      }
+      // Save to sessionStorage for preview page
+      sessionStorage.setItem('coursePreviewData', JSON.stringify(previewData));
 
       // Open preview in new tab
-      const previewUrl = `/courses/${courseId}`;
+      const previewUrl = `/courses/preview`;
       window.open(previewUrl, '_blank');
       
-      toast.success('Đã lưu bản nháp và mở xem trước');
+      toast.success('Đã mở xem trước');
     } catch (error: any) {
-      console.error('Error creating course for preview:', error);
-      toast.error('Không thể tạo khóa học để xem trước');
+      console.error('Error preparing preview:', error);
+      toast.error('Không thể mở xem trước');
     } finally {
       setPreviewLoading(false);
     }

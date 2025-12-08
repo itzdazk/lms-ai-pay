@@ -16,6 +16,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { LandingPage } from './pages/LandingPage';
 import { CoursesPage } from './pages/CoursesPage';
 import { CourseDetailPage } from './pages/CourseDetailPage';
+import { CoursePreviewPage } from './pages/CoursePreviewPage';
 import { AboutPage } from './pages/AboutPage';
 
 // Student Pages
@@ -60,6 +61,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/courses" element={<CoursesPage />} />
+                  <Route path="/courses/preview" element={<CoursePreviewPage />} />
                   <Route path="/courses/:id" element={<CourseDetailPage />} />
                   <Route path="/about" element={<AboutPage />} />
 

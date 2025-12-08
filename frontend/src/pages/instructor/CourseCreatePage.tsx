@@ -109,12 +109,6 @@ export function CourseCreatePage() {
     navigate('/instructor/dashboard');
   };
 
-  const handlePreview = (courseId: string) => {
-    // Course was created for preview, we can optionally update the URL or state
-    // For now, just let the preview open in new tab
-    // The course is already saved, so user can continue editing
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -146,7 +140,6 @@ export function CourseCreatePage() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             loading={submitting}
-            onPreview={handlePreview}
           />
         </CardContent>
       </Card>
