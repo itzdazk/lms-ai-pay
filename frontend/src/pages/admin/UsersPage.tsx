@@ -62,6 +62,8 @@ export function UsersPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [newRole, setNewRole] = useState<'ADMIN' | 'INSTRUCTOR' | 'STUDENT'>('STUDENT');
   const [newStatus, setNewStatus] = useState<'ACTIVE' | 'INACTIVE' | 'BANNED'>('ACTIVE');
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState<string>(filters.search || '');
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
   const [userStats, setUserStats] = useState({
@@ -88,6 +90,23 @@ export function UsersPage() {
       return;
     }
   }, [currentUser, authLoading, navigate]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Save current scroll position before changing filter
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+      } else {
+        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      }
+      isPageChangingRef.current = true;
+      setFilters((prevFilters) => ({ ...prevFilters, search: searchInput, page: 1 }));
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Load users
   useEffect(() => {
@@ -186,15 +205,7 @@ export function UsersPage() {
   };
 
   const handleSearch = (value: string) => {
-    // Save current scroll position before changing filter
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
-    setFilters({ ...filters, search: value, page: 1 });
+    setSearchInput(value);
   };
 
   const handleFilterChange = (key: keyof GetUsersParams, value: any) => {
@@ -494,6 +505,7 @@ export function UsersPage() {
                       <SelectValue placeholder="10 / trang" />
                     </DarkOutlineSelectTrigger>
                     <DarkOutlineSelectContent>
+                      <DarkOutlineSelectItem value="5">5 / trang</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="10">10 / trang</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="20">20 / trang</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="50">50 / trang</DarkOutlineSelectItem>
@@ -505,8 +517,9 @@ export function UsersPage() {
                   <label className="text-sm font-medium text-gray-400 dark:text-gray-400">
                     Thao tác
                   </label>
-                  <DarkOutlineButton
-                    onClick={() =>
+                  <Button
+                    onClick={() => {
+                      setSearchInput('');
                       setFilters({
                         page: 1,
                         limit: 10,
@@ -515,12 +528,13 @@ export function UsersPage() {
                         status: undefined,
                         sortBy: 'createdAt',
                         sortOrder: 'desc',
-                      })
-                    }
+                      });
+                    }}
+                    variant="blue"
                     className="w-full"
                   >
                     Xóa bộ lọc
-                  </DarkOutlineButton>
+                  </Button>
                 </div>
               </div>
               
@@ -529,7 +543,7 @@ export function UsersPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
                 <DarkOutlineInput
                   placeholder="Tìm kiếm theo tên, email..."
-                  value={filters.search || ''}
+                  value={searchInput}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10"
                 />
@@ -556,6 +570,8 @@ export function UsersPage() {
               onChangeRole={handleChangeRole}
               onChangeStatus={handleChangeStatus}
               loading={loading}
+              selectedRowId={selectedRowId}
+              onRowSelect={setSelectedRowId}
             />
 
             {/* Pagination */}
