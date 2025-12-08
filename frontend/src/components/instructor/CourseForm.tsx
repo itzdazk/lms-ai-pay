@@ -9,10 +9,18 @@ import {
   SelectValue,
 } from '../ui/select';
 import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../ui/dark-outline-select-trigger';
-import { Loader2, X, Image as ImageIcon, Video, Search, Eye } from 'lucide-react';
+import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Course, Category, Tag } from '../../lib/api/types';
 import { coursesApi } from '../../lib/api/courses';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 interface CourseFormData {
   title: string;
@@ -71,26 +79,47 @@ export function CourseForm({
   const [previewVideoPreview, setPreviewVideoPreview] = useState<string | null>(null);
   const [categorySearch, setCategorySearch] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [initialFormData, setInitialFormData] = useState<CourseFormData | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (course) {
-      setFormData({
+      // Get categoryId from course, try multiple sources
+      const categoryId = course.categoryId 
+        ? String(course.categoryId) 
+        : (course.category?.id ? String(course.category.id) : '');
+      
+      // Level is already transformed to lowercase by CourseEditPage
+      // But we handle both cases (uppercase from backend or lowercase from transform)
+      let normalizedLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
+      if (course.level) {
+        const levelStr = String(course.level).toLowerCase().trim();
+        if (levelStr === 'beginner' || levelStr === 'intermediate' || levelStr === 'advanced') {
+          normalizedLevel = levelStr as 'beginner' | 'intermediate' | 'advanced';
+        }
+      }
+      
+      const initialData: CourseFormData = {
         title: course.title || '',
         description: course.description || '',
-        shortDescription: course.description?.substring(0, 500) || '',
-        categoryId: course.categoryId || '',
-        level: course.level || 'beginner',
+        shortDescription: course.shortDescription || course.description?.substring(0, 500) || '',
+        categoryId: categoryId,
+        level: normalizedLevel,
         price: course.originalPrice?.toString() || '0',
         discountPrice: course.discountPrice?.toString() || '',
-        requirements: '',
-        whatYouLearn: '',
-        courseObjectives: '',
-        targetAudience: '',
-        language: 'vi',
+        requirements: course.requirements || '',
+        whatYouLearn: course.whatYouLearn || '',
+        courseObjectives: course.courseObjectives || '',
+        targetAudience: course.targetAudience || '',
+        language: course.language || 'vi',
         tags: course.tags?.map((t) => String(t.id)) || [],
-      });
+      };
+      
+      setFormData(initialData);
+      setInitialFormData(initialData);
+      
       if (course.thumbnail) {
         setThumbnailPreview(course.thumbnail);
       }
@@ -99,6 +128,53 @@ export function CourseForm({
       }
     }
   }, [course]);
+
+  // Ensure categoryId is set after categories are loaded
+  useEffect(() => {
+    if (course && categories.length > 0 && !formData.categoryId) {
+      const categoryId = course.categoryId 
+        ? String(course.categoryId) 
+        : (course.category?.id ? String(course.category.id) : '');
+      
+      if (categoryId) {
+        // Verify the category exists in the list
+        const categoryExists = categories.some(cat => String(cat.id) === categoryId);
+        if (categoryExists) {
+          setFormData((prev) => ({
+            ...prev,
+            categoryId: categoryId,
+          }));
+        }
+      }
+    }
+  }, [course, categories, formData.categoryId]);
+
+  // Force update level if course.level changes and formData.level doesn't match
+  // This is a safety net in case the first useEffect didn't set it correctly
+  // Only run when course or course.level changes, NOT when formData.level changes (to allow user edits)
+  useEffect(() => {
+    if (course && course.level) {
+      const levelStr = String(course.level).toLowerCase().trim();
+      let normalizedLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
+      
+      if (levelStr === 'beginner' || levelStr === 'intermediate' || levelStr === 'advanced') {
+        normalizedLevel = levelStr as 'beginner' | 'intermediate' | 'advanced';
+      }
+      
+      // Only update if level doesn't match (but don't include formData.level in dependencies)
+      // This allows user to change level without it being reset
+      setFormData((prev) => {
+        if (prev.level !== normalizedLevel) {
+          return {
+            ...prev,
+            level: normalizedLevel,
+          };
+        }
+        return prev;
+      });
+    }
+  }, [course, course?.level]);
+
 
   const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -205,8 +281,18 @@ export function CourseForm({
       return;
     }
 
-    const submitData: any = prepareSubmitData();
-    await onSubmit(submitData, thumbnailFile || undefined, previewFile || undefined);
+    try {
+      const submitData: any = prepareSubmitData();
+      await onSubmit(submitData, thumbnailFile || undefined, previewFile || undefined);
+      
+      // Reset initial form data after successful submit to clear change indicators
+      setInitialFormData({ ...formData });
+      setThumbnailFile(null);
+      setPreviewFile(null);
+    } catch (error) {
+      // Error is handled by parent component
+      throw error;
+    }
   };
 
   const handlePreview = async () => {
@@ -283,6 +369,99 @@ export function CourseForm({
     }));
   };
 
+  const handleReset = () => {
+    if (!initialFormData) return;
+    
+    // Reset form data to initial values
+    setFormData({ ...initialFormData });
+    
+    // Reset file uploads
+    setThumbnailFile(null);
+    setPreviewFile(null);
+    
+    // Reset previews to original course values
+    if (course?.thumbnail) {
+      setThumbnailPreview(course.thumbnail);
+    } else {
+      setThumbnailPreview(null);
+    }
+    
+    if (course?.previewVideoUrl) {
+      // Revoke blob URL if exists
+      if (previewVideoPreview && previewVideoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(previewVideoPreview);
+      }
+      setPreviewVideoPreview(course.previewVideoUrl);
+    } else {
+      // Revoke blob URL if exists
+      if (previewVideoPreview && previewVideoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(previewVideoPreview);
+      }
+      setPreviewVideoPreview(null);
+    }
+    
+    // Clear file input refs
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
+    }
+    if (previewInputRef.current) {
+      previewInputRef.current.value = '';
+    }
+    
+    toast.success('Đã đặt lại form về giá trị ban đầu');
+  };
+
+  const handleCancel = () => {
+    if (hasChanges()) {
+      setShowCancelDialog(true);
+    } else {
+      onCancel?.();
+    }
+  };
+
+  const confirmCancel = () => {
+    setShowCancelDialog(false);
+    onCancel?.();
+  };
+
+  // Check if a field has been changed
+  const isFieldChanged = (fieldName: keyof CourseFormData): boolean => {
+    if (!initialFormData || !course) return false;
+    const currentValue = formData[fieldName];
+    const initialValue = initialFormData[fieldName];
+    
+    // Special handling for arrays (tags)
+    if (fieldName === 'tags') {
+      const currentTags = (currentValue as string[]).sort().join(',');
+      const initialTags = (initialValue as string[]).sort().join(',');
+      return currentTags !== initialTags;
+    }
+    
+    return String(currentValue) !== String(initialValue);
+  };
+
+  // Check if form has any changes
+  const hasChanges = (): boolean => {
+    if (!initialFormData || !course) return false;
+    return (
+      isFieldChanged('title') ||
+      isFieldChanged('description') ||
+      isFieldChanged('shortDescription') ||
+      isFieldChanged('categoryId') ||
+      isFieldChanged('level') ||
+      isFieldChanged('price') ||
+      isFieldChanged('discountPrice') ||
+      isFieldChanged('requirements') ||
+      isFieldChanged('whatYouLearn') ||
+      isFieldChanged('courseObjectives') ||
+      isFieldChanged('targetAudience') ||
+      isFieldChanged('language') ||
+      isFieldChanged('tags') ||
+      thumbnailFile !== null ||
+      previewFile !== null
+    );
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information */}
@@ -290,29 +469,39 @@ export function CourseForm({
         <h3 className="text-lg font-semibold text-white">Thông tin cơ bản</h3>
         
         <div className="space-y-2">
-          <Label htmlFor="title" className="text-white">
+          <Label htmlFor="title" className="text-white flex items-center gap-2">
             Tiêu đề khóa học <span className="text-red-500">*</span>
+            {isFieldChanged('title') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Input
             id="title"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             placeholder="Nhập tiêu đề khóa học"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('title') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             required
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="shortDescription" className="text-white">
+          <Label htmlFor="shortDescription" className="text-white flex items-center gap-2">
             Mô tả ngắn
+            {isFieldChanged('shortDescription') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Textarea
             id="shortDescription"
             value={formData.shortDescription}
             onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
             placeholder="Mô tả ngắn gọn về khóa học (tối đa 500 ký tự)"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('shortDescription') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             rows={3}
             maxLength={500}
           />
@@ -320,15 +509,20 @@ export function CourseForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-white">
+          <Label htmlFor="description" className="text-white flex items-center gap-2">
             Mô tả chi tiết <span className="text-red-500">*</span>
+            {isFieldChanged('description') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Textarea
             id="description"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="Mô tả chi tiết về khóa học"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('description') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             rows={6}
             required
           />
@@ -336,17 +530,22 @@ export function CourseForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="categoryId" className="text-white">
+            <Label htmlFor="categoryId" className="text-white flex items-center gap-2">
               Danh mục <span className="text-red-500">*</span>
+              {isFieldChanged('categoryId') && (
+                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+              )}
             </Label>
             <Select
-              value={formData.categoryId ? String(formData.categoryId) : ''}
+              value={formData.categoryId || ''}
               onValueChange={(value) => {
                 setFormData({ ...formData, categoryId: value });
                 setCategorySearch(''); // Reset search when selected
               }}
             >
-              <DarkOutlineSelectTrigger className="!data-[placeholder]:text-gray-500 dark:!data-[placeholder]:text-gray-400 [&_*[data-slot=select-value]]:!text-black [&_*[data-slot=select-value]]:opacity-100 [&_*[data-slot=select-value][data-placeholder]]:!text-gray-500 dark:[&_*[data-slot=select-value]]:!text-white dark:[&_*[data-slot=select-value]]:opacity-100 dark:[&_*[data-slot=select-value][data-placeholder]]:!text-gray-400">
+              <DarkOutlineSelectTrigger className={`!data-[placeholder]:text-gray-500 dark:!data-[placeholder]:text-gray-400 [&_*[data-slot=select-value]]:!text-black [&_*[data-slot=select-value]]:opacity-100 [&_*[data-slot=select-value][data-placeholder]]:!text-gray-500 dark:[&_*[data-slot=select-value]]:!text-white dark:[&_*[data-slot=select-value]]:opacity-100 dark:[&_*[data-slot=select-value][data-placeholder]]:!text-gray-400 ${
+                isFieldChanged('categoryId') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+              }`}>
                 <SelectValue placeholder="Chọn danh mục" />
               </DarkOutlineSelectTrigger>
               <DarkOutlineSelectContent>
@@ -391,16 +590,22 @@ export function CourseForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="level" className="text-white">
+            <Label htmlFor="level" className="text-white flex items-center gap-2">
               Cấp độ
+              {isFieldChanged('level') && (
+                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+              )}
             </Label>
             <Select
-              value={formData.level}
+              key={`level-select-${formData.level}`}
+              value={formData.level || 'beginner'}
               onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') =>
                 setFormData({ ...formData, level: value })
               }
             >
-              <DarkOutlineSelectTrigger className="[&_*[data-slot=select-value]]:!text-black dark:[&_*[data-slot=select-value]]:!text-white">
+              <DarkOutlineSelectTrigger className={`[&_*[data-slot=select-value]]:!text-black dark:[&_*[data-slot=select-value]]:!text-white ${
+                isFieldChanged('level') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+              }`}>
                 <SelectValue />
               </DarkOutlineSelectTrigger>
               <DarkOutlineSelectContent>
@@ -420,8 +625,11 @@ export function CourseForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="price" className="text-white">
+            <Label htmlFor="price" className="text-white flex items-center gap-2">
               Giá (VND)
+              {isFieldChanged('price') && (
+                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+              )}
             </Label>
             <Input
               id="price"
@@ -430,13 +638,18 @@ export function CourseForm({
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               placeholder="0"
-              className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+              className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+                isFieldChanged('price') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+              }`}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discountPrice" className="text-white">
+            <Label htmlFor="discountPrice" className="text-white flex items-center gap-2">
               Giá khuyến mãi (VND)
+              {isFieldChanged('discountPrice') && (
+                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+              )}
             </Label>
             <Input
               id="discountPrice"
@@ -445,7 +658,9 @@ export function CourseForm({
               value={formData.discountPrice}
               onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
               placeholder="0"
-              className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+              className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+                isFieldChanged('discountPrice') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+              }`}
             />
           </div>
         </div>
@@ -456,10 +671,17 @@ export function CourseForm({
         <h3 className="text-lg font-semibold text-white">Hình ảnh và Video</h3>
 
         <div className="space-y-2">
-          <Label className="text-white">Ảnh đại diện</Label>
+          <Label className="text-white flex items-center gap-2">
+            Ảnh đại diện
+            {thumbnailFile !== null && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
+          </Label>
           <div className="flex items-center gap-4">
             {thumbnailPreview && (
-              <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-[#2D2D2D]">
+              <div className={`relative w-32 h-32 rounded-lg overflow-hidden border ${
+                thumbnailFile !== null ? 'border-green-500 ring-1 ring-green-500/50' : 'border-[#2D2D2D]'
+              }`}>
                 <img
                   src={thumbnailPreview}
                   alt="Thumbnail preview"
@@ -496,21 +718,34 @@ export function CourseForm({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-white">Video giới thiệu</Label>
-          <div className="flex items-center gap-4">
+          <Label className="text-white flex items-center gap-2">
+            Video giới thiệu
+            {previewFile !== null && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
+          </Label>
+          <div className="space-y-4">
             {previewVideoPreview && (
-              <div className="relative w-48 h-32 rounded-lg overflow-hidden border border-[#2D2D2D] bg-[#1F1F1F] flex items-center justify-center">
-                <Video className="h-8 w-8 text-gray-400" />
+              <div className={`relative w-full max-w-2xl aspect-video rounded-lg overflow-hidden border bg-[#1F1F1F] ${
+                previewFile !== null ? 'border-green-500 ring-1 ring-green-500/50' : 'border-[#2D2D2D]'
+              }`}>
+                <video
+                  src={previewVideoPreview}
+                  controls
+                  className="w-full h-full object-contain"
+                >
+                  Trình duyệt của bạn không hỗ trợ video.
+                </video>
                 <button
                   type="button"
                   onClick={removePreview}
-                  className="absolute top-1 right-1 p-1 bg-red-600 rounded-full hover:bg-red-700"
+                  className="absolute top-2 right-2 p-1.5 bg-red-600 rounded-full hover:bg-red-700 z-10"
                 >
                   <X className="h-4 w-4 text-white" />
                 </button>
               </div>
             )}
-            <div className="flex-1">
+            <div>
               <input
                 ref={previewInputRef}
                 type="file"
@@ -534,7 +769,12 @@ export function CourseForm({
 
       {/* Tags */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Tags</h3>
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          Tags
+          {isFieldChanged('tags') && (
+            <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+          )}
+        </h3>
         <div className="flex flex-wrap gap-2">
           {Array.isArray(tags) && tags.length > 0 ? tags.map((tag) => (
             <button
@@ -560,68 +800,107 @@ export function CourseForm({
         <h3 className="text-lg font-semibold text-white">Thông tin bổ sung</h3>
 
         <div className="space-y-2">
-          <Label htmlFor="requirements" className="text-white">
+          <Label htmlFor="requirements" className="text-white flex items-center gap-2">
             Yêu cầu
+            {isFieldChanged('requirements') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Textarea
             id="requirements"
             value={formData.requirements}
             onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
             placeholder="Yêu cầu để tham gia khóa học"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('requirements') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             rows={3}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="whatYouLearn" className="text-white">
+          <Label htmlFor="whatYouLearn" className="text-white flex items-center gap-2">
             Bạn sẽ học được gì
+            {isFieldChanged('whatYouLearn') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Textarea
             id="whatYouLearn"
             value={formData.whatYouLearn}
             onChange={(e) => setFormData({ ...formData, whatYouLearn: e.target.value })}
             placeholder="Những kiến thức và kỹ năng bạn sẽ học được"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('whatYouLearn') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             rows={3}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="courseObjectives" className="text-white">
+          <Label htmlFor="courseObjectives" className="text-white flex items-center gap-2">
             Mục tiêu khóa học
+            {isFieldChanged('courseObjectives') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Textarea
             id="courseObjectives"
             value={formData.courseObjectives}
             onChange={(e) => setFormData({ ...formData, courseObjectives: e.target.value })}
             placeholder="Mục tiêu của khóa học"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('courseObjectives') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             rows={3}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="targetAudience" className="text-white">
+          <Label htmlFor="targetAudience" className="text-white flex items-center gap-2">
             Đối tượng mục tiêu
+            {isFieldChanged('targetAudience') && (
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            )}
           </Label>
           <Textarea
             id="targetAudience"
             value={formData.targetAudience}
             onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
             placeholder="Khóa học phù hợp với ai"
-            className="bg-[#1F1F1F] border-[#2D2D2D] text-white"
+            className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+              isFieldChanged('targetAudience') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+            }`}
             rows={3}
           />
         </div>
       </div>
 
+      {/* Change Indicator */}
+      {course && hasChanges() && (
+        <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-green-500" />
+          <span className="text-sm text-green-500">Bạn có thay đổi chưa lưu</span>
+        </div>
+      )}
+
       {/* Form Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t border-[#2D2D2D]">
+        {course && initialFormData && (
+          <DarkOutlineButton
+            type="button"
+            onClick={handleReset}
+            disabled={loading || previewLoading || !hasChanges()}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Đặt lại
+          </DarkOutlineButton>
+        )}
         {onCancel && (
           <DarkOutlineButton
             type="button"
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={loading || previewLoading}
           >
             Hủy
@@ -662,6 +941,33 @@ export function CourseForm({
           )}
         </Button>
       </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Xác nhận hủy</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn hủy và rời khỏi trang này không?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DarkOutlineButton
+              type="button"
+              onClick={() => setShowCancelDialog(false)}
+            >
+              Ở lại
+            </DarkOutlineButton>
+            <Button
+              type="button"
+              onClick={confirmCancel}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Hủy và rời khỏi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

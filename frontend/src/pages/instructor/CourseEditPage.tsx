@@ -40,20 +40,64 @@ export function CourseEditPage() {
     }
   }, [id]);
 
+  // Transform backend course data to frontend format
+  const transformCourse = (course: any): Course => {
+    return {
+      id: String(course.id),
+      title: course.title || '',
+      slug: course.slug || '',
+      description: course.description || '',
+      shortDescription: course.shortDescription || '',
+      thumbnail: course.thumbnailUrl || '',
+      previewVideoUrl: course.videoPreviewUrl || '',
+      instructorId: String(course.instructorId || ''),
+      categoryId: String(course.categoryId || course.category?.id || ''),
+      category: course.category ? {
+        id: String(course.category.id),
+        name: course.category.name,
+        slug: course.category.slug,
+      } : undefined,
+      level: (course.level?.toLowerCase() as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
+      originalPrice: parseFloat(String(course.price || 0)) || 0,
+      discountPrice: course.discountPrice ? parseFloat(String(course.discountPrice)) : undefined,
+      isFree: parseFloat(String(course.price || 0)) === 0,
+      status: (course.status?.toLowerCase() as 'draft' | 'published' | 'archived') || 'draft',
+      featured: course.isFeatured || false,
+      viewsCount: course.viewsCount || 0,
+      enrolledCount: course.enrolledCount || 0,
+      ratingAvg: course.ratingAvg ? parseFloat(String(course.ratingAvg)) : 0,
+      ratingCount: course.ratingCount || 0,
+      lessonsCount: course.lessonsCount || course.totalLessons || course._count?.lessons || 0,
+      durationMinutes: (course.durationHours || 0) * 60,
+      requirements: course.requirements || '',
+      whatYouLearn: course.whatYouLearn || '',
+      courseObjectives: course.courseObjectives || '',
+      targetAudience: course.targetAudience || '',
+      language: course.language || 'vi',
+      tags: course.tags || course.courseTags?.map((ct: any) => ct.tag || ct) || [],
+      createdAt: course.createdAt || new Date().toISOString(),
+      updatedAt: course.updatedAt || new Date().toISOString(),
+    };
+  };
+
   const loadData = async () => {
     if (!id) return;
     
     try {
       setLoading(true);
-      // Load instructor courses with pagination to find the course
-      // Try with a reasonable limit first
-      let courseData: Course | null = null;
-      let page = 1;
-      const limit = 100; // Use a reasonable limit
-      let hasMore = true;
       
-      while (hasMore && !courseData) {
-        try {
+      // Try to get course by ID using instructor endpoint (has full details)
+      let courseData: any = null;
+      try {
+        courseData = await coursesApi.getInstructorCourseById(id);
+      } catch (error: any) {
+        // If endpoint doesn't exist (404) or fails, fallback to searching in list
+        console.warn('getInstructorCourseById failed, falling back to list search');
+        let page = 1;
+        const limit = 100;
+        let hasMore = true;
+        
+        while (hasMore && !courseData) {
           const coursesResponse = await coursesApi.getInstructorCourses({ 
             page, 
             limit 
@@ -65,40 +109,28 @@ export function CourseEditPage() {
             break;
           }
           
-          // Check if there are more pages
           hasMore = page < (coursesResponse.pagination?.totalPages || 0);
           page++;
           
-          // Safety limit: stop after 10 pages (1000 courses max)
           if (page > 10) break;
-        } catch (error: any) {
-          // If we get 422 or other error, try with smaller limit
-          if (error.response?.status === 422 && limit > 20) {
-            // Retry with smaller limit
-            const coursesResponse = await coursesApi.getInstructorCourses({ 
-              page: 1, 
-              limit: 20 
-            });
-            const foundCourse = coursesResponse.data.find((c: Course) => String(c.id) === id);
-            if (foundCourse) {
-              courseData = foundCourse;
-              break;
-            }
-          }
-          throw error;
         }
       }
       
       if (!courseData) {
-        throw new Error('Khóa học không tồn tại');
+        throw new Error('Khóa học không tồn tại hoặc bạn không có quyền truy cập');
       }
       
+      // Transform course data to frontend format
+      const transformedCourse = transformCourse(courseData);
+      console.log('[CourseEditPage] Transformed course level:', transformedCourse.level, 'from original:', courseData.level);
+      
+      // Load categories and tags in parallel
       const [categoriesData, tagsData] = await Promise.all([
         coursesApi.getCategories(),
         coursesApi.getTags(),
       ]);
       
-      setCourse(courseData);
+      setCourse(transformedCourse);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setTags(Array.isArray(tagsData) ? tagsData : []);
     } catch (error: any) {
@@ -176,7 +208,12 @@ export function CourseEditPage() {
       }
       
       toast.success('Cập nhật khóa học thành công!');
-      navigate('/instructor/courses');
+      // Navigate back to previous page, or to dashboard if no previous page
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate('/instructor/dashboard');
+      }
     } catch (error: any) {
       console.error('Error updating course:', error);
       const errorMessage = error.response?.data?.message || 'Không thể cập nhật khóa học';
@@ -188,7 +225,12 @@ export function CourseEditPage() {
   };
 
   const handleCancel = () => {
-    navigate('/instructor/courses');
+    // Navigate back to previous page, or to dashboard if no previous page
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/instructor/dashboard');
+    }
   };
 
   const handlePreview = (courseId: string) => {

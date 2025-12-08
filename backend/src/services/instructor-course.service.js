@@ -144,6 +144,98 @@ class InstructorCourseService {
     }
 
     /**
+     * Get a single course by ID with full details
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @returns {Promise<object>} Course with full details
+     */
+    async getInstructorCourseById(courseId, instructorId) {
+        const course = await prisma.course.findFirst({
+            where: {
+                id: courseId,
+                instructorId,
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                shortDescription: true,
+                thumbnailUrl: true,
+                videoPreviewUrl: true,
+                videoPreviewDuration: true,
+                price: true,
+                discountPrice: true,
+                level: true,
+                durationHours: true,
+                totalLessons: true,
+                language: true,
+                requirements: true,
+                whatYouLearn: true,
+                courseObjectives: true,
+                targetAudience: true,
+                status: true,
+                isFeatured: true,
+                ratingAvg: true,
+                ratingCount: true,
+                enrolledCount: true,
+                viewsCount: true,
+                completionRate: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+                courseTags: {
+                    select: {
+                        tag: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        lessons: true,
+                        enrollments: true,
+                    },
+                },
+            },
+        })
+
+        if (!course) {
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Transform course data
+        const transformedCourse = {
+            ...course,
+            lessonsCount: course._count.lessons,
+            enrollmentsCount: course._count.enrollments,
+            tags: course.courseTags.map((ct) => ct.tag),
+            courseTags: undefined,
+            _count: undefined,
+        }
+
+        logger.info(
+            `Instructor ${instructorId} retrieved course ${courseId}`
+        )
+
+        return transformedCourse
+    }
+
+    /**
      * Create a new course
      * @param {number} instructorId - Instructor user ID
      * @param {object} data - Course data

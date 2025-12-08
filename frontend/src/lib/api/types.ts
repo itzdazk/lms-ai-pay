@@ -56,6 +56,7 @@ export interface Course {
   title: string;
   slug: string;
   description: string;
+  shortDescription?: string;
   thumbnail?: string;
   previewVideoUrl?: string;
   instructorId: string;
@@ -83,6 +84,11 @@ export interface Course {
   tags?: Tag[];
   lessonsCount?: number;
   durationMinutes?: number;
+  requirements?: string;
+  whatYouLearn?: string;
+  courseObjectives?: string;
+  targetAudience?: string;
+  language?: string;
   createdAt: string;
   updatedAt: string;
 }

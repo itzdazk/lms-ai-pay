@@ -101,6 +101,12 @@ export const coursesApi = {
 
   // ========== INSTRUCTOR COURSE MANAGEMENT ==========
   
+  // Get instructor course by ID (with full details)
+  async getInstructorCourseById(id: string): Promise<Course> {
+    const response = await apiClient.get<ApiResponse<Course>>(`/instructor/courses/${id}`);
+    return response.data.data;
+  },
+
   // Get instructor courses
   async getInstructorCourses(filters?: {
     page?: number;
