@@ -10,42 +10,42 @@ import type {
 export const authApi = {
     // Login
     async login(credentials: LoginRequest): Promise<AuthResponse> {
-        const response = await apiClient.post<ApiResponse<AuthResponse>>(
+        const response = await apiClient.post<ApiResponse<{ user: User }>>(
             '/auth/login',
             credentials
         )
-        const { token, user } = response.data.data
 
-        // Store token and user
-        localStorage.setItem('token', token)
+        // Validate response structure
+        if (!response.data?.data?.user) {
+            throw new Error('Invalid response from server')
+        }
+
+        const { user } = response.data.data
+
+        // Store user in localStorage (tokens are in httpOnly cookies)
         localStorage.setItem('user', JSON.stringify(user))
 
-        return { token, user }
+        return { user }
     },
 
     // Register
     async register(data: RegisterRequest): Promise<AuthResponse> {
-        const response = await apiClient.post<ApiResponse<AuthResponse>>(
+        const response = await apiClient.post<ApiResponse<{ user: User }>>(
             '/auth/register',
             data
         )
-        const { token, user } = response.data.data
 
-        // Store token and user
-        localStorage.setItem('token', token)
+        // ✅ Validate response structure
+        if (!response.data?.data?.user) {
+            throw new Error('Invalid response from server')
+        }
+
+        const { user } = response.data.data
+
+        // ✅ Store user in localStorage (tokens are in httpOnly cookies)
         localStorage.setItem('user', JSON.stringify(user))
 
-        return { token, user }
-    },
-
-    // Logout
-    async logoutAPI(): Promise<void> {
-        try {
-            await apiClient.post('/auth/logout', {})
-        } catch (error) {
-            // Ignore errors on logout, clear storage anyway
-            console.error('Logout error:', error)
-        }
+        return { user }
     },
 
     // Get current user
@@ -59,33 +59,42 @@ export const authApi = {
         return user
     },
 
-    // Logout
-    logout(): void {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        localStorage.removeItem('rememberEmail')
-        window.location.href = '/login'
-    },
-
-    // Check if user is authenticated
-    isAuthenticated(): boolean {
-        return !!localStorage.getItem('token')
-    },
-
-    // Get stored user
-    getStoredUser(): User | null {
-        const userStr = localStorage.getItem('user')
-        if (!userStr) return null
+    // Logout - Call API and clear local data
+    async logout(): Promise<void> {
         try {
-            return JSON.parse(userStr)
-        } catch {
-            return null
+            // ✅ Call backend to invalidate tokens and clear cookies
+            await apiClient.post('/auth/logout')
+        } catch (error) {
+            console.error('Logout API error:', error)
+            // ✅ Continue to clear local data even if API fails
+        } finally {
+            // ✅ Clear all auth-related data from localStorage
+            localStorage.removeItem('user')
+            localStorage.removeItem('rememberEmail')
+
+            // ✅ Redirect to login page
+            window.location.href = '/login'
         }
     },
 
-    // Get stored token
-    getToken(): string | null {
-        return localStorage.getItem('token')
+    // Check if user is authenticated
+    // Note: Token is in httpOnly cookie, automatically sent with requests
+    // We check localStorage user as a client-side indicator
+    isAuthenticated(): boolean {
+        return !!localStorage.getItem('user')
+    },
+
+    // Get stored user from localStorage
+    getStoredUser(): User | null {
+        const userStr = localStorage.getItem('user')
+        if (!userStr) return null
+
+        try {
+            return JSON.parse(userStr)
+        } catch (error) {
+            console.error('Failed to parse stored user:', error)
+            return null
+        }
     },
 
     // Forgot password - Request reset token
@@ -111,5 +120,11 @@ export const authApi = {
     // Resend email verification
     async resendVerification(): Promise<void> {
         await apiClient.post<ApiResponse<null>>('/auth/resend-verification')
+    },
+
+    // Refresh token method
+    async refreshToken(): Promise<void> {
+        await apiClient.post('/auth/refresh-token')
+        // Tokens được lưu trong httpOnly cookies tự động
     },
 }

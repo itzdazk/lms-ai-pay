@@ -11,7 +11,7 @@ import {
     CardTitle,
 } from '../components/ui/card'
 import { Checkbox } from '../components/ui/checkbox'
-import { BookOpen, AlertCircle } from 'lucide-react'
+import { BookOpen, AlertCircle, Loader2, Lock, Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'sonner'
@@ -24,12 +24,17 @@ export function LoginPage() {
     const [rememberMe, setRememberMe] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+        {}
+    )
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
         // Reset error state
         setError('')
+        setErrors({})
 
         // Validate inputs
         if (!email || !password) {
@@ -56,13 +61,32 @@ export function LoginPage() {
                 localStorage.removeItem('rememberEmail')
             }
 
-            // Redirect to dashboard
-            setTimeout(() => {
+            // Redirect based on user role
+            const userStr = localStorage.getItem('user')
+            if (userStr) {
+                const user = JSON.parse(userStr)
+                if (user.role === 'ADMIN') {
+                    navigate('/admin-dashboard')
+                } else if (user.role === 'INSTRUCTOR') {
+                    navigate('/instructor-dashboard')
+                } else {
+                    navigate('/dashboard')
+                }
+            } else {
                 navigate('/dashboard')
-            }, 500)
+            }
         } catch (err: any) {
-            setError('Email hoặc mật khẩu chưa chính xác')
+            console.error('Login error:', err)
+            const errorMessage =
+                err.response?.data?.message ||
+                'Email hoặc mật khẩu chưa chính xác'
+            setError(errorMessage)
             toast.error('Đăng nhập thất bại!')
+
+            // Set field-specific errors if available
+            if (err.response?.status === 401) {
+                setErrors({ password: 'Email hoặc mật khẩu không đúng' })
+            }
         } finally {
             setLoading(false)
         }
@@ -142,18 +166,36 @@ export function LoginPage() {
                                         Quên mật khẩu?
                                     </Link>
                                 </div>
-                                <Input
-                                    id='password'
-                                    type='password'
-                                    placeholder='••••••••'
-                                    value={password}
-                                    onChange={(e) =>
-                                        setPassword(e.target.value)
-                                    }
-                                    className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
-                                    disabled={loading}
-                                    required
-                                />
+                                <div className='relative'>
+                                    <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                                    <Input
+                                        id='password'
+                                        type={
+                                            showPassword ? 'text' : 'password'
+                                        }
+                                        placeholder='••••••••'
+                                        value={password}
+                                        onChange={(e) =>
+                                            setPassword(e.target.value)
+                                        }
+                                        className='pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                        disabled={loading}
+                                        required
+                                    />
+                                    <button
+                                        type='button'
+                                        onClick={() =>
+                                            setShowPassword(!showPassword)
+                                        }
+                                        className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black'
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className='h-4 w-4' />
+                                        ) : (
+                                            <Eye className='h-4 w-4' />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <div className='flex items-center space-x-2'>
                                 <Checkbox
@@ -176,7 +218,14 @@ export function LoginPage() {
                                 className='w-full'
                                 disabled={loading}
                             >
-                                {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                                {loading ? (
+                                    <>
+                                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                        Đang đăng nhập...
+                                    </>
+                                ) : (
+                                    'Đăng nhập'
+                                )}
                             </DarkOutlineButton>
                         </form>
                     </CardContent>

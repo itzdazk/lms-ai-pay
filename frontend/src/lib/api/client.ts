@@ -17,8 +17,7 @@ const apiClient: AxiosInstance = axios.create({
     withCredentials: true, // Enable cookies for authentication
 })
 
-// Request interceptor - Cookies are automatically sent with withCredentials: true
-// No need to manually add token to headers, backend will read from cookies
+// Request interceptor
 apiClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         // Don't set Content-Type for FormData - browser will set it with boundary
@@ -53,7 +52,7 @@ apiClient.interceptors.response.use(
         const status = error.response.status
         const requestUrl = error.config?.url || ''
 
-        // Extract message safely - handle both object and string
+        // ✅ Extract message safely - handle both object and string formats
         let message = 'Đã xảy ra lỗi'
         if (error.response.data) {
             if (typeof error.response.data.message === 'string') {
@@ -73,44 +72,51 @@ apiClient.interceptors.response.use(
         // Handle specific error codes
         switch (status) {
             case 401:
-                // Check if this is a login/register request - don't show session expired message
+                // ✅ Check if this is a login/register request
                 const isAuthRequest =
                     requestUrl.includes('/auth/login') ||
                     requestUrl.includes('/auth/register')
 
                 if (isAuthRequest) {
-                    // For login/register, show the actual error message from backend
-                    // toast.error(message)
+                    // ✅ For login/register, don't show toast or redirect
+                    // Let the page handle the error message display
+                    // This prevents duplicate error messages
                 } else {
-                    // For other requests, it's an expired session
+                    // ✅ For other requests, session has expired
                     localStorage.removeItem('user')
                     toast.error(
                         'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
                     )
+                    // ✅ Avoid redirect loop
                     if (window.location.pathname !== '/login') {
                         window.location.href = '/login'
                     }
                 }
                 break
+
             case 403:
                 toast.error('Bạn không có quyền truy cập.')
                 break
+
             case 404:
                 toast.error('Không tìm thấy dữ liệu.')
                 break
+
             case 422:
-                // Validation errors - message might be an array or object
+                // ✅ Validation errors - message might be array or object
                 if (typeof message === 'string') {
                     toast.error(message)
                 } else {
                     toast.error('Vui lòng kiểm tra lại thông tin đã nhập')
                 }
                 break
+
             case 500:
                 toast.error('Lỗi server. Vui lòng thử lại sau.')
                 break
+
             default:
-                // Ensure message is a string
+                // ✅ Ensure message is a string before showing
                 if (typeof message === 'string') {
                     toast.error(message)
                 } else {
@@ -123,41 +129,3 @@ apiClient.interceptors.response.use(
 )
 
 export default apiClient
-
-// Alternative LoginPage.tsx handleSubmit - Remove duplicate toast
-/*
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setErrors({});
-  setIsLoading(true);
-
-  try {
-    await login(email, password);
-    toast.success('Đăng nhập thành công!');
-    
-    // Redirect based on user role
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      if (user.role === 'ADMIN') {
-        navigate('/admin-dashboard');
-      } else if (user.role === 'INSTRUCTOR') {
-        navigate('/instructor-dashboard');
-      } else {
-        navigate('/dashboard');
-      }
-    } else {
-      navigate('/dashboard');
-    }
-  } catch (error: any) {
-    console.error('Login error:', error);
-    // Don't show toast here - client.ts already handles it
-    // Just set field-specific errors if needed
-    if (error.response?.status === 401) {
-      setErrors({ password: 'Email hoặc mật khẩu không đúng' });
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
-*/

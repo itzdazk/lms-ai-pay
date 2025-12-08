@@ -51,6 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    useEffect(() => {
+        if (!user) return
+        // Refresh token mỗi 30 phút
+        const interval = setInterval(() => {
+            refreshAccessToken()
+        }, 30 * 60 * 1000)
+
+        return () => clearInterval(interval)
+    }, [user])
+
     const login = async (email: string, password: string) => {
         const { user } = await authApi.login({ email, password })
         setUser(user)
@@ -62,13 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const logout = async () => {
-        try {
-            // Call logout endpoint to invalidate tokens on server
-            await authApi.logoutAPI()
-        } catch (error) {
-            console.error('Error during logout:', error)
-        }
-
         // Clear local storage và redirect
         authApi.logout()
         setUser(null)
@@ -81,6 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             // If token is invalid, logout
             logout()
+        }
+    }
+
+    const refreshAccessToken = async () => {
+        try {
+            await authApi.refreshToken()
+            // Token đã được refresh (cookies được update tự động)
+            return true
+        } catch (error) {
+            // Refresh thất bại, logout
+            logout()
+            return false
         }
     }
 

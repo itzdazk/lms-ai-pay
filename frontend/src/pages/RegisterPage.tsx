@@ -10,10 +10,10 @@ import {
     CardTitle,
 } from '../components/ui/card'
 import { Checkbox } from '../components/ui/checkbox'
-import { BookOpen, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'sonner'
+import { BookOpen, Loader2, Lock, Eye, EyeOff } from 'lucide-react'
 
 export function RegisterPage() {
     const navigate = useNavigate()
@@ -35,6 +35,8 @@ export function RegisterPage() {
         confirmPassword?: string
         terms?: string
     }>({})
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
     const validateForm = () => {
         const newErrors: typeof errors = {}
@@ -281,22 +283,42 @@ export function RegisterPage() {
                                 >
                                     Mật khẩu
                                 </Label>
-                                <Input
-                                    id='password'
-                                    type='password'
-                                    placeholder='••••••••'
-                                    value={formData.password}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            password: e.target.value,
-                                        })
-                                    }
-                                    className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
-                                        errors.password ? 'border-red-500' : ''
-                                    }`}
-                                    required
-                                />
+                                <div className='relative'>
+                                    <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                                    <Input
+                                        id='password'
+                                        type={
+                                            showPassword ? 'text' : 'password'
+                                        }
+                                        placeholder='••••••••'
+                                        value={formData.password}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                password: e.target.value,
+                                            })
+                                        }
+                                        className={`pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
+                                            errors.password
+                                                ? 'border-red-500'
+                                                : ''
+                                        }`}
+                                        required
+                                    />
+                                    <button
+                                        type='button'
+                                        onClick={() =>
+                                            setShowPassword(!showPassword)
+                                        }
+                                        className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white'
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className='h-4 w-4' />
+                                        ) : (
+                                            <Eye className='h-4 w-4' />
+                                        )}
+                                    </button>
+                                </div>
                                 {errors.password ? (
                                     <p className='text-xs text-red-500'>
                                         {errors.password}
@@ -316,24 +338,47 @@ export function RegisterPage() {
                                 >
                                     Xác nhận mật khẩu
                                 </Label>
-                                <Input
-                                    id='confirmPassword'
-                                    type='password'
-                                    placeholder='••••••••'
-                                    value={formData.confirmPassword}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            confirmPassword: e.target.value,
-                                        })
-                                    }
-                                    className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
-                                        errors.confirmPassword
-                                            ? 'border-red-500'
-                                            : ''
-                                    }`}
-                                    required
-                                />
+                                {/* THAY ĐỔI: Thay thế Input cũ với div wrapper + Input + icon toggle */}
+                                <div className='relative'>
+                                    <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                                    <Input
+                                        id='confirmPassword'
+                                        type={
+                                            showConfirmPassword
+                                                ? 'text'
+                                                : 'password'
+                                        }
+                                        placeholder='••••••••'
+                                        value={formData.confirmPassword}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                confirmPassword: e.target.value,
+                                            })
+                                        }
+                                        className={`pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
+                                            errors.confirmPassword
+                                                ? 'border-red-500'
+                                                : ''
+                                        }`}
+                                        required
+                                    />
+                                    <button
+                                        type='button'
+                                        onClick={() =>
+                                            setShowConfirmPassword(
+                                                !showConfirmPassword
+                                            )
+                                        }
+                                        className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white'
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeOff className='h-4 w-4' />
+                                        ) : (
+                                            <Eye className='h-4 w-4' />
+                                        )}
+                                    </button>
+                                </div>
                                 {errors.confirmPassword && (
                                     <p className='text-xs text-red-500'>
                                         {errors.confirmPassword}
