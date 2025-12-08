@@ -5,6 +5,7 @@ import logger from '../config/logger.config.js'
 import { USER_ROLES, USER_STATUS, HTTP_STATUS } from '../config/constants.js'
 import path from 'path'
 import fs from 'fs'
+import { avatarsDir } from '../config/multer.config.js'
 
 class UsersService {
     /**
@@ -113,14 +114,15 @@ class UsersService {
         // Delete old avatar file if exists
         if (currentUser?.avatarUrl) {
             try {
-                const oldAvatarPath = path.join(
-                    process.cwd(),
-                    'backend',
-                    currentUser.avatarUrl
-                )
+                // Extract filename from avatarUrl (e.g., /uploads/avatars/filename.webp -> filename.webp)
+                const filename = path.basename(currentUser.avatarUrl)
+                const oldAvatarPath = path.join(avatarsDir, filename)
+                
                 if (fs.existsSync(oldAvatarPath)) {
                     fs.unlinkSync(oldAvatarPath)
                     logger.info(`Old avatar deleted: ${currentUser.avatarUrl}`)
+                } else {
+                    logger.warn(`Old avatar file not found: ${oldAvatarPath}`)
                 }
             } catch (error) {
                 logger.warn(`Failed to delete old avatar: ${error.message}`)
@@ -202,7 +204,7 @@ class UsersService {
      * Get users list (Admin only)
      */
     async getUsers(query) {
-        const { page = 1, limit = 20, role, status, search } = query
+        const { page = 1, limit = 20, role, status, search, sortBy = 'createdAt', sortOrder = 'desc' } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
@@ -229,6 +231,12 @@ class UsersService {
             ]
         }
 
+        // Build orderBy clause
+        const validSortFields = ['createdAt', 'fullName', 'email', 'updatedAt', 'lastLoginAt']
+        const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt'
+        const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc'
+        const orderBy = { [sortField]: sortDirection }
+
         // Get users and total count
         const [users, total] = await Promise.all([
             prisma.user.findMany({
@@ -250,7 +258,7 @@ class UsersService {
                     createdAt: true,
                     updatedAt: true,
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy,
             }),
             prisma.user.count({ where }),
         ])

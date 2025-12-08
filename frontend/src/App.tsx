@@ -22,6 +22,8 @@ import { CertificatePage } from './pages/CertificatePage';
 import { CertificatesPage } from './pages/CertificatesPage';
 import { AboutPage } from './pages/AboutPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { UsersPage } from './pages/admin/UsersPage';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
@@ -36,6 +38,20 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+          {/* Admin Routes - No Navbar/Footer */}
+          <Route
+            path="/admin-dashboard"
+            element={<AdminDashboard />}
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <Routes>
+                <Route path="/users" element={<UsersPage />} />
+              </Routes>
+            }
+          />
+
           {/* Main Routes - With Navbar/Footer */}
           <Route
             path="/*"
@@ -49,7 +65,6 @@ export default function App() {
                     <Route path="/courses/:id" element={<CourseDetailPage />} />
                     <Route path="/dashboard" element={<StudentDashboard />} />
                     <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
-                    <Route path="/admin-dashboard" element={<AdminDashboard />} />
                     <Route path="/learn/:id" element={<VideoPlayerPage />} />
                     <Route path="/ai-chat" element={<AIChatPage />} />
                     <Route path="/checkout/:id" element={<PaymentCheckoutPage />} />
@@ -60,6 +75,7 @@ export default function App() {
                     <Route path="/certificates" element={<CertificatesPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                   </Routes>
                 </main>
                 <Footer />

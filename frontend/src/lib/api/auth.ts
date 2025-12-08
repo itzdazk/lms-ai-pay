@@ -4,26 +4,48 @@ import type { ApiResponse, LoginRequest, RegisterRequest, AuthResponse, User } f
 export const authApi = {
   // Login
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
-    const { token, user } = response.data.data;
+    const response = await apiClient.post<ApiResponse<{ user: User }>>('/auth/login', credentials);
     
-    // Store token and user
-    localStorage.setItem('token', token);
+    // Check if response has data
+    if (!response.data || !response.data.data) {
+      throw new Error('Invalid response from server');
+    }
+    
+    const { user } = response.data.data;
+    
+    // Validate user exists
+    if (!user) {
+      throw new Error('User data missing from response');
+    }
+    
+    // Store user in localStorage (token is in httpOnly cookie, managed by browser)
     localStorage.setItem('user', JSON.stringify(user));
     
-    return { token, user };
+    // Return user, token is in cookie (not accessible via JavaScript)
+    return { token: '', user }; // Token is in httpOnly cookie
   },
 
   // Register
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/register', data);
-    const { token, user } = response.data.data;
+    const response = await apiClient.post<ApiResponse<{ user: User }>>('/auth/register', data);
     
-    // Store token and user
-    localStorage.setItem('token', token);
+    // Check if response has data
+    if (!response.data || !response.data.data) {
+      throw new Error('Invalid response from server');
+    }
+    
+    const { user } = response.data.data;
+    
+    // Validate user exists
+    if (!user) {
+      throw new Error('User data missing from response');
+    }
+    
+    // Store user in localStorage (token is in httpOnly cookie, managed by browser)
     localStorage.setItem('user', JSON.stringify(user));
     
-    return { token, user };
+    // Return user, token is in cookie (not accessible via JavaScript)
+    return { token: '', user }; // Token is in httpOnly cookie
   },
 
   // Get current user
@@ -38,15 +60,24 @@ export const authApi = {
   },
 
   // Logout
-  logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+  async logout(): Promise<void> {
+    try {
+      // Call backend logout to clear cookies
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear localStorage
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
   },
 
   // Check if user is authenticated
+  // Since token is in httpOnly cookie, we check if user exists in localStorage
+  // Backend will validate the cookie on each request
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem('user');
   },
 
   // Get stored user
@@ -61,7 +92,14 @@ export const authApi = {
   },
 
   // Get stored token
+  // Token is in httpOnly cookie, not accessible via JavaScript
+  // This method returns null as token is managed by browser
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return null; // Token is in httpOnly cookie, not accessible
+  },
+
+  // Resend email verification
+  async resendVerification(): Promise<void> {
+    await apiClient.post<ApiResponse<null>>('/auth/resend-verification');
   },
 };
