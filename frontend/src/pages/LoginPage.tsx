@@ -32,9 +32,9 @@ export function LoginPage() {
       if (userStr) {
         const user = JSON.parse(userStr);
         if (user.role === 'ADMIN') {
-          navigate('/admin-dashboard');
+          navigate('/admin/dashboard');
         } else if (user.role === 'INSTRUCTOR') {
-          navigate('/instructor-dashboard');
+          navigate('/instructor/dashboard');
         } else {
           navigate('/dashboard');
         }
