@@ -14,7 +14,7 @@ const apiClient: AxiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: true, // Enable cookies for authentication
+    withCredentials: true, // Enable cookies for authenticationssssssssssssssssss
 })
 
 // Request interceptor

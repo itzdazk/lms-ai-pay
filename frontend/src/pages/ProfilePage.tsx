@@ -1,32 +1,202 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DarkOutlineButton } from '../components/ui/buttons';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Separator } from '../components/ui/separator';
-import { User, Mail, Phone, Camera, Save, Lock } from 'lucide-react';
+import { User, Mail, Phone, Save, Loader2, AlertCircle, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { currentUser } from '../lib/mockData';
+import { useAuth } from '../contexts/AuthContext';
+import { usersApi, authApi } from '../lib/api';
+import { AvatarUpload } from '../components/Profile/AvatarUpload';
+import { ChangePassword } from '../components/Profile/ChangePassword';
+import type { User as UserType } from '../lib/api/types';
 
 export function ProfilePage() {
+  const { user: authUser, refreshUser } = useAuth();
+  const [user, setUser] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    fullName: currentUser.full_name,
-    email: currentUser.email,
+    fullName: '',
+    email: '',
     phone: '',
     bio: '',
   });
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    phone?: string;
+    bio?: string;
+  }>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  // Load user profile
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const profile = await usersApi.getProfile();
+        setUser(profile);
+        setFormData({
+          fullName: profile.fullName || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          bio: profile.bio || '',
+        });
+      } catch (error: any) {
+        console.error('Error loading profile:', error);
+        toast.error('Không thể tải thông tin hồ sơ');
+        // Fallback to auth user if available
+        if (authUser) {
+          setUser(authUser);
+          setFormData({
+            fullName: authUser.fullName || '',
+            email: authUser.email || '',
+            phone: authUser.phone || '',
+            bio: authUser.bio || '',
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [authUser]);
+
+  // Client-side validation
+  const validateForm = (): boolean => {
+    const newErrors: { fullName?: string; phone?: string; bio?: string } = {};
+
+    // Validate fullName
+    if (formData.fullName.trim()) {
+      if (formData.fullName.trim().length < 2) {
+        newErrors.fullName = 'Họ và tên phải có ít nhất 2 ký tự';
+      } else if (formData.fullName.trim().length > 100) {
+        newErrors.fullName = 'Họ và tên không được vượt quá 100 ký tự';
+      }
+    }
+
+    // Validate phone
+    if (formData.phone.trim()) {
+      const phoneRegex = /^0\d{9}$/;
+      if (!phoneRegex.test(formData.phone.trim())) {
+        newErrors.phone = 'Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng 0';
+      }
+    }
+
+    // Validate bio
+    if (formData.bio.trim() && formData.bio.trim().length > 500) {
+      newErrors.bio = 'Giới thiệu không được vượt quá 500 ký tự';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setErrors({});
+
+    // Client-side validation
+    if (!validateForm()) {
+      toast.error('Vui lòng kiểm tra lại thông tin đã nhập');
+      return;
+    }
+
     setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const updatedUser = await usersApi.updateProfile({
+        fullName: formData.fullName.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+        bio: formData.bio.trim() || undefined,
+      });
+      setUser(updatedUser);
+      await refreshUser();
+      setErrors({});
       toast.success('Thông tin đã được cập nhật!');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      
+      // Handle validation errors from backend (422)
+      if (error.response?.status === 422) {
+        const responseData = error.response.data;
+        const validationErrors: { fullName?: string; phone?: string; bio?: string } = {};
+
+        // Backend returns errors in different formats
+        if (responseData.errors && Array.isArray(responseData.errors)) {
+          // Format: { errors: [{ field: 'fullName', message: '...' }] }
+          responseData.errors.forEach((err: any) => {
+            if (err.field === 'fullName') validationErrors.fullName = err.message;
+            if (err.field === 'phone') validationErrors.phone = err.message;
+            if (err.field === 'bio') validationErrors.bio = err.message;
+          });
+        } else if (responseData.error?.details) {
+          // Format: { error: { details: { fullName: '...', phone: '...' } } }
+          const details = responseData.error.details;
+          if (details.fullName) validationErrors.fullName = Array.isArray(details.fullName) ? details.fullName[0] : details.fullName;
+          if (details.phone) validationErrors.phone = Array.isArray(details.phone) ? details.phone[0] : details.phone;
+          if (details.bio) validationErrors.bio = Array.isArray(details.bio) ? details.bio[0] : details.bio;
+        } else if (responseData.message) {
+          // Generic error message
+          const message = typeof responseData.message === 'string' ? responseData.message : 'Vui lòng kiểm tra lại thông tin đã nhập';
+          toast.error(message);
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+          setErrors(validationErrors);
+        }
+      } else {
+        // Other errors
+        const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || 'Có lỗi xảy ra khi cập nhật thông tin';
+        if (typeof errorMessage === 'string') {
+          toast.error(errorMessage);
+        } else {
+          toast.error('Có lỗi xảy ra khi cập nhật thông tin');
+        }
+      }
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
+
+  const handleAvatarUpdated = async (updatedUser: UserType) => {
+    setUser(updatedUser);
+    await refreshUser();
+  };
+
+  const handleResendVerification = async () => {
+    setIsResendingVerification(true);
+    try {
+      await authApi.resendVerification();
+      toast.success('Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư của bạn.');
+    } catch (error: any) {
+      console.error('Error resending verification:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || 'Có lỗi xảy ra khi gửi email xác nhận';
+      toast.error(typeof errorMessage === 'string' ? errorMessage : 'Có lỗi xảy ra khi gửi email xác nhận');
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+        <p className="mt-4 text-muted-foreground">Đang tải thông tin...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
+        <p className="text-muted-foreground">Không thể tải thông tin hồ sơ</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-4 bg-background text-foreground min-h-screen">
@@ -39,37 +209,70 @@ export function ProfilePage() {
           <div className="lg:col-span-1">
             <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader className="text-center">
-                <div className="relative inline-block mb-4">
-                  <Avatar className="h-32 w-32 mx-auto">
-                    <AvatarImage src={currentUser.avatar} alt={formData.fullName} />
-                    <AvatarFallback className="bg-blue-600 text-white text-2xl">
-                      {formData.fullName.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <DarkOutlineButton
-                    size="icon"
-                    className="absolute bottom-0 right-0 rounded-full bg-black"
-                    title="Đổi avatar"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </DarkOutlineButton>
+                <div className="flex justify-center mb-4">
+                  <AvatarUpload user={user} onAvatarUpdated={handleAvatarUpdated} />
                 </div>
-                <CardTitle className="text-white">{formData.fullName}</CardTitle>
-                <CardDescription className="text-gray-400">{formData.email}</CardDescription>
+                <CardTitle className="text-white">{user.fullName}</CardTitle>
+                <CardDescription className="text-gray-400">{user.email}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Vai trò</p>
                     <p className="text-white font-medium">
-                      {currentUser.role === 'student' ? 'Học viên' : currentUser.role === 'instructor' ? 'Giảng viên' : 'Quản trị viên'}
+                      {user.role === 'STUDENT'
+                        ? 'Học viên'
+                        : user.role === 'INSTRUCTOR'
+                        ? 'Giảng viên'
+                        : 'Quản trị viên'}
                     </p>
                   </div>
                   <Separator className="bg-[#2D2D2D]" />
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Thành viên từ</p>
-                    <p className="text-white">Tháng 1, 2024</p>
+                    <p className="text-white">
+                      {new Date(user.createdAt).toLocaleDateString('vi-VN', {
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </p>
                   </div>
+                  <Separator className="bg-[#2D2D2D]" />
+                  {user.emailVerified ? (
+                    <div>
+                      <p className="text-sm text-green-400">✓ Email đã xác thực</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm text-yellow-400 font-medium">Email chưa được xác thực</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Vui lòng xác thực email để đảm bảo tài khoản của bạn được bảo mật.
+                          </p>
+                        </div>
+                      </div>
+                      <DarkOutlineButton
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={isResendingVerification}
+                        className="w-full"
+                      >
+                        {isResendingVerification ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                            Đang gửi...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-3 w-3 mr-2" />
+                            Gửi lại email xác nhận
+                          </>
+                        )}
+                      </DarkOutlineButton>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -95,11 +298,22 @@ export function ProfilePage() {
                         id="fullName"
                         type="text"
                         value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white"
+                        onChange={(e) => {
+                          setFormData({ ...formData, fullName: e.target.value });
+                          // Clear error when user types
+                          if (errors.fullName) {
+                            setErrors({ ...errors, fullName: undefined });
+                          }
+                        }}
+                        className={`pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+                          errors.fullName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                        }`}
                         required
                       />
                     </div>
+                    {errors.fullName && (
+                      <p className="text-sm text-red-500 mt-1">{errors.fullName}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -110,10 +324,12 @@ export function ProfilePage() {
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white"
-                        required
+                        disabled
+                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white opacity-60 cursor-not-allowed"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Email không thể thay đổi
+                      </p>
                     </div>
                   </div>
 
@@ -126,10 +342,29 @@ export function ProfilePage() {
                         type="tel"
                         placeholder="0901234567"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
+                        onChange={(e) => {
+                          // Only allow numbers
+                          const value = e.target.value.replace(/\D/g, '');
+                          setFormData({ ...formData, phone: value });
+                          // Clear error when user types
+                          if (errors.phone) {
+                            setErrors({ ...errors, phone: undefined });
+                          }
+                        }}
+                        className={`pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
+                          errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                        }`}
+                        maxLength={10}
                       />
                     </div>
+                    {errors.phone && (
+                      <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
+                    )}
+                    {!errors.phone && formData.phone && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Định dạng: 10 chữ số, bắt đầu bằng 0
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -139,9 +374,30 @@ export function ProfilePage() {
                       rows={4}
                       placeholder="Viết một chút về bản thân..."
                       value={formData.bio}
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      className="w-full p-3 rounded-md bg-[#1F1F1F] border border-[#2D2D2D] text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      onChange={(e) => {
+                        setFormData({ ...formData, bio: e.target.value });
+                        // Clear error when user types
+                        if (errors.bio) {
+                          setErrors({ ...errors, bio: undefined });
+                        }
+                      }}
+                      className={`w-full p-3 rounded-md bg-[#1F1F1F] border text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 ${
+                        errors.bio 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-[#2D2D2D] focus:ring-blue-600'
+                      }`}
+                      maxLength={500}
                     />
+                    <div className="flex justify-between items-center">
+                      {errors.bio && (
+                        <p className="text-sm text-red-500">{errors.bio}</p>
+                      )}
+                      <p className={`text-xs ml-auto ${
+                        formData.bio.length > 500 ? 'text-red-500' : 'text-gray-500'
+                      }`}>
+                        {formData.bio.length}/500 ký tự
+                      </p>
+                    </div>
                   </div>
 
                   <DarkOutlineButton
@@ -149,8 +405,17 @@ export function ProfilePage() {
                     className="w-full"
                     disabled={isSaving}
                   >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Lưu thay đổi
+                      </>
+                    )}
                   </DarkOutlineButton>
                 </form>
               </CardContent>
@@ -165,55 +430,7 @@ export function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword" className="text-white">Mật khẩu hiện tại</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword" className="text-white">Mật khẩu mới</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">Tối thiểu 8 ký tự</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmNewPassword" className="text-white">Xác nhận mật khẩu mới</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="confirmNewPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500"
-                      />
-                    </div>
-                  </div>
-
-                  <DarkOutlineButton
-                    type="submit"
-                    className="w-full"
-                  >
-                    <Lock className="h-4 w-4 mr-2" />
-                    Đổi mật khẩu
-                  </DarkOutlineButton>
-                </form>
+                <ChangePassword />
               </CardContent>
             </Card>
           </div>

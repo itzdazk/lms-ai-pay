@@ -45,6 +45,19 @@ export interface User {
     emailVerified: boolean
     createdAt: string
     updatedAt: string
+  id: string;
+  userName: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
+  avatar?: string; // Legacy field name (for backward compatibility)
+  avatarUrl?: string; // Backend field name
+  bio?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Course types

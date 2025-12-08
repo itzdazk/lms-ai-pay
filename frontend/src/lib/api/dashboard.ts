@@ -47,4 +47,36 @@ export const dashboardApi = {
     const response = await apiClient.get<ApiResponse<Course[]>>('/dashboard/instructor/courses');
     return response.data.data;
   },
+
+  // Admin Dashboard APIs
+  async getAdminDashboard(): Promise<any> {
+    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin');
+    return response.data.data;
+  },
+
+  async getAdminStats(): Promise<any> {
+    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin/stats');
+    return response.data.data;
+  },
+
+  async getAdminUsersAnalytics(): Promise<any> {
+    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin/users-analytics');
+    return response.data.data;
+  },
+
+  async getAdminCoursesAnalytics(): Promise<any> {
+    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin/courses-analytics');
+    return response.data.data;
+  },
+
+  async getAdminRevenueAnalytics(): Promise<any> {
+    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin/revenue');
+    return response.data.data;
+  },
+
+  async getAdminRecentActivities(limit?: number): Promise<any> {
+    const params = limit ? `?limit=${limit}` : '';
+    const response = await apiClient.get<ApiResponse<any>>(`/dashboard/admin/activities${params}`);
+    return response.data.data;
+  },
 };
