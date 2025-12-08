@@ -24,6 +24,9 @@ import { AboutPage } from './pages/AboutPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/admin/UsersPage';
+import { CoursesPage as InstructorCoursesPage } from './pages/instructor/CoursesPage';
+import { CourseCreatePage } from './pages/instructor/CourseCreatePage';
+import { CourseEditPage } from './pages/instructor/CourseEditPage';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
@@ -38,8 +41,8 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Admin Routes - No Navbar/Footer */}
-          <Route
+           {/* Admin Routes - No Navbar/Footer */}
+           <Route
             path="/admin-dashboard"
             element={<AdminDashboard />}
           />
@@ -52,6 +55,7 @@ export default function App() {
             }
           />
 
+
           {/* Main Routes - With Navbar/Footer */}
           <Route
             path="/*"
@@ -59,12 +63,14 @@ export default function App() {
               <>
                 <Navbar />
                 <main className="flex-1">
-                  <Routes>
+                <Routes>
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/courses/:id" element={<CourseDetailPage />} />
                     <Route path="/dashboard" element={<StudentDashboard />} />
-                    <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
+                    <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+                    <Route path="/instructor/courses/create" element={<CourseCreatePage />} />
+                    <Route path="/instructor/courses/:id/edit" element={<CourseEditPage />} />
                     <Route path="/learn/:id" element={<VideoPlayerPage />} />
                     <Route path="/ai-chat" element={<AIChatPage />} />
                     <Route path="/checkout/:id" element={<PaymentCheckoutPage />} />
