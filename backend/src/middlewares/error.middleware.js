@@ -1,7 +1,7 @@
 // src/middlewares/error.middleware.js
-import logger from '../config/logger.config.js';
-import ApiResponse from '../utils/response.util.js';
-import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js';
+import logger from '../config/logger.config.js'
+import ApiResponse from '../utils/response.util.js'
+import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js'
 
 /**
  * Handle 404 Not Found
@@ -28,6 +28,34 @@ const errorHandler = (err, req, res, next) => {
         path: req.path,
         method: req.method,
     })
+
+    if (!err.code) {
+        switch (statusCode) {
+            case HTTP_STATUS.UNAUTHORIZED:
+                errorCode = ERROR_CODES.AUTHENTICATION_ERROR
+                break
+            case HTTP_STATUS.FORBIDDEN:
+                errorCode = ERROR_CODES.AUTHORIZATION_ERROR
+                break
+            case HTTP_STATUS.NOT_FOUND:
+                errorCode = ERROR_CODES.NOT_FOUND
+                break
+            case HTTP_STATUS.UNPROCESSABLE_ENTITY:
+                errorCode = ERROR_CODES.VALIDATION_ERROR
+                break
+            case HTTP_STATUS.CONFLICT:
+                errorCode = ERROR_CODES.DUPLICATE_ENTRY
+                break
+            case HTTP_STATUS.TOO_MANY_REQUESTS:
+                errorCode = ERROR_CODES.RATE_LIMIT_ERROR
+                break
+            case HTTP_STATUS.BAD_REQUEST:
+                errorCode = ERROR_CODES.VALIDATION_ERROR
+                break
+            default:
+                errorCode = ERROR_CODES.INTERNAL_ERROR
+        }
+    }
 
     // Prisma errors
     if (err.code && err.code.startsWith('P')) {
@@ -123,9 +151,4 @@ const asyncHandler = (fn) => {
     }
 }
 
-export {
-    notFound,
-    errorHandler,
-    asyncHandler,
-};
-
+export { notFound, errorHandler, asyncHandler }
