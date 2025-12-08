@@ -72,6 +72,9 @@ class InstructorCourseService {
             case 'updated':
                 orderBy = { updatedAt: 'desc' }
                 break
+            case 'updated-oldest':
+                orderBy = { updatedAt: 'asc' }
+                break
             case 'popular':
                 orderBy = { enrolledCount: 'desc' }
                 break

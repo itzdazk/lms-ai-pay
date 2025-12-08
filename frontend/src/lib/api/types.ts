@@ -81,6 +81,7 @@ export interface Course {
   enrolledCount: number;
   ratingAvg: number;
   ratingCount: number;
+  completionRate?: number;
   tags?: Tag[];
   lessonsCount?: number;
   durationMinutes?: number;
