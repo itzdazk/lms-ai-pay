@@ -22,6 +22,8 @@ import { CertificatePage } from './pages/CertificatePage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { AboutPage } from './pages/AboutPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { SettingsPage } from './pages/SettingsPage'
+import { UsersPage } from './pages/admin/UsersPage'
 import { Toaster } from './components/ui/sonner'
 import { EmailVerificationPage } from './pages/EmailVerificationPage'
 
@@ -45,6 +47,19 @@ export default function App() {
                     <Route
                         path='/verify-email'
                         element={<EmailVerificationPage />}
+                    />
+                    {/* Admin Routes - No Navbar/Footer */}
+                    <Route
+                        path='/admin-dashboard'
+                        element={<AdminDashboard />}
+                    />
+                    <Route
+                        path='/admin/*'
+                        element={
+                            <Routes>
+                                <Route path='/users' element={<UsersPage />} />
+                            </Routes>
+                        }
                     />
 
                     {/* Main Routes - With Navbar/Footer */}
@@ -118,6 +133,10 @@ export default function App() {
                                         <Route
                                             path='/profile'
                                             element={<ProfilePage />}
+                                        />
+                                        <Route
+                                            path='/settings'
+                                            element={<SettingsPage />}
                                         />
                                     </Routes>
                                 </main>
