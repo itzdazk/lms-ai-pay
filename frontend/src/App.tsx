@@ -11,6 +11,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { EmailVerificationPage } from './pages/EmailVerificationPage';
 
 // Public Pages
 import { LandingPage } from './pages/LandingPage';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<EmailVerificationPage />} />
 
           {/* ========== PUBLIC ROUTES (With Navbar/Footer) ========== */}
           <Route
