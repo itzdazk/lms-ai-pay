@@ -58,7 +58,7 @@ export default function App() {
             path="/*"
             element={
               <PublicLayout>
-                <Routes>
+              <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/courses" element={<CoursesPage />} />
                   <Route path="/courses/preview" element={<CoursePreviewPage />} />
@@ -190,7 +190,7 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
-                </Routes>
+              </Routes>
               </PublicLayout>
             }
           />
@@ -202,10 +202,10 @@ export default function App() {
               <ProtectedRoute>
                 <RoleRoute allowedRoles={['ADMIN']} redirectTo="/dashboard">
                   <AdminLayout>
-                    <Routes>
+                  <Routes>
                       <Route path="/dashboard" element={<AdminDashboard />} />
                       <Route path="/users" element={<UsersPage />} />
-                    </Routes>
+                  </Routes>
                   </AdminLayout>
                 </RoleRoute>
               </ProtectedRoute>
