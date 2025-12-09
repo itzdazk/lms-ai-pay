@@ -49,6 +49,26 @@ interface CourseFormProps {
   onTagCreated?: () => void;
 }
 
+// Format number to currency string without VND suffix (for input display)
+function formatPriceInput(price: number | undefined | string): string {
+  if (!price) return '';
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return '';
+  return new Intl.NumberFormat('vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numPrice);
+}
+
+// Parse currency string to number (remove dots and spaces)
+function parsePriceInput(value: string): number | undefined {
+  if (!value || value.trim() === '') return undefined;
+  // Remove all dots, spaces, and non-numeric characters except digits
+  const cleaned = value.replace(/[^\d]/g, '');
+  if (cleaned === '') return undefined;
+  return parseFloat(cleaned);
+}
+
 export function CourseForm({
   course,
   categories,
@@ -87,7 +107,7 @@ export function CourseForm({
     shortDescription: '',
     categoryId: '',
     level: 'beginner',
-    price: '0',
+    price: formatPriceInput(0),
     discountPrice: '',
     requirements: '',
     whatYouLearn: '',
@@ -303,17 +323,17 @@ export function CourseForm({
     }
     
     // Price validation: required, >= 0
-    const price = parseFloat(formData.price);
-    if (isNaN(price) || price < 0) {
+    const price = parsePriceInput(formData.price);
+    if (price === undefined || price < 0) {
       invalidFields.push('giá phải là số không âm');
     }
     
     // Discount price validation: optional, >= 0 and <= price
     if (formData.discountPrice.trim()) {
-      const discountPrice = parseFloat(formData.discountPrice);
-      if (isNaN(discountPrice) || discountPrice < 0) {
+      const discountPrice = parsePriceInput(formData.discountPrice);
+      if (discountPrice === undefined || discountPrice < 0) {
         invalidFields.push('giá khuyến mãi phải là số không âm');
-      } else if (!isNaN(price) && discountPrice > price) {
+      } else if (price !== undefined && discountPrice > price) {
         invalidFields.push('giá khuyến mãi không được lớn hơn giá gốc');
       }
     }
@@ -352,8 +372,8 @@ export function CourseForm({
       throw new Error('Category ID is invalid');
     }
 
-    const price = parseFloat(formData.price);
-    if (isNaN(price) || price < 0) {
+    const price = parsePriceInput(formData.price);
+    if (price === undefined || price < 0) {
       throw new Error('Price is invalid');
     }
 
@@ -371,8 +391,8 @@ export function CourseForm({
       level: formData.level.toUpperCase(),
       price: price,
       discountPrice: formData.discountPrice ? (() => {
-        const discount = parseFloat(formData.discountPrice);
-        return isNaN(discount) ? undefined : discount;
+        const discount = parsePriceInput(formData.discountPrice);
+        return discount;
       })() : undefined,
       requirements: formData.requirements.trim() || undefined,
       whatYouLearn: formData.whatYouLearn.trim() || undefined,
@@ -721,7 +741,7 @@ export function CourseForm({
         formData.description.trim() !== '' ||
         formData.shortDescription.trim() !== '' ||
         formData.categoryId !== '' ||
-        formData.price !== '0' ||
+        (formData.price !== '0' && formData.price !== '') ||
         formData.discountPrice !== '' ||
         formData.requirements.trim() !== '' ||
         formData.whatYouLearn.trim() !== '' ||
@@ -994,11 +1014,22 @@ export function CourseForm({
             </Label>
             <Input
               id="price"
-              type="number"
-              min="0"
+              type="text"
               value={formData.price}
               onChange={(e) => {
-                setFormData({ ...formData, price: e.target.value });
+                const inputValue = e.target.value;
+                // Allow empty input
+                if (inputValue === '' || inputValue.trim() === '') {
+                  setFormData({ ...formData, price: '' });
+                  return;
+                }
+                const parsedValue = parsePriceInput(inputValue);
+                if (parsedValue !== undefined) {
+                  setFormData({ ...formData, price: formatPriceInput(parsedValue) });
+                } else {
+                  // If parsing fails, keep the formatted value
+                  setFormData({ ...formData, price: inputValue });
+                }
                 // Clear custom validation when user types
                 const input = e.target as HTMLInputElement;
                 input.setCustomValidity('');
@@ -1009,8 +1040,8 @@ export function CourseForm({
               }`}
               onInvalid={(e) => {
                 const input = e.currentTarget;
-                const price = parseFloat(input.value);
-                if (isNaN(price) || price < 0) {
+                const price = parsePriceInput(input.value);
+                if (price === undefined || price < 0) {
                   input.setCustomValidity('Giá phải là số không âm');
                 }
               }}
@@ -1026,11 +1057,22 @@ export function CourseForm({
             </Label>
             <Input
               id="discountPrice"
-              type="number"
-              min="0"
+              type="text"
               value={formData.discountPrice}
               onChange={(e) => {
-                setFormData({ ...formData, discountPrice: e.target.value });
+                const inputValue = e.target.value;
+                // Allow empty input
+                if (inputValue === '' || inputValue.trim() === '') {
+                  setFormData({ ...formData, discountPrice: '' });
+                  return;
+                }
+                const parsedValue = parsePriceInput(inputValue);
+                if (parsedValue !== undefined) {
+                  setFormData({ ...formData, discountPrice: formatPriceInput(parsedValue) });
+                } else {
+                  // If parsing fails, keep the formatted value
+                  setFormData({ ...formData, discountPrice: inputValue });
+                }
                 // Clear custom validation when user types
                 const input = e.target as HTMLInputElement;
                 input.setCustomValidity('');
@@ -1041,11 +1083,11 @@ export function CourseForm({
               }`}
               onInvalid={(e) => {
                 const input = e.currentTarget;
-                const discountPrice = parseFloat(input.value);
-                const price = parseFloat(formData.price);
-                if (isNaN(discountPrice) || discountPrice < 0) {
+                const discountPrice = parsePriceInput(input.value);
+                const price = parsePriceInput(formData.price);
+                if (discountPrice === undefined || discountPrice < 0) {
                   input.setCustomValidity('Giá khuyến mãi phải là số không âm');
-                } else if (!isNaN(price) && discountPrice > price) {
+                } else if (price !== undefined && discountPrice > price) {
                   input.setCustomValidity('Giá khuyến mãi không được lớn hơn giá gốc');
                 }
               }}
