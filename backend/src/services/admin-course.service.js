@@ -129,8 +129,14 @@ class AdminCourseService {
             case 'updated':
                 orderBy = { updatedAt: 'desc' }
                 break
+            case 'updated-oldest':
+                orderBy = { updatedAt: 'asc' }
+                break
             case 'popular':
                 orderBy = { enrolledCount: 'desc' }
+                break
+            case 'enrollments':
+                orderBy = { enrolledCount: 'asc' }
                 break
             case 'rating':
                 orderBy = { ratingAvg: 'desc' }
