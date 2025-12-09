@@ -357,11 +357,13 @@ export function CourseForm({
       throw new Error('Price is invalid');
     }
 
+    // Prepare tags for separate handling (not sent in create/update request)
+    // This prevents "All tags are already associated" error if backend processes tags during creation
     const tags = formData.tags
       .map(tagId => parseInt(tagId))
       .filter(id => !isNaN(id) && id > 0);
 
-    return {
+    const submitData: any = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       shortDescription: formData.shortDescription.trim() || undefined,
@@ -378,8 +380,15 @@ export function CourseForm({
       targetAudience: formData.targetAudience.trim() || undefined,
       language: formData.language,
       status: 'DRAFT',
-      tags: tags.length > 0 ? tags : undefined,
     };
+
+    // Include tags in return object for parent component to handle separately
+    // But don't send tags in the actual API request to avoid backend processing them
+    if (tags.length > 0) {
+      submitData.tags = tags;
+    }
+
+    return submitData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -626,8 +635,7 @@ export function CourseForm({
       setTagSearch('');
     } catch (error: any) {
       console.error('Error creating tag:', error);
-      const errorMessage = error.response?.data?.message || 'Không thể tạo tag';
-      toast.error(errorMessage);
+      // Error toast is already shown by API client interceptor
     } finally {
       setCreatingTag(false);
     }

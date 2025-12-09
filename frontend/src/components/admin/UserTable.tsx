@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   DarkOutlineTable,
@@ -277,7 +278,7 @@ function UserRow({
         </DarkOutlineTableCell>
       </DarkOutlineTableRow>
       
-      {menuOpen && (
+      {menuOpen && createPortal(
         <div
           ref={menuRef}
           className="fixed z-50 min-w-[8rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md"
@@ -331,7 +332,8 @@ function UserRow({
             <Trash2 className="h-4 w-4" />
             Xóa
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
