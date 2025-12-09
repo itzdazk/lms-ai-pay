@@ -45,6 +45,42 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
+// Format number to currency string without VND suffix (for input display)
+function formatPriceInput(price: number | undefined): string {
+  if (!price) return '';
+  return new Intl.NumberFormat('vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
+// Parse currency string to number (remove dots and spaces)
+function parsePriceInput(value: string): number | undefined {
+  if (!value || value.trim() === '') return undefined;
+  // Remove all dots, spaces, and non-numeric characters except digits
+  const cleaned = value.replace(/[^\d]/g, '');
+  if (cleaned === '') return undefined;
+  return parseFloat(cleaned);
+}
+
+// Format number to string with thousand separators (for enrollment display)
+function formatNumberInput(value: number | undefined): string {
+  if (!value) return '';
+  return new Intl.NumberFormat('vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+// Parse number string to number (remove dots and spaces)
+function parseNumberInput(value: string): number | undefined {
+  if (!value || value.trim() === '') return undefined;
+  // Remove all dots, spaces, and non-numeric characters except digits
+  const cleaned = value.replace(/[^\d]/g, '');
+  if (cleaned === '') return undefined;
+  return parseInt(cleaned, 10);
+}
+
 function formatDuration(hours: number): string {
   if (!hours) return '0 giờ';
   const h = Math.floor(hours);
@@ -194,33 +230,33 @@ function CourseRow({
         selected={isSelected}
         onRowToggle={handleToggle}
       >
-        <DarkOutlineTableCell>
-          <div className="flex items-center gap-3">
+        <DarkOutlineTableCell className="max-w-[300px]">
+          <div className="flex items-center gap-3 min-w-0">
             {course.thumbnailUrl ? (
               <img
                 src={course.thumbnailUrl}
                 alt={course.title}
-                className="w-16 h-10 object-cover rounded"
+                className="w-16 h-10 object-cover rounded flex-shrink-0"
               />
             ) : (
-              <div className="w-16 h-10 bg-gray-200 dark:bg-[#2D2D2D] rounded flex items-center justify-center">
+              <div className="w-16 h-10 bg-gray-200 dark:bg-[#2D2D2D] rounded flex items-center justify-center flex-shrink-0">
                 <BookOpen className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-medium line-clamp-1 text-gray-900 dark:text-white">{course.title}</p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <p className="font-medium line-clamp-1 text-gray-900 dark:text-white truncate" title={course.title}>{course.title}</p>
                 {course.isFeatured && (
-                  <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
                 )}
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                 {course.totalLessons} bài • {formatDuration(course.durationHours)}
               </p>
             </div>
           </div>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[120px]">
           {course.status === 'PUBLISHED' ? (
             <Badge className="bg-green-600">Đã xuất bản</Badge>
           ) : course.status === 'DRAFT' ? (
@@ -229,21 +265,21 @@ function CourseRow({
             <Badge variant="secondary" className="bg-gray-600 text-white">Đã lưu trữ</Badge>
           )}
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
-          <span className="text-gray-900 dark:text-gray-300">{course.instructor.fullName}</span>
+        <DarkOutlineTableCell className="w-[150px]">
+          <span className="text-gray-900 dark:text-gray-300 truncate block" title={course.instructor.fullName}>{course.instructor.fullName}</span>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
-          <span className="text-gray-900 dark:text-gray-300">{course.category.name}</span>
+        <DarkOutlineTableCell className="w-[130px]">
+          <span className="text-gray-900 dark:text-gray-300 truncate block" title={course.category.name}>{course.category.name}</span>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[100px]">
           <div className="flex items-center gap-1">
-            <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Users className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <span className="text-gray-900 dark:text-gray-300">{(course.enrolledCount || 0).toLocaleString()}</span>
           </div>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[100px]">
           <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
             <span className="text-gray-900 dark:text-gray-300">
               {course.ratingCount > 0 && course.ratingAvg 
                 ? (typeof course.ratingAvg === 'number' ? course.ratingAvg : parseFloat(String(course.ratingAvg)) || 0).toFixed(1) 
@@ -251,25 +287,25 @@ function CourseRow({
             </span>
           </div>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[120px]">
           <span className="text-gray-900 dark:text-gray-300">
             {course.discountPrice ? (
               <>
-                <span className="line-through text-gray-500 text-sm">{formatPrice(course.price)}</span>
-                <span className="ml-2 text-red-500">{formatPrice(course.discountPrice)}</span>
+                <span className="line-through text-gray-500 text-sm block">{formatPrice(course.price)}</span>
+                <span className="text-red-500">{formatPrice(course.discountPrice)}</span>
               </>
             ) : (
               formatPrice(course.price)
             )}
           </span>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[110px]">
           <span className="text-gray-900 dark:text-gray-300">{formatDate(course.createdAt)}</span>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[110px]">
           <span className="text-gray-900 dark:text-gray-300">{formatDate(course.updatedAt)}</span>
         </DarkOutlineTableCell>
-        <DarkOutlineTableCell className="text-right">
+        <DarkOutlineTableCell className="text-right w-[100px]">
           <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-[#1F1F1F]" onClick={(e) => {
             e.stopPropagation();
             if (!isSelected) {
@@ -327,13 +363,13 @@ export function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 20,
+    limit: 10,
     total: 0,
     totalPages: 0,
   });
   const [filters, setFilters] = useState<AdminCourseFilters>({
     page: 1,
-    limit: 20,
+    limit: 10,
     search: '',
     status: undefined,
     categoryId: undefined,
@@ -352,6 +388,14 @@ export function CoursesPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
+  const [categorySearch, setCategorySearch] = useState<string>('');
+  const [instructorSearch, setInstructorSearch] = useState<string>('');
+  const [tempMinPrice, setTempMinPrice] = useState<number | undefined>(undefined);
+  const [tempMaxPrice, setTempMaxPrice] = useState<number | undefined>(undefined);
+  const [tempMinEnrollments, setTempMinEnrollments] = useState<number | undefined>(undefined);
+  const [tempMaxEnrollments, setTempMaxEnrollments] = useState<number | undefined>(undefined);
+  const priceDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enrollmentsDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
 
@@ -394,6 +438,72 @@ export function CoursesPage() {
 
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Debounce price filter changes
+  useEffect(() => {
+    if (priceDebounceTimerRef.current) {
+      clearTimeout(priceDebounceTimerRef.current);
+    }
+
+    if (tempMinPrice !== undefined || tempMaxPrice !== undefined) {
+      priceDebounceTimerRef.current = setTimeout(() => {
+        const mainContainer = document.querySelector('main');
+        if (mainContainer) {
+          scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+        } else {
+          scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+        }
+        isPageChangingRef.current = true;
+        setFilters(prevFilters => ({
+          ...prevFilters,
+          minPrice: tempMinPrice,
+          maxPrice: tempMaxPrice,
+          page: 1,
+        }));
+        setTempMinPrice(undefined);
+        setTempMaxPrice(undefined);
+      }, 1000); // 500ms debounce
+    }
+
+    return () => {
+      if (priceDebounceTimerRef.current) {
+        clearTimeout(priceDebounceTimerRef.current);
+      }
+    };
+  }, [tempMinPrice, tempMaxPrice]);
+
+  // Debounce enrollment filter changes
+  useEffect(() => {
+    if (enrollmentsDebounceTimerRef.current) {
+      clearTimeout(enrollmentsDebounceTimerRef.current);
+    }
+
+    if (tempMinEnrollments !== undefined || tempMaxEnrollments !== undefined) {
+      enrollmentsDebounceTimerRef.current = setTimeout(() => {
+        const mainContainer = document.querySelector('main');
+        if (mainContainer) {
+          scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+        } else {
+          scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+        }
+        isPageChangingRef.current = true;
+        setFilters(prevFilters => ({
+          ...prevFilters,
+          minEnrollments: tempMinEnrollments,
+          maxEnrollments: tempMaxEnrollments,
+          page: 1,
+        }));
+        setTempMinEnrollments(undefined);
+        setTempMaxEnrollments(undefined);
+      }, 500); // 500ms debounce
+    }
+
+    return () => {
+      if (enrollmentsDebounceTimerRef.current) {
+        clearTimeout(enrollmentsDebounceTimerRef.current);
+      }
+    };
+  }, [tempMinEnrollments, tempMaxEnrollments]);
 
   // Load courses when filters change
   useEffect(() => {
@@ -621,8 +731,8 @@ export function CoursesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 bg-background text-foreground min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full px-4 py-4 bg-background text-foreground min-h-screen">
+      <div className="w-full">
         <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3">
             <BookOpen className="h-8 w-8" />
@@ -637,7 +747,121 @@ export function CoursesPage() {
           <CardTitle className="text-white">Bộ lọc</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          {/* Main Filters Row - 4 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Giảng viên</Label>
+              <Select
+                value={filters.instructorId ? String(filters.instructorId) : 'all'}
+                onValueChange={(value) => {
+                  handleFilterChange('instructorId', value === 'all' ? undefined : parseInt(value));
+                  setInstructorSearch(''); // Reset search when selecting
+                }}
+              >
+                <DarkOutlineSelectTrigger>
+                  <SelectValue placeholder="Tất cả giảng viên" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <div className="p-2 border-b border-[#2D2D2D]">
+                    <DarkOutlineInput
+                      placeholder="Tìm kiếm giảng viên..."
+                      value={instructorSearch}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setInstructorSearch(e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    <DarkOutlineSelectItem value="all" onSelect={() => setInstructorSearch('')}>
+                      Tất cả giảng viên
+                    </DarkOutlineSelectItem>
+                    {instructors
+                      .filter((instructor) =>
+                        instructor.fullName.toLowerCase().includes(instructorSearch.toLowerCase())
+                      )
+                      .map((instructor) => (
+                        <DarkOutlineSelectItem
+                          key={instructor.id}
+                          value={String(instructor.id)}
+                          onSelect={() => setInstructorSearch('')}
+                        >
+                          {instructor.fullName}
+                        </DarkOutlineSelectItem>
+                      ))}
+                    {instructors.filter((instructor) =>
+                      instructor.fullName.toLowerCase().includes(instructorSearch.toLowerCase())
+                    ).length === 0 && instructorSearch && (
+                      <div className="px-2 py-1.5 text-sm text-gray-400 text-center">
+                        Không tìm thấy giảng viên
+                      </div>
+                    )}
+                  </div>
+                </DarkOutlineSelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Danh mục</Label>
+              <Select
+                value={filters.categoryId ? String(filters.categoryId) : 'all'}
+                onValueChange={(value) => {
+                  handleFilterChange('categoryId', value === 'all' ? undefined : parseInt(value));
+                  setCategorySearch(''); // Reset search when selecting
+                }}
+              >
+                <DarkOutlineSelectTrigger>
+                  <SelectValue placeholder="Tất cả danh mục" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <div className="p-2 border-b border-[#2D2D2D]">
+                    <DarkOutlineInput
+                      placeholder="Tìm kiếm danh mục..."
+                      value={categorySearch}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setCategorySearch(e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    <DarkOutlineSelectItem value="all" onSelect={() => setCategorySearch('')}>
+                      Tất cả danh mục
+                    </DarkOutlineSelectItem>
+                    {categories
+                      .filter((category) =>
+                        category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                      )
+                      .map((category) => {
+                        const categoryIdStr = String(category.id);
+                        return (
+                          <DarkOutlineSelectItem
+                            key={category.id}
+                            value={categoryIdStr}
+                            onSelect={() => setCategorySearch('')}
+                          >
+                            {category.name}
+                          </DarkOutlineSelectItem>
+                        );
+                      })}
+                    {categories.filter((category) =>
+                      category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                    ).length === 0 && categorySearch && (
+                      <div className="px-2 py-1.5 text-sm text-gray-400 text-center">
+                        Không tìm thấy danh mục
+                      </div>
+                    )}
+                  </div>
+                </DarkOutlineSelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Trạng thái</Label>
               <Select
@@ -652,31 +876,6 @@ export function CoursesPage() {
                   <DarkOutlineSelectItem value="DRAFT">Bản nháp</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="PUBLISHED">Đã xuất bản</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="ARCHIVED">Đã lưu trữ</DarkOutlineSelectItem>
-                </DarkOutlineSelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Danh mục</Label>
-              <Select
-                value={filters.categoryId ? String(filters.categoryId) : 'all'}
-                onValueChange={(value) => {
-                  handleFilterChange('categoryId', value === 'all' ? undefined : parseInt(value));
-                }}
-              >
-                <DarkOutlineSelectTrigger>
-                  <SelectValue placeholder="Tất cả danh mục" />
-                </DarkOutlineSelectTrigger>
-                <DarkOutlineSelectContent>
-                  <DarkOutlineSelectItem value="all">Tất cả danh mục</DarkOutlineSelectItem>
-                  {categories.map((category) => {
-                    const categoryIdStr = String(category.id);
-                    return (
-                      <DarkOutlineSelectItem key={category.id} value={categoryIdStr}>
-                        {category.name}
-                      </DarkOutlineSelectItem>
-                    );
-                  })}
                 </DarkOutlineSelectContent>
               </Select>
             </div>
@@ -698,29 +897,10 @@ export function CoursesPage() {
                 </DarkOutlineSelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Giảng viên</Label>
-              <Select
-                value={filters.instructorId ? String(filters.instructorId) : 'all'}
-                onValueChange={(value) => {
-                  handleFilterChange('instructorId', value === 'all' ? undefined : parseInt(value));
-                }}
-              >
-                <DarkOutlineSelectTrigger>
-                  <SelectValue placeholder="Tất cả giảng viên" />
-                </DarkOutlineSelectTrigger>
-                <DarkOutlineSelectContent>
-                  <DarkOutlineSelectItem value="all">Tất cả giảng viên</DarkOutlineSelectItem>
-                  {instructors.map((instructor) => (
-                    <DarkOutlineSelectItem key={instructor.id} value={instructor.id}>
-                      {instructor.fullName}
-                    </DarkOutlineSelectItem>
-                  ))}
-                </DarkOutlineSelectContent>
-              </Select>
-            </div>
-
+          {/* Pagination and Sort Row - 4 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Nổi bật</Label>
               <Select
@@ -739,7 +919,6 @@ export function CoursesPage() {
                 </DarkOutlineSelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Sắp xếp</Label>
               <Select
@@ -761,8 +940,10 @@ export function CoursesPage() {
                 <DarkOutlineSelectContent>
                   <DarkOutlineSelectItem value="newest">Mới nhất</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="oldest">Cũ nhất</DarkOutlineSelectItem>
-                  <DarkOutlineSelectItem value="updated">Cập nhật gần nhất</DarkOutlineSelectItem>
-                  <DarkOutlineSelectItem value="popular">Phổ biến</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="updated">Cập nhật: mới nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="updated-oldest">Cập nhật: cũ nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="popular">Phổ biến: Cao đến thấp</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="enrollments">Phổ biến: Thấp đến cao</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="rating">Đánh giá</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="price_asc">Giá: Thấp đến cao</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="price_desc">Giá: Cao đến thấp</DarkOutlineSelectItem>
@@ -771,80 +952,35 @@ export function CoursesPage() {
                 </DarkOutlineSelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Advanced Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Giá tối thiểu (VND)</Label>
-              <DarkOutlineInput
-                type="number"
-                placeholder="0"
-                value={filters.minPrice || ''}
-                onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-                min="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Giá tối đa (VND)</Label>
-              <DarkOutlineInput
-                type="number"
-                placeholder="Không giới hạn"
-                value={filters.maxPrice || ''}
-                onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-                min="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Số học viên tối thiểu</Label>
-              <DarkOutlineInput
-                type="number"
-                placeholder="0"
-                value={filters.minEnrollments || ''}
-                onChange={(e) => handleFilterChange('minEnrollments', e.target.value ? parseInt(e.target.value) : undefined)}
-                min="0"
-              />
+              <Label className="text-gray-400 text-sm">Số lượng / trang</Label>
+              <Select
+                value={filters.limit?.toString() || '10'}
+                onValueChange={(value) => {
+                  const mainContainer = document.querySelector('main');
+                  if (mainContainer) {
+                    scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+                  } else {
+                    scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+                  }
+                  isPageChangingRef.current = true;
+                  handleFilterChange('limit', parseInt(value));
+                }}
+              >
+                <DarkOutlineSelectTrigger>
+                  <SelectValue placeholder="10 / trang" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="5">5 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="10">10 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="20">20 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="50">50 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="100">100 / trang</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Số học viên tối đa</Label>
-              <DarkOutlineInput
-                type="number"
-                placeholder="Không giới hạn"
-                value={filters.maxEnrollments || ''}
-                onChange={(e) => handleFilterChange('maxEnrollments', e.target.value ? parseInt(e.target.value) : undefined)}
-                min="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Đánh giá tối thiểu</Label>
-              <DarkOutlineInput
-                type="number"
-                placeholder="0"
-                value={filters.minRating || ''}
-                onChange={(e) => handleFilterChange('minRating', e.target.value ? parseFloat(e.target.value) : undefined)}
-                min="0"
-                max="5"
-                step="0.1"
-              />
-            </div>
-          </div>
-
-          {/* Search and Clear Filters */}
-          <div className="flex gap-4">
-            <div className="flex-1 space-y-2">
-              <Label className="text-gray-400 text-sm">Tìm kiếm</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <DarkOutlineInput
-                  type="text"
-                  placeholder="Tìm kiếm theo tên khóa học, mô tả, giảng viên..."
-                  value={searchInput}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex items-end">
+              <Label className="text-gray-400 text-sm opacity-0">Xóa bộ lọc</Label>
               <Button
                 onClick={() => {
                   setSearchInput('');
@@ -857,7 +993,7 @@ export function CoursesPage() {
                   isPageChangingRef.current = true;
                   setFilters({
                     page: 1,
-                    limit: 20,
+                    limit: 10,
                     search: '',
                     status: undefined,
                     categoryId: undefined,
@@ -879,22 +1015,135 @@ export function CoursesPage() {
               </Button>
             </div>
           </div>
+
+          {/* Advanced Filters Row - Commented out */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Khoảng giá (VND)</Label>
+              <div className="flex items-center gap-2">
+                <DarkOutlineInput
+                  type="text"
+                  placeholder="Tối thiểu"
+                  value={formatPriceInput(tempMinPrice !== undefined ? tempMinPrice : filters.minPrice)}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    // Allow empty input
+                    if (inputValue === '' || inputValue.trim() === '') {
+                      setTempMinPrice(undefined);
+                      return;
+                    }
+                    const parsedValue = parsePriceInput(inputValue);
+                    const maxValue = tempMaxPrice !== undefined ? tempMaxPrice : (filters.maxPrice || 10000000);
+                    if (parsedValue === undefined || parsedValue <= maxValue) {
+                      setTempMinPrice(parsedValue);
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <span className="text-gray-400">-</span>
+                <DarkOutlineInput
+                  type="text"
+                  placeholder="Tối đa"
+                  value={formatPriceInput(tempMaxPrice !== undefined ? tempMaxPrice : filters.maxPrice)}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    // Allow empty input
+                    if (inputValue === '' || inputValue.trim() === '') {
+                      setTempMaxPrice(undefined);
+                      return;
+                    }
+                    const parsedValue = parsePriceInput(inputValue);
+                    const minValue = tempMinPrice !== undefined ? tempMinPrice : (filters.minPrice || 0);
+                    if (parsedValue === undefined || parsedValue >= minValue) {
+                      setTempMaxPrice(parsedValue);
+                    }
+                  }}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Số lượng học viên</Label>
+              <div className="flex items-center gap-2">
+                <DarkOutlineInput
+                  type="text"
+                  placeholder="Tối thiểu"
+                  value={formatNumberInput(tempMinEnrollments !== undefined ? tempMinEnrollments : filters.minEnrollments)}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    // Allow empty input
+                    if (inputValue === '' || inputValue.trim() === '') {
+                      setTempMinEnrollments(undefined);
+                      return;
+                    }
+                    const parsedValue = parseNumberInput(inputValue);
+                    const maxValue = tempMaxEnrollments !== undefined ? tempMaxEnrollments : (filters.maxEnrollments || 999999999);
+                    if (parsedValue === undefined || parsedValue <= maxValue) {
+                      setTempMinEnrollments(parsedValue);
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <span className="text-gray-400">-</span>
+                <DarkOutlineInput
+                  type="text"
+                  placeholder="Tối đa"
+                  value={formatNumberInput(tempMaxEnrollments !== undefined ? tempMaxEnrollments : filters.maxEnrollments)}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    // Allow empty input
+                    if (inputValue === '' || inputValue.trim() === '') {
+                      setTempMaxEnrollments(undefined);
+                      return;
+                    }
+                    const parsedValue = parseNumberInput(inputValue);
+                    const minValue = tempMinEnrollments !== undefined ? tempMinEnrollments : (filters.minEnrollments || 0);
+                    if (parsedValue === undefined || parsedValue >= minValue) {
+                      setTempMaxEnrollments(parsedValue);
+                    }
+                  }}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Đánh giá tối thiểu</Label>
+              <DarkOutlineInput
+                type="number"
+                placeholder="0"
+                value={filters.minRating || ''}
+                onChange={(e) => handleFilterChange('minRating', e.target.value ? parseFloat(e.target.value) : undefined)}
+                min="0"
+                max="5"
+                step="0.1"
+              />
+            </div> */}
+          </div>
         </CardContent>
       </Card>
 
       {/* Courses Table */}
       <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-white">Quản lý khóa học</CardTitle>
-              <CardDescription className="text-gray-400">
-                Danh sách tất cả khóa học trên hệ thống
-              </CardDescription>
-            </div>
-          </div>
+          <CardTitle className="text-white">
+            Danh sách khóa học ({pagination.total})
+          </CardTitle>
+          <CardDescription className="text-gray-400">
+            Trang {pagination.page} / {pagination.totalPages}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <DarkOutlineInput
+              type="text"
+              placeholder="Tìm kiếm theo tên khóa học, mô tả, giảng viên..."
+              value={searchInput}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -980,7 +1229,7 @@ export function CoursesPage() {
             </DarkOutlineButton>
             <Button
               onClick={confirmToggleFeatured}
-              disabled={actionLoading || (selectedCourse && !selectedCourse.isFeatured && selectedCourse.status !== 'PUBLISHED')}
+              disabled={actionLoading || (selectedCourse ? ((selectedCourse.isFeatured !== true) && selectedCourse.status !== 'PUBLISHED') : false)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {actionLoading ? (
