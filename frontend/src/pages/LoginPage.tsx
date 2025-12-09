@@ -66,9 +66,9 @@ export function LoginPage() {
             if (userStr) {
                 const user = JSON.parse(userStr)
                 if (user.role === 'ADMIN') {
-                    navigate('/admin-dashboard')
+                    navigate('/admin/dashboard')
                 } else if (user.role === 'INSTRUCTOR') {
-                    navigate('/instructor-dashboard')
+                    navigate('/instructor/dashboard')
                 } else {
                     navigate('/dashboard')
                 }
@@ -77,11 +77,12 @@ export function LoginPage() {
             }
         } catch (err: any) {
             console.error('Login error:', err)
+            // Error toast is already shown by API client interceptor for non-auth requests
+            // For auth requests, we handle it here
             const errorMessage =
                 err.response?.data?.message ||
                 'Email hoặc mật khẩu chưa chính xác'
             setError(errorMessage)
-            toast.error('Đăng nhập thất bại!')
 
             // Set field-specific errors if available
             if (err.response?.status === 401) {

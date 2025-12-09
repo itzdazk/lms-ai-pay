@@ -98,23 +98,9 @@ export function ChangePassword() {
             }
           });
           setErrors(validationErrors);
-          
-          // Show first error as toast (only string)
-          const firstError = responseData.errors[0];
-          const firstErrorMsg = firstError?.message || firstError?.msg || 'Vui lòng kiểm tra lại thông tin';
-          if (typeof firstErrorMsg === 'string') {
-            toast.error(firstErrorMsg);
-          } else {
-            toast.error('Vui lòng kiểm tra lại thông tin');
-          }
+          // Toast is shown by API client interceptor
         } else {
-          // Single error message
-          const errorMessage = responseData?.message || 'Vui lòng kiểm tra lại thông tin';
-          if (typeof errorMessage === 'string') {
-            toast.error(errorMessage);
-          } else {
-            toast.error('Vui lòng kiểm tra lại thông tin');
-          }
+          // Single error message - toast is shown by API client interceptor
         }
       } 
       // Handle 400 Bad Request (wrong current password or other errors)
@@ -136,7 +122,7 @@ export function ChangePassword() {
           errorMessage = 'Mật khẩu hiện tại không đúng';
         }
         
-        toast.error(errorMessage);
+        // Error toast is already shown by API client interceptor
         setErrors({ currentPassword: errorMessage });
       }
       // Handle 401 Unauthorized
@@ -148,21 +134,11 @@ export function ChangePassword() {
         } else if (responseData?.error?.message && typeof responseData.error.message === 'string') {
           errorMessage = responseData.error.message;
         }
-        toast.error(errorMessage);
+        // Error toast is already shown by API client interceptor
         setErrors({ currentPassword: errorMessage });
       }
-      // Other errors
+      // Other errors - toast is already shown by API client interceptor
       else {
-        const responseData = error.response?.data;
-        let errorMessage = 'Có lỗi xảy ra khi đổi mật khẩu';
-        if (responseData?.message && typeof responseData.message === 'string') {
-          errorMessage = responseData.message;
-        } else if (responseData?.error?.message && typeof responseData.error.message === 'string') {
-          errorMessage = responseData.error.message;
-        } else if (typeof responseData?.error === 'string') {
-          errorMessage = responseData.error;
-        }
-        toast.error(errorMessage);
       }
     } finally {
       setIsSubmitting(false);

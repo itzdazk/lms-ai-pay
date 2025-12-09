@@ -22,10 +22,12 @@ import {
   Moon,
   LogOut,
   User as UserIcon,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { dashboardApi } from '../lib/api/dashboard';
-import { toast } from 'sonner';
 import { UsersPage } from './admin/UsersPage';
+import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -52,11 +54,12 @@ interface MenuItem {
   id: AdminSection;
   label: string;
   icon: React.ElementType;
+  children?: MenuItem[];
 }
 
 const menuItems: MenuItem[] = [
   { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'users', label: 'Người dùng', icon: Users },
+  { id: 'users', label: 'Quản lý người dùng', icon: Users },
   { id: 'courses', label: 'Khóa học', icon: BookOpen },
   { id: 'analytics', label: 'Phân tích', icon: BarChart3 },
   { id: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
@@ -72,6 +75,7 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['users'])); // Default expand "Người dùng"
 
   // Check if user is admin
   useEffect(() => {
@@ -81,8 +85,8 @@ export function AdminDashboard() {
         return;
       }
       if (currentUser.role !== 'ADMIN') {
+        // RoleRoute component already handles permission check and shows toast
         navigate('/');
-        toast.error('Bạn không có quyền truy cập trang này');
         return;
       }
     }
@@ -101,7 +105,7 @@ export function AdminDashboard() {
       setDashboard(dashboardData);
     } catch (error: any) {
       console.error('Error loading dashboard:', error);
-      toast.error('Không thể tải dữ liệu dashboard');
+      // Error toast is already shown by API client interceptor
     } finally {
       setLoading(false);
     }
@@ -120,6 +124,43 @@ export function AdminDashboard() {
     featuredCourses: summary.courses?.featured || 0,
   };
 
+  const getBreadcrumb = () => {
+    if (activeSection === 'dashboard') {
+      return (
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-5 w-5 text-blue-500" />
+          <span className="text-white">Dashboard</span>
+        </div>
+      );
+    }
+    const currentItem = menuItems.find((item) => item.id === activeSection);
+    if (currentItem) {
+      const CurrentIcon = currentItem.icon;
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            <span>Dashboard</span>
+          </button>
+          <ChevronRight className="h-4 w-4 text-gray-500" />
+          <div className="flex items-center gap-2">
+            <CurrentIcon className="h-5 w-5 text-blue-500" />
+            <span className="text-white">{currentItem.label}</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-2">
+        <LayoutDashboard className="h-5 w-5 text-blue-500" />
+        <span className="text-white">Admin Dashboard</span>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
@@ -131,7 +172,11 @@ export function AdminDashboard() {
           </div>
         );
       case 'courses':
-        return <CoursesManagement stats={displayStats} />;
+        return (
+          <div className="h-full">
+            <AdminCoursesPage />
+          </div>
+        );
       case 'analytics':
         return <AnalyticsView stats={displayStats} />;
       case 'orders':
@@ -169,7 +214,15 @@ export function AdminDashboard() {
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-[#2D2D2D] flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Admin Panel</h2>
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30">
+              <BookOpen className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-semibold text-white">EduLearn</span>
+              <span className="text-xs text-gray-400">Admin Panel</span>
+            </div>
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -184,20 +237,71 @@ export function AdminDashboard() {
         <nav className="flex-1 overflow-y-auto p-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeSection === item.id;
+            const hasChildren = item.children && item.children.length > 0;
+            const isExpanded = expandedMenus.has(item.id);
+            const isActive = activeSection === item.id || (hasChildren && item.children?.some(child => activeSection === child.id));
+            
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
-                  isActive
-                    ? 'bg-[#2D2D2D] text-white'
-                    : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="font-medium">{item.label}</span>
-              </button>
+              <div key={item.id}>
+                <button
+                  onClick={() => {
+                    if (hasChildren) {
+                      setExpandedMenus(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(item.id)) {
+                          newSet.delete(item.id);
+                        } else {
+                          newSet.add(item.id);
+                        }
+                        return newSet;
+                      });
+                    } else {
+                      setActiveSection(item.id);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
+                    isActive
+                      ? 'bg-[#2D2D2D] text-white'
+                      : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {hasChildren && (
+                    isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )
+                  )}
+                </button>
+                
+                {/* Submenu Items */}
+                {hasChildren && isExpanded && (
+                  <div className="ml-4 space-y-1">
+                    {item.children?.map((child) => {
+                      const ChildIcon = child.icon;
+                      const isChildActive = activeSection === child.id;
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => setActiveSection(child.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                            isChildActive
+                              ? 'bg-[#2D2D2D] text-white'
+                              : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
+                          }`}
+                        >
+                          <ChildIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{child.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
@@ -230,7 +334,7 @@ export function AdminDashboard() {
               </Button>
             )}
             <h1 className="text-2xl font-bold text-white">
-              {menuItems.find((item) => item.id === activeSection)?.label || 'Admin Dashboard'}
+              {getBreadcrumb()}
             </h1>
           </div>
 
@@ -484,42 +588,6 @@ function DashboardOverview({ loading, stats }: { loading: boolean; stats: any })
   );
 }
 
-// Courses Management Component
-function CoursesManagement({ stats }: { stats: any }) {
-  return (
-    <div className="space-y-6">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-        <CardHeader>
-          <CardTitle className="text-white">Quản lý khóa học</CardTitle>
-          <CardDescription className="text-gray-400">
-            Tổng quan và quản lý khóa học trong hệ thống
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-[#1F1F1F] rounded-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <BookOpen className="h-5 w-5 text-green-500" />
-                <span className="text-gray-300">Tổng khóa học</span>
-              </div>
-              <p className="text-2xl font-bold text-white">{stats.totalCourses || 0}</p>
-            </div>
-            <div className="p-4 bg-[#1F1F1F] rounded-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <TrendingUp className="h-5 w-5 text-yellow-500" />
-                <span className="text-gray-300">Khóa học đã xuất bản</span>
-              </div>
-              <p className="text-2xl font-bold text-white">{stats.publishedCourses || 0}</p>
-            </div>
-          </div>
-          <div className="mt-6">
-            <p className="text-gray-400 text-sm">Chức năng quản lý khóa học đầy đủ sẽ được triển khai sau.</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 // Analytics View Component
 function AnalyticsView({ stats }: { stats: any }) {

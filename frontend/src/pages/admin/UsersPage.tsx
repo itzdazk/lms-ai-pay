@@ -34,7 +34,11 @@ import { toast } from 'sonner';
 import type { User } from '../../lib/api/types';
 import type { GetUsersParams, UpdateUserRequest } from '../../lib/api/users';
 
-export function UsersPage() {
+interface UsersPageProps {
+  defaultRole?: 'STUDENT' | 'INSTRUCTOR';
+}
+
+export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const { user: currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -49,7 +53,7 @@ export function UsersPage() {
     page: 1,
     limit: 10,
     search: '',
-    role: undefined,
+    role: defaultRole,
     status: undefined,
     sortBy: 'createdAt',
     sortOrder: 'desc',
@@ -60,8 +64,10 @@ export function UsersPage() {
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [newRole, setNewRole] = useState<'ADMIN' | 'INSTRUCTOR' | 'STUDENT'>('STUDENT');
+  const [newRole, setNewRole] = useState<'INSTRUCTOR' | 'STUDENT'>('STUDENT');
   const [newStatus, setNewStatus] = useState<'ACTIVE' | 'INACTIVE' | 'BANNED'>('ACTIVE');
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState<string>(filters.search || '');
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
   const [userStats, setUserStats] = useState({
@@ -70,6 +76,13 @@ export function UsersPage() {
     instructors: 0,
     admins: 0,
   });
+
+  // Update filter role when defaultRole prop changes
+  useEffect(() => {
+    if (defaultRole !== undefined && defaultRole !== filters.role) {
+      setFilters((prevFilters) => ({ ...prevFilters, role: defaultRole, page: 1 }));
+    }
+  }, [defaultRole]);
 
   // Check if user is admin
   useEffect(() => {
@@ -83,11 +96,28 @@ export function UsersPage() {
     
     
     if (currentUser.role !== 'ADMIN') {
-      toast.error('Bạn không có quyền truy cập trang này');
+      // RoleRoute component already handles permission check and shows toast
       navigate('/dashboard');
       return;
     }
   }, [currentUser, authLoading, navigate]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Save current scroll position before changing filter
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+      } else {
+        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      }
+      isPageChangingRef.current = true;
+      setFilters((prevFilters) => ({ ...prevFilters, search: searchInput, page: 1 }));
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Load users
   useEffect(() => {
@@ -152,7 +182,7 @@ export function UsersPage() {
       });
     } catch (error: any) {
       console.error('Error loading users:', error);
-      toast.error('Không thể tải danh sách người dùng');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setLoading(false);
     }
@@ -186,15 +216,7 @@ export function UsersPage() {
   };
 
   const handleSearch = (value: string) => {
-    // Save current scroll position before changing filter
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
-    setFilters({ ...filters, search: value, page: 1 });
+    setSearchInput(value);
   };
 
   const handleFilterChange = (key: keyof GetUsersParams, value: any) => {
@@ -236,7 +258,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error updating user:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật người dùng');
+      // Error toast is already shown by API client interceptor, no need to show again
       throw error;
     } finally {
       setActionLoading(false);
@@ -260,7 +282,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa người dùng');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setActionLoading(false);
     }
@@ -284,7 +306,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error changing role:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi đổi vai trò');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setActionLoading(false);
     }
@@ -310,7 +332,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error changing status:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi đổi trạng thái');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setActionLoading(false);
     }
@@ -336,10 +358,18 @@ export function UsersPage() {
         <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3">
             <Users className="h-8 w-8" />
-            Quản lý người dùng
+            {defaultRole === 'STUDENT' 
+              ? 'Quản lý học viên' 
+              : defaultRole === 'INSTRUCTOR' 
+              ? 'Quản lý giảng viên' 
+              : 'Quản lý người dùng'}
           </h1>
           <p className="text-muted-foreground">
-            Quản lý tất cả người dùng trong hệ thống
+            {defaultRole === 'STUDENT' 
+              ? 'Quản lý tất cả học viên trong hệ thống' 
+              : defaultRole === 'INSTRUCTOR' 
+              ? 'Quản lý tất cả giảng viên trong hệ thống' 
+              : 'Quản lý tất cả người dùng trong hệ thống'}
           </p>
         </div>
 
@@ -473,6 +503,8 @@ export function UsersPage() {
                     <DarkOutlineSelectContent>
                       <DarkOutlineSelectItem value="createdAt-desc">Mới nhất</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="createdAt-asc">Cũ nhất</DarkOutlineSelectItem>
+                      <DarkOutlineSelectItem value="updatedAt-desc">Cập nhật: mới nhất</DarkOutlineSelectItem>
+                      <DarkOutlineSelectItem value="updatedAt-asc">Cập nhật: cũ nhất</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="fullName-asc">Tên A-Z</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="fullName-desc">Tên Z-A</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="email-asc">Email A-Z</DarkOutlineSelectItem>
@@ -494,6 +526,7 @@ export function UsersPage() {
                       <SelectValue placeholder="10 / trang" />
                     </DarkOutlineSelectTrigger>
                     <DarkOutlineSelectContent>
+                      <DarkOutlineSelectItem value="5">5 / trang</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="10">10 / trang</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="20">20 / trang</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="50">50 / trang</DarkOutlineSelectItem>
@@ -505,8 +538,9 @@ export function UsersPage() {
                   <label className="text-sm font-medium text-gray-400 dark:text-gray-400">
                     Thao tác
                   </label>
-                  <DarkOutlineButton
-                    onClick={() =>
+                  <Button
+                    onClick={() => {
+                      setSearchInput('');
                       setFilters({
                         page: 1,
                         limit: 10,
@@ -515,24 +549,14 @@ export function UsersPage() {
                         status: undefined,
                         sortBy: 'createdAt',
                         sortOrder: 'desc',
-                      })
-                    }
+                      });
+                    }}
+                    variant="blue"
                     className="w-full"
                   >
                     Xóa bộ lọc
-                  </DarkOutlineButton>
+                  </Button>
                 </div>
-              </div>
-              
-              {/* Search Bar Row */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
-                <DarkOutlineInput
-                  placeholder="Tìm kiếm theo tên, email..."
-                  value={filters.search || ''}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
-                />
               </div>
             </div>
           </CardContent>
@@ -549,6 +573,16 @@ export function UsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
+              <DarkOutlineInput
+                placeholder="Tìm kiếm theo tên, email..."
+                value={searchInput}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <UserTable
               users={users}
               onEdit={handleEdit}
@@ -556,6 +590,8 @@ export function UsersPage() {
               onChangeRole={handleChangeRole}
               onChangeStatus={handleChangeStatus}
               loading={loading}
+              selectedRowId={selectedRowId}
+              onRowSelect={setSelectedRowId}
             />
 
             {/* Pagination */}
@@ -698,10 +734,27 @@ export function UsersPage() {
               <DialogTitle>Xác nhận xóa người dùng</DialogTitle>
               <DialogDescription className="text-gray-400">
                 Bạn có chắc chắn muốn xóa người dùng{' '}
-                <strong className="text-white">{selectedUser?.fullName}</strong>? Hành động này
-                không thể hoàn tác.
+                <strong className="text-white">{selectedUser?.fullName}</strong>?
               </DialogDescription>
             </DialogHeader>
+            <div className="space-y-3 py-4">
+              <div className="p-3 bg-yellow-600/20 border border-yellow-600/50 rounded-lg">
+                <p className="text-sm text-yellow-300">
+                  <strong className="text-yellow-400">Lưu ý:</strong> Không thể xóa người dùng nếu:
+                </p>
+                <ul className="list-disc list-inside text-yellow-300/90 mt-2 space-y-1 text-sm">
+                  <li>Người dùng đã tạo khóa học (instructor)</li>
+                  <li>Người dùng đã đăng ký khóa học (student)</li>
+                  <li>Người dùng có đơn hàng</li>
+                </ul>
+                <p className="text-xs text-yellow-300/80 mt-2">
+                  Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước khi xóa người dùng.
+                </p>
+              </div>
+              <p className="text-sm text-red-400">
+                Hành động này không thể hoàn tác.
+              </p>
+            </div>
             <DialogFooter>
               <DarkOutlineButton
                 onClick={() => setIsDeleteDialogOpen(false)}
@@ -744,7 +797,7 @@ export function UsersPage() {
                     <RoleSelectValue />
                   </RoleSelectTrigger>
                   <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <RoleSelectItem value="ADMIN">Quản trị viên</RoleSelectItem>
+                    {/* Note: ADMIN role cannot be assigned via role change - only STUDENT and INSTRUCTOR are allowed */}
                     <RoleSelectItem value="INSTRUCTOR">Giảng viên</RoleSelectItem>
                     <RoleSelectItem value="STUDENT">Học viên</RoleSelectItem>
                   </RoleSelectContent>

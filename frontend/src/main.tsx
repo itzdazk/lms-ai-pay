@@ -44,11 +44,13 @@ class ErrorBoundary extends React.Component<
 }
 
 createRoot(document.getElementById("root")!).render(
-  <ErrorBoundary>
-    <ThemeProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ThemeProvider>
-  </ErrorBoundary>
+  <React.StrictMode>
+    <AuthProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </ErrorBoundary>
+    </AuthProvider>
+  </React.StrictMode>
 );
