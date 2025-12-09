@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -326,7 +327,7 @@ function CourseRow({
         </DarkOutlineTableCell>
       </DarkOutlineTableRow>
       
-      {menuOpen && (
+      {menuOpen && createPortal(
         <div
           ref={menuRef}
           className="fixed z-50 min-w-[8rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md"
@@ -374,7 +375,8 @@ function CourseRow({
             <Trash2 className="h-4 w-4" />
             Xóa
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -421,7 +423,7 @@ export function CoursesPage() {
     }
     
     if (currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
-      toast.error('Bạn không có quyền truy cập trang này');
+      // RoleRoute component already handles permission check and shows toast
       navigate('/dashboard');
       return;
     }
@@ -552,7 +554,7 @@ export function CoursesPage() {
       setPagination(paginationData);
     } catch (error: any) {
       console.error('Error loading courses:', error);
-      toast.error('Không thể tải danh sách khóa học');
+      // Error toast is already shown by API client interceptor
       setCourses([]);
     } finally {
       setLoading(false);

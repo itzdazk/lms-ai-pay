@@ -34,7 +34,11 @@ import { toast } from 'sonner';
 import type { User } from '../../lib/api/types';
 import type { GetUsersParams, UpdateUserRequest } from '../../lib/api/users';
 
-export function UsersPage() {
+interface UsersPageProps {
+  defaultRole?: 'STUDENT' | 'INSTRUCTOR';
+}
+
+export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const { user: currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -49,7 +53,7 @@ export function UsersPage() {
     page: 1,
     limit: 10,
     search: '',
-    role: undefined,
+    role: defaultRole,
     status: undefined,
     sortBy: 'createdAt',
     sortOrder: 'desc',
@@ -60,7 +64,7 @@ export function UsersPage() {
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [newRole, setNewRole] = useState<'ADMIN' | 'INSTRUCTOR' | 'STUDENT'>('STUDENT');
+  const [newRole, setNewRole] = useState<'INSTRUCTOR' | 'STUDENT'>('STUDENT');
   const [newStatus, setNewStatus] = useState<'ACTIVE' | 'INACTIVE' | 'BANNED'>('ACTIVE');
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
@@ -72,6 +76,13 @@ export function UsersPage() {
     instructors: 0,
     admins: 0,
   });
+
+  // Update filter role when defaultRole prop changes
+  useEffect(() => {
+    if (defaultRole !== undefined && defaultRole !== filters.role) {
+      setFilters((prevFilters) => ({ ...prevFilters, role: defaultRole, page: 1 }));
+    }
+  }, [defaultRole]);
 
   // Check if user is admin
   useEffect(() => {
@@ -85,7 +96,7 @@ export function UsersPage() {
     
     
     if (currentUser.role !== 'ADMIN') {
-      toast.error('Bạn không có quyền truy cập trang này');
+      // RoleRoute component already handles permission check and shows toast
       navigate('/dashboard');
       return;
     }
@@ -347,10 +358,18 @@ export function UsersPage() {
         <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3">
             <Users className="h-8 w-8" />
-            Quản lý người dùng
+            {defaultRole === 'STUDENT' 
+              ? 'Quản lý học viên' 
+              : defaultRole === 'INSTRUCTOR' 
+              ? 'Quản lý giảng viên' 
+              : 'Quản lý người dùng'}
           </h1>
           <p className="text-muted-foreground">
-            Quản lý tất cả người dùng trong hệ thống
+            {defaultRole === 'STUDENT' 
+              ? 'Quản lý tất cả học viên trong hệ thống' 
+              : defaultRole === 'INSTRUCTOR' 
+              ? 'Quản lý tất cả giảng viên trong hệ thống' 
+              : 'Quản lý tất cả người dùng trong hệ thống'}
           </p>
         </div>
 
@@ -777,7 +796,7 @@ export function UsersPage() {
                     <RoleSelectValue />
                   </RoleSelectTrigger>
                   <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <RoleSelectItem value="ADMIN">Quản trị viên</RoleSelectItem>
+                    {/* Note: ADMIN role cannot be assigned via role change - only STUDENT and INSTRUCTOR are allowed */}
                     <RoleSelectItem value="INSTRUCTOR">Giảng viên</RoleSelectItem>
                     <RoleSelectItem value="STUDENT">Học viên</RoleSelectItem>
                   </RoleSelectContent>

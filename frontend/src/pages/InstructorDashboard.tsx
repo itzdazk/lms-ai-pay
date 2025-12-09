@@ -114,7 +114,7 @@ export function InstructorDashboard() {
   const isPageChangingRef = useRef<boolean>(false);
   const shouldRestoreScrollRef = useRef<boolean>(false);
 
-  // Check if user is instructor
+  // Check if user is instructor - early return to prevent API calls
   useEffect(() => {
     if (authLoading) return;
     
@@ -124,8 +124,8 @@ export function InstructorDashboard() {
     }
     
     if (currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
-      toast.error('Bạn không có quyền truy cập trang này');
-      navigate('/dashboard');
+      // RoleRoute component already handles permission check and redirect
+      // Don't navigate here to avoid duplicate redirects
       return;
     }
   }, [currentUser, authLoading, navigate]);
@@ -166,16 +166,10 @@ export function InstructorDashboard() {
     }
   }, [loading, courses.length]);
 
-  // Load data
-  useEffect(() => {
-    if (currentUser) {
-    }
-  }, [currentUser]);
-
-
   // Load courses when filters change
   useEffect(() => {
-    if (currentUser) {
+    // Only load if user is instructor/admin
+    if (currentUser && (currentUser.role === 'INSTRUCTOR' || currentUser.role === 'ADMIN')) {
       loadCourses();
     }
   }, [filters.page, filters.limit, filters.search, filters.status, filters.categoryId, filters.level, filters.sort, currentUser]);
@@ -273,7 +267,7 @@ export function InstructorDashboard() {
       }, 100);
     } catch (error: any) {
       console.error('Error loading courses:', error);
-      toast.error('Không thể tải danh sách khóa học');
+      // Error toast is already shown by API client interceptor
       setCourses([]);
     } finally {
       setLoading(false);
@@ -364,9 +358,7 @@ export function InstructorDashboard() {
       loadStats();
     } catch (error: any) {
       console.error('Error deleting course:', error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || error.message || 'Không thể xóa khóa học';
-      const translatedMessage = translateErrorMessage(errorMessage);
-      toast.error(translatedMessage);
+      // Error toast is already shown by API client interceptor
     } finally {
       setActionLoading(false);
     }
@@ -385,13 +377,21 @@ export function InstructorDashboard() {
       loadStats();
     } catch (error: any) {
       console.error('Error changing status:', error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || error.message || 'Không thể thay đổi trạng thái';
-      const translatedMessage = translateErrorMessage(errorMessage);
-      toast.error(translatedMessage);
+      // Error toast is already shown by API client interceptor
     } finally {
       setActionLoading(false);
     }
   };
+
+  // Early return if user doesn't have permission (RoleRoute will handle redirect)
+  if (currentUser && currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
+    return null;
+  }
+
+  // Early return if not authenticated (ProtectedRoute will handle redirect)
+  if (!currentUser) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4 py-4 bg-background min-h-screen">

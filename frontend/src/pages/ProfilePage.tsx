@@ -45,7 +45,7 @@ export function ProfilePage() {
         });
       } catch (error: any) {
         console.error('Error loading profile:', error);
-        toast.error('Không thể tải thông tin hồ sơ');
+        // Error toast is already shown by API client interceptor
         // Fallback to auth user if available
         if (authUser) {
           setUser(authUser);
@@ -139,23 +139,14 @@ export function ProfilePage() {
           if (details.fullName) validationErrors.fullName = Array.isArray(details.fullName) ? details.fullName[0] : details.fullName;
           if (details.phone) validationErrors.phone = Array.isArray(details.phone) ? details.phone[0] : details.phone;
           if (details.bio) validationErrors.bio = Array.isArray(details.bio) ? details.bio[0] : details.bio;
-        } else if (responseData.message) {
-          // Generic error message
-          const message = typeof responseData.message === 'string' ? responseData.message : 'Vui lòng kiểm tra lại thông tin đã nhập';
-          toast.error(message);
         }
 
         if (Object.keys(validationErrors).length > 0) {
           setErrors(validationErrors);
         }
+        // Error toast is already shown by API client interceptor for generic errors
       } else {
-        // Other errors
-        const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || 'Có lỗi xảy ra khi cập nhật thông tin';
-        if (typeof errorMessage === 'string') {
-          toast.error(errorMessage);
-        } else {
-          toast.error('Có lỗi xảy ra khi cập nhật thông tin');
-        }
+        // Other errors - toast is already shown by API client interceptor
       }
     } finally {
       setIsSaving(false);
@@ -174,8 +165,7 @@ export function ProfilePage() {
       toast.success('Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư của bạn.');
     } catch (error: any) {
       console.error('Error resending verification:', error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || 'Có lỗi xảy ra khi gửi email xác nhận';
-      toast.error(typeof errorMessage === 'string' ? errorMessage : 'Có lỗi xảy ra khi gửi email xác nhận');
+      // Error toast is already shown by API client interceptor
     } finally {
       setIsResendingVerification(false);
     }

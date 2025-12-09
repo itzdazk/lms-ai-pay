@@ -28,7 +28,7 @@ export function CourseEditPage() {
     }
     
     if (currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
-      toast.error('Bạn không có quyền truy cập trang này');
+      // RoleRoute component already handles permission check and shows toast
       navigate('/dashboard');
       return;
     }
@@ -122,7 +122,6 @@ export function CourseEditPage() {
       
       // Transform course data to frontend format
       const transformedCourse = transformCourse(courseData);
-      console.log('[CourseEditPage] Transformed course level:', transformedCourse.level, 'from original:', courseData.level);
       
       // Extract selected tag IDs from course data (before transform, in case tags structure is different)
       const selectedTagIds = courseData.tags 
@@ -138,16 +137,12 @@ export function CourseEditPage() {
         coursesApi.getTags(selectedTagIds),
       ]);
       
-      console.log('Categories data:', categoriesData);
-      console.log('Tags data:', tagsData);
-      
       setCourse(transformedCourse);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setTags(Array.isArray(tagsData) ? tagsData : []);
     } catch (error: any) {
       console.error('Error loading data:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể tải dữ liệu';
-      toast.error(errorMessage);
+      // Error toast is already shown by API client interceptor
       navigate('/instructor/dashboard');
     } finally {
       setLoading(false);
@@ -188,43 +183,99 @@ export function CourseEditPage() {
       }
       
       // Update tags if provided
-      if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
-        const tagIds = data.tags
+      if (data.tags && Array.isArray(data.tags)) {
+        const newTagIds = data.tags
           .map((tagId: any) => parseInt(String(tagId)))
           .filter((id: number) => !isNaN(id) && id > 0);
-        if (tagIds.length > 0) {
-          // Get current course to check existing tags
-          // Use the course from state if available, otherwise load it
-          let currentCourse: Course | null = course;
-          if (!currentCourse) {
-            // Try to load the course
-            try {
-              const coursesResponse = await coursesApi.getInstructorCourses({ page: 1, limit: 100 });
-              const found = coursesResponse.data.find((c: Course) => String(c.id) === id);
-              if (!found) {
-                throw new Error('Không tìm thấy khóa học');
-              }
+        
+        // Always load fresh course data from API to get current tags
+        // This ensures we have the most up-to-date tag associations
+        let currentCourse: Course | null = null;
+        try {
+          // Try to get course by ID first
+          try {
+            currentCourse = await coursesApi.getInstructorCourseById(id);
+          } catch (error) {
+            // If endpoint doesn't exist, fallback to searching in list
+            const coursesResponse = await coursesApi.getInstructorCourses({ page: 1, limit: 100 });
+            const found = coursesResponse.data.find((c: Course) => String(c.id) === id);
+            if (found) {
               currentCourse = found;
-            } catch (error) {
-              console.warn('Could not load course for tags:', error);
-              // Continue without removing old tags
             }
           }
-          
-          // Remove old tags
-          if (currentCourse?.tags && Array.isArray(currentCourse.tags)) {
+        } catch (error) {
+          console.warn('Could not load course for tags:', error);
+        }
+        
+        if (currentCourse) {
+          // Get existing tag IDs - handle both Tag[] and different tag structures
+          const existingTagIds: number[] = [];
+          if (currentCourse.tags && Array.isArray(currentCourse.tags) && currentCourse.tags.length > 0) {
             for (const tag of currentCourse.tags) {
-              try {
-                await coursesApi.removeCourseTag(id, typeof tag.id === 'string' ? parseInt(tag.id) : tag.id);
-              } catch (error) {
-                // Ignore errors if tag doesn't exist
-                console.warn('Error removing tag:', error);
+              // Handle different tag structures: {id: string}, {id: number}, or just number/string
+              let tagId: number;
+              if (typeof tag === 'object' && tag !== null) {
+                tagId = typeof tag.id === 'string' ? parseInt(tag.id) : (tag.id as number);
+              } else {
+                tagId = typeof tag === 'string' ? parseInt(tag) : (tag as number);
+              }
+              if (!isNaN(tagId) && tagId > 0) {
+                existingTagIds.push(tagId);
               }
             }
           }
           
-          // Add new tags
-          await coursesApi.addCourseTags(id, tagIds);
+          // Find tags to remove (in existing but not in new)
+          const tagsToRemove = existingTagIds.filter(id => !newTagIds.includes(id));
+          
+          // Find tags to add (in new but not in existing)
+          const tagsToAdd = newTagIds.filter(id => !existingTagIds.includes(id));
+          
+          // Remove tags that are no longer selected
+          for (const tagId of tagsToRemove) {
+            try {
+              await coursesApi.removeCourseTag(id, tagId);
+            } catch (error) {
+              // Ignore errors if tag doesn't exist
+              console.warn('Error removing tag:', error);
+            }
+          }
+          
+          // Add only new tags (not already associated)
+          if (tagsToAdd.length > 0) {
+            try {
+              await coursesApi.addCourseTags(id, tagsToAdd);
+            } catch (error: any) {
+              // If error is "All tags are already associated", it means our comparison was wrong
+              // This could happen if tags weren't loaded properly
+              if (error?.response?.data?.message?.includes('already associated')) {
+                console.warn('Tags already associated - skipping add');
+                // Don't throw - tags are already there, which is fine
+              } else {
+                throw error;
+              }
+            }
+          }
+        } else {
+          // If we can't load current course, we need to be more careful
+          // Try to remove all existing tags first, then add new ones
+          // But we don't know which tags exist, so we'll just try to add
+          // and let backend handle duplicates gracefully
+          if (newTagIds.length > 0) {
+            try {
+              await coursesApi.addCourseTags(id, newTagIds);
+            } catch (error: any) {
+              // If error is "All tags are already associated", try removing all first
+              if (error?.response?.data?.message?.includes('already associated')) {
+                console.warn('All tags already associated - trying to sync tags');
+                // This is a fallback - we can't know which tags to remove without course data
+                // So we'll just log and continue
+                console.warn('Cannot sync tags without course data');
+              } else {
+                throw error;
+              }
+            }
+          }
         }
       }
       
@@ -237,8 +288,7 @@ export function CourseEditPage() {
       }
     } catch (error: any) {
       console.error('Error updating course:', error);
-      const errorMessage = error.response?.data?.message || 'Không thể cập nhật khóa học';
-      toast.error(errorMessage);
+      // Error toast is already shown by API client interceptor
       throw error;
     } finally {
       setSubmitting(false);
@@ -248,16 +298,10 @@ export function CourseEditPage() {
   const handleCancel = () => {
     // Navigate back to previous page, or to dashboard if no previous page
     if (window.history.length > 1) {
-      navigate(-1, { state: { preserveScroll: true } });
+      navigate(-1 as any, { state: { preserveScroll: true } });
     } else {
       navigate('/instructor/dashboard', { state: { preserveScroll: true } });
     }
-  };
-
-  const handlePreview = (courseId: string) => {
-    // Course was updated, open preview
-    const previewUrl = `/courses/${courseId}`;
-    window.open(previewUrl, '_blank');
   };
 
   if (loading) {
@@ -305,7 +349,6 @@ export function CourseEditPage() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             loading={submitting}
-            onPreview={handlePreview}
             onTagCreated={reloadTags}
           />
         </CardContent>

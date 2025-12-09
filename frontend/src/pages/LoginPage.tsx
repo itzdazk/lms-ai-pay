@@ -43,8 +43,7 @@ export function LoginPage() {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
-      toast.error(errorMessage);
+      // Error toast is already shown by API client interceptor
       
       // Set field-specific errors if available
       if (error.response?.status === 401) {

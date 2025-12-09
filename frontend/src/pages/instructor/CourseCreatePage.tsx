@@ -26,7 +26,7 @@ export function CourseCreatePage() {
     }
     
     if (currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
-      toast.error('Bạn không có quyền truy cập trang này');
+      // RoleRoute component already handles permission check and shows toast
       navigate('/dashboard');
       return;
     }
@@ -43,13 +43,11 @@ export function CourseCreatePage() {
         coursesApi.getCategories(),
         coursesApi.getTags(),
       ]);
-      console.log('Categories data:', categoriesData);
-      console.log('Tags data:', tagsData);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setTags(Array.isArray(tagsData) ? tagsData : []);
     } catch (error: any) {
       console.error('Error loading data:', error);
-      toast.error('Không thể tải dữ liệu');
+      // Error toast is already shown by API client interceptor
       // Set empty arrays on error
       setCategories([]);
       setTags([]);
@@ -76,8 +74,12 @@ export function CourseCreatePage() {
     try {
       setSubmitting(true);
       
-      // Create course
-      const newCourse = await coursesApi.createInstructorCourse(data);
+      // Extract tags from data before creating course
+      // Tags should not be sent in create request to avoid backend processing them
+      const { tags, ...courseData } = data;
+      
+      // Create course (without tags)
+      const newCourse = await coursesApi.createInstructorCourse(courseData);
       
       if (!newCourse || !newCourse.id) {
         throw new Error('Course creation failed: No course ID returned');
@@ -95,9 +97,9 @@ export function CourseCreatePage() {
         await coursesApi.uploadCoursePreview(courseId, previewFile);
       }
       
-      // Add tags if provided
-      if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
-        const tagIds = data.tags
+      // Add tags separately after course creation
+      if (tags && Array.isArray(tags) && tags.length > 0) {
+        const tagIds = tags
           .map((tagId) => parseInt(String(tagId)))
           .filter((id) => !isNaN(id) && id > 0);
         if (tagIds.length > 0) {
@@ -140,7 +142,7 @@ export function CourseCreatePage() {
         errorMessage = error.message;
       }
       
-      toast.error(errorMessage);
+      // Error toast is already shown by API client interceptor
       throw error;
     } finally {
       setSubmitting(false);
