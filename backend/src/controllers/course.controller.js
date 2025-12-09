@@ -21,6 +21,7 @@ class CourseController {
             isFeatured,
             instructorId,
             sort,
+            tagId,
         } = req.query
 
         const filters = {
@@ -33,7 +34,8 @@ class CourseController {
             maxPrice: maxPrice || undefined,
             isFeatured: isFeatured || undefined,
             instructorId: instructorId || undefined,
-            sort: sort || 'newest', // newest, popular, rating, price_asc, price_desc
+            sort: sort || 'newest',
+            tagId: tagId || undefined,
         }
 
         const result = await courseService.getCourses(filters)

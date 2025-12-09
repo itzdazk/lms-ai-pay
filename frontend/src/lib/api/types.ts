@@ -6,6 +6,23 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
+    courses?: T[] // Backend trả về field này cho courses API
+    data?: T[] // Generic field
+    total: number
+    page?: number
+    limit?: number
+    totalPages?: number
+    pagination?: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+    }
+}
+
+export interface PaginatedApiResponse<T> {
+    success: boolean
+    message?: string
     data: T[]
     pagination: {
         page: number
@@ -34,118 +51,159 @@ export interface AuthResponse {
 }
 
 export interface User {
-    id: string
+    id: number
     userName: string
     email: string
     fullName: string
+    phone?: string
     role: 'admin' | 'instructor' | 'student'
-    avatar?: string
+    avatarUrl?: string
     bio?: string
     status: 'active' | 'inactive' | 'suspended'
     emailVerified: boolean
     createdAt: string
     updatedAt: string
-  id: string;
-  userName: string;
-  email: string;
-  fullName: string;
-  phone?: string;
-  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
-  avatar?: string; // Legacy field name (for backward compatibility)
-  avatarUrl?: string; // Backend field name
-  bio?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 // Course types
 export interface Course {
-    id: string
+    id: number
     title: string
     slug: string
-    description: string
-    thumbnail?: string
-    previewVideoUrl?: string
-    instructorId: string
-    instructor?: {
-        id: string
-        fullName: string
-        avatar?: string
-    }
-    categoryId: string
-    category?: {
-        id: string
-        name: string
-        slug: string
-    }
-    level: 'beginner' | 'intermediate' | 'advanced'
-    originalPrice: number
+    description?: string
+    shortDescription?: string
+    thumbnailUrl?: string
+    videoPreviewUrl?: string
+    videoPreviewDuration?: number
+    price: number
     discountPrice?: number
-    isFree: boolean
-    status: 'draft' | 'published' | 'archived'
-    featured: boolean
-    viewsCount: number
-    enrolledCount: number
+    instructorId: number
+    instructor?: Instructor
+    categoryId: number
+    category?: Category
+    level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
+    durationHours: number
+    totalLessons: number
+    language: string
+    requirements?: string
+    whatYouLearn?: string
+    courseObjectives?: string
+    targetAudience?: string
+    status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+    isFeatured: boolean
     ratingAvg: number
     ratingCount: number
+    enrolledCount: number
+    viewsCount: number
+    completionRate: number
+    publishedAt?: string
+    createdAt: string
+    updatedAt: string
     tags?: Tag[]
     lessonsCount?: number
-    durationMinutes?: number
+    enrollmentsCount?: number
+}
+
+export interface Instructor {
+    id: number
+    userName: string
+    fullName: string
+    avatarUrl?: string
+    bio?: string
+    createdAt?: string
+    totalCourses?: number
+    otherCourses?: Course[]
+}
+
+export interface Category {
+    id: number
+    name: string
+    slug: string
+    description?: string
+    imageUrl?: string
+    parentId?: number
+    sortOrder: number
+    isActive: boolean
     createdAt: string
     updatedAt: string
 }
 
-export interface Category {
-    id: string
+export interface Tag {
+    id: number
     name: string
     slug: string
     description?: string
-    isActive: boolean
-}
-
-export interface Tag {
-    id: string
-    name: string
-    slug: string
+    createdAt: string
+    _count?: {
+        courses: number // Số lượng courses có tag này
+    }
 }
 
 export interface CourseFilters {
-    categoryId?: string
-    level?: 'beginner' | 'intermediate' | 'advanced'
-    minPrice?: number
-    maxPrice?: number
-    isFree?: boolean
-    featured?: boolean
-    search?: string
-    tags?: string[]
-    sortBy?: 'newest' | 'popular' | 'rating' | 'price_asc' | 'price_desc'
     page?: number
     limit?: number
+    search?: string
+    categoryId?: number // ⚠️ ĐỔI từ string sang number
+    level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
+    minPrice?: number
+    maxPrice?: number
+    isFeatured?: boolean
+    instructorId?: number
+    sort?: 'newest' | 'popular' | 'rating' | 'price_asc' | 'price_desc'
+    tagId?: number
 }
 
 // Enrollment types
 export interface Enrollment {
-    id: string
-    userId: string
-    courseId: string
-    progress: number
-    completed: boolean
+    id: number // ⚠️ ĐỔI từ string sang number
+    userId: number
+    courseId: number
     enrolledAt: string
+    startedAt?: string
     completedAt?: string
+    progressPercentage: number
+    lastAccessedAt?: string
+    expiresAt?: string
+    status: 'active' | 'expired' | 'cancelled'
+    createdAt: string
+    updatedAt: string
 }
 
 // Lesson types
 export interface Lesson {
-    id: string
-    courseId: string
+    id: number
+    courseId: number
     title: string
+    slug: string
     description?: string
+    content?: string
     videoUrl?: string
-    durationMinutes?: number
-    order: number
+    videoDuration?: number
+    transcriptUrl?: string
+    transcriptStatus: string
+    transcriptJsonUrl?: string
+    lessonOrder: number
     isPreview: boolean
+    isPublished: boolean
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CourseLessonsResponse {
+    course: {
+        id: number
+        title: string
+    }
+    lessons: Lesson[]
+    totalLessons: number
+}
+
+export interface CoursesListResponse {
+    courses: Course[]
+    total: number
+    page: number
+    limit: number
+    totalPages: number
 }
 
 // Payment types
