@@ -1,6 +1,10 @@
 // src/services/course.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS, COURSE_LEVEL, HTTP_STATUS } from '../config/constants.js'
+import {
+    COURSE_STATUS,
+    COURSE_LEVEL,
+    HTTP_STATUS,
+} from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
 class CourseService {
@@ -19,6 +23,7 @@ class CourseService {
             isFeatured,
             instructorId,
             sort,
+            tagId,
         } = filters
 
         const skip = (page - 1) * limit
@@ -26,6 +31,14 @@ class CourseService {
         // Build where clause
         const where = {
             status: COURSE_STATUS.PUBLISHED,
+        }
+
+        if (tagId) {
+            where.courseTags = {
+                some: {
+                    tagId: parseInt(tagId, 10),
+                },
+            }
         }
 
         // Search in title, description, short description
@@ -126,15 +139,34 @@ class CourseService {
                             slug: true,
                         },
                     },
+                    courseTags: {
+                        select: {
+                            tag: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    slug: true,
+                                },
+                            },
+                        },
+                    },
                 },
             }),
             prisma.course.count({ where }),
         ])
 
-        logger.info(`Retrieved ${courses.length} courses`)
+        // Thêm transform để format tags
+        const coursesWithTags = courses.map((course) => ({
+            ...course,
+            tags: course.courseTags?.map((ct) => ct.tag) || [],
+            // Remove courseTags to keep response clean
+            courseTags: undefined,
+        }))
+
+        logger.info(`Retrieved ${coursesWithTags.length} courses`)
 
         return {
-            courses,
+            courses: coursesWithTags,
             total,
         }
     }

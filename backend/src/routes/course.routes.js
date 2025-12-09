@@ -24,8 +24,9 @@ const router = express.Router()
  *          - maxPrice: Giá tối đa
  *          - isFeatured: Lọc khóa học nổi bật (true|false)
  *          - instructorId: Lọc theo instructor ID
+ *          - tagId: Lọc theo tag ID
  *          - sort: Sắp xếp (newest|popular|rating|price_asc|price_desc)
- * @example /api/v1/courses?search=javascript&level=BEGINNER&sort=rating&page=1&limit=20
+ * @example /api/v1/courses?search=javascript&level=BEGINNER&tagId=5&sort=rating&page=1&limit=20
  */
 router.get('/', getCoursesValidator, courseController.getCourses)
 

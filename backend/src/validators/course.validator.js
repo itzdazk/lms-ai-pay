@@ -60,6 +60,11 @@ const getCoursesValidator = [
         .isIn(['newest', 'popular', 'rating', 'price_asc', 'price_desc'])
         .withMessage('Invalid sort option'),
 
+    query('tagId')
+        .optional()
+        .isInt({ min: 1 })
+        .withMessage('Tag ID must be a valid integer'),
+
     validate,
 ]
 
