@@ -86,17 +86,82 @@ export const coursesApi = {
     return response.data.data;
   },
 
-  // Get tags
-  async getTags(): Promise<Tag[]> {
-    const response = await apiClient.get<ApiResponse<Tag[]>>('/tags');
-    // Handle different response structures
-    if (Array.isArray(response.data)) {
-      return response.data;
+  // Get tags (paginate with max limit 100, but also include selected tag IDs if provided)
+  async getTags(selectedTagIds?: string[]): Promise<Tag[]> {
+    // Backend max limit is 100, so we paginate to get all tags
+    let allTags: Tag[] = [];
+    let page = 1;
+    const limit = 100; // Max allowed by backend
+    let hasMore = true;
+    
+    while (hasMore) {
+      const response = await apiClient.get<ApiResponse<{ tags: Tag[]; pagination: any }>>(`/tags?page=${page}&limit=${limit}`);
+      
+      // Backend returns { success: true, data: { tags: [...], pagination: {...} }, message: "..." }
+      const responseData = response.data?.data as { tags?: Tag[]; pagination?: any } | undefined;
+      
+      let tags: Tag[] = [];
+      if (responseData?.tags && Array.isArray(responseData.tags)) {
+        tags = responseData.tags;
+      } else if (Array.isArray(response.data)) {
+        tags = response.data as Tag[];
+      } else {
+        console.warn('Unexpected tags response structure:', response.data);
+        break;
+      }
+      
+      allTags = [...allTags, ...tags];
+      
+      // Check if there are more pages
+      const pagination = responseData?.pagination;
+      if (pagination && pagination.totalPages && page < pagination.totalPages) {
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
-    if (Array.isArray(response.data?.data)) {
-      return response.data.data;
+
+    // If selectedTagIds provided, load missing tags
+    if (selectedTagIds && selectedTagIds.length > 0) {
+      const loadedTagIds = new Set(allTags.map(t => String(t.id)));
+      const missingTagIds = selectedTagIds.filter(id => !loadedTagIds.has(id));
+      
+      if (missingTagIds.length > 0) {
+        // Load missing tags by fetching them individually
+        const missingTagsPromises = missingTagIds.map(async (tagId) => {
+          try {
+            const tagResponse = await apiClient.get<ApiResponse<Tag>>(`/tags/${tagId}`);
+            return tagResponse.data?.data;
+          } catch (error) {
+            console.warn(`Failed to load tag ${tagId}:`, error);
+            return null;
+          }
+        });
+        
+        const missingTags = (await Promise.all(missingTagsPromises)).filter((tag): tag is Tag => tag !== null);
+        allTags = [...allTags, ...missingTags];
+      }
     }
-    return [];
+
+    return allTags;
+  },
+
+  // Create tag
+  async createTag(name: string, description?: string): Promise<Tag> {
+    // Generate slug from name (similar to backend seed.js)
+    const slug = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove Vietnamese accents
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    
+    const response = await apiClient.post<ApiResponse<Tag>>('/tags', {
+      name,
+      slug,
+      description,
+    });
+    return response.data.data;
   },
 
   // ========== INSTRUCTOR COURSE MANAGEMENT ==========
@@ -200,7 +265,9 @@ export const coursesApi = {
 
   // Change course status
   async changeCourseStatus(id: string, status: 'draft' | 'published' | 'archived'): Promise<Course> {
-    const response = await apiClient.patch<ApiResponse<Course>>(`/instructor/courses/${id}/status`, { status });
+    // Convert to uppercase as backend expects: DRAFT, PUBLISHED, ARCHIVED
+    const statusUpper = status.toUpperCase() as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+    const response = await apiClient.patch<ApiResponse<Course>>(`/instructor/courses/${id}/status`, { status: statusUpper });
     return response.data.data;
   },
 

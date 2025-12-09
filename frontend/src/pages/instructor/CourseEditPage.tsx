@@ -124,11 +124,22 @@ export function CourseEditPage() {
       const transformedCourse = transformCourse(courseData);
       console.log('[CourseEditPage] Transformed course level:', transformedCourse.level, 'from original:', courseData.level);
       
+      // Extract selected tag IDs from course data (before transform, in case tags structure is different)
+      const selectedTagIds = courseData.tags 
+        ? courseData.tags.map((t: any) => String(t.id || t))
+        : (courseData.courseTags 
+          ? courseData.courseTags.map((ct: any) => String(ct.tag?.id || ct.tagId || ct.tag))
+          : []);
+      
       // Load categories and tags in parallel
+      // Pass selected tag IDs to ensure they are loaded even if not in first 25
       const [categoriesData, tagsData] = await Promise.all([
         coursesApi.getCategories(),
-        coursesApi.getTags(),
+        coursesApi.getTags(selectedTagIds),
       ]);
+      
+      console.log('Categories data:', categoriesData);
+      console.log('Tags data:', tagsData);
       
       setCourse(transformedCourse);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
@@ -140,6 +151,16 @@ export function CourseEditPage() {
       navigate('/instructor/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const reloadTags = async () => {
+    try {
+      const tagsData = await coursesApi.getTags();
+      setTags(Array.isArray(tagsData) ? tagsData : []);
+    } catch (error: any) {
+      console.error('Error reloading tags:', error);
+      // Don't show error toast, just log it
     }
   };
 
@@ -227,9 +248,9 @@ export function CourseEditPage() {
   const handleCancel = () => {
     // Navigate back to previous page, or to dashboard if no previous page
     if (window.history.length > 1) {
-      navigate(-1);
+      navigate(-1, { state: { preserveScroll: true } });
     } else {
-      navigate('/instructor/dashboard');
+      navigate('/instructor/dashboard', { state: { preserveScroll: true } });
     }
   };
 
@@ -285,6 +306,7 @@ export function CourseEditPage() {
             onCancel={handleCancel}
             loading={submitting}
             onPreview={handlePreview}
+            onTagCreated={reloadTags}
           />
         </CardContent>
       </Card>

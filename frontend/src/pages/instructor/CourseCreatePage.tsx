@@ -43,6 +43,8 @@ export function CourseCreatePage() {
         coursesApi.getCategories(),
         coursesApi.getTags(),
       ]);
+      console.log('Categories data:', categoriesData);
+      console.log('Tags data:', tagsData);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setTags(Array.isArray(tagsData) ? tagsData : []);
     } catch (error: any) {
@@ -53,6 +55,16 @@ export function CourseCreatePage() {
       setTags([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const reloadTags = async () => {
+    try {
+      const tagsData = await coursesApi.getTags();
+      setTags(Array.isArray(tagsData) ? tagsData : []);
+    } catch (error: any) {
+      console.error('Error reloading tags:', error);
+      // Don't show error toast, just log it
     }
   };
 
@@ -97,7 +109,37 @@ export function CourseCreatePage() {
       navigate('/instructor/dashboard');
     } catch (error: any) {
       console.error('Error creating course:', error);
-      const errorMessage = error.response?.data?.message || 'Không thể tạo khóa học';
+      
+      // Log full error response for debugging
+      if (error.response?.data) {
+        console.error('Error response data:', error.response.data);
+        if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+          console.error('Validation errors:', error.response.data.errors);
+        }
+      }
+      
+      // Try to get detailed error message
+      let errorMessage = 'Không thể tạo khóa học';
+      if (error.response?.data) {
+        if (error.response.data.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+          // Handle validation errors array - express-validator format
+          const errorMessages = error.response.data.errors.map((err: any) => {
+            if (typeof err === 'string') return err;
+            if (err.msg) return err.msg;
+            if (err.message) return err.message;
+            if (err.path && err.msg) return `${err.path}: ${err.msg}`;
+            return JSON.stringify(err);
+          }).join(', ');
+          errorMessage = errorMessages || errorMessage;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast.error(errorMessage);
       throw error;
     } finally {
@@ -106,7 +148,7 @@ export function CourseCreatePage() {
   };
 
   const handleCancel = () => {
-    navigate('/instructor/dashboard');
+    navigate('/instructor/dashboard', { state: { preserveScroll: true } });
   };
 
   if (loading) {
@@ -140,6 +182,7 @@ export function CourseCreatePage() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             loading={submitting}
+            onTagCreated={reloadTags}
           />
         </CardContent>
       </Card>
