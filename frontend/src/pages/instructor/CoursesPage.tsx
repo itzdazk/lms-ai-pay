@@ -410,6 +410,7 @@ export function CoursesPage() {
   const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
+  const [categorySearch, setCategorySearch] = useState<string>('');
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
 
@@ -745,6 +746,64 @@ export function CoursesPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Danh mục</Label>
+              <Select
+                value={filters.categoryId ? String(filters.categoryId) : 'all'}
+                onValueChange={(value) => {
+                  handleFilterChange('categoryId', value === 'all' ? undefined : value);
+                  setCategorySearch(''); // Reset search when selecting
+                }}
+              >
+                <DarkOutlineSelectTrigger className="w-full !data-[placeholder]:text-gray-500 dark:!data-[placeholder]:text-gray-400 [&_*[data-slot=select-value]]:!text-black [&_*[data-slot=select-value]]:opacity-100 [&_*[data-slot=select-value][data-placeholder]]:!text-gray-500 dark:[&_*[data-slot=select-value]]:!text-white dark:[&_*[data-slot=select-value]]:opacity-100 dark:[&_*[data-slot=select-value][data-placeholder]]:!text-gray-400">
+                  <SelectValue placeholder="Tất cả danh mục" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <div className="p-2 border-b border-[#2D2D2D]">
+                    <DarkOutlineInput
+                      placeholder="Tìm kiếm danh mục..."
+                      value={categorySearch}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setCategorySearch(e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    <DarkOutlineSelectItem value="all" onSelect={() => setCategorySearch('')}>
+                      Tất cả danh mục
+                    </DarkOutlineSelectItem>
+                    {categories
+                      .filter((category) =>
+                        category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                      )
+                      .map((category) => {
+                        const categoryIdStr = String(category.id);
+                        return (
+                          <DarkOutlineSelectItem
+                            key={category.id}
+                            value={categoryIdStr}
+                            onSelect={() => setCategorySearch('')}
+                          >
+                            {category.name}
+                          </DarkOutlineSelectItem>
+                        );
+                      })}
+                    {categories.filter((category) =>
+                      category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                    ).length === 0 && categorySearch && (
+                      <div className="px-2 py-1.5 text-sm text-gray-400 text-center">
+                        Không tìm thấy danh mục
+                      </div>
+                    )}
+                  </div>
+                </DarkOutlineSelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Trạng thái</Label>
               <Select
                 value={filters.status || 'all'}
@@ -758,31 +817,6 @@ export function CoursesPage() {
                   <DarkOutlineSelectItem value="DRAFT">Bản nháp</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="PUBLISHED">Đã xuất bản</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="ARCHIVED">Đã lưu trữ</DarkOutlineSelectItem>
-                </DarkOutlineSelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Danh mục</Label>
-              <Select
-                value={filters.categoryId ? String(filters.categoryId) : 'all'}
-                onValueChange={(value) => {
-                  handleFilterChange('categoryId', value === 'all' ? undefined : value);
-                }}
-              >
-                <DarkOutlineSelectTrigger className="w-full !data-[placeholder]:text-gray-500 dark:!data-[placeholder]:text-gray-400 [&_*[data-slot=select-value]]:!text-black [&_*[data-slot=select-value]]:opacity-100 [&_*[data-slot=select-value][data-placeholder]]:!text-gray-500 dark:[&_*[data-slot=select-value]]:!text-white dark:[&_*[data-slot=select-value]]:opacity-100 dark:[&_*[data-slot=select-value][data-placeholder]]:!text-gray-400">
-                  <SelectValue placeholder="Tất cả danh mục" />
-                </DarkOutlineSelectTrigger>
-                <DarkOutlineSelectContent>
-                  <DarkOutlineSelectItem value="all">Tất cả danh mục</DarkOutlineSelectItem>
-                  {categories.map((category) => {
-                    const categoryIdStr = String(category.id);
-                    return (
-                      <DarkOutlineSelectItem key={category.id} value={categoryIdStr}>
-                        {category.name}
-                      </DarkOutlineSelectItem>
-                    );
-                  })}
                 </DarkOutlineSelectContent>
               </Select>
             </div>
@@ -883,20 +917,6 @@ export function CoursesPage() {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="space-y-2">
-            <Label className="text-gray-400 text-sm">Tìm kiếm</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <DarkOutlineInput
-                type="text"
-                placeholder="Tìm kiếm theo tên khóa học..."
-                value={searchInput}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -905,9 +925,11 @@ export function CoursesPage() {
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-white">Quản lý khóa học</CardTitle>
+              <CardTitle className="text-white">
+                Danh sách khóa học ({pagination.total})
+              </CardTitle>
               <CardDescription className="text-gray-400">
-                Danh sách tất cả khóa học của bạn
+                Trang {pagination.page} / {pagination.totalPages}
               </CardDescription>
             </div>
             <Button 
@@ -929,6 +951,17 @@ export function CoursesPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <DarkOutlineInput
+              type="text"
+              placeholder="Tìm kiếm theo tên khóa học..."
+              value={searchInput}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
