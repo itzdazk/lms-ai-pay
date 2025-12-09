@@ -34,17 +34,6 @@ export interface AuthResponse {
 }
 
 export interface User {
-    id: string
-    userName: string
-    email: string
-    fullName: string
-    role: 'admin' | 'instructor' | 'student'
-    avatar?: string
-    bio?: string
-    status: 'active' | 'inactive' | 'suspended'
-    emailVerified: boolean
-    createdAt: string
-    updatedAt: string
   id: string;
   userName: string;
   email: string;
@@ -62,39 +51,46 @@ export interface User {
 
 // Course types
 export interface Course {
-    id: string
-    title: string
-    slug: string
-    description: string
-    thumbnail?: string
-    previewVideoUrl?: string
-    instructorId: string
-    instructor?: {
-        id: string
-        fullName: string
-        avatar?: string
-    }
-    categoryId: string
-    category?: {
-        id: string
-        name: string
-        slug: string
-    }
-    level: 'beginner' | 'intermediate' | 'advanced'
-    originalPrice: number
-    discountPrice?: number
-    isFree: boolean
-    status: 'draft' | 'published' | 'archived'
-    featured: boolean
-    viewsCount: number
-    enrolledCount: number
-    ratingAvg: number
-    ratingCount: number
-    tags?: Tag[]
-    lessonsCount?: number
-    durationMinutes?: number
-    createdAt: string
-    updatedAt: string
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  shortDescription?: string;
+  thumbnail?: string;
+  previewVideoUrl?: string;
+  instructorId: string;
+  instructor?: {
+    id: string;
+    fullName: string;
+    avatar?: string;
+  };
+  categoryId: string;
+  category?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  level: 'beginner' | 'intermediate' | 'advanced';
+  originalPrice: number;
+  discountPrice?: number;
+  isFree: boolean;
+  status: 'draft' | 'published' | 'archived';
+  featured: boolean;
+  viewsCount: number;
+  enrolledCount: number;
+  ratingAvg: number;
+  ratingCount: number;
+  completionRate?: number;
+  tags?: Tag[];
+  lessonsCount?: number;
+  durationMinutes?: number;
+  requirements?: string;
+  whatYouLearn?: string;
+  courseObjectives?: string;
+  targetAudience?: string;
+  language?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Category {

@@ -335,6 +335,16 @@ export const uploadVideoPreviewValidator = [
 ]
 
 /**
+ * Validator for getting a single course by ID
+ */
+export const getInstructorCourseByIdValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    validate,
+]
+
+/**
  * Validator for getting course analytics
  */
 export const getCourseAnalyticsValidator = [

@@ -5,6 +5,7 @@ export { authApi } from './auth';
 export { coursesApi } from './courses';
 export { dashboardApi } from './dashboard';
 export { usersApi } from './users';
+export { adminCoursesApi } from './admin-courses';
 export type {
   UpdateProfileRequest,
   ChangePasswordRequest,
@@ -13,4 +14,9 @@ export type {
   ChangeRoleRequest,
   ChangeStatusRequest,
 } from './users';
+export type {
+  AdminCourse,
+  AdminCourseFilters,
+  PlatformAnalytics,
+} from './admin-courses';
 

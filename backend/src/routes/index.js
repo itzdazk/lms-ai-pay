@@ -90,8 +90,8 @@ router.use('/instructor', instructorQuizzesRoutes) // Instructor quiz endpoints
 router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/lessons', lessonsRoutes)
+router.use('/instructor/courses', instructorCourseRoutes) // Must be before /instructor to avoid conflict
 router.use('/instructor', instructorRoutes)
-router.use('/instructor/courses', instructorCourseRoutes)
 router.use('/admin/courses', adminCourseRoutes)
 router.use('/enrollments', enrollmentRoutes)
 router.use('/progress', progressRoutes)
