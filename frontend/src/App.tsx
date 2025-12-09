@@ -40,6 +40,7 @@ import { CourseEditPage } from './pages/instructor/CourseEditPage';
 // Admin Pages
 import { AdminDashboard } from './pages/AdminDashboard';
 import { UsersPage } from './pages/admin/UsersPage';
+import { CoursesPage as AdminCoursesPage } from './pages/admin/CoursesPage';
 
 export default function App() {
   return (
@@ -205,6 +206,7 @@ export default function App() {
                   <Routes>
                       <Route path="/dashboard" element={<AdminDashboard />} />
                       <Route path="/users" element={<UsersPage />} />
+                      <Route path="/courses" element={<AdminCoursesPage />} />
                   </Routes>
                   </AdminLayout>
                 </RoleRoute>
