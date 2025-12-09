@@ -17,14 +17,13 @@ import {
     type SortOption,
 } from '../components/Courses'
 import { coursesApi } from '../lib/api'
-import type { Course, Category, Tag } from '../lib/api/types'
+import type { Category, Tag, PublicCourse, Course } from '../lib/api/types'
 
 export function CoursesPage() {
     const [searchParams, setSearchParams] = useSearchParams()
-    const navigate = useNavigate()
 
     // State
-    const [courses, setCourses] = useState<Course[]>([])
+    const [courses, setCourses] = useState<PublicCourse[]>([])
     const [categories, setCategories] = useState<Category[]>([])
     const [tags, setTags] = useState<Tag[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -80,7 +79,7 @@ export function CoursesPage() {
             try {
                 setIsTagsLoading(true)
                 // Lấy top 20 tags phổ biến nhất
-                const data = await coursesApi.getTags({ limit: 20 })
+                const data = await coursesApi.getCourseTags({ limit: 20 })
                 // Sort theo số lượng courses (descending)
                 const sortedTags = data.tags.sort((a, b) => {
                     const countA = a._count?.courses || 0
@@ -105,7 +104,7 @@ export function CoursesPage() {
             try {
                 setIsLoading(true)
 
-                const response = await coursesApi.getCourses({
+                const response = await coursesApi.getPublicCourses({
                     page: currentPage,
                     limit,
                     search: searchQuery || undefined,

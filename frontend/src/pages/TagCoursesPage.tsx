@@ -15,7 +15,7 @@ import {
     type SortOption,
 } from '../components/Courses'
 import { coursesApi } from '../lib/api'
-import type { Course, Tag } from '../lib/api/types'
+import type { Course, PublicCourse, Tag } from '../lib/api/types'
 
 export function TagCoursesPage() {
     const { tagId } = useParams<{ tagId: string }>()
@@ -23,7 +23,7 @@ export function TagCoursesPage() {
 
     // State
     const [tag, setTag] = useState<Tag | null>(null)
-    const [courses, setCourses] = useState<Course[]>([])
+    const [courses, setCourses] = useState<PublicCourse[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     // Pagination

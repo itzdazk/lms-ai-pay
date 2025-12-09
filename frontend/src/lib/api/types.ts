@@ -5,14 +5,24 @@ export interface ApiResponse<T> {
     message?: string
 }
 
-export interface PaginatedResponse<T> {
-    courses?: T[] // Backend trả về field này cho courses API
-    data?: T[] // Generic field
+export interface PublicCoursesPagination<T> {
+    courses?: T[]
+    data?: T[]
     total: number
     page?: number
     limit?: number
     totalPages?: number
     pagination?: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+    }
+}
+
+export interface PaginatedResponse<T> {
+    data: T[]
+    pagination: {
         page: number
         limit: number
         total: number
@@ -51,23 +61,23 @@ export interface AuthResponse {
 }
 
 export interface User {
-  id: number;
-  userName: string;
-  email: string;
-  fullName: string;
-  phone?: string;
-  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
-  avatar?: string; // Legacy field name (for backward compatibility)
-  avatarUrl?: string; // Backend field name
-  bio?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
+    id: number
+    userName: string
+    email: string
+    fullName: string
+    phone?: string
+    role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
+    avatar?: string // Legacy field name (for backward compatibility)
+    avatarUrl?: string // Backend field name
+    bio?: string
+    status: 'ACTIVE' | 'INACTIVE' | 'BANNED'
+    emailVerified: boolean
+    createdAt: string
+    updatedAt: string
 }
 
-// Course types
-export interface Course {
+// Public course types
+export interface PublicCourse {
     id: number
     title: string
     slug: string
@@ -76,7 +86,9 @@ export interface Course {
     thumbnailUrl?: string
     videoPreviewUrl?: string
     videoPreviewDuration?: number
+    isFree: boolean
     price: number
+    originalPrice: number
     discountPrice?: number
     instructorId: number
     instructor?: Instructor
@@ -92,6 +104,7 @@ export interface Course {
     targetAudience?: string
     status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
     isFeatured: boolean
+    featured: boolean
     ratingAvg: number
     ratingCount: number
     enrolledCount: number
@@ -105,47 +118,89 @@ export interface Course {
     enrollmentsCount?: number
 }
 
+export interface Course {
+    id: number
+    title: string
+    slug: string
+    description: string
+    shortDescription?: string
+    thumbnail?: string
+    previewVideoUrl?: string
+    instructorId: string
+    instructor?: {
+        id: string
+        fullName: string
+        avatar?: string
+    }
+    categoryId: string
+    category?: {
+        id: string
+        name: string
+        slug: string
+    }
+    level: 'beginner' | 'intermediate' | 'advanced'
+    originalPrice: number
+    discountPrice?: number
+    isFree: boolean
+    status: 'draft' | 'published' | 'archived'
+    featured: boolean
+    viewsCount: number
+    enrolledCount: number
+    ratingAvg: number
+    ratingCount: number
+    completionRate?: number
+    tags?: Tag[]
+    lessonsCount?: number
+    durationMinutes?: number
+    requirements?: string
+    whatYouLearn?: string
+    courseObjectives?: string
+    targetAudience?: string
+    language?: string
+    createdAt: string
+    updatedAt: string
+}
 export interface Instructor {
-  id: string;
-  title: string;
-  slug: string;
-  description: string;
-  shortDescription?: string;
-  thumbnail?: string;
-  previewVideoUrl?: string;
-  instructorId: string;
-  instructor?: {
-    id: string;
-    fullName: string;
-    avatar?: string;
-  };
-  categoryId: string;
-  category?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  level: 'beginner' | 'intermediate' | 'advanced';
-  originalPrice: number;
-  discountPrice?: number;
-  isFree: boolean;
-  status: 'draft' | 'published' | 'archived';
-  featured: boolean;
-  viewsCount: number;
-  enrolledCount: number;
-  ratingAvg: number;
-  ratingCount: number;
-  completionRate?: number;
-  tags?: Tag[];
-  lessonsCount?: number;
-  durationMinutes?: number;
-  requirements?: string;
-  whatYouLearn?: string;
-  courseObjectives?: string;
-  targetAudience?: string;
-  language?: string;
-  createdAt: string;
-  updatedAt: string;
+    id: string
+    title: string
+    slug: string
+    description: string
+    shortDescription?: string
+    thumbnail?: string
+    previewVideoUrl?: string
+    instructorId: string
+    instructor?: {
+        id: string
+        fullName: string
+        avatar?: string
+    }
+    categoryId: string
+    category?: {
+        id: string
+        name: string
+        slug: string
+    }
+    level: 'beginner' | 'intermediate' | 'advanced'
+    originalPrice: number
+    discountPrice?: number
+    isFree: boolean
+    status: 'draft' | 'published' | 'archived'
+    featured: boolean
+    viewsCount: number
+    enrolledCount: number
+    ratingAvg: number
+    ratingCount: number
+    completionRate?: number
+    tags?: Tag[]
+    lessonsCount?: number
+    durationMinutes?: number
+    requirements?: string
+    whatYouLearn?: string
+    courseObjectives?: string
+    targetAudience?: string
+    language?: string
+    createdAt: string
+    updatedAt: string
 }
 
 export interface Category {
@@ -172,7 +227,7 @@ export interface Tag {
     }
 }
 
-export interface CourseFilters {
+export interface PublicCourseFilters {
     page?: number
     limit?: number
     search?: string
@@ -184,6 +239,20 @@ export interface CourseFilters {
     instructorId?: number
     sort?: 'newest' | 'popular' | 'rating' | 'price_asc' | 'price_desc'
     tagId?: number
+}
+
+export interface CourseFilters {
+    categoryId?: string
+    level?: 'beginner' | 'intermediate' | 'advanced'
+    minPrice?: number
+    maxPrice?: number
+    isFree?: boolean
+    featured?: boolean
+    search?: string
+    tags?: string[]
+    sortBy?: 'newest' | 'popular' | 'rating' | 'price_asc' | 'price_desc'
+    page?: number
+    limit?: number
 }
 
 // Enrollment types

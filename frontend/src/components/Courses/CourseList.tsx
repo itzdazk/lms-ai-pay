@@ -7,10 +7,10 @@ import { CourseCard } from './CourseCard'
 import { Button } from '../ui/button'
 import { Card } from '../ui/card'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import type { Course } from '../../lib/api/types'
+import type { PublicCourse } from '../../lib/api/types'
 
 interface CourseListProps {
-    courses: Course[]
+    courses: PublicCourse[]
     isLoading?: boolean
     currentPage: number
     totalPages: number
