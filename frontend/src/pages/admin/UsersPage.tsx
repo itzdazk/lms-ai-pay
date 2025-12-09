@@ -503,6 +503,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                     <DarkOutlineSelectContent>
                       <DarkOutlineSelectItem value="createdAt-desc">Mới nhất</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="createdAt-asc">Cũ nhất</DarkOutlineSelectItem>
+                      <DarkOutlineSelectItem value="updatedAt-desc">Cập nhật: mới nhất</DarkOutlineSelectItem>
+                      <DarkOutlineSelectItem value="updatedAt-asc">Cập nhật: cũ nhất</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="fullName-asc">Tên A-Z</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="fullName-desc">Tên Z-A</DarkOutlineSelectItem>
                       <DarkOutlineSelectItem value="email-asc">Email A-Z</DarkOutlineSelectItem>
@@ -556,17 +558,6 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                   </Button>
                 </div>
               </div>
-              
-              {/* Search Bar Row */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
-                <DarkOutlineInput
-                  placeholder="Tìm kiếm theo tên, email..."
-                  value={searchInput}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -582,6 +573,16 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400" />
+              <DarkOutlineInput
+                placeholder="Tìm kiếm theo tên, email..."
+                value={searchInput}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <UserTable
               users={users}
               onEdit={handleEdit}
