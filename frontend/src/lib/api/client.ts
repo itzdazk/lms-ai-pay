@@ -43,14 +43,58 @@ apiClient.interceptors.response.use(
     const status = error.response.status;
     // Extract message safely - handle both object and string
     let message = 'Đã xảy ra lỗi';
+    let errorCode: string | undefined;
     if (error.response.data) {
       if (typeof error.response.data.message === 'string') {
         message = error.response.data.message;
-      } else if (error.response.data.error && typeof error.response.data.error.message === 'string') {
-        message = error.response.data.error.message;
-      } else if (typeof error.response.data.error === 'string') {
-        message = error.response.data.error;
+      } else if (error.response.data.error) {
+        if (typeof error.response.data.error.message === 'string') {
+          message = error.response.data.error.message;
+        } else if (typeof error.response.data.error === 'string') {
+          message = error.response.data.error;
+        }
+        // Get error code if available
+        if (error.response.data.error?.code) {
+          errorCode = error.response.data.error.code;
+        }
       }
+    }
+
+    // Translate common error messages to Vietnamese
+    const lowerMessage = message.toLowerCase();
+    const requestPath = error.config?.url || '';
+    const requestMethod = error.config?.method?.toUpperCase() || '';
+    
+    // Check for Prisma error codes (P2003 = Foreign key constraint)
+    if (errorCode === 'NOT_FOUND' || errorCode === 'P2003') {
+      // This is likely a foreign key constraint violation
+      if (requestPath.includes('/users/') && requestMethod === 'DELETE') {
+        message = 'Không thể xóa người dùng này vì có dữ liệu liên quan (khóa học đã tạo, đăng ký khóa học, hoặc đơn hàng). Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước.';
+      }
+    }
+    
+    // Check for constraint violations in message
+    if (lowerMessage.includes('foreign key constraint') || 
+        lowerMessage.includes('constraint') ||
+        lowerMessage.includes('related record not found') ||
+        lowerMessage.includes('database operation failed')) {
+      // Check what type of constraint violation based on request path
+      if (requestPath.includes('/users/') && requestMethod === 'DELETE') {
+        // This is a user deletion - check error details
+        if (lowerMessage.includes('courses') || lowerMessage.includes('instructor') || lowerMessage.includes('course')) {
+          message = 'Không thể xóa người dùng này vì họ đã tạo khóa học. Vui lòng xóa hoặc chuyển quyền sở hữu các khóa học trước.';
+        } else if (lowerMessage.includes('enrollments') || lowerMessage.includes('enrollment')) {
+          message = 'Không thể xóa người dùng này vì họ đã đăng ký khóa học. Vui lòng hủy đăng ký trước.';
+        } else if (lowerMessage.includes('orders') || lowerMessage.includes('order')) {
+          message = 'Không thể xóa người dùng này vì họ có đơn hàng. Vui lòng xử lý các đơn hàng trước.';
+        } else if (message === 'Đã xảy ra lỗi' || lowerMessage.includes('related record not found')) {
+          message = 'Không thể xóa người dùng này vì có dữ liệu liên quan (khóa học đã tạo, đăng ký khóa học, hoặc đơn hàng). Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước.';
+        }
+      }
+    } else if (lowerMessage.includes('cannot delete admin')) {
+      message = 'Không thể xóa tài khoản quản trị viên.';
+    } else if (lowerMessage.includes('user not found')) {
+      message = 'Không tìm thấy người dùng.';
     }
 
     // Handle specific error codes
@@ -68,7 +112,12 @@ apiClient.interceptors.response.use(
         toast.error('Bạn không có quyền truy cập.');
         break;
       case 404:
-        toast.error('Không tìm thấy dữ liệu.');
+        // Only show default message if we haven't translated it already
+        if (message === 'Đã xảy ra lỗi' || message.toLowerCase().includes('not found') && !lowerMessage.includes('user not found')) {
+          toast.error('Không tìm thấy dữ liệu.');
+        } else {
+          toast.error(message);
+        }
         break;
       case 422:
         // Validation errors - message might be an array or object
