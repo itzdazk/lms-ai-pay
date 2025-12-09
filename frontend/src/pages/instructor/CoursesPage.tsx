@@ -598,9 +598,8 @@ export function CoursesPage() {
       loadCourses();
     } catch (error: any) {
       console.error('Error deleting course:', error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || error.message || 'Không thể xóa khóa học';
-      const translatedMessage = translateErrorMessage(errorMessage);
-      toast.error(translatedMessage);
+      // Error toast is already shown by API client interceptor, no need to show again
+      // Only log for debugging
     } finally {
       setActionLoading(false);
     }
@@ -611,6 +610,7 @@ export function CoursesPage() {
     
     try {
       setActionLoading(true);
+      console.log('Changing status:', { courseId: selectedCourse.id, status: newStatus });
       await coursesApi.changeCourseStatus(selectedCourse.id, newStatus);
       toast.success('Thay đổi trạng thái thành công');
       setIsStatusDialogOpen(false);
@@ -618,9 +618,8 @@ export function CoursesPage() {
       loadCourses();
     } catch (error: any) {
       console.error('Error changing status:', error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || error.message || 'Không thể thay đổi trạng thái';
-      const translatedMessage = translateErrorMessage(errorMessage);
-      toast.error(translatedMessage);
+      // Error toast is already shown by API client interceptor, no need to show again
+      // Only log for debugging
     } finally {
       setActionLoading(false);
     }

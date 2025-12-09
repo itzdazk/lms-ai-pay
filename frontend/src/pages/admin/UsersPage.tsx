@@ -171,7 +171,7 @@ export function UsersPage() {
       });
     } catch (error: any) {
       console.error('Error loading users:', error);
-      toast.error('Không thể tải danh sách người dùng');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setLoading(false);
     }
@@ -247,7 +247,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error updating user:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật người dùng');
+      // Error toast is already shown by API client interceptor, no need to show again
       throw error;
     } finally {
       setActionLoading(false);
@@ -271,7 +271,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa người dùng');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setActionLoading(false);
     }
@@ -295,7 +295,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error changing role:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi đổi vai trò');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setActionLoading(false);
     }
@@ -321,7 +321,7 @@ export function UsersPage() {
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error changing status:', error);
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi đổi trạng thái');
+      // Error toast is already shown by API client interceptor, no need to show again
     } finally {
       setActionLoading(false);
     }
@@ -714,10 +714,27 @@ export function UsersPage() {
               <DialogTitle>Xác nhận xóa người dùng</DialogTitle>
               <DialogDescription className="text-gray-400">
                 Bạn có chắc chắn muốn xóa người dùng{' '}
-                <strong className="text-white">{selectedUser?.fullName}</strong>? Hành động này
-                không thể hoàn tác.
+                <strong className="text-white">{selectedUser?.fullName}</strong>?
               </DialogDescription>
             </DialogHeader>
+            <div className="space-y-3 py-4">
+              <div className="p-3 bg-yellow-600/20 border border-yellow-600/50 rounded-lg">
+                <p className="text-sm text-yellow-300">
+                  <strong className="text-yellow-400">Lưu ý:</strong> Không thể xóa người dùng nếu:
+                </p>
+                <ul className="list-disc list-inside text-yellow-300/90 mt-2 space-y-1 text-sm">
+                  <li>Người dùng đã tạo khóa học (instructor)</li>
+                  <li>Người dùng đã đăng ký khóa học (student)</li>
+                  <li>Người dùng có đơn hàng</li>
+                </ul>
+                <p className="text-xs text-yellow-300/80 mt-2">
+                  Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước khi xóa người dùng.
+                </p>
+              </div>
+              <p className="text-sm text-red-400">
+                Hành động này không thể hoàn tác.
+              </p>
+            </div>
             <DialogFooter>
               <DarkOutlineButton
                 onClick={() => setIsDeleteDialogOpen(false)}
