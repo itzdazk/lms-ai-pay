@@ -19,7 +19,7 @@ export interface AdminCourse {
   enrolledCount: number;
   viewsCount: number;
   completionRate: number | null;
-  isFeatured: boolean;
+  isFeatured: boolean | null;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -49,7 +49,7 @@ export interface AdminCourseFilters {
   level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   instructorId?: number;
   isFeatured?: boolean;
-  sort?: 'newest' | 'oldest' | 'updated' | 'popular' | 'rating' | 'price_asc' | 'price_desc' | 'views' | 'title';
+  sort?: 'newest' | 'oldest' | 'updated' | 'updated-oldest' | 'popular' | 'enrollments' | 'rating' | 'price_asc' | 'price_desc' | 'views' | 'title';
   minPrice?: number;
   maxPrice?: number;
   minEnrollments?: number;
