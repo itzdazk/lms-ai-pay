@@ -3,6 +3,7 @@ import authService from '../services/auth.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
 import config from '../config/app.config.js'
+import { prisma } from '../config/database.config.js'
 import CookieUtil from '../utils/cookie.utils.js'
 
 class AuthController {
@@ -159,7 +160,32 @@ class AuthController {
      * @access  Private
      */
     getMe = asyncHandler(async (req, res) => {
-        return ApiResponse.success(res, req.user, 'User retrieved successfully')
+        // Fetch full user data including bio
+        const fullUser = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: {
+                id: true,
+                userName: true,
+                email: true,
+                fullName: true,
+                phone: true,
+                role: true,
+                avatarUrl: true,
+                bio: true,
+                status: true,
+                emailVerified: true,
+                emailVerifiedAt: true,
+                lastLoginAt: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        })
+
+        if (!fullUser) {
+            return ApiResponse.notFound(res, 'User not found')
+        }
+
+        return ApiResponse.success(res, fullUser, 'User retrieved successfully')
     })
 }
 

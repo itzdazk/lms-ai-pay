@@ -759,4 +759,15 @@ export interface Certificate {
     certificateNumber: string
 }
 
-// Remove duplicate Instructor interface - use Course.instructor instead
+// =====================================================
+// INSTRUCTOR TYPES
+// =====================================================
+export interface Instructor {
+    id: number
+    userName: string
+    fullName: string
+    avatarUrl?: string
+    bio?: string
+    totalCourses?: number
+    otherCourses?: Course[]
+}
