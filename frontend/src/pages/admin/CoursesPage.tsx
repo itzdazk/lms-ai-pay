@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Button } from '../../components/ui/button';
 import { DarkOutlineButton } from '../../components/ui/buttons';
 import { Badge } from '../../components/ui/badge';
 import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Select, SelectValue } from '../../components/ui/select';
 import { DarkOutlineInput } from '../../components/ui/dark-outline-input';
 import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../../components/ui/dark-outline-select-trigger';
 import {
@@ -26,9 +27,12 @@ import {
   Loader2,
   Search,
   Star as StarIcon,
+  X,
+  FileText,
+  Archive,
   TrendingUp,
 } from 'lucide-react';
-import { adminCoursesApi, type AdminCourse, type AdminCourseFilters } from '../../lib/api/admin-courses';
+import { adminCoursesApi, type AdminCourse, type AdminCourseFilters, type PlatformAnalytics } from '../../lib/api/admin-courses';
 import { coursesApi } from '../../lib/api/courses';
 import { usersApi } from '../../lib/api/users';
 import { useAuth } from '../../contexts/AuthContext';
@@ -46,40 +50,44 @@ function formatPrice(price: number): string {
 }
 
 // Format number to currency string without VND suffix (for input display)
-function formatPriceInput(price: number | undefined): string {
-  if (!price) return '';
-  return new Intl.NumberFormat('vi-VN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-}
+// Currently unused - reserved for advanced filters feature
+// function formatPriceInput(price: number | undefined): string {
+//   if (!price) return '';
+//   return new Intl.NumberFormat('vi-VN', {
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(price);
+// }
 
 // Parse currency string to number (remove dots and spaces)
-function parsePriceInput(value: string): number | undefined {
-  if (!value || value.trim() === '') return undefined;
-  // Remove all dots, spaces, and non-numeric characters except digits
-  const cleaned = value.replace(/[^\d]/g, '');
-  if (cleaned === '') return undefined;
-  return parseFloat(cleaned);
-}
+// Currently unused - reserved for advanced filters feature
+// function parsePriceInput(value: string): number | undefined {
+//   if (!value || value.trim() === '') return undefined;
+//   // Remove all dots, spaces, and non-numeric characters except digits
+//   const cleaned = value.replace(/[^\d]/g, '');
+//   if (cleaned === '') return undefined;
+//   return parseFloat(cleaned);
+// }
 
 // Format number to string with thousand separators (for enrollment display)
-function formatNumberInput(value: number | undefined): string {
-  if (!value) return '';
-  return new Intl.NumberFormat('vi-VN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+// Currently unused - reserved for advanced filters feature
+// function formatNumberInput(value: number | undefined): string {
+//   if (!value) return '';
+//   return new Intl.NumberFormat('vi-VN', {
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
 
 // Parse number string to number (remove dots and spaces)
-function parseNumberInput(value: string): number | undefined {
-  if (!value || value.trim() === '') return undefined;
-  // Remove all dots, spaces, and non-numeric characters except digits
-  const cleaned = value.replace(/[^\d]/g, '');
-  if (cleaned === '') return undefined;
-  return parseInt(cleaned, 10);
-}
+// Currently unused - reserved for advanced filters feature
+// function parseNumberInput(value: string): number | undefined {
+//   if (!value || value.trim() === '') return undefined;
+//   // Remove all dots, spaces, and non-numeric characters except digits
+//   const cleaned = value.replace(/[^\d]/g, '');
+//   if (cleaned === '') return undefined;
+//   return parseInt(cleaned, 10);
+// }
 
 function formatDuration(hours: number): string {
   if (!hours) return '0 giờ';
@@ -230,7 +238,7 @@ function CourseRow({
         selected={isSelected}
         onRowToggle={handleToggle}
       >
-        <DarkOutlineTableCell className="max-w-[300px]">
+        <DarkOutlineTableCell className="min-w-[250px] max-w-[400px]">
           <div className="flex items-center gap-3 min-w-0">
             {course.thumbnailUrl ? (
               <img
@@ -244,13 +252,13 @@ function CourseRow({
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <p className="font-medium line-clamp-1 text-gray-900 dark:text-white truncate" title={course.title}>{course.title}</p>
+              <div className="flex items-start gap-2 min-w-0">
+                <p className="font-medium text-gray-900 dark:text-white break-words whitespace-normal">{course.title}</p>
                 {course.isFeatured && (
-                  <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                  <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0 mt-0.5" />
                 )}
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+              <p className="text-sm text-gray-500 dark:text-gray-400 break-words whitespace-normal">
                 {course.totalLessons} bài • {formatDuration(course.durationHours)}
               </p>
             </div>
@@ -288,16 +296,33 @@ function CourseRow({
           </div>
         </DarkOutlineTableCell>
         <DarkOutlineTableCell className="w-[120px]">
-          <span className="text-gray-900 dark:text-gray-300">
-            {course.discountPrice ? (
-              <>
-                <span className="line-through text-gray-500 text-sm block">{formatPrice(course.price)}</span>
-                <span className="text-red-500">{formatPrice(course.discountPrice)}</span>
-              </>
-            ) : (
-              formatPrice(course.price)
-            )}
-          </span>
+          {(() => {
+            // Convert to number if needed (handle Decimal from Prisma)
+            const priceNum = typeof course.price === 'string' ? parseFloat(course.price) : course.price;
+            const discountPriceNum = course.discountPrice !== null && course.discountPrice !== undefined
+              ? (typeof course.discountPrice === 'string' ? parseFloat(course.discountPrice) : course.discountPrice)
+              : null;
+            
+            const finalPrice = discountPriceNum !== null ? discountPriceNum : priceNum;
+            
+            // Check if final price is 0
+            if (finalPrice === 0 || finalPrice === null || finalPrice === undefined || isNaN(finalPrice)) {
+              return <span className="text-green-600 dark:text-green-400 font-semibold">Miễn phí</span>;
+            }
+            
+            return (
+              <div className="flex flex-col">
+                {discountPriceNum !== null && discountPriceNum !== priceNum ? (
+                  <>
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">{formatPrice(discountPriceNum)}</span>
+                    <span className="text-gray-500 dark:text-gray-500 text-xs line-through">{formatPrice(priceNum)}</span>
+                  </>
+                ) : (
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold">{formatPrice(priceNum)}</span>
+                )}
+              </div>
+            );
+          })()}
         </DarkOutlineTableCell>
         <DarkOutlineTableCell className="w-[110px]">
           <span className="text-gray-900 dark:text-gray-300">{formatDate(course.createdAt)}</span>
@@ -361,6 +386,8 @@ export function CoursesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [instructors, setInstructors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<PlatformAnalytics | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -383,6 +410,7 @@ export function CoursesPage() {
     maxEnrollments: undefined,
     minRating: undefined,
   });
+  const [priceType, setPriceType] = useState<'all' | 'free' | 'paid'>('all');
   const [isFeaturedDialogOpen, setIsFeaturedDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<AdminCourse | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -415,13 +443,26 @@ export function CoursesPage() {
     }
   }, [currentUser, authLoading, navigate]);
 
-  // Load categories and instructors
+  // Load categories, instructors, and analytics
   useEffect(() => {
     if (currentUser) {
       loadCategories();
       loadInstructors();
+      loadAnalytics();
     }
   }, [currentUser]);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoadingAnalytics(true);
+      const data = await adminCoursesApi.getPlatformAnalytics();
+      setAnalytics(data);
+    } catch (error: any) {
+      console.error('Error loading analytics:', error);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -554,11 +595,7 @@ export function CoursesPage() {
   const loadCategories = async () => {
     try {
       const categoriesData = await coursesApi.getCategories();
-      const transformedCategories = categoriesData.map(cat => ({
-        ...cat,
-        id: typeof cat.id === 'number' ? String(cat.id) : cat.id,
-      }));
-      setCategories(transformedCategories);
+      setCategories(categoriesData);
     } catch (error: any) {
       console.error('Error loading categories:', error);
     }
@@ -621,6 +658,28 @@ export function CoursesPage() {
     }
     isPageChangingRef.current = true;
     setFilters({ ...filters, [key]: value === 'all' ? undefined : value, page: 1 });
+  };
+
+  const handlePriceTypeChange = (value: 'all' | 'free' | 'paid') => {
+    setPriceType(value);
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+    } else {
+      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+    }
+    isPageChangingRef.current = true;
+    
+    if (value === 'free') {
+      // Miễn phí: maxPrice = 0
+      setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
+    } else if (value === 'paid') {
+      // Có phí: minPrice > 0
+      setFilters({ ...filters, minPrice: 1, maxPrice: undefined, page: 1 });
+    } else {
+      // Tất cả: clear price filters
+      setFilters({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 });
+    }
   };
 
   const handlePageChange = (newPage: number) => {
@@ -741,69 +800,214 @@ export function CoursesPage() {
           <p className="text-muted-foreground">Quản lý và theo dõi tất cả khóa học trên nền tảng</p>
         </div>
         <div className="space-y-4">
+          {/* Stats Grid */}
+          {!loadingAnalytics && analytics && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">Tổng khóa học</p>
+                      <p className="text-2xl font-bold text-white">{analytics.overview.courses.total.toLocaleString()}</p>
+                    </div>
+                    <BookOpen className="h-8 w-8 text-blue-500" />
+                  </div>
+                  {(() => {
+                    // Calculate free and paid courses from current courses data
+                    const freeCount = courses.filter((course) => {
+                      const finalPrice = course.discountPrice ?? course.price;
+                      return finalPrice === 0 || finalPrice === null || finalPrice === undefined;
+                    }).length;
+                    const paidCount = courses.filter((course) => {
+                      const finalPrice = course.discountPrice ?? course.price;
+                      return finalPrice !== 0 && finalPrice !== null && finalPrice !== undefined;
+                    }).length;
+                    
+                    // If we have pagination data, estimate based on current page ratio
+                    const totalCourses = pagination.total || courses.length;
+                    const currentPageRatio = totalCourses > 0 && courses.length > 0 ? courses.length / totalCourses : 1;
+                    const estimatedFree = totalCourses > 0 && currentPageRatio > 0 ? Math.round(freeCount / currentPageRatio) : freeCount;
+                    const estimatedPaid = totalCourses > 0 && currentPageRatio > 0 ? Math.round(paidCount / currentPageRatio) : paidCount;
+                    
+                    return (
+                      <div className="mt-3 pt-3 border-t border-[#2D2D2D]">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-400">Miễn phí:</span>
+                          <span className="text-green-400 font-semibold">{estimatedFree.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs mt-1">
+                          <span className="text-gray-400">Có phí:</span>
+                          <span className="text-blue-400 font-semibold">{estimatedPaid.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">Đã xuất bản</p>
+                      <p className="text-2xl font-bold text-white">{analytics.overview.courses.published.toLocaleString()}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">Bản nháp</p>
+                      <p className="text-2xl font-bold text-white">{analytics.overview.courses.draft.toLocaleString()}</p>
+                    </div>
+                    <FileText className="h-8 w-8 text-yellow-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">Đã lưu trữ</p>
+                      <p className="text-2xl font-bold text-white">{analytics.overview.courses.archived.toLocaleString()}</p>
+                    </div>
+                    <Archive className="h-8 w-8 text-gray-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">Nổi bật</p>
+                      <p className="text-2xl font-bold text-white">{analytics.overview.courses.featured.toLocaleString()}</p>
+                    </div>
+                    <StarIcon className="h-8 w-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
           {/* Filters */}
           <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
           <CardTitle className="text-white">Bộ lọc</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Main Filters Row - 4 columns */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Giảng viên</Label>
-              <Select
-                value={filters.instructorId ? String(filters.instructorId) : 'all'}
-                onValueChange={(value) => {
-                  handleFilterChange('instructorId', value === 'all' ? undefined : parseInt(value));
-                  setInstructorSearch(''); // Reset search when selecting
-                }}
-              >
-                <DarkOutlineSelectTrigger>
-                  <SelectValue placeholder="Tất cả giảng viên" />
-                </DarkOutlineSelectTrigger>
-                <DarkOutlineSelectContent>
-                  <div className="p-2 border-b border-[#2D2D2D]">
-                    <DarkOutlineInput
-                      placeholder="Tìm kiếm giảng viên..."
-                      value={instructorSearch}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setInstructorSearch(e.target.value);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="max-h-[200px] overflow-y-auto">
-                    <DarkOutlineSelectItem value="all" onSelect={() => setInstructorSearch('')}>
-                      Tất cả giảng viên
-                    </DarkOutlineSelectItem>
-                    {instructors
-                      .filter((instructor) =>
-                        instructor.fullName.toLowerCase().includes(instructorSearch.toLowerCase())
-                      )
-                      .map((instructor) => (
+          {/* Instructor Filter - Full Width Row */}
+          <div className="space-y-2">
+            <Label className="text-gray-400 text-sm">Giảng viên</Label>
+            <Select
+              value={filters.instructorId ? String(filters.instructorId) : 'all'}
+              onValueChange={(value) => {
+                handleFilterChange('instructorId', value === 'all' ? undefined : parseInt(value));
+                setInstructorSearch(''); // Reset search when selecting
+              }}
+            >
+              <DarkOutlineSelectTrigger className="w-full min-h-[48px]">
+                <SelectValue placeholder="Tất cả giảng viên" />
+              </DarkOutlineSelectTrigger>
+              <DarkOutlineSelectContent className="min-w-[500px]">
+                <div className="p-3 border-b border-[#2D2D2D]">
+                  <DarkOutlineInput
+                    placeholder="Tìm kiếm giảng viên theo tên, email, số điện thoại..."
+                    value={instructorSearch}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setInstructorSearch(e.target.value);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="w-full h-10"
+                  />
+                </div>
+                <div className="max-h-[400px] overflow-y-auto">
+                  <DarkOutlineSelectItem value="all" onSelect={() => setInstructorSearch('')}>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-gray-400" />
+                      <span>Tất cả giảng viên</span>
+                    </div>
+                  </DarkOutlineSelectItem>
+                  {instructors
+                    .filter((instructor) => {
+                      const searchLower = instructorSearch.toLowerCase();
+                      return (
+                        instructor.fullName.toLowerCase().includes(searchLower) ||
+                        instructor.email.toLowerCase().includes(searchLower) ||
+                        instructor.userName.toLowerCase().includes(searchLower) ||
+                        (instructor.phone && instructor.phone.toLowerCase().includes(searchLower))
+                      );
+                    })
+                    .map((instructor) => {
+                      return (
                         <DarkOutlineSelectItem
                           key={instructor.id}
                           value={String(instructor.id)}
                           onSelect={() => setInstructorSearch('')}
                         >
-                          {instructor.fullName}
+                          <div className="flex items-center gap-3 w-full">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={instructor.avatarUrl || undefined} alt={instructor.fullName} />
+                              <AvatarFallback className="bg-blue-600 text-white text-xs">
+                                {instructor.fullName.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <div className="font-medium text-white truncate">{instructor.fullName}</div>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs px-1.5 py-0 h-4 ${
+                                    instructor.status === 'ACTIVE' 
+                                      ? 'border-green-500 text-green-400 bg-green-500/10' 
+                                      : instructor.status === 'INACTIVE'
+                                      ? 'border-gray-500 text-gray-400 bg-gray-500/10'
+                                      : 'border-red-500 text-red-400 bg-red-500/10'
+                                  }`}
+                                >
+                                  {instructor.status === 'ACTIVE' ? 'Hoạt động' : instructor.status === 'INACTIVE' ? 'Tạm ngưng' : 'Bị cấm'}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs flex-wrap">
+                                <span className="text-gray-400 truncate">{instructor.email}</span>
+                                {instructor.phone && (
+                                  <>
+                                    <span className="text-gray-500">•</span>
+                                    <span className="text-gray-400 truncate">{instructor.phone}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </DarkOutlineSelectItem>
-                      ))}
-                    {instructors.filter((instructor) =>
-                      instructor.fullName.toLowerCase().includes(instructorSearch.toLowerCase())
-                    ).length === 0 && instructorSearch && (
-                      <div className="px-2 py-1.5 text-sm text-gray-400 text-center">
-                        Không tìm thấy giảng viên
-                      </div>
-                    )}
-                  </div>
-                </DarkOutlineSelectContent>
-              </Select>
-            </div>
+                      );
+                    })}
+                  {instructors.filter((instructor) => {
+                    const searchLower = instructorSearch.toLowerCase();
+                    return (
+                      instructor.fullName.toLowerCase().includes(searchLower) ||
+                      instructor.email.toLowerCase().includes(searchLower) ||
+                      instructor.userName.toLowerCase().includes(searchLower) ||
+                      (instructor.phone && instructor.phone.toLowerCase().includes(searchLower))
+                    );
+                  }).length === 0 && instructorSearch && (
+                    <div className="px-2 py-1.5 text-sm text-gray-400 text-center">
+                      Không tìm thấy giảng viên
+                    </div>
+                  )}
+                </div>
+              </DarkOutlineSelectContent>
+            </Select>
+          </div>
 
+          {/* Main Filters Row - 4 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Danh mục</Label>
               <Select
@@ -897,10 +1101,7 @@ export function CoursesPage() {
                 </DarkOutlineSelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Pagination and Sort Row - 4 columns */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Nổi bật</Label>
               <Select
@@ -919,6 +1120,10 @@ export function CoursesPage() {
                 </DarkOutlineSelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Pagination and Sort Row - 4 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Sắp xếp</Label>
               <Select
@@ -949,6 +1154,22 @@ export function CoursesPage() {
                   <DarkOutlineSelectItem value="price_desc">Giá: Cao đến thấp</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="views">Lượt xem</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="title">Tên A-Z</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Giá</Label>
+              <Select
+                value={priceType}
+                onValueChange={(value) => handlePriceTypeChange(value as 'all' | 'free' | 'paid')}
+              >
+                <DarkOutlineSelectTrigger>
+                  <SelectValue placeholder="Tất cả" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="all">Tất cả</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="free">Miễn phí</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="paid">Có phí</DarkOutlineSelectItem>
                 </DarkOutlineSelectContent>
               </Select>
             </div>
@@ -991,6 +1212,7 @@ export function CoursesPage() {
                     scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
                   }
                   isPageChangingRef.current = true;
+                  setPriceType('all');
                   setFilters({
                     page: 1,
                     limit: 10,
@@ -1141,8 +1363,17 @@ export function CoursesPage() {
               placeholder="Tìm kiếm theo tên khóa học, mô tả, giảng viên..."
               value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => handleSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
