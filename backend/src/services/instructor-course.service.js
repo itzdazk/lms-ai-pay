@@ -12,6 +12,7 @@ import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
 import path from 'path'
 import fs from 'fs'
+import sharp from 'sharp'
 import { thumbnailsDir, videoPreviewsDir } from '../config/multer.config.js'
 
 class InstructorCourseService {
@@ -402,6 +403,7 @@ class InstructorCourseService {
                 slug: true,
                 status: true,
                 thumbnailUrl: true, // Need to get old thumbnail for deletion
+                videoPreviewUrl: true, // Need to get old video preview for deletion
             },
         })
 
@@ -441,8 +443,9 @@ class InstructorCourseService {
             tags, // Array of tag IDs to replace existing tags
         } = data
 
-        // Get old thumbnail URL before update (for file deletion)
+        // Get old thumbnail and video preview URLs before update (for file deletion)
         const oldThumbnailUrl = existingCourse.thumbnailUrl
+        const oldVideoPreviewUrl = existingCourse.videoPreviewUrl
 
         // Build update data
         const updateData = {}
@@ -470,8 +473,25 @@ class InstructorCourseService {
                 }
             }
         }
-        if (videoPreviewUrl !== undefined)
+        if (videoPreviewUrl !== undefined) {
             updateData.videoPreviewUrl = videoPreviewUrl
+            // If videoPreviewUrl is null, delete the old file
+            if (videoPreviewUrl === null && oldVideoPreviewUrl) {
+                const oldPath = path.join(
+                    process.cwd(),
+                    oldVideoPreviewUrl.replace(/^\//, '')
+                )
+                if (fs.existsSync(oldPath)) {
+                    try {
+                        fs.unlinkSync(oldPath)
+                        logger.info(`Video preview file deleted: ${oldVideoPreviewUrl}`)
+                    } catch (error) {
+                        logger.error(`Error deleting video preview file: ${error.message}`)
+                        // Don't throw error, just log it
+                    }
+                }
+            }
+        }
         if (videoPreviewDuration !== undefined)
             updateData.videoPreviewDuration = parseInt(videoPreviewDuration)
         if (price !== undefined) updateData.price = parseFloat(price)
@@ -870,6 +890,57 @@ class InstructorCourseService {
             const error = new Error('Course not found')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
+        }
+
+        // Auto-crop/resize image to 16:9 aspect ratio
+        const filePath = file.path
+        const targetAspectRatio = 16 / 9 // 1.777...
+        
+        try {
+            const metadata = await sharp(filePath).metadata()
+            const { width, height } = metadata
+            
+            if (width && height) {
+                const currentAspectRatio = width / height
+                
+                // Only process if aspect ratio is different from 16:9
+                if (Math.abs(currentAspectRatio - targetAspectRatio) > 0.01) {
+                    let newWidth, newHeight, left, top
+                    
+                    if (currentAspectRatio > targetAspectRatio) {
+                        // Image is wider than 16:9 - crop width (center crop)
+                        newHeight = height
+                        newWidth = Math.round(height * targetAspectRatio)
+                        left = Math.round((width - newWidth) / 2)
+                        top = 0
+                    } else {
+                        // Image is taller than 16:9 - crop height (center crop)
+                        newWidth = width
+                        newHeight = Math.round(width / targetAspectRatio)
+                        left = 0
+                        top = Math.round((height - newHeight) / 2)
+                    }
+                    
+                    // Crop and resize to 16:9
+                    await sharp(filePath)
+                        .extract({ left, top, width: newWidth, height: newHeight })
+                        .resize(1920, 1080, { // Standard 16:9 resolution
+                            fit: 'cover',
+                            position: 'center'
+                        })
+                        .toFile(filePath + '.processed')
+                    
+                    // Replace original with processed image
+                    fs.renameSync(filePath + '.processed', filePath)
+                    
+                    logger.info(
+                        `Thumbnail auto-cropped to 16:9: ${width}×${height} → ${newWidth}×${newHeight} (Course ${courseId})`
+                    )
+                }
+            }
+        } catch (error) {
+            logger.error(`Error processing thumbnail: ${error.message}`)
+            // Continue with original file if processing fails
         }
 
         const thumbnailUrl = `/uploads/thumbnails/${file.filename}`

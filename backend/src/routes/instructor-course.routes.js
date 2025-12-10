@@ -16,7 +16,6 @@ import {
     removeTagFromCourseValidator,
 } from '../validators/instructor-course.validator.js'
 import { uploadThumbnail, uploadVideoPreview } from '../config/multer.config.js'
-import { validateThumbnailAspectRatio } from '../middlewares/image-validation.middleware.js'
 
 const router = express.Router()
 
@@ -105,7 +104,7 @@ router.delete(
 router.patch(
     '/:id/thumbnail',
     uploadThumbnail,
-    validateThumbnailAspectRatio(),
+    // Removed aspect ratio validation - system will auto-crop to 16:9
     instructorCourseController.uploadThumbnail
 )
 
