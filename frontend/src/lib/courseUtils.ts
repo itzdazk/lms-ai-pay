@@ -142,9 +142,9 @@ export function formatNumber(num: number): string {
  * - If discountPrice is null/undefined/0 or >= price → Use price (no discount)
  */
 export function getCoursePrice(course: {
-    price: number
-    discountPrice?: number | null
-    originalPrice?: number
+    price: number | string | null | undefined
+    discountPrice?: number | string | null | undefined
+    originalPrice?: number | string | null | undefined
 }): {
     isFree: boolean
     currentPrice: number
@@ -153,17 +153,35 @@ export function getCoursePrice(course: {
     discountPercentage: number
     displayPrice: string
 } {
-    // Use originalPrice if available, otherwise use price
-    const originalPrice = course.originalPrice ?? course.price
-    const discountPrice = course.discountPrice
+    // Normalize price values - handle Decimal from Prisma, string, null, undefined
+    const normalizePrice = (value: number | string | null | undefined): number => {
+        if (value === null || value === undefined) return 0
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value)
+            return isNaN(parsed) ? 0 : parsed
+        }
+        return typeof value === 'number' ? value : 0
+    }
+
+    // Normalize all price values
+    const price = normalizePrice(course.price)
+    const discountPrice = normalizePrice(course.discountPrice)
+    const originalPrice = normalizePrice(course.originalPrice) || price
     
     // Course is free if original price is 0
-    const isFree = originalPrice === 0
+    const isFree = originalPrice === 0 || price === 0
     
-    // Has discount if discountPrice exists, is > 0, and is less than original price
+    // Has discount if:
+    // 1. discountPrice is not null/undefined/0 (explicitly set)
+    // 2. discountPrice > 0 (valid discount amount)
+    // 3. discountPrice < originalPrice (discount is less than original)
+    // 4. originalPrice > 0 (not a free course)
     const hasDiscount = 
-        discountPrice != null && 
-        discountPrice > 0 && 
+        !isFree &&
+        discountPrice !== null &&
+        discountPrice !== undefined &&
+        !isNaN(discountPrice) &&
+        discountPrice > 0 &&
         discountPrice < originalPrice
     
     // Current price: use discountPrice if has discount, otherwise use originalPrice
