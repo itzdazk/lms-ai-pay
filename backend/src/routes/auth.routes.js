@@ -108,4 +108,18 @@ router.post(
  */
 router.get('/me', authenticate, authController.getMe)
 
+/**
+ * @route   GET /api/v1/auth/sessions
+ * @desc    Get all active sessions for current user
+ * @access  Private
+ */
+router.get('/sessions', authenticate, authController.getSessions)
+
+/**
+ * @route   DELETE /api/v1/auth/sessions/:sessionId
+ * @desc    Logout a specific session
+ * @access  Private
+ */
+router.delete('/sessions/:sessionId', authenticate, authController.logoutSession)
+
 export default router

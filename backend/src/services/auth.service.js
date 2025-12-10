@@ -2,7 +2,8 @@
 import { prisma } from '../config/database.config.js'
 import BcryptUtil from '../utils/bcrypt.util.js'
 import JWTUtil from '../utils/jwt.util.js'
-import { USER_STATUS, USER_ROLES, HTTP_STATUS } from '../config/constants.js'
+import DeviceUtil from '../utils/device.util.js'
+import { USER_STATUS, USER_ROLES, HTTP_STATUS, JWT_EXPIRY } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import emailService from './email.service.js'
 
@@ -10,7 +11,7 @@ class AuthService {
     /**
      * Register new user
      */
-    async register(data) {
+    async register(data, req) {
         const {
             userName,
             email,
@@ -71,11 +72,27 @@ class AuthService {
             },
         })
 
-        // Generate tokens
+        // Create session for new user
+        const deviceInfo = req ? DeviceUtil.getDeviceInfo(req) : null
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+
+        const session = await prisma.userSession.create({
+            data: {
+                userId: user.id,
+                deviceId: deviceInfo?.deviceId || null,
+                deviceName: deviceInfo?.deviceName || 'Unknown Device',
+                ipAddress: deviceInfo?.ipAddress || null,
+                userAgent: deviceInfo?.userAgent || null,
+                expiresAt,
+            },
+        })
+
+        // Generate tokens with sessionId
         const tokens = JWTUtil.generateTokens({
             userId: user.id,
             role: user.role,
             tokenVersion: user.tokenVersion,
+            sessionId: session.id,
         })
 
         logger.info(`New user registered: ${user.email}`)
@@ -102,7 +119,7 @@ class AuthService {
     /**
      * Login user
      */
-    async login(email, password) {
+    async login(email, password, req) {
         // Find user by email
         const user = await prisma.user.findUnique({
             where: { email },
@@ -146,20 +163,57 @@ class AuthService {
             throw error
         }
 
-        // Update last login
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { lastLoginAt: new Date() },
+        // Single session: Delete all existing active sessions for this user
+        await prisma.userSession.deleteMany({
+            where: {
+                userId: user.id,
+                isActive: true,
+            },
         })
 
-        // Generate tokens
+        // Increment tokenVersion to invalidate all old tokens
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                lastLoginAt: new Date(),
+                tokenVersion: {
+                    increment: 1,
+                },
+            },
+        })
+
+        // Get updated user with new tokenVersion
+        const updatedUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                tokenVersion: true,
+            },
+        })
+
+        // Create new session
+        const deviceInfo = req ? DeviceUtil.getDeviceInfo(req) : null
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+
+        const session = await prisma.userSession.create({
+            data: {
+                userId: user.id,
+                deviceId: deviceInfo?.deviceId || null,
+                deviceName: deviceInfo?.deviceName || 'Unknown Device',
+                ipAddress: deviceInfo?.ipAddress || null,
+                userAgent: deviceInfo?.userAgent || null,
+                expiresAt,
+            },
+        })
+
+        // Generate tokens with sessionId
         const tokens = JWTUtil.generateTokens({
             userId: user.id,
             role: user.role,
-            tokenVersion: user.tokenVersion,
+            tokenVersion: updatedUser.tokenVersion,
+            sessionId: session.id,
         })
 
-        logger.info(`User logged in: ${user.email}`)
+        logger.info(`User logged in: ${user.email} (Session: ${session.id})`)
 
         return {
             user: {
@@ -209,10 +263,37 @@ class AuthService {
                 throw new Error('Token has been invalidated')
             }
 
+            // Check if session exists and is active
+            if (decoded.sessionId) {
+                const session = await prisma.userSession.findUnique({
+                    where: { id: decoded.sessionId },
+                    select: {
+                        id: true,
+                        isActive: true,
+                        expiresAt: true,
+                    },
+                })
+
+                if (!session || !session.isActive) {
+                    throw new Error('Session has been invalidated')
+                }
+
+                if (session.expiresAt < new Date()) {
+                    throw new Error('Session has expired')
+                }
+
+                // Update last activity
+                await prisma.userSession.update({
+                    where: { id: session.id },
+                    data: { lastActivityAt: new Date() },
+                })
+            }
+
             const tokens = JWTUtil.generateTokens({
                 userId: user.id,
                 role: user.role,
                 tokenVersion: user.tokenVersion,
+                sessionId: decoded.sessionId,
             })
 
             return tokens
@@ -430,12 +511,19 @@ class AuthService {
     }
 
     /**
-     * Invalidate all tokens for a user
+     * Invalidate all tokens for a user (logout all sessions)
      * @param {number} userId - User ID
      * @returns {Promise<boolean>}
      */
     async invalidateAllTokens(userId) {
         try {
+            // Deactivate all sessions
+            await prisma.userSession.updateMany({
+                where: { userId, isActive: true },
+                data: { isActive: false },
+            })
+
+            // Increment tokenVersion
             await prisma.user.update({
                 where: { id: userId },
                 data: {
@@ -450,6 +538,77 @@ class AuthService {
         } catch (error) {
             logger.error('Error invalidating tokens:', error)
             throw new Error('Failed to invalidate tokens')
+        }
+    }
+
+    /**
+     * Logout current session
+     * @param {string} sessionId - Session ID
+     * @param {number} userId - User ID
+     * @returns {Promise<boolean>}
+     */
+    async logoutSession(sessionId, userId) {
+        try {
+            const session = await prisma.userSession.findFirst({
+                where: {
+                    id: sessionId,
+                    userId: userId,
+                    isActive: true,
+                },
+            })
+
+            if (!session) {
+                throw new Error('Session not found')
+            }
+
+            // Deactivate session
+            await prisma.userSession.update({
+                where: { id: sessionId },
+                data: { isActive: false },
+            })
+
+            logger.info(`Session logged out: ${sessionId}`)
+            return true
+        } catch (error) {
+            logger.error('Error logging out session:', error)
+            throw new Error('Failed to logout session')
+        }
+    }
+
+    /**
+     * Get all active sessions for a user
+     * @param {number} userId - User ID
+     * @returns {Promise<Array>}
+     */
+    async getSessions(userId) {
+        try {
+            const sessions = await prisma.userSession.findMany({
+                where: {
+                    userId,
+                    isActive: true,
+                    expiresAt: {
+                        gt: new Date(),
+                    },
+                },
+                select: {
+                    id: true,
+                    deviceId: true,
+                    deviceName: true,
+                    ipAddress: true,
+                    userAgent: true,
+                    lastActivityAt: true,
+                    createdAt: true,
+                    expiresAt: true,
+                },
+                orderBy: {
+                    lastActivityAt: 'desc',
+                },
+            })
+
+            return sessions
+        } catch (error) {
+            logger.error('Error getting sessions:', error)
+            throw new Error('Failed to get sessions')
         }
     }
 
