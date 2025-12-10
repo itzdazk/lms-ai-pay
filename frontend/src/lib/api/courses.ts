@@ -40,6 +40,11 @@ export const coursesApi = {
                 params.append('instructorId', filters.instructorId.toString())
             if (filters.sort) params.append('sort', filters.sort)
             if (filters.tagId) params.append('tagId', filters.tagId.toString())
+            if (filters.tagIds && filters.tagIds.length > 0) {
+                filters.tagIds.forEach((tagId) => {
+                    params.append('tagIds', tagId.toString())
+                })
+            }
         }
 
         // fetch vào tags

@@ -222,7 +222,8 @@ export interface PublicCourseFilters {
     isFeatured?: boolean
     instructorId?: number
     sort?: 'newest' | 'popular' | 'rating' | 'price_asc' | 'price_desc'
-    tagId?: number
+    tagId?: number // Legacy - for backward compatibility
+    tagIds?: number[] // New - for multiple tag selection
 }
 
 export interface CourseFilters {
