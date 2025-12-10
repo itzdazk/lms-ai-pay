@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { CourseForm } from '../../components/instructor/CourseForm';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { coursesApi } from '../../lib/api/courses';
+import { coursesApi } from '../../lib/api/courses'
+import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { toast } from 'sonner';
 import { DarkOutlineButton } from '../../components/ui/buttons';
 import type { Course, Category, Tag } from '../../lib/api/types';
@@ -79,7 +80,7 @@ export function CourseCreatePage() {
       const { tags, ...courseData } = data;
       
       // Create course (without tags)
-      const newCourse = await coursesApi.createInstructorCourse(courseData);
+      const newCourse = await instructorCoursesApi.createInstructorCourse(courseData);
       
       if (!newCourse || !newCourse.id) {
         throw new Error('Course creation failed: No course ID returned');
@@ -89,12 +90,12 @@ export function CourseCreatePage() {
       
       // Upload thumbnail if provided
       if (thumbnailFile) {
-        await coursesApi.uploadCourseThumbnail(courseId, thumbnailFile);
+        await instructorCoursesApi.uploadCourseThumbnail(courseId, thumbnailFile);
       }
       
       // Upload preview video if provided
       if (previewFile) {
-        await coursesApi.uploadCoursePreview(courseId, previewFile);
+        await instructorCoursesApi.uploadCoursePreview(courseId, previewFile);
       }
       
       // Add tags separately after course creation
@@ -103,7 +104,7 @@ export function CourseCreatePage() {
           .map((tagId) => parseInt(String(tagId)))
           .filter((id) => !isNaN(id) && id > 0);
         if (tagIds.length > 0) {
-          await coursesApi.addCourseTags(courseId, tagIds);
+          await instructorCoursesApi.addCourseTags(courseId, tagIds);
         }
       }
       

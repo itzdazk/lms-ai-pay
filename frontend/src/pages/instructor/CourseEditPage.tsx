@@ -4,7 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { CourseForm } from '../../components/instructor/CourseForm';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { coursesApi } from '../../lib/api/courses';
+import { coursesApi } from '../../lib/api/courses'
+import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { toast } from 'sonner';
 import { DarkOutlineButton } from '../../components/ui/buttons';
 import type { Course, Category, Tag } from '../../lib/api/types';
@@ -96,7 +97,7 @@ export function CourseEditPage() {
       // Try to get course by ID using instructor endpoint (has full details)
       let courseData: any = null;
       try {
-        courseData = await coursesApi.getInstructorCourseById(id);
+        courseData = await instructorCoursesApi.getInstructorCourseById(id);
       } catch (error: any) {
         // If endpoint doesn't exist (404) or fails, fallback to searching in list
         console.warn('getInstructorCourseById failed, falling back to list search');
@@ -105,7 +106,7 @@ export function CourseEditPage() {
         let hasMore = true;
         
         while (hasMore && !courseData) {
-          const coursesResponse = await coursesApi.getInstructorCourses({ 
+          const coursesResponse = await instructorCoursesApi.getInstructorCourses({ 
             page, 
             limit 
           });
@@ -177,16 +178,16 @@ export function CourseEditPage() {
       setSubmitting(true);
       
       // Update course
-      await coursesApi.updateInstructorCourse(id, data);
+      await instructorCoursesApi.updateInstructorCourse(id, data);
       
       // Upload thumbnail if provided
       if (thumbnailFile) {
-        await coursesApi.uploadCourseThumbnail(id, thumbnailFile);
+        await instructorCoursesApi.uploadCourseThumbnail(id, thumbnailFile);
       }
       
       // Upload preview video if provided
       if (previewFile) {
-        await coursesApi.uploadCoursePreview(id, previewFile);
+        await instructorCoursesApi.uploadCoursePreview(id, previewFile);
       }
       
       // Update tags if provided
@@ -201,10 +202,10 @@ export function CourseEditPage() {
         try {
           // Try to get course by ID first
           try {
-            currentCourse = await coursesApi.getInstructorCourseById(id);
+            currentCourse = await instructorCoursesApi.getInstructorCourseById(id);
           } catch (error) {
             // If endpoint doesn't exist, fallback to searching in list
-            const coursesResponse = await coursesApi.getInstructorCourses({ page: 1, limit: 100 });
+            const coursesResponse = await instructorCoursesApi.getInstructorCourses({ page: 1, limit: 100 });
             const found = coursesResponse.data.find((c: Course) => String(c.id) === id);
             if (found) {
               currentCourse = found;
@@ -241,7 +242,7 @@ export function CourseEditPage() {
           // Remove tags that are no longer selected
           for (const tagId of tagsToRemove) {
             try {
-              await coursesApi.removeCourseTag(id, tagId);
+              await instructorCoursesApi.removeCourseTag(id, tagId);
             } catch (error) {
               // Ignore errors if tag doesn't exist
               console.warn('Error removing tag:', error);
@@ -251,7 +252,7 @@ export function CourseEditPage() {
           // Add only new tags (not already associated)
           if (tagsToAdd.length > 0) {
             try {
-              await coursesApi.addCourseTags(id, tagsToAdd);
+              await instructorCoursesApi.addCourseTags(id, tagsToAdd);
             } catch (error: any) {
               // If error is "All tags are already associated", it means our comparison was wrong
               // This could happen if tags weren't loaded properly
@@ -270,7 +271,7 @@ export function CourseEditPage() {
           // and let backend handle duplicates gracefully
           if (newTagIds.length > 0) {
             try {
-              await coursesApi.addCourseTags(id, newTagIds);
+              await instructorCoursesApi.addCourseTags(id, newTagIds);
             } catch (error: any) {
               // If error is "All tags are already associated", try removing all first
               if (error?.response?.data?.message?.includes('already associated')) {

@@ -31,7 +31,8 @@ import {
   Search,
   X
 } from 'lucide-react';
-import { coursesApi } from '../../lib/api/courses';
+import { coursesApi } from '../../lib/api/courses'
+import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { useAuth } from '../../contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from 'sonner';
@@ -529,7 +530,7 @@ export function CoursesPage() {
         ...(filters.level ? { level: filters.level } : {}),
         sort: filters.sort,
       };
-      const coursesData = await coursesApi.getInstructorCourses(requestParams);
+      const coursesData = await instructorCoursesApi.getInstructorCourses(requestParams);
       
       // Transform courses data - preserve order from backend
       const coursesArray: any[] = coursesData?.data || [];
@@ -595,7 +596,7 @@ export function CoursesPage() {
     
     try {
       setActionLoading(true);
-      await coursesApi.deleteInstructorCourse(String(selectedCourse.id));
+      await instructorCoursesApi.deleteInstructorCourse(String(selectedCourse.id));
       toast.success('Xóa khóa học thành công');
       setIsDeleteDialogOpen(false);
       setSelectedCourse(null);
@@ -616,7 +617,7 @@ export function CoursesPage() {
       setActionLoading(true);
       console.log('Changing status:', { courseId: selectedCourse.id, status: newStatus });
       const statusLower = newStatus.toLowerCase() as 'draft' | 'published' | 'archived';
-      await coursesApi.changeCourseStatus(String(selectedCourse.id), statusLower);
+      await instructorCoursesApi.changeCourseStatus(String(selectedCourse.id), statusLower);
       toast.success('Thay đổi trạng thái thành công');
       setIsStatusDialogOpen(false);
       setSelectedCourse(null);

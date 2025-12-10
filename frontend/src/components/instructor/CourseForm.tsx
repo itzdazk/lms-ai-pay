@@ -13,7 +13,8 @@ import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectIt
 import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw, BookOpen, FileText, Tag as TagIcon, Globe, HelpCircle, Hash, Info, Target, Users, Upload, CheckCircle2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Course, Category, Tag } from '../../lib/api/types';
-import { coursesApi } from '../../lib/api/courses';
+import { coursesApi } from '../../lib/api/courses'
+import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { Checkbox } from '../ui/checkbox';
 import {
   Dialog,
@@ -368,7 +369,7 @@ export function CourseForm({
   const loadAvailableThumbnails = async () => {
     try {
       setLoadingThumbnails(true);
-      const response = await coursesApi.getInstructorCourses({ limit: 100 });
+      const response = await instructorCoursesApi.getInstructorCourses({ limit: 100 });
       const courses = response.data || [];
       const thumbnails = courses
         .map((c: Course) => c.thumbnailUrl || (c as any).thumbnail)
@@ -387,7 +388,7 @@ export function CourseForm({
   const loadAvailableVideoPreviews = async () => {
     try {
       setLoadingVideoPreviews(true);
-      const response = await coursesApi.getInstructorCourses({ limit: 100 });
+      const response = await instructorCoursesApi.getInstructorCourses({ limit: 100 });
       const courses = response.data || [];
       const videoPreviews = courses
         .map((c: Course) => c.videoPreviewUrl || (c as any).previewVideoUrl)
