@@ -27,7 +27,7 @@ import {
   SelectTrigger as RoleSelectTrigger,
   SelectValue as RoleSelectValue,
 } from '../../components/ui/select';
-import { Users, Search, Filter, Loader2, UserCheck, UserX, Shield } from 'lucide-react';
+import { Users, Search, Filter, Loader2, UserCheck, UserX, Shield, X } from 'lucide-react';
 import { usersApi } from '../../lib/api';
 import { dashboardApi } from '../../lib/api/dashboard';
 import { toast } from 'sonner';
@@ -580,8 +580,17 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                 placeholder="Tìm kiếm theo tên, email..."
                 value={searchInput}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => handleSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <UserTable
               users={users}
