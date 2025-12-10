@@ -272,6 +272,14 @@ export const coursesApi = {
         return response.data.data
     },
 
+    // Get course by ID
+    async getPublicCourseById(id: number): Promise<PublicCourse> {
+        const response = await apiClient.get<ApiResponse<PublicCourse>>(
+            `/courses/${id}`
+        )
+        return response.data.data
+    },
+
     // Get user enrollments
     async getEnrollments(): Promise<Enrollment[]> {
         const response = await apiClient.get<ApiResponse<Enrollment[]>>(

@@ -61,7 +61,7 @@ export interface AuthResponse {
 }
 
 export interface User {
-    id: number
+    id: string
     userName: string
     email: string
     fullName: string
@@ -162,8 +162,12 @@ export interface Course {
 }
 export interface Instructor {
     id: string
+    fullName?: string
+    userName?: string
+    avatarUrl?: string
     title: string
     slug: string
+    bio?: string
     description: string
     shortDescription?: string
     thumbnail?: string
@@ -210,14 +214,14 @@ export interface Category {
     description?: string
     imageUrl?: string
     parentId?: number
-    sortOrder: number
+    sortOrder?: number
     isActive: boolean
-    createdAt: string
-    updatedAt: string
+    createdAt?: string
+    updatedAt?: string
 }
 
 export interface Tag {
-    id: number
+    id: string
     name: string
     slug: string
     description?: string

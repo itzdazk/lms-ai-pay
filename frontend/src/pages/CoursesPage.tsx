@@ -4,7 +4,7 @@
 // ============================================
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Filter } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,7 +15,7 @@ import {
     CourseSortSelect,
     type CourseFiltersState,
     type SortOption,
-} from '../components/Courses'
+} from '../components/courses'
 import { coursesApi } from '../lib/api'
 import type { Category, Tag, PublicCourse, Course } from '../lib/api/types'
 
