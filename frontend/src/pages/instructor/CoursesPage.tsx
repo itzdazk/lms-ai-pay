@@ -28,7 +28,8 @@ import {
   Star,
   BarChart3,
   Loader2,
-  Search
+  Search,
+  X
 } from 'lucide-react';
 import { coursesApi } from '../../lib/api/courses';
 import { useAuth } from '../../contexts/AuthContext';
@@ -54,45 +55,6 @@ function formatDuration(minutes: number): string {
   return `${mins}p`;
 }
 
-function translateErrorMessage(message: string): string {
-  if (!message) return 'Đã xảy ra lỗi';
-  
-  const lowerMessage = message.toLowerCase();
-  
-  // Course deletion errors
-  if (lowerMessage.includes('course not found') || lowerMessage.includes('không tìm thấy khóa học')) {
-    return 'Không tìm thấy khóa học';
-  }
-  if (lowerMessage.includes('permission') || lowerMessage.includes('quyền')) {
-    return 'Bạn không có quyền thực hiện thao tác này';
-  }
-  if (lowerMessage.includes('enrollments') || lowerMessage.includes('học viên đã đăng ký')) {
-    return 'Không thể xóa khóa học đã có học viên đăng ký. Vui lòng lưu trữ thay vì xóa';
-  }
-  if (lowerMessage.includes('active enrollments')) {
-    return 'Không thể xóa khóa học đã có học viên đăng ký. Vui lòng lưu trữ thay vì xóa';
-  }
-  
-  // Generic errors
-  if (lowerMessage.includes('not found')) {
-    return 'Không tìm thấy dữ liệu';
-  }
-  if (lowerMessage.includes('unauthorized') || lowerMessage.includes('chưa đăng nhập')) {
-    return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại';
-  }
-  if (lowerMessage.includes('forbidden') || lowerMessage.includes('không có quyền')) {
-    return 'Bạn không có quyền truy cập';
-  }
-  if (lowerMessage.includes('validation') || lowerMessage.includes('dữ liệu không hợp lệ')) {
-    return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại';
-  }
-  if (lowerMessage.includes('server error') || lowerMessage.includes('lỗi server')) {
-    return 'Lỗi server. Vui lòng thử lại sau';
-  }
-  
-  // Return original message if no translation found (might already be in Vietnamese)
-  return message;
-}
 
 // Component for each course row with dropdown menu
 function CourseRow({ 
@@ -108,23 +70,23 @@ function CourseRow({
   onDelete: (course: Course) => void;
   onChangeStatus: (course: Course) => void;
   isSelected: boolean;
-  onSelect: (courseId: string) => void;
+  onSelect: (courseId: number | null) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [adjustedPosition, setAdjustedPosition] = useState({ x: 0, y: 0, transform: 'translate(-100%, 0)' });
   const menuRef = useRef<HTMLDivElement>(null);
   
-  const price = course.discountPrice || course.originalPrice || 0;
-  const revenue = price * (course.enrolledCount || 0);
-  const durationMinutes = (course.durationMinutes || 0);
-  const lessonsCount = course.lessonsCount || 0;
+  const coursePrice = course.discountPrice || course.price || 0;
+  const revenue = coursePrice * (course.enrolledCount || 0);
+  const durationMinutes = Math.round((course.durationHours || 0) * 60);
+  const lessonsCount = course.totalLessons || 0;
 
   const handleToggle = (isCurrentlySelected: boolean, e: React.MouseEvent<HTMLTableRowElement>) => {
     e.preventDefault();
     // Toggle selection: nếu đã được chọn thì bỏ chọn, nếu chưa thì chọn
     if (isCurrentlySelected) {
-      onSelect('');
+      onSelect(null);
     } else {
       onSelect(course.id);
       setMenuPosition({ x: e.clientX, y: e.clientY });
@@ -256,11 +218,11 @@ function CourseRow({
         selected={isSelected}
         onRowToggle={handleToggle}
       >
-        <DarkOutlineTableCell>
-          <div className="flex items-center gap-3">
-            {course.thumbnail ? (
+        <DarkOutlineTableCell className="min-w-[250px] max-w-[400px]">
+          <div className="flex items-start gap-3">
+            {course.thumbnailUrl ? (
               <img
-                src={course.thumbnail}
+                src={course.thumbnailUrl}
                 alt={course.title}
                 className="w-16 h-10 object-cover rounded"
               />
@@ -269,16 +231,16 @@ function CourseRow({
                 <BookOpen className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               </div>
             )}
-            <div>
-              <p className="font-medium line-clamp-1 text-gray-900 dark:text-white">{course.title}</p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-gray-900 dark:text-white break-words whitespace-normal">{course.title}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{lessonsCount} bài • {formatDuration(durationMinutes)}</p>
             </div>
           </div>
         </DarkOutlineTableCell>
         <DarkOutlineTableCell>
-          {course.status === 'published' ? (
+          {course.status === 'PUBLISHED' ? (
             <Badge className="bg-green-600">Đã xuất bản</Badge>
-          ) : course.status === 'draft' ? (
+          ) : course.status === 'DRAFT' ? (
             <Badge variant="outline" className="border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300">Bản nháp</Badge>
           ) : (
             <Badge variant="secondary" className="bg-gray-600 text-white">Đã lưu trữ</Badge>
@@ -298,8 +260,28 @@ function CourseRow({
             </span>
           </div>
         </DarkOutlineTableCell>
+        <DarkOutlineTableCell className="w-[120px]">
+          {(() => {
+            const finalPrice = course.discountPrice ?? course.price;
+            if (finalPrice === 0 || finalPrice === null || finalPrice === undefined) {
+              return <span className="text-green-600 dark:text-green-400 font-semibold">Miễn phí</span>;
+            }
+            return (
+              <div className="flex flex-col">
+                {course.discountPrice && course.discountPrice !== course.price ? (
+                  <>
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">{formatPrice(course.discountPrice)}</span>
+                    <span className="text-gray-500 dark:text-gray-500 text-xs line-through">{formatPrice(course.price)}</span>
+                  </>
+                ) : (
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold">{formatPrice(course.price)}</span>
+                )}
+              </div>
+            );
+          })()}
+        </DarkOutlineTableCell>
         <DarkOutlineTableCell>
-          <span className="text-gray-900 dark:text-gray-300">{formatPrice(revenue)}</span>
+          <span className="text-blue-600 dark:text-blue-400 font-semibold">{formatPrice(revenue)}</span>
         </DarkOutlineTableCell>
         <DarkOutlineTableCell>
           <span className="text-gray-900 dark:text-gray-300">
@@ -403,12 +385,13 @@ export function CoursesPage() {
     level: undefined as 'beginner' | 'intermediate' | 'advanced' | undefined,
     sort: 'newest' as string,
   });
+  const [priceType, setPriceType] = useState<'all' | 'free' | 'paid'>('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
   const [categorySearch, setCategorySearch] = useState<string>('');
   const scrollPositionRef = useRef<number>(0);
@@ -458,7 +441,7 @@ export function CoursesPage() {
     if (currentUser) {
       loadCourses();
     }
-  }, [filters.page, filters.limit, filters.search, filters.status, filters.categoryId, filters.level, filters.sort, currentUser]);
+  }, [filters.page, filters.limit, filters.search, filters.status, filters.categoryId, filters.level, filters.sort, priceType, currentUser]);
 
   // Restore scroll position (only when page changes, not when courses update)
   useEffect(() => {
@@ -493,32 +476,42 @@ export function CoursesPage() {
   // Transform backend course data to frontend format
   const transformCourse = (course: any): Course => {
     return {
-      id: String(course.id),
+      id: typeof course.id === 'number' ? course.id : parseInt(String(course.id), 10),
       title: course.title || '',
       slug: course.slug || '',
       description: course.description || course.shortDescription || '',
-      thumbnail: course.thumbnailUrl || '',
-      previewVideoUrl: course.videoPreviewUrl || '',
-      instructorId: String(course.instructorId || ''),
-      categoryId: String(course.categoryId || course.category?.id || ''),
-      category: course.category ? {
-        id: String(course.category.id),
-        name: course.category.name,
-        slug: course.category.slug,
-      } : undefined,
-      level: course.level || 'beginner',
-      originalPrice: parseFloat(String(course.price || 0)) || 0,
+      shortDescription: course.shortDescription,
+      thumbnailUrl: course.thumbnailUrl || '',
+      videoPreviewUrl: course.videoPreviewUrl || '',
+      price: parseFloat(String(course.price || 0)) || 0,
       discountPrice: course.discountPrice ? parseFloat(String(course.discountPrice)) : undefined,
-      isFree: parseFloat(String(course.price || 0)) === 0,
-      status: course.status ? (course.status.toLowerCase() as 'draft' | 'published' | 'archived') : 'draft',
-      featured: course.isFeatured || false,
-      viewsCount: course.viewsCount || 0,
+      instructorId: typeof course.instructorId === 'number' ? course.instructorId : parseInt(String(course.instructorId || 0), 10),
+      instructor: course.instructor ? {
+        id: typeof course.instructor.id === 'number' ? course.instructor.id : parseInt(String(course.instructor.id), 10),
+        fullName: course.instructor.fullName || '',
+        avatarUrl: course.instructor.avatarUrl,
+      } : undefined,
+      categoryId: typeof course.categoryId === 'number' ? course.categoryId : (course.category?.id ? parseInt(String(course.category.id), 10) : parseInt(String(course.categoryId || 0), 10)),
+      category: course.category ? {
+        id: typeof course.category.id === 'number' ? course.category.id : parseInt(String(course.category.id), 10),
+        name: course.category.name || '',
+        slug: course.category.slug || '',
+        sortOrder: course.category.sortOrder || 0,
+        isActive: course.category.isActive !== undefined ? course.category.isActive : true,
+        createdAt: course.category.createdAt || '',
+        updatedAt: course.category.updatedAt || '',
+      } : undefined,
+      level: course.level ? (course.level.toUpperCase() as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED') : 'BEGINNER',
+      durationHours: parseFloat(String(course.durationHours || 0)) || 0,
+      totalLessons: course.totalLessons || 0,
+      language: course.language || 'vi',
+      status: course.status ? (course.status.toUpperCase() as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') : 'DRAFT',
+      isFeatured: course.isFeatured || false,
       enrolledCount: course.enrolledCount || 0,
       ratingAvg: course.ratingAvg ? parseFloat(String(course.ratingAvg)) : 0,
       ratingCount: course.ratingCount || 0,
+      viewsCount: course.viewsCount || 0,
       completionRate: course.completionRate ? parseFloat(String(course.completionRate)) : 0,
-      lessonsCount: course.lessonsCount || course.totalLessons || 0,
-      durationMinutes: (course.durationHours || 0) * 60,
       createdAt: course.createdAt || new Date().toISOString(),
       updatedAt: course.updatedAt || new Date().toISOString(),
     };
@@ -542,8 +535,22 @@ export function CoursesPage() {
       const coursesArray: any[] = coursesData?.data || [];
       const transformedCourses = coursesArray.map(transformCourse);
       
+      // Filter by price type (client-side filtering)
+      let filteredCourses = transformedCourses;
+      if (priceType === 'free') {
+        filteredCourses = transformedCourses.filter((course) => {
+          const finalPrice = course.discountPrice ?? course.price;
+          return finalPrice === 0 || finalPrice === null || finalPrice === undefined;
+        });
+      } else if (priceType === 'paid') {
+        filteredCourses = transformedCourses.filter((course) => {
+          const finalPrice = course.discountPrice ?? course.price;
+          return finalPrice !== 0 && finalPrice !== null && finalPrice !== undefined;
+        });
+      }
+      
       // Create a deep copy to ensure new reference and prevent any mutation
-      const coursesToSet = JSON.parse(JSON.stringify(transformedCourses)) as Course[];
+      const coursesToSet = JSON.parse(JSON.stringify(filteredCourses)) as Course[];
       setCourses(coursesToSet);
       
       const paginationData = coursesData.pagination || {
@@ -565,13 +572,7 @@ export function CoursesPage() {
   const loadCategories = async () => {
     try {
       const categoriesData = await coursesApi.getCategories();
-      // Backend returns id as number, but we need to keep it as string for Select component
-      // Transform to ensure consistency
-      const transformedCategories = categoriesData.map(cat => ({
-        ...cat,
-        id: typeof cat.id === 'number' ? String(cat.id) : cat.id,
-      }));
-      setCategories(transformedCategories);
+      setCategories(categoriesData);
     } catch (error: any) {
       console.error('Error loading categories:', error);
     }
@@ -594,7 +595,7 @@ export function CoursesPage() {
     
     try {
       setActionLoading(true);
-      await coursesApi.deleteInstructorCourse(selectedCourse.id);
+      await coursesApi.deleteInstructorCourse(String(selectedCourse.id));
       toast.success('Xóa khóa học thành công');
       setIsDeleteDialogOpen(false);
       setSelectedCourse(null);
@@ -614,7 +615,8 @@ export function CoursesPage() {
     try {
       setActionLoading(true);
       console.log('Changing status:', { courseId: selectedCourse.id, status: newStatus });
-      await coursesApi.changeCourseStatus(selectedCourse.id, newStatus);
+      const statusLower = newStatus.toLowerCase() as 'draft' | 'published' | 'archived';
+      await coursesApi.changeCourseStatus(String(selectedCourse.id), statusLower);
       toast.success('Thay đổi trạng thái thành công');
       setIsStatusDialogOpen(false);
       setSelectedCourse(null);
@@ -641,6 +643,18 @@ export function CoursesPage() {
     }
     isPageChangingRef.current = true;
     setFilters({ ...filters, [key]: value === 'all' ? undefined : value, page: 1 });
+  };
+
+  const handlePriceTypeChange = (value: 'all' | 'free' | 'paid') => {
+    setPriceType(value);
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+    } else {
+      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+    }
+    isPageChangingRef.current = true;
+    setFilters({ ...filters, page: 1 });
   };
 
   const handlePageChange = (newPage: number) => {
@@ -744,7 +758,7 @@ export function CoursesPage() {
           <CardTitle className="text-white">Bộ lọc</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Danh mục</Label>
               <Select
@@ -869,6 +883,23 @@ export function CoursesPage() {
             </div>
 
             <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Giá</Label>
+              <Select
+                value={priceType}
+                onValueChange={(value) => handlePriceTypeChange(value as 'all' | 'free' | 'paid')}
+              >
+                <DarkOutlineSelectTrigger>
+                  <SelectValue placeholder="Tất cả" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="all">Tất cả</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="free">Miễn phí</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="paid">Có phí</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Số lượng/trang</Label>
               <Select
                 value={filters.limit?.toString() || '10'}
@@ -892,6 +923,7 @@ export function CoursesPage() {
               <Button
                 onClick={() => {
                   setSearchInput('');
+                  setPriceType('all');
                   const mainContainer = document.querySelector('main');
                   if (mainContainer) {
                     scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
@@ -959,8 +991,17 @@ export function CoursesPage() {
               placeholder="Tìm kiếm theo tên khóa học..."
               value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => handleSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -982,6 +1023,7 @@ export function CoursesPage() {
                     <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
                     <DarkOutlineTableHead>Học viên</DarkOutlineTableHead>
                     <DarkOutlineTableHead>Đánh giá</DarkOutlineTableHead>
+                    <DarkOutlineTableHead>Giá</DarkOutlineTableHead>
                     <DarkOutlineTableHead>Doanh thu</DarkOutlineTableHead>
                     <DarkOutlineTableHead>Hoàn thành</DarkOutlineTableHead>
                     <DarkOutlineTableHead>Ngày tạo</DarkOutlineTableHead>
