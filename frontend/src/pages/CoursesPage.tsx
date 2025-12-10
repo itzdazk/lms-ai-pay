@@ -4,9 +4,7 @@
 // ============================================
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Button } from '../components/ui/button'
-import { Filter } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
     CourseList,
@@ -17,7 +15,7 @@ import {
     type SortOption,
 } from '../components/Courses'
 import { coursesApi } from '../lib/api'
-import type { Category, Tag, PublicCourse, Course } from '../lib/api/types'
+import type { Category, Tag, PublicCourse } from '../lib/api/types'
 
 export function CoursesPage() {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -41,6 +39,9 @@ export function CoursesPage() {
     const [searchQuery, setSearchQuery] = useState(
         searchParams.get('search') || ''
     )
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(
+        searchParams.get('search') || ''
+    )
     const [sortBy, setSortBy] = useState<SortOption>(
         (searchParams.get('sort') as SortOption) || 'popular'
     )
@@ -50,8 +51,12 @@ export function CoursesPage() {
             : undefined,
         level: (searchParams.get('level') as any) || undefined,
         priceType: (searchParams.get('priceType') as any) || undefined,
-        tagId: searchParams.get('tagId')
-            ? parseInt(searchParams.get('tagId')!)
+        tagIds: searchParams.get('tagIds')
+            ? searchParams
+                  .get('tagIds')!
+                  .split(',')
+                  .map((id) => parseInt(id))
+                  .filter((id) => !isNaN(id))
             : undefined,
     })
 
@@ -98,6 +103,15 @@ export function CoursesPage() {
         fetchTags()
     }, [])
 
+    // Debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+        }, 500) // 500ms delay
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
     // Fetch courses
     useEffect(() => {
         const fetchCourses = async () => {
@@ -107,13 +121,13 @@ export function CoursesPage() {
                 const response = await coursesApi.getPublicCourses({
                     page: currentPage,
                     limit,
-                    search: searchQuery || undefined,
+                    search: debouncedSearchQuery || undefined,
                     categoryId: filters.categoryId,
                     level: filters.level,
                     minPrice: filters.minPrice,
                     maxPrice: filters.maxPrice,
                     sort: sortBy,
-                    tagId: filters.tagId,
+                    tagIds: filters.tagIds,
                 })
 
                 console.log('CoursesPage.tsx: ', response)
@@ -142,27 +156,28 @@ export function CoursesPage() {
         }
 
         fetchCourses()
-    }, [currentPage, searchQuery, filters, sortBy])
+    }, [currentPage, debouncedSearchQuery, filters, sortBy])
 
     // Sync URL params
     useEffect(() => {
         const params: Record<string, string> = {}
 
-        if (searchQuery) params.search = searchQuery
+        if (debouncedSearchQuery) params.search = debouncedSearchQuery
         if (sortBy !== 'popular') params.sort = sortBy
         if (filters.categoryId)
             params.categoryId = filters.categoryId.toString()
         if (filters.level) params.level = filters.level
         if (filters.priceType) params.priceType = filters.priceType
-        if (filters.tagId) params.tagId = filters.tagId.toString()
+        if (filters.tagIds && filters.tagIds.length > 0)
+            params.tagIds = filters.tagIds.join(',')
 
         setSearchParams(params, { replace: true })
-    }, [searchQuery, sortBy, filters, setSearchParams])
+    }, [debouncedSearchQuery, sortBy, filters, setSearchParams])
 
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1)
-    }, [searchQuery, filters, sortBy])
+    }, [debouncedSearchQuery, filters, sortBy])
 
     const handleSearchChange = (value: string) => {
         setSearchQuery(value)
@@ -184,16 +199,16 @@ export function CoursesPage() {
     return (
         <div className='bg-background min-h-screen'>
             {/* Header Section */}
-            <div className='bg-[#1A1A1A] border-b border-[#2D2D2D]'>
-                <div className='container mx-auto px-4 py-6'>
-                    <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4'>
+            <div className='bg-[#1A1A1A]  border-b border-gray-800 dark:border-gray-800'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                    <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-6 '>
                         <div>
-                            <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white'>
+                            <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white dark:text-white'>
                                 Khám phá khóa học
                             </h1>
-                            <p className='text-sm text-gray-400'>
+                            <p className='text-base text-gray-300 dark:text-gray-300 leading-relaxed'>
                                 Tìm kiếm và học hỏi từ{' '}
-                                <span className='text-white font-semibold'>
+                                <span className='text-white dark:text-white font-semibold'>
                                     {totalCourses}
                                 </span>{' '}
                                 khóa học chất lượng cao
@@ -202,85 +217,88 @@ export function CoursesPage() {
 
                         {/* Stats */}
                         <div className='flex gap-4'>
-                            <div className='text-center'>
-                                <div className='text-xl font-bold text-white'>
-                                    {totalCourses}
+                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-200 shadow-lg hover:shadow-blue-500/10 group min-w-[100px]'>
+                                <div className='text-2xl font-bold text-white dark:text-white group-hover:text-blue-400 dark:group-hover:text-blue-400 transition-colors'>
+                                    {totalCourses} 
                                 </div>
-                                <div className='text-xs text-gray-400'>
+                                <div className='text-xs text-gray-400 dark:text-gray-400 group-hover:text-gray-300 dark:group-hover:text-gray-300 transition-colors mt-1'>
                                     Khóa học
                                 </div>
                             </div>
-                            <div className='text-center'>
-                                <div className='text-xl font-bold text-white'>
+                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] hover:border-green-500 dark:hover:border-green-500 transition-all duration-200 shadow-lg hover:shadow-green-500/10 group min-w-[100px]'>
+                                <div className='text-2xl font-bold text-white dark:text-white group-hover:text-green-400 dark:group-hover:text-green-400 transition-colors'>
                                     {categories.length}
                                 </div>
-                                <div className='text-xs text-gray-400'>
+                                <div className='text-xs text-gray-400 dark:text-gray-400 group-hover:text-gray-300 dark:group-hover:text-gray-300 transition-colors mt-1'>
                                     Danh mục
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* Search Bar */}
-                    <div className='flex gap-2'>
-                        <CourseSearch
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            className='flex-1'
-                        />
-                        <Button
-                            variant='outline'
-                            onClick={() => setShowFilters(!showFilters)}
-                            className='md:hidden h-10 border-[#2D2D2D] text-white hover:bg-[#2D2D2D]'
-                        >
-                            <Filter className='h-4 w-4 mr-2' />
-                            Bộ lọc
-                        </Button>
-                    </div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className='container mx-auto px-4 py-8'>
+            <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8'>
                 <div className='grid lg:grid-cols-4 gap-6'>
                     {/* Filters Sidebar */}
-                    <aside
-                        className={`lg:block ${
-                            showFilters ? 'block' : 'hidden'
-                        }`}
-                    >
+                    <aside className='lg:col-span-1'>
                         <CourseFilters
                             filters={filters}
                             onChange={handleFiltersChange}
                             categories={categories}
                             tags={tags}
                             isLoading={isCategoriesLoading || isTagsLoading}
+                            onToggle={() => setShowFilters(!showFilters)}
+                            showFilters={showFilters}
                         />
                     </aside>
 
                     {/* Courses Grid */}
                     <div className='lg:col-span-3 space-y-6'>
-                        {/* Sort & Results */}
-                        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
-                            <p className='text-gray-400'>
-                                {isLoading ? (
-                                    'Đang tải...'
-                                ) : (
-                                    <>
-                                        Hiển thị {(currentPage - 1) * limit + 1}
-                                        -
-                                        {Math.min(
-                                            currentPage * limit,
-                                            totalCourses
-                                        )}{' '}
-                                        trong tổng số {totalCourses} khóa học
-                                    </>
-                                )}
-                            </p>
-                            <CourseSortSelect
-                                value={sortBy}
-                                onChange={handleSortChange}
-                            />
+                        {/* Sort & Search */}
+                        <div className='bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl p-4 shadow-lg space-y-4'>
+                            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
+                                <p className='text-sm text-gray-300'>
+                                    {isLoading ? (
+                                        <span className='animate-pulse'>Đang tải...</span>
+                                    ) : (
+                                        <>
+                                            Hiển thị{' '}
+                                            <span className='text-white font-semibold'>
+                                                {(currentPage - 1) * limit + 1}
+                                            </span>
+                                            {' - '}
+                                            <span className='text-white font-semibold'>
+                                                {Math.min(
+                                                    currentPage * limit,
+                                                    totalCourses
+                                                )}
+                                            </span>{' '}
+                                            trong tổng số{' '}
+                                            <span className='text-white font-semibold'>
+                                                {totalCourses}
+                                            </span>{' '}
+                                            khóa học
+                                        </>
+                                    )}
+                                </p>
+                                <CourseSortSelect
+                                    value={sortBy}
+                                    onChange={handleSortChange}
+                                />
+                            </div>
+
+                            {/* Search Bar */}
+                            <div className='flex gap-3'>
+                                <div className='flex-1'>
+                                    <CourseSearch
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                        className='flex-1'
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Course List */}
@@ -290,6 +308,7 @@ export function CoursesPage() {
                             currentPage={currentPage}
                             totalPages={totalPages}
                             totalCourses={totalCourses}
+                            limit={limit}
                             onPageChange={handlePageChange}
                         />
                     </div>
