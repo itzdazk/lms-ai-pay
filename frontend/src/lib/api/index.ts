@@ -3,6 +3,7 @@ export { default as apiClient } from './client';
 export * from './types';
 export { authApi } from './auth';
 export { coursesApi } from './courses';
+export { instructorCoursesApi } from './instructor-courses';
 export { dashboardApi } from './dashboard';
 export { usersApi } from './users';
 export { adminCoursesApi } from './admin-courses';
