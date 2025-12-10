@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../ui/dark-outline-select-trigger';
-import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw } from 'lucide-react';
+import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw, BookOpen, FileText, Tag as TagIcon, Globe, HelpCircle, Hash, Info, Target, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Course, Category, Tag } from '../../lib/api/types';
 import { coursesApi } from '../../lib/api/courses';
@@ -185,11 +185,15 @@ export function CourseForm({
         setOriginalTagIds(new Set(originalIds));
       }
       
-      if (course.thumbnailUrl) {
-        setThumbnailPreview(course.thumbnailUrl);
+      // Support both field names for backward compatibility
+      const thumbnailUrl = (course as any).thumbnailUrl || (course as any).thumbnail;
+      const videoPreviewUrl = (course as any).videoPreviewUrl || (course as any).previewVideoUrl;
+      
+      if (thumbnailUrl) {
+        setThumbnailPreview(thumbnailUrl);
       }
-      if (course.videoPreviewUrl) {
-        setPreviewVideoPreview(course.videoPreviewUrl);
+      if (videoPreviewUrl) {
+        setPreviewVideoPreview(videoPreviewUrl);
       }
     }
   }, [course]);
@@ -720,18 +724,22 @@ export function CourseForm({
     setPreviewFile(null);
     
     // Reset previews to original course values
-    if (course?.thumbnailUrl) {
-      setThumbnailPreview(course.thumbnailUrl);
+    // Support both field names for backward compatibility
+    const thumbnailUrl = (course as any)?.thumbnailUrl || (course as any)?.thumbnail;
+    const videoPreviewUrl = (course as any)?.videoPreviewUrl || (course as any)?.previewVideoUrl;
+    
+    if (thumbnailUrl) {
+      setThumbnailPreview(thumbnailUrl);
     } else {
       setThumbnailPreview(null);
     }
     
-    if (course?.videoPreviewUrl) {
+    if (videoPreviewUrl) {
       // Revoke blob URL if exists
       if (previewVideoPreview && previewVideoPreview.startsWith('blob:')) {
         URL.revokeObjectURL(previewVideoPreview);
       }
-      setPreviewVideoPreview(course.videoPreviewUrl);
+      setPreviewVideoPreview(videoPreviewUrl);
     } else {
       // Revoke blob URL if exists
       if (previewVideoPreview && previewVideoPreview.startsWith('blob:')) {
@@ -833,15 +841,33 @@ export function CourseForm({
       noValidate
     >
       {/* Basic Information */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Thông tin cơ bản</h3>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex items-center gap-3 pb-4 border-b border-[#2D2D2D]">
+          <div className="p-2 bg-blue-500/10 rounded-lg">
+            <BookOpen className="h-5 w-5 text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">Thông tin cơ bản</h3>
+            <p className="text-sm text-gray-400 mt-0.5">Thông tin chính về khóa học của bạn</p>
+          </div>
+        </div>
         
+        {/* Title Section */}
         <div className="space-y-2">
           <Label htmlFor="title" className="text-white flex items-center gap-2">
-            Tiêu đề khóa học <span className="text-red-500">*</span>
+            <BookOpen className="h-4 w-4 text-gray-400" />
+            <span>Tiêu đề khóa học</span>
+            <span className="text-red-500">*</span>
             {isFieldChanged('title') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Tiêu đề nên ngắn gọn, hấp dẫn và mô tả rõ nội dung khóa học. Tối thiểu 5 ký tự, tối đa 200 ký tự.
+              </div>
+            </div>
           </Label>
           <FormInput
             id="title"
@@ -877,21 +903,40 @@ export function CourseForm({
             }}
           />
           {formData.title.trim().length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {formData.title.trim().length} / 200 ký tự
-              {formData.title.trim().length < 5 && (
-                <span className="text-red-500 ml-2">(Tối thiểu 5 ký tự)</span>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-gray-400">
+                {formData.title.trim().length} / 200 ký tự
+                {formData.title.trim().length < 5 && (
+                  <span className="text-red-500 ml-2">(Tối thiểu 5 ký tự)</span>
+                )}
+              </p>
+              {formData.title.trim().length >= 5 && formData.title.trim().length <= 200 && (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Circle className="h-2 w-2 fill-green-400" />
+                  Hợp lệ
+                </span>
               )}
-            </p>
+            </div>
           )}
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
+        {/* Short Description Section */}
         <div className="space-y-2">
           <Label htmlFor="shortDescription" className="text-white flex items-center gap-2">
-            Mô tả ngắn
+            <FileText className="h-4 w-4 text-gray-400" />
+            <span>Mô tả ngắn</span>
             {isFieldChanged('shortDescription') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Mô tả ngắn sẽ hiển thị trên trang danh sách khóa học. Viết ngắn gọn, hấp dẫn trong 1-2 câu (tối đa 500 ký tự).
+              </div>
+            </div>
           </Label>
           <Textarea
             id="shortDescription"
@@ -915,20 +960,39 @@ export function CourseForm({
               }
             }}
           />
-          <p className="text-xs text-gray-400">
-            {formData.shortDescription.length}/500
-            {formData.shortDescription.length > 500 && (
-              <span className="text-red-500 ml-2">(Vượt quá giới hạn)</span>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              {formData.shortDescription.length}/500 ký tự
+              {formData.shortDescription.length > 500 && (
+                <span className="text-red-500 ml-2">(Vượt quá giới hạn)</span>
+              )}
+            </p>
+            {formData.shortDescription.length > 0 && formData.shortDescription.length <= 500 && (
+              <span className="text-xs text-green-400 flex items-center gap-1">
+                <Circle className="h-2 w-2 fill-green-400" />
+                Hợp lệ
+              </span>
             )}
-          </p>
+          </div>
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
+        {/* Detailed Description Section */}
         <div className="space-y-2">
           <Label htmlFor="description" className="text-white flex items-center gap-2">
-            Mô tả chi tiết
+            <FileText className="h-4 w-4 text-gray-400" />
+            <span>Mô tả chi tiết</span>
             {isFieldChanged('description') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Mô tả chi tiết sẽ hiển thị trên trang chi tiết khóa học. Bao gồm nội dung, lợi ích, và thông tin quan trọng (tối đa 10,000 ký tự).
+              </div>
+            </div>
           </Label>
           <Textarea
             id="description"
@@ -953,16 +1017,38 @@ export function CourseForm({
             }}
           />
           {formData.description.trim().length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {formData.description.trim().length} / 10000 ký tự
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-gray-400">
+                {formData.description.trim().length} / 10000 ký tự
+              </p>
+              {formData.description.trim().length <= 10000 && (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Circle className="h-2 w-2 fill-green-400" />
+                  Hợp lệ
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
+        {/* Category and Level Section */}
+        <div className="p-4 bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <TagIcon className="h-4 w-4 text-blue-400" />
+            <h4 className="text-sm font-semibold text-gray-300">Phân loại khóa học</h4>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
             <Label htmlFor="categoryId" className="text-white flex items-center gap-2">
-              Danh mục <span className="text-red-500">*</span>
+              <TagIcon className="h-4 w-4 text-gray-400" />
+              <span>Danh mục</span>
+              <span className="text-red-500">*</span>
               {isFieldChanged('categoryId') && (
                 <Circle className="h-2 w-2 fill-green-500 text-green-500" />
               )}
@@ -1022,10 +1108,17 @@ export function CourseForm({
 
           <div className="space-y-2">
             <Label htmlFor="level" className="text-white flex items-center gap-2">
-              Cấp độ
+              <Globe className="h-4 w-4 text-gray-400" />
+              <span>Cấp độ</span>
               {isFieldChanged('level') && (
                 <Circle className="h-2 w-2 fill-green-500 text-green-500" />
               )}
+              <div className="group relative ml-auto">
+                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                <div className="absolute right-0 top-6 w-56 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                  Cấp độ phù hợp với học viên: Cơ bản, Trung bình, hoặc Nâng cao.
+                </div>
+              </div>
             </Label>
             <Select
               key={`level-select-${formData.level}`}
@@ -1052,7 +1145,18 @@ export function CourseForm({
               </DarkOutlineSelectContent>
             </Select>
           </div>
+          </div>
         </div>
+
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
+        {/* Price Section */}
+        <div className="p-4 bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <Circle className="h-4 w-4 text-green-400 fill-green-400" />
+            <h4 className="text-sm font-semibold text-gray-300">Thiết lập giá</h4>
+          </div>
 
         {/* Checkbox Miễn phí - Chiếm hết hàng với ghi chú chi tiết */}
         <div className="flex items-start gap-3 p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg w-full">
@@ -1245,18 +1349,39 @@ export function CourseForm({
             </div>
           )}
         </div>
+        </div>
       </div>
 
-      {/* Media Upload */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Hình ảnh và Video</h3>
+      {/* Large Divider - Separating Basic Info (Category, Level, Price) from Media */}
+      <div className="my-8 border-t-2 border-[#2D2D2D]"></div>
 
+      {/* Media Upload */}
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex items-center gap-3 pb-4 border-b border-[#2D2D2D]">
+          <div className="p-2 bg-purple-500/10 rounded-lg">
+            <ImageIcon className="h-5 w-5 text-purple-400" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">Hình ảnh và Video</h3>
+            <p className="text-sm text-gray-400 mt-0.5">Tải lên ảnh đại diện và video giới thiệu cho khóa học</p>
+          </div>
+        </div>
+
+        {/* Thumbnail Section */}
         <div className="space-y-2">
           <Label className="text-white flex items-center gap-2">
-            Ảnh đại diện
+            <ImageIcon className="h-4 w-4 text-gray-400" />
+            <span>Ảnh đại diện</span>
             {thumbnailFile !== null && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Ảnh đại diện sẽ hiển thị trên trang danh sách và chi tiết khóa học. Kích thước tối đa 5MB, định dạng: JPG, PNG, GIF.
+              </div>
+            </div>
           </Label>
           <div className="flex items-center gap-4">
             {thumbnailPreview && (
@@ -1298,12 +1423,23 @@ export function CourseForm({
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
+        {/* Preview Video Section */}
         <div className="space-y-2">
           <Label className="text-white flex items-center gap-2">
-            Video giới thiệu
+            <Video className="h-4 w-4 text-gray-400" />
+            <span>Video giới thiệu</span>
             {previewFile !== null && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Video giới thiệu sẽ được phát tự động trên trang chi tiết khóa học. Kích thước tối đa 100MB, định dạng: MP4, WebM, MOV.
+              </div>
+            </div>
           </Label>
           <div className="space-y-4">
             {previewVideoPreview && (
@@ -1348,14 +1484,26 @@ export function CourseForm({
         </div>
       </div>
 
+      {/* Large Divider - Separating Media from Tags */}
+      <div className="my-8 border-t-2 border-[#2D2D2D]"></div>
+
       {/* Tags */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          Tags
-          {isFieldChanged('tags') && (
-            <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-          )}
-        </h3>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex items-center gap-3 pb-4 border-b border-[#2D2D2D]">
+          <div className="p-2 bg-orange-500/10 rounded-lg">
+            <Hash className="h-5 w-5 text-orange-400" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-white">Tags</h3>
+              {isFieldChanged('tags') && (
+                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+              )}
+            </div>
+            <p className="text-sm text-gray-400 mt-0.5">Thêm tags để giúp học viên dễ dàng tìm thấy khóa học của bạn</p>
+          </div>
+        </div>
         
         {/* Selected Tags */}
         {formData.tags.length > 0 && (
@@ -1539,16 +1687,38 @@ export function CourseForm({
         </div>
       </div>
 
+      {/* Large Divider - Separating Tags from Additional Information */}
+      <div className="my-8 border-t-2 border-[#2D2D2D]"></div>
+
       {/* Additional Information */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Thông tin bổ sung</h3>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex items-center gap-3 pb-4 border-b border-[#2D2D2D]">
+          <div className="p-2 bg-indigo-500/10 rounded-lg">
+            <Info className="h-5 w-5 text-indigo-400" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">Thông tin bổ sung</h3>
+            <p className="text-sm text-gray-400 mt-0.5">Cung cấp thông tin chi tiết về khóa học để thu hút học viên</p>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
 
         <div className="space-y-2">
           <Label htmlFor="requirements" className="text-white flex items-center gap-2">
-            Yêu cầu
+            <AlertCircle className="h-4 w-4 text-gray-400" />
+            <span>Yêu cầu</span>
             {isFieldChanged('requirements') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Liệt kê các yêu cầu cần thiết để tham gia khóa học (ví dụ: kiến thức cơ bản, phần mềm cần thiết, v.v.)
+              </div>
+            </div>
           </Label>
           <Textarea
             id="requirements"
@@ -1562,18 +1732,36 @@ export function CourseForm({
             maxLength={5000}
           />
           {formData.requirements.trim().length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {formData.requirements.trim().length} / 5000 ký tự
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-gray-400">
+                {formData.requirements.trim().length} / 5000 ký tự
+              </p>
+              {formData.requirements.trim().length <= 5000 && formData.requirements.trim().length > 0 && (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Circle className="h-2 w-2 fill-green-400" />
+                  Hợp lệ
+                </span>
+              )}
+            </div>
           )}
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
         <div className="space-y-2">
           <Label htmlFor="whatYouLearn" className="text-white flex items-center gap-2">
-            Bạn sẽ học được gì
+            <BookOpen className="h-4 w-4 text-gray-400" />
+            <span>Bạn sẽ học được gì</span>
             {isFieldChanged('whatYouLearn') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Mô tả những kiến thức và kỹ năng cụ thể mà học viên sẽ đạt được sau khi hoàn thành khóa học.
+              </div>
+            </div>
           </Label>
           <Textarea
             id="whatYouLearn"
@@ -1587,18 +1775,36 @@ export function CourseForm({
             maxLength={5000}
           />
           {formData.whatYouLearn.trim().length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {formData.whatYouLearn.trim().length} / 5000 ký tự
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-gray-400">
+                {formData.whatYouLearn.trim().length} / 5000 ký tự
+              </p>
+              {formData.whatYouLearn.trim().length <= 5000 && formData.whatYouLearn.trim().length > 0 && (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Circle className="h-2 w-2 fill-green-400" />
+                  Hợp lệ
+                </span>
+              )}
+            </div>
           )}
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
         <div className="space-y-2">
           <Label htmlFor="courseObjectives" className="text-white flex items-center gap-2">
-            Mục tiêu khóa học
+            <Target className="h-4 w-4 text-gray-400" />
+            <span>Mục tiêu khóa học</span>
             {isFieldChanged('courseObjectives') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Nêu rõ các mục tiêu học tập mà khóa học hướng tới đạt được.
+              </div>
+            </div>
           </Label>
           <Textarea
             id="courseObjectives"
@@ -1612,18 +1818,36 @@ export function CourseForm({
             maxLength={5000}
           />
           {formData.courseObjectives.trim().length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {formData.courseObjectives.trim().length} / 5000 ký tự
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-gray-400">
+                {formData.courseObjectives.trim().length} / 5000 ký tự
+              </p>
+              {formData.courseObjectives.trim().length <= 5000 && formData.courseObjectives.trim().length > 0 && (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Circle className="h-2 w-2 fill-green-400" />
+                  Hợp lệ
+                </span>
+              )}
+            </div>
           )}
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-[#2D2D2D] my-6"></div>
+
         <div className="space-y-2">
           <Label htmlFor="targetAudience" className="text-white flex items-center gap-2">
-            Đối tượng mục tiêu
+            <Users className="h-4 w-4 text-gray-400" />
+            <span>Đối tượng mục tiêu</span>
             {isFieldChanged('targetAudience') && (
               <Circle className="h-2 w-2 fill-green-500 text-green-500" />
             )}
+            <div className="group relative ml-auto">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Mô tả đối tượng học viên phù hợp với khóa học (ví dụ: người mới bắt đầu, sinh viên, chuyên gia, v.v.)
+              </div>
+            </div>
           </Label>
           <Textarea
             id="targetAudience"
@@ -1637,9 +1861,17 @@ export function CourseForm({
             maxLength={5000}
           />
           {formData.targetAudience.trim().length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {formData.targetAudience.trim().length} / 5000 ký tự
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-gray-400">
+                {formData.targetAudience.trim().length} / 5000 ký tự
+              </p>
+              {formData.targetAudience.trim().length <= 5000 && formData.targetAudience.trim().length > 0 && (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <Circle className="h-2 w-2 fill-green-400" />
+                  Hợp lệ
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
