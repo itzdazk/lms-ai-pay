@@ -14,6 +14,7 @@ import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle
 import { toast } from 'sonner';
 import type { Course, Category, Tag } from '../../lib/api/types';
 import { coursesApi } from '../../lib/api/courses';
+import { Checkbox } from '../ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ interface CourseFormData {
   level: 'beginner' | 'intermediate' | 'advanced';
   price: string;
   discountPrice: string;
+  isFree: boolean;
   requirements: string;
   whatYouLearn: string;
   courseObjectives: string;
@@ -49,7 +51,7 @@ interface CourseFormProps {
   onTagCreated?: () => void;
 }
 
-// Format number to currency string without VND suffix (for input display)
+// Format number to currency string without VNĐ suffix (for input display)
 function formatPriceInput(price: number | undefined | string): string {
   if (!price) return '';
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -66,7 +68,9 @@ function parsePriceInput(value: string): number | undefined {
   // Remove all dots, spaces, and non-numeric characters except digits
   const cleaned = value.replace(/[^\d]/g, '');
   if (cleaned === '') return undefined;
-  return parseFloat(cleaned);
+  const parsed = parseFloat(cleaned);
+  // Return the parsed number (including 0) if valid, undefined if NaN
+  return isNaN(parsed) ? undefined : parsed;
 }
 
 export function CourseForm({
@@ -109,6 +113,7 @@ export function CourseForm({
     level: 'beginner',
     price: formatPriceInput(0),
     discountPrice: '',
+    isFree: true, // Default to free course
     requirements: '',
     whatYouLearn: '',
     courseObjectives: '',
@@ -151,14 +156,18 @@ export function CourseForm({
         }
       }
       
+      const originalPrice = course.originalPrice || course.price || 0;
+      const isFree = originalPrice === 0 || originalPrice === null || originalPrice === undefined;
+      
       const initialData: CourseFormData = {
         title: course.title || '',
         description: course.description || '',
         shortDescription: course.shortDescription || course.description?.substring(0, 500) || '',
         categoryId: categoryId,
         level: normalizedLevel,
-        price: course.originalPrice?.toString() || '0',
+        price: isFree ? formatPriceInput(0) : formatPriceInput(originalPrice),
         discountPrice: course.discountPrice?.toString() || '',
+        isFree: isFree,
         requirements: course.requirements || '',
         whatYouLearn: course.whatYouLearn || '',
         courseObjectives: course.courseObjectives || '',
@@ -176,11 +185,11 @@ export function CourseForm({
         setOriginalTagIds(new Set(originalIds));
       }
       
-      if (course.thumbnail) {
-        setThumbnailPreview(course.thumbnail);
+      if (course.thumbnailUrl) {
+        setThumbnailPreview(course.thumbnailUrl);
       }
-      if (course.previewVideoUrl) {
-        setPreviewVideoPreview(course.previewVideoUrl);
+      if (course.videoPreviewUrl) {
+        setPreviewVideoPreview(course.videoPreviewUrl);
       }
     }
   }, [course]);
@@ -322,21 +331,31 @@ export function CourseForm({
       missingFields.push('danh mục');
     }
     
-    // Price validation: required, >= 0
-    const price = parsePriceInput(formData.price);
-    if (price === undefined || price < 0) {
-      invalidFields.push('giá phải là số không âm');
-    }
-    
-    // Discount price validation: optional, >= 0 and <= price
-    if (formData.discountPrice.trim()) {
-      const discountPrice = parsePriceInput(formData.discountPrice);
-      if (discountPrice === undefined || discountPrice < 0) {
-        invalidFields.push('giá khuyến mãi phải là số không âm');
-      } else if (price !== undefined && discountPrice > price) {
-        invalidFields.push('giá khuyến mãi không được lớn hơn giá gốc');
+    // Price validation: if not free, price is required and must be >= 0
+    if (!formData.isFree) {
+      // Check if price is empty/missing first
+      if (!formData.price.trim()) {
+        missingFields.push('giá khóa học');
+      } else {
+        const price = parsePriceInput(formData.price);
+        // Allow 0 as valid price (>= 0 means 0 is valid)
+        if (price === undefined || price < 0 || isNaN(price)) {
+          invalidFields.push('giá phải là số không âm');
+        } else {
+          // Only validate discount price if price is valid
+          // Discount price validation: optional, >= 0 and <= price
+          if (formData.discountPrice.trim()) {
+            const discountPrice = parsePriceInput(formData.discountPrice);
+            if (discountPrice === undefined || discountPrice < 0) {
+              invalidFields.push('giá khuyến mãi phải là số không âm');
+            } else if (price !== undefined && discountPrice > price) {
+              invalidFields.push('giá khuyến mãi không được lớn hơn giá gốc');
+            }
+          }
+        }
       }
     }
+    // If free course, skip discount price validation - it will be cleared/ignored in prepareSubmitData
     
     // Language validation: optional, 2-10 characters
     if (formData.language.trim() && (formData.language.trim().length < 2 || formData.language.trim().length > 10)) {
@@ -372,9 +391,41 @@ export function CourseForm({
       throw new Error('Category ID is invalid');
     }
 
-    const price = parsePriceInput(formData.price);
-    if (price === undefined || price < 0) {
-      throw new Error('Price is invalid');
+    // If free course, set price to 0 and discountPrice to 0
+    // Backend understands: price=0 and discountPrice=0 means free course
+    let price: number;
+    let discountPrice: number | null;
+    
+    if (formData.isFree) {
+      price = 0;
+      discountPrice = 0; // Backend requires discountPrice=0 for free courses
+    } else {
+      const parsedPrice = parsePriceInput(formData.price);
+      // Allow 0 as valid price (>= 0 means 0 is valid)
+      if (parsedPrice === undefined || parsedPrice < 0 || isNaN(parsedPrice)) {
+        throw new Error('Price is invalid');
+      }
+      price = parsedPrice;
+      
+      // Handle discount price for paid courses
+      if (formData.discountPrice.trim()) {
+        const discount = parsePriceInput(formData.discountPrice);
+        if (discount === undefined || discount < 0) {
+          throw new Error('Discount price is invalid');
+        }
+        // If discount is 0, treat it as removing discount (send null)
+        if (discount === 0) {
+          discountPrice = null;
+        } else {
+          if (discount > price) {
+            throw new Error('Discount price cannot be greater than price');
+          }
+          discountPrice = discount;
+        }
+      } else {
+        // If no discount price, send null to remove existing discount
+        discountPrice = null;
+      }
     }
 
     // Prepare tags for separate handling (not sent in create/update request)
@@ -390,10 +441,7 @@ export function CourseForm({
       categoryId: categoryId,
       level: formData.level.toUpperCase(),
       price: price,
-      discountPrice: formData.discountPrice ? (() => {
-        const discount = parsePriceInput(formData.discountPrice);
-        return discount;
-      })() : undefined,
+      discountPrice: discountPrice,
       requirements: formData.requirements.trim() || undefined,
       whatYouLearn: formData.whatYouLearn.trim() || undefined,
       courseObjectives: formData.courseObjectives.trim() || undefined,
@@ -416,6 +464,31 @@ export function CourseForm({
 
     // Validate all fields
     const { missingFields, invalidFields } = validateFormData();
+
+    // Priority: Check missing fields first (required fields)
+    if (missingFields.length > 0) {
+      // Show general message if multiple fields are missing
+      if (missingFields.length > 1) {
+        toast.error('Vui lòng nhập các thông tin bắt buộc');
+      } else {
+        // Show specific message for single missing field
+        toast.error(`Vui lòng nhập ${missingFields[0]}`);
+      }
+      
+      // Trigger HTML5 validation to show field-level messages
+      // Use setTimeout to ensure toast shows first
+      setTimeout(() => {
+        const form = e.currentTarget.closest('form');
+        if (form) {
+          const firstInvalidField = form.querySelector(':invalid') as HTMLInputElement | HTMLTextAreaElement;
+          if (firstInvalidField) {
+            firstInvalidField.focus();
+            firstInvalidField.reportValidity();
+          }
+        }
+      }, 100);
+      return;
+    }
 
     // If there are invalid fields (validation errors), show message
     if (invalidFields.length > 0) {
@@ -461,31 +534,6 @@ export function CourseForm({
             targetField.focus();
             targetField.setCustomValidity(invalidFields[0]);
             targetField.reportValidity();
-          }
-        }
-      }, 100);
-      return;
-    }
-
-    // If there are missing fields, show appropriate message
-    if (missingFields.length > 0) {
-      // Show general message if multiple fields are missing
-      if (missingFields.length > 1) {
-        toast.error('Vui lòng nhập các thông tin bắt buộc');
-      } else {
-        // Show specific message for single missing field
-        toast.error(`Vui lòng nhập ${missingFields[0]}`);
-      }
-      
-      // Trigger HTML5 validation to show field-level messages
-      // Use setTimeout to ensure toast shows first
-      setTimeout(() => {
-        const form = e.currentTarget.closest('form');
-        if (form) {
-          const firstInvalidField = form.querySelector(':invalid') as HTMLInputElement | HTMLTextAreaElement;
-          if (firstInvalidField) {
-            firstInvalidField.focus();
-            firstInvalidField.reportValidity();
           }
         }
       }, 100);
@@ -672,18 +720,18 @@ export function CourseForm({
     setPreviewFile(null);
     
     // Reset previews to original course values
-    if (course?.thumbnail) {
-      setThumbnailPreview(course.thumbnail);
+    if (course?.thumbnailUrl) {
+      setThumbnailPreview(course.thumbnailUrl);
     } else {
       setThumbnailPreview(null);
     }
     
-    if (course?.previewVideoUrl) {
+    if (course?.videoPreviewUrl) {
       // Revoke blob URL if exists
       if (previewVideoPreview && previewVideoPreview.startsWith('blob:')) {
         URL.revokeObjectURL(previewVideoPreview);
       }
-      setPreviewVideoPreview(course.previewVideoUrl);
+      setPreviewVideoPreview(course.videoPreviewUrl);
     } else {
       // Revoke blob URL if exists
       if (previewVideoPreview && previewVideoPreview.startsWith('blob:')) {
@@ -743,6 +791,7 @@ export function CourseForm({
         formData.categoryId !== '' ||
         (formData.price !== '0' && formData.price !== '') ||
         formData.discountPrice !== '' ||
+        !formData.isFree ||
         formData.requirements.trim() !== '' ||
         formData.whatYouLearn.trim() !== '' ||
         formData.courseObjectives.trim() !== '' ||
@@ -765,6 +814,7 @@ export function CourseForm({
       isFieldChanged('level') ||
       isFieldChanged('price') ||
       isFieldChanged('discountPrice') ||
+      isFieldChanged('isFree') ||
       isFieldChanged('requirements') ||
       isFieldChanged('whatYouLearn') ||
       isFieldChanged('courseObjectives') ||
@@ -1004,95 +1054,196 @@ export function CourseForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="price" className="text-white flex items-center gap-2">
-              Giá (VND)
-              {isFieldChanged('price') && (
-                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-              )}
+        {/* Checkbox Miễn phí - Chiếm hết hàng với ghi chú chi tiết */}
+        <div className="flex items-start gap-3 p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg w-full">
+          <Checkbox
+            id="isFree"
+            checked={formData.isFree}
+            onCheckedChange={(checked) => {
+              const isFree = checked === true;
+              setFormData((prev) => ({
+                ...prev,
+                isFree,
+                price: isFree ? formatPriceInput(0) : prev.price,
+                discountPrice: isFree ? '' : prev.discountPrice,
+              }));
+            }}
+            className="mt-0.5 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+          />
+          <div className="flex-1">
+            <Label
+              htmlFor="isFree"
+              className="text-base font-semibold text-white cursor-pointer block mb-2"
+            >
+              Khóa học miễn phí
             </Label>
-            <Input
-              id="price"
-              type="text"
-              value={formData.price}
-              onChange={(e) => {
-                const inputValue = e.target.value;
-                // Allow empty input
-                if (inputValue === '' || inputValue.trim() === '') {
-                  setFormData({ ...formData, price: '' });
-                  return;
-                }
-                const parsedValue = parsePriceInput(inputValue);
-                if (parsedValue !== undefined) {
-                  setFormData({ ...formData, price: formatPriceInput(parsedValue) });
-                } else {
-                  // If parsing fails, keep the formatted value
-                  setFormData({ ...formData, price: inputValue });
-                }
-                // Clear custom validation when user types
-                const input = e.target as HTMLInputElement;
-                input.setCustomValidity('');
-              }}
-              placeholder="0"
-              className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
-                isFieldChanged('price') ? 'border-green-500 ring-1 ring-green-500/50' : ''
-              }`}
-              onInvalid={(e) => {
-                const input = e.currentTarget;
-                const price = parsePriceInput(input.value);
-                if (price === undefined || price < 0) {
-                  input.setCustomValidity('Giá phải là số không âm');
-                }
-              }}
-            />
+            {formData.isFree ? (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-300">
+                  ✓ Khóa học này sẽ được cung cấp <span className="text-green-400 font-medium">miễn phí</span> cho tất cả học viên
+                </p>
+                <p className="text-xs text-gray-400">
+                  Học viên có thể đăng ký và học ngay mà không cần thanh toán. Các trường "Giá (VNĐ)" và "Giá khuyến mãi (VNĐ)" sẽ tự động bị vô hiệu hóa.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-300">
+                  Khóa học có phí - Bạn cần nhập giá cho khóa học
+                </p>
+                <p className="text-xs text-gray-400">
+                  Bỏ chọn để thiết lập giá cho khóa học. Bạn có thể nhập "Giá (VNĐ)" và tùy chọn "Giá khuyến mãi (VNĐ)" để tạo chương trình giảm giá.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Giá và Giá khuyến mãi - Cùng một hàng */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price" className="text-white flex items-center gap-2">
+                Giá (VNĐ)
+                {isFieldChanged('price') && (
+                  <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                )}
+              </Label>
+              <Input
+                id="price"
+                type="text"
+                value={formData.price}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  // Allow empty input
+                  if (inputValue === '' || inputValue.trim() === '') {
+                    setFormData({ ...formData, price: '' });
+                    return;
+                  }
+                  const parsedValue = parsePriceInput(inputValue);
+                  if (parsedValue !== undefined) {
+                    setFormData({ ...formData, price: formatPriceInput(parsedValue) });
+                  } else {
+                    // If parsing fails, keep the formatted value
+                    setFormData({ ...formData, price: inputValue });
+                  }
+                  // Clear custom validation when user types
+                  const input = e.target as HTMLInputElement;
+                  input.setCustomValidity('');
+                }}
+                placeholder="0"
+                disabled={formData.isFree}
+                className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+                  isFieldChanged('price') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+                } ${formData.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onInvalid={(e) => {
+                  const input = e.currentTarget;
+                  const price = parsePriceInput(input.value);
+                  if (price === undefined || price < 0) {
+                    input.setCustomValidity('Giá phải là số không âm');
+                  }
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discountPrice" className="text-white flex items-center gap-2">
+                Giá khuyến mãi (VNĐ)
+                {isFieldChanged('discountPrice') && (
+                  <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                )}
+              </Label>
+              <Input
+                id="discountPrice"
+                type="text"
+                value={formData.discountPrice}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  // Allow empty input
+                  if (inputValue === '' || inputValue.trim() === '') {
+                    setFormData({ ...formData, discountPrice: '' });
+                    return;
+                  }
+                  const parsedValue = parsePriceInput(inputValue);
+                  if (parsedValue !== undefined) {
+                    setFormData({ ...formData, discountPrice: formatPriceInput(parsedValue) });
+                  } else {
+                    // If parsing fails, keep the formatted value
+                    setFormData({ ...formData, discountPrice: inputValue });
+                  }
+                  // Clear custom validation when user types
+                  const input = e.target as HTMLInputElement;
+                  input.setCustomValidity('');
+                }}
+                placeholder="0"
+                disabled={formData.isFree}
+                className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
+                  isFieldChanged('discountPrice') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+                } ${formData.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onInvalid={(e) => {
+                  const input = e.currentTarget;
+                  const discountPrice = parsePriceInput(input.value);
+                  const price = parsePriceInput(formData.price);
+                  if (discountPrice === undefined || discountPrice < 0) {
+                    input.setCustomValidity('Giá khuyến mãi phải là số không âm');
+                  } else if (price !== undefined && discountPrice > price) {
+                    input.setCustomValidity('Giá khuyến mãi không được lớn hơn giá gốc');
+                  }
+                }}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="discountPrice" className="text-white flex items-center gap-2">
-              Giá khuyến mãi (VND)
-              {isFieldChanged('discountPrice') && (
-                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-              )}
-            </Label>
-            <Input
-              id="discountPrice"
-              type="text"
-              value={formData.discountPrice}
-              onChange={(e) => {
-                const inputValue = e.target.value;
-                // Allow empty input
-                if (inputValue === '' || inputValue.trim() === '') {
-                  setFormData({ ...formData, discountPrice: '' });
-                  return;
-                }
-                const parsedValue = parsePriceInput(inputValue);
-                if (parsedValue !== undefined) {
-                  setFormData({ ...formData, discountPrice: formatPriceInput(parsedValue) });
-                } else {
-                  // If parsing fails, keep the formatted value
-                  setFormData({ ...formData, discountPrice: inputValue });
-                }
-                // Clear custom validation when user types
-                const input = e.target as HTMLInputElement;
-                input.setCustomValidity('');
-              }}
-              placeholder="0"
-              className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
-                isFieldChanged('discountPrice') ? 'border-green-500 ring-1 ring-green-500/50' : ''
-              }`}
-              onInvalid={(e) => {
-                const input = e.currentTarget;
-                const discountPrice = parsePriceInput(input.value);
-                const price = parsePriceInput(formData.price);
-                if (discountPrice === undefined || discountPrice < 0) {
-                  input.setCustomValidity('Giá khuyến mãi phải là số không âm');
-                } else if (price !== undefined && discountPrice > price) {
-                  input.setCustomValidity('Giá khuyến mãi không được lớn hơn giá gốc');
-                }
-              }}
-            />
-          </div>
+          {/* Chú thích về cách tính giá bán */}
+          {!formData.isFree && (
+            <div className="p-3 bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg">
+              <p className="text-xs font-medium text-gray-300 mb-2">📌 Cách tính giá bán:</p>
+              <div className="space-y-1.5 text-xs text-gray-400">
+                {formData.discountPrice.trim() ? (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-400 mt-0.5">•</span>
+                      <span>
+                        <span className="text-white font-medium">Giá bán hiện tại:</span> {formatPriceInput(parsePriceInput(formData.discountPrice) || 0)} VNĐ
+                        <span className="text-gray-500 ml-2">(Giá khuyến mãi)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-500 mt-0.5">•</span>
+                      <span>
+                        Giá gốc: {formatPriceInput(parsePriceInput(formData.price) || 0)} VNĐ
+                        <span className="text-gray-500 ml-2">(sẽ hiển thị gạch ngang trên trang chi tiết)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 pt-1 border-t border-[#2D2D2D]">
+                      <span className="text-blue-400 mt-0.5">ℹ️</span>
+                      <span>
+                        Khi có cả <span className="text-white">Giá (VNĐ)</span> và <span className="text-white">Giá khuyến mãi (VNĐ)</span>, 
+                        giá bán sẽ là <span className="text-green-400 font-medium">Giá khuyến mãi</span>. 
+                        Học viên sẽ thấy giá gốc bị gạch ngang và giá khuyến mãi nổi bật.
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-400 mt-0.5">•</span>
+                      <span>
+                        <span className="text-white font-medium">Giá bán:</span> {formatPriceInput(parsePriceInput(formData.price) || 0)} VNĐ
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 pt-1 border-t border-[#2D2D2D]">
+                      <span className="text-blue-400 mt-0.5">ℹ️</span>
+                      <span>
+                        Khi chỉ nhập <span className="text-white">Giá (VNĐ)</span> mà không nhập <span className="text-white">Giá khuyến mãi (VNĐ)</span>, 
+                        giá bán sẽ là <span className="text-green-400 font-medium">Giá (VNĐ)</span> bạn đã nhập.
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
