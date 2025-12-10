@@ -4,7 +4,7 @@
 // ============================================
 
 import { useState, useCallback } from 'react'
-import { Input } from '../ui/input'
+import { DarkOutlineInput } from '../ui/dark-outline-input'
 import { Button } from '../ui/button'
 import { Search, X, Mic } from 'lucide-react'
 
@@ -65,18 +65,18 @@ export function CourseSearch({
 
     return (
         <div className={`relative ${className}`}>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
-            <Input
-                type='search'
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400 z-10' />
+            <DarkOutlineInput
+                type='text'
                 placeholder={placeholder}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className='pl-10 pr-20 h-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus:border-blue-600'
+                className='pl-10 pr-20 h-10 [&::-webkit-search-cancel-button]:hidden [&::-ms-clear]:hidden'
             />
             {value && (
                 <button
                     onClick={() => onChange('')}
-                    className='absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors'
+                    className='absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors z-10'
                     title='Xóa tìm kiếm'
                 >
                     <X className='h-4 w-4' />

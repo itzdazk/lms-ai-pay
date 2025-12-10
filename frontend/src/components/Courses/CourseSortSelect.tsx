@@ -3,13 +3,12 @@
 // Sort dropdown component
 // ============================================
 
+import { Select, SelectValue } from '../ui/select'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '../ui/select'
+    DarkOutlineSelectTrigger,
+    DarkOutlineSelectContent,
+    DarkOutlineSelectItem,
+} from '../ui/dark-outline-select-trigger'
 
 export type SortOption =
     | 'newest'
@@ -39,22 +38,21 @@ export function CourseSortSelect({
 }: CourseSortSelectProps) {
     return (
         <Select value={value} onValueChange={onChange}>
-            <SelectTrigger
-                className={`w-full sm:w-48 bg-[#1F1F1F] border-[#2D2D2D] text-white ${className}`}
+            <DarkOutlineSelectTrigger
+                className={`w-full sm:w-48 ${className}`}
             >
                 <SelectValue placeholder='Sắp xếp theo' />
-            </SelectTrigger>
-            <SelectContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+            </DarkOutlineSelectTrigger>
+            <DarkOutlineSelectContent>
                 {sortOptions.map((option) => (
-                    <SelectItem
+                    <DarkOutlineSelectItem
                         key={option.value}
                         value={option.value}
-                        className='text-white hover:bg-[#2D2D2D] focus:bg-[#2D2D2D]'
                     >
                         {option.label}
-                    </SelectItem>
+                    </DarkOutlineSelectItem>
                 ))}
-            </SelectContent>
+            </DarkOutlineSelectContent>
         </Select>
     )
 }
