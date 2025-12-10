@@ -94,15 +94,19 @@ export const createCourseValidator = [
         .isFloat({ min: 0 })
         .withMessage('Price must be a non-negative number'),
     body('discountPrice')
-        .optional()
-        .isFloat({ min: 0 })
-        .withMessage('Discount price must be a non-negative number')
+        .optional({ nullable: true, checkFalsy: true })
         .custom((value, { req }) => {
-            if (
-                value &&
-                req.body.price &&
-                parseFloat(value) > parseFloat(req.body.price)
-            ) {
+            // Allow null to remove discount price
+            if (value === null || value === undefined) {
+                return true
+            }
+            // If value is provided, it must be a non-negative number
+            const numValue = parseFloat(value)
+            if (isNaN(numValue) || numValue < 0) {
+                throw new Error('Discount price must be a non-negative number')
+            }
+            // If price exists, discount price must be <= price
+            if (req.body.price && numValue > parseFloat(req.body.price)) {
                 throw new Error(
                     'Discount price must be less than or equal to price'
                 )
@@ -217,15 +221,19 @@ export const updateCourseValidator = [
         .isFloat({ min: 0 })
         .withMessage('Price must be a non-negative number'),
     body('discountPrice')
-        .optional()
-        .isFloat({ min: 0 })
-        .withMessage('Discount price must be a non-negative number')
+        .optional({ nullable: true, checkFalsy: true })
         .custom((value, { req }) => {
-            if (
-                value &&
-                req.body.price &&
-                parseFloat(value) > parseFloat(req.body.price)
-            ) {
+            // Allow null to remove discount price
+            if (value === null || value === undefined) {
+                return true
+            }
+            // If value is provided, it must be a non-negative number
+            const numValue = parseFloat(value)
+            if (isNaN(numValue) || numValue < 0) {
+                throw new Error('Discount price must be a non-negative number')
+            }
+            // If price exists, discount price must be <= price
+            if (req.body.price && numValue > parseFloat(req.body.price)) {
                 throw new Error(
                     'Discount price must be less than or equal to price'
                 )
