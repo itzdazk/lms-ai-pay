@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../ui/dark-outline-select-trigger';
-import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw, BookOpen, FileText, Tag as TagIcon, Globe, HelpCircle, Hash, Info, Target, Users } from 'lucide-react';
+import { Loader2, X, Image as ImageIcon, Video, Search, Eye, AlertCircle, Circle, RotateCcw, BookOpen, FileText, Tag as TagIcon, Globe, HelpCircle, Hash, Info, Target, Users, Upload, CheckCircle2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Course, Category, Tag } from '../../lib/api/types';
 import { coursesApi } from '../../lib/api/courses';
@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 
 interface CourseFormData {
   title: string;
@@ -126,11 +127,18 @@ export function CourseForm({
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [previewVideoPreview, setPreviewVideoPreview] = useState<string | null>(null);
+  const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
+  const [thumbnailRemoved, setThumbnailRemoved] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
   const [tagSearch, setTagSearch] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [initialFormData, setInitialFormData] = useState<CourseFormData | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showThumbnailDialog, setShowThumbnailDialog] = useState(false);
+  const [availableThumbnails, setAvailableThumbnails] = useState<string[]>([]);
+  const [loadingThumbnails, setLoadingThumbnails] = useState(false);
+  const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null);
+  const [thumbnailDialogTab, setThumbnailDialogTab] = useState<'library' | 'upload'>('upload');
   const [creatingTag, setCreatingTag] = useState(false);
   // Track newly created tags in this session (only when editing)
   const [newlyCreatedTagIds, setNewlyCreatedTagIds] = useState<Set<string>>(new Set());
@@ -244,11 +252,52 @@ export function CourseForm({
     }
   }, [course, course?.level]);
 
+  // Validate image aspect ratio (16:9)
+  const validateImageAspectRatio = (file: File): Promise<{ valid: boolean; width?: number; height?: number; aspectRatio?: number; error?: string }> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const width = img.width;
+        const height = img.height;
+        const aspectRatio = width / height;
+        const targetRatio = 16 / 9; // 1.777...
+        const tolerance = 0.05; // 5% tolerance (same as backend)
+        const ratioDifference = Math.abs(aspectRatio - targetRatio);
+        
+        if (ratioDifference > tolerance) {
+          resolve({
+            valid: false,
+            width,
+            height,
+            aspectRatio,
+            error: `Tỷ lệ ảnh phải là 16:9. Ảnh hiện tại: ${width}×${height} (${aspectRatio.toFixed(2)}:1). Cho phép sai lệch: ±${(tolerance * 100).toFixed(0)}%`
+          });
+        } else {
+          resolve({
+            valid: true,
+            width,
+            height,
+            aspectRatio
+          });
+        }
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({
+          valid: false,
+          error: 'Không thể đọc thông tin ảnh. Vui lòng chọn file ảnh hợp lệ.'
+        });
+      };
+      
+      img.src = url;
+    });
+  };
 
-  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processThumbnailFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Vui lòng chọn file hình ảnh');
       return;
@@ -259,12 +308,104 @@ export function CourseForm({
       return;
     }
 
+    // Validate aspect ratio
+    const validation = await validateImageAspectRatio(file);
+    if (!validation.valid) {
+      toast.error(validation.error || 'Ảnh không hợp lệ');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setThumbnailPreview(reader.result as string);
       setThumbnailFile(file);
+      setThumbnailRemoved(false); // Reset removed flag when new image is selected
+      toast.success(`Đã tải ảnh đại diện thành công (${validation.width}×${validation.height}, tỷ lệ 16:9)`);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processThumbnailFile(file);
+  };
+
+  const handleThumbnailDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingThumbnail(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    processThumbnailFile(file);
+  };
+
+  const handleThumbnailDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingThumbnail(true);
+  };
+
+  const handleThumbnailDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingThumbnail(false);
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // Load available thumbnails from instructor's courses
+  const loadAvailableThumbnails = async () => {
+    try {
+      setLoadingThumbnails(true);
+      const response = await coursesApi.getInstructorCourses({ limit: 100 });
+      const courses = response.data || [];
+      const thumbnails = courses
+        .map((c: Course) => c.thumbnailUrl || (c as any).thumbnail)
+        .filter((url: string | undefined): url is string => !!url && url.trim() !== '');
+      // Remove duplicates
+      setAvailableThumbnails([...new Set(thumbnails)]);
+    } catch (error) {
+      console.error('Error loading thumbnails:', error);
+      setAvailableThumbnails([]);
+    } finally {
+      setLoadingThumbnails(false);
+    }
+  };
+
+  // Open thumbnail dialog
+  const handleOpenThumbnailDialog = () => {
+    setShowThumbnailDialog(true);
+    setSelectedThumbnailUrl(null);
+    loadAvailableThumbnails();
+  };
+
+  // Handle selecting thumbnail from library
+  const handleSelectThumbnailFromLibrary = (url: string) => {
+    setSelectedThumbnailUrl(url);
+  };
+
+  // Handle confirming thumbnail selection
+  const handleConfirmThumbnail = () => {
+    if (selectedThumbnailUrl) {
+      setThumbnailPreview(selectedThumbnailUrl);
+      setThumbnailFile(null); // Clear file since we're using URL
+      setThumbnailRemoved(false); // Reset removed flag when selecting from library
+      setShowThumbnailDialog(false);
+      toast.success('Đã chọn ảnh đại diện');
+    }
+  };
+
+  // Handle upload in dialog
+  const handleDialogThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processThumbnailFile(file);
+    setShowThumbnailDialog(false);
   };
 
   const handlePreviewSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,6 +430,7 @@ export function CourseForm({
   const removeThumbnail = () => {
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setThumbnailRemoved(true); // Mark as removed for backend deletion
     if (thumbnailInputRef.current) {
       thumbnailInputRef.current.value = '';
     }
@@ -453,6 +595,11 @@ export function CourseForm({
       language: formData.language,
       status: 'DRAFT',
     };
+
+    // Handle thumbnail deletion: if editing and thumbnail was removed, send null to delete
+    if (course && thumbnailRemoved && !thumbnailFile && !thumbnailPreview) {
+      submitData.thumbnailUrl = null;
+    }
 
     // Include tags in return object for parent component to handle separately
     // But don't send tags in the actual API request to avoid backend processing them
@@ -722,6 +869,7 @@ export function CourseForm({
     // Reset file uploads
     setThumbnailFile(null);
     setPreviewFile(null);
+    setThumbnailRemoved(false); // Reset removed flag
     
     // Reset previews to original course values
     // Support both field names for backward compatibility
@@ -814,6 +962,16 @@ export function CourseForm({
     
     // For edit mode: check if any field has changed from initial
     if (!initialFormData) return false;
+    
+    // Check thumbnail changes
+    const initialThumbnailUrl = (course as any)?.thumbnailUrl || (course as any)?.thumbnail || null;
+    const currentThumbnailPreview = thumbnailPreview;
+    const thumbnailChanged = 
+      thumbnailRemoved || // Thumbnail was removed
+      thumbnailFile !== null || // New thumbnail file uploaded
+      (initialThumbnailUrl && !currentThumbnailPreview) || // Had thumbnail, now removed
+      (currentThumbnailPreview && currentThumbnailPreview !== initialThumbnailUrl); // Thumbnail changed
+    
     return (
       isFieldChanged('title') ||
       isFieldChanged('description') ||
@@ -829,17 +987,18 @@ export function CourseForm({
       isFieldChanged('targetAudience') ||
       isFieldChanged('language') ||
       isFieldChanged('tags') ||
-      thumbnailFile !== null ||
+      thumbnailChanged ||
       previewFile !== null
     );
   };
 
   return (
-    <form 
-      onSubmit={handleSubmit} 
-      className="space-y-6"
-      noValidate
-    >
+    <div className="relative">
+      <form 
+        onSubmit={handleSubmit} 
+        className="space-y-6 pb-24 sm:pb-28"
+        noValidate
+      >
       {/* Basic Information */}
       <div className="space-y-6">
         {/* Header Section */}
@@ -1204,7 +1363,7 @@ export function CourseForm({
         </div>
 
         {/* Giá và Giá khuyến mãi - Cùng một hàng */}
-        <div className="space-y-3">
+        <div className="space-y-3 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="price" className="text-white flex items-center gap-2">
@@ -1369,40 +1528,152 @@ export function CourseForm({
         </div>
 
         {/* Thumbnail Section */}
-        <div className="space-y-2">
-          <Label className="text-white flex items-center gap-2">
-            <ImageIcon className="h-4 w-4 text-gray-400" />
-            <span>Ảnh đại diện</span>
-            {thumbnailFile !== null && (
-              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-            )}
-            <div className="group relative ml-auto">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-white flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-gray-400" />
+              <span>Ảnh đại diện</span>
+              {thumbnailFile !== null && (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              )}
+              {course && thumbnailRemoved && !thumbnailFile && !thumbnailPreview && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/30 rounded-md">
+                  <AlertCircle className="h-3.5 w-3.5 text-green-400" />
+                  <span className="text-xs text-green-400 font-medium">Đã xóa ảnh đại diện</span>
+                </div>
+              )}
+            </Label>
+            <div className="group relative">
               <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
               <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                Ảnh đại diện sẽ hiển thị trên trang danh sách và chi tiết khóa học. Kích thước tối đa 5MB, định dạng: JPG, PNG, GIF.
+                Ảnh đại diện sẽ hiển thị trên trang danh sách và chi tiết khóa học. Kích thước tối đa 5MB, định dạng: JPG, PNG, GIF. <span className="text-yellow-400 font-medium">Tỷ lệ bắt buộc: 16:9</span> (cho phép sai lệch ±5%).
               </div>
             </div>
-          </Label>
-          <div className="flex items-center gap-4">
-            {thumbnailPreview && (
-              <div className={`relative w-32 h-32 rounded-lg overflow-hidden border ${
-                thumbnailFile !== null ? 'border-green-500 ring-1 ring-green-500/50' : 'border-[#2D2D2D]'
+          </div>
+
+          {thumbnailPreview ? (
+            <div className="space-y-3">
+              {/* Preview Image */}
+              <div className={`relative w-full max-w-md mx-auto aspect-video rounded-lg overflow-hidden border-2 transition-all group ${
+                thumbnailFile !== null 
+                  ? 'border-green-500 ring-2 ring-green-500/30 shadow-lg shadow-green-500/20'
+                  : course && thumbnailRemoved
+                  ? 'border-green-500 ring-2 ring-green-500/30 shadow-lg shadow-green-500/20'
+                  : 'border-[#2D2D2D]'
               }`}>
                 <img
                   src={thumbnailPreview}
                   alt="Thumbnail preview"
                   className="w-full h-full object-cover"
                 />
-                <button
-                  type="button"
-                  onClick={removeThumbnail}
-                  className="absolute top-1 right-1 p-1 bg-red-600 rounded-full hover:bg-red-700"
-                >
-                  <X className="h-4 w-4 text-white" />
-                </button>
+                {/* Overlay with actions */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3 pointer-events-none group/overlay">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenThumbnailDialog();
+                    }}
+                    className="bg-white/90 hover:bg-white text-gray-900 border-0 pointer-events-auto"
+                    size="sm"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Thay đổi
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeThumbnail();
+                    }}
+                    className="bg-red-600/90 hover:bg-red-700 text-white border-0 pointer-events-auto"
+                    size="sm"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Xóa
+                  </Button>
+                </div>
+                {/* Always visible action buttons at bottom */}
+                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenThumbnailDialog();
+                    }}
+                    className="flex-1 bg-white/95 hover:bg-white text-gray-900 border-0 backdrop-blur-sm"
+                    size="sm"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Thay đổi
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeThumbnail();
+                    }}
+                    className="bg-red-600/95 hover:bg-red-700 text-white border-0 backdrop-blur-sm"
+                    size="sm"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Status badge */}
+                {thumbnailFile !== null && (
+                  <div className="absolute top-3 right-3 px-2 py-1 bg-green-500/90 backdrop-blur-sm rounded-md flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                    <span className="text-xs font-medium text-white">Mới tải lên</span>
+                  </div>
+                )}
+                {course && thumbnailRemoved && !thumbnailFile && (
+                  <div className="absolute top-3 right-3 px-2 py-1 bg-green-500/90 backdrop-blur-sm rounded-md flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-white" />
+                    <span className="text-xs font-medium text-white">Đã xóa </span>
+                  </div>
+                )}
               </div>
-            )}
-            <div className="flex-1">
+              
+              {/* File Info */}
+              {thumbnailFile && (
+                <div className="flex items-center justify-between p-3 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <ImageIcon className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{thumbnailFile.name}</p>
+                      <p className="text-xs text-gray-400">{formatFileSize(thumbnailFile.size)}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeThumbnail}
+                    className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
+                    title="Xóa ảnh"
+                  >
+                    <X className="h-4 w-4 text-gray-400 hover:text-red-400" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Drag & Drop Area */
+            <div
+              onDrop={handleThumbnailDrop}
+              onDragOver={handleThumbnailDragOver}
+              onDragLeave={handleThumbnailDragLeave}
+              onClick={handleOpenThumbnailDialog}
+              className={`relative w-full max-w-md mx-auto aspect-video rounded-lg border-2 border-dashed transition-all cursor-pointer group ${
+                isDraggingThumbnail
+                  ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
+                  : 'border-[#2D2D2D] bg-[#1F1F1F] hover:border-gray-600 hover:bg-[#2A2A2A]'
+              }`}
+            >
               <input
                 ref={thumbnailInputRef}
                 type="file"
@@ -1410,17 +1681,25 @@ export function CourseForm({
                 onChange={handleThumbnailSelect}
                 className="hidden"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => thumbnailInputRef.current?.click()}
-                className="bg-[#1F1F1F] border-[#2D2D2D] text-white hover:bg-[#2D2D2D]"
-              >
-                <ImageIcon className="h-4 w-4 mr-2" />
-                {thumbnailPreview ? 'Thay đổi ảnh' : 'Chọn ảnh đại diện'}
-              </Button>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+                <div className={`p-4 rounded-full transition-colors ${
+                  isDraggingThumbnail ? 'bg-blue-500/20' : 'bg-gray-700/50 group-hover:bg-gray-600/50'
+                }`}>
+                  <Upload className={`h-8 w-8 transition-colors ${
+                    isDraggingThumbnail ? 'text-blue-400' : 'text-gray-400 group-hover:text-gray-300'
+                  }`} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-white mb-1">
+                    {isDraggingThumbnail ? 'Thả ảnh vào đây' : 'Kéo thả ảnh hoặc click để chọn'}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    JPG, PNG, GIF (tối đa 5MB) • <span className="text-yellow-400 font-medium">Tỷ lệ bắt buộc: 16:9</span> (±5%)
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Divider */}
@@ -1884,63 +2163,98 @@ export function CourseForm({
         </div>
       )}
 
-      {/* Form Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-[#2D2D2D]">
-        {course && initialFormData && (
-          <DarkOutlineButton
-            type="button"
-            onClick={handleReset}
-            disabled={loading || previewLoading || !hasChanges()}
-            className="flex items-center gap-2"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Đặt lại
-          </DarkOutlineButton>
-        )}
-        {onCancel && (
-          <DarkOutlineButton
-            type="button"
-            onClick={handleCancel}
-            disabled={loading || previewLoading}
-          >
-            Hủy
-          </DarkOutlineButton>
-        )}
-        <DarkOutlineButton
-          type="button"
-          onClick={handlePreview}
-          disabled={loading || previewLoading}
-          className="flex items-center gap-2"
-        >
-          {previewLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Đang tải...
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4" />
-              Xem trước
-            </>
-          )}
-        </DarkOutlineButton>
-        <Button
-          type="submit"
-          disabled={loading || previewLoading}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Đang lưu...
-            </>
-          ) : course ? (
-            'Cập nhật khóa học'
-          ) : (
-            'Tạo khóa học'
-          )}
-        </Button>
+      {/* Sticky Bottom Action Bar - Sticks to bottom of viewport when scrolling, sticks to form bottom when at end */}
+      <div className="sticky bottom-0 left-0 right-0 z-50 bg-[#1A1A1A] border-t-2 border-[#2D2D2D] shadow-2xl mt-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+            {/* Left side - Change Indicator */}
+            <div className="flex items-center justify-center sm:justify-start">
+              {course && hasChanges() && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span className="text-sm text-green-500 font-medium whitespace-nowrap">Có thay đổi chưa lưu</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right side - Action Buttons */}
+            <div className="flex items-center justify-end gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+              {course && initialFormData && (
+                <DarkOutlineButton
+                  type="button"
+                  onClick={handleReset}
+                  disabled={loading || previewLoading || !hasChanges()}
+                  className="flex items-center gap-2 flex-shrink-0"
+                  size="sm"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span className="hidden sm:inline">Đặt lại</span>
+                </DarkOutlineButton>
+              )}
+              {onCancel && (
+                <DarkOutlineButton
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={loading || previewLoading}
+                  size="sm"
+                  className="flex-shrink-0"
+                >
+                  Hủy
+                </DarkOutlineButton>
+              )}
+              <DarkOutlineButton
+                type="button"
+                onClick={handlePreview}
+                disabled={loading || previewLoading}
+                className="flex items-center gap-2 flex-shrink-0"
+                size="sm"
+              >
+                {previewLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Đang tải...</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4" />
+                    <span className="hidden sm:inline">Xem trước</span>
+                  </>
+                )}
+              </DarkOutlineButton>
+              <Button
+                type="button"
+                onClick={() => {
+                  const form = document.querySelector('form');
+                  if (form) {
+                    form.requestSubmit();
+                  }
+                }}
+                disabled={loading || previewLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+                size="sm"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <span className="hidden sm:inline">Đang lưu...</span>
+                  </>
+                ) : course ? (
+                  <>
+                    <span className="hidden sm:inline">Cập nhật khóa học</span>
+                    <span className="sm:hidden">Cập nhật</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Tạo khóa học</span>
+                    <span className="sm:hidden">Tạo</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
+      </form>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
@@ -1970,7 +2284,133 @@ export function CourseForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </form>
+
+      {/* Thumbnail Selection Dialog */}
+      <Dialog open={showThumbnailDialog} onOpenChange={setShowThumbnailDialog}>
+        <DialogContent className="bg-[#1F1F1F] border-[#2D2D2D] text-white max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Chọn ảnh đại diện
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Chọn ảnh từ thư viện hoặc tải lên ảnh mới từ máy tính
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={thumbnailDialogTab} onValueChange={(v) => setThumbnailDialogTab(v as 'library' | 'upload')} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="bg-[#2A2A2A] border border-[#2D2D2D] mb-4">
+              <TabsTrigger value="library" className="data-[state=active]:bg-[#1F1F1F] data-[state=active]:text-white">
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Thư viện ảnh
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="data-[state=active]:bg-[#1F1F1F] data-[state=active]:text-white">
+                <Upload className="h-4 w-4 mr-2" />
+                Tải lên mới
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="library" className="flex-1 overflow-y-auto mt-0">
+              {loadingThumbnails ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : availableThumbnails.length === 0 ? (
+                <div className="text-center py-12">
+                  <FolderOpen className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-400">Chưa có ảnh nào trong thư viện</p>
+                  <p className="text-sm text-gray-500 mt-2">Tải lên ảnh mới để thêm vào thư viện</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {availableThumbnails.map((url, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSelectThumbnailFromLibrary(url)}
+                      className={`relative aspect-video rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${
+                        selectedThumbnailUrl === url
+                          ? 'border-blue-500 ring-2 ring-blue-500/50'
+                          : 'border-[#2D2D2D] hover:border-gray-600'
+                      }`}
+                    >
+                      <img
+                        src={url}
+                        alt={`Thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {selectedThumbnailUrl === url && (
+                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                          <CheckCircle2 className="h-8 w-8 text-blue-400" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="upload" className="flex-1 overflow-y-auto mt-0">
+              <div
+                onDrop={handleThumbnailDrop}
+                onDragOver={handleThumbnailDragOver}
+                onDragLeave={handleThumbnailDragLeave}
+                onClick={() => thumbnailInputRef.current?.click()}
+                className={`relative w-full aspect-video rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                  isDraggingThumbnail
+                    ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
+                    : 'border-[#2D2D2D] bg-[#1A1A1A] hover:border-gray-600 hover:bg-[#2A2A2A]'
+                }`}
+              >
+                <input
+                  ref={thumbnailInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleDialogThumbnailSelect}
+                  className="hidden"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+                  <div className={`p-4 rounded-full transition-colors ${
+                    isDraggingThumbnail ? 'bg-blue-500/20' : 'bg-gray-700/50 group-hover:bg-gray-600/50'
+                  }`}>
+                    <Upload className={`h-8 w-8 transition-colors ${
+                      isDraggingThumbnail ? 'text-blue-400' : 'text-gray-400 group-hover:text-gray-300'
+                    }`} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-white mb-1">
+                      {isDraggingThumbnail ? 'Thả ảnh vào đây' : 'Kéo thả ảnh hoặc click để chọn'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      JPG, PNG, GIF (tối đa 5MB) • <span className="text-yellow-400 font-medium">Tỷ lệ bắt buộc: 16:9</span> (±5%)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-4">
+            <DarkOutlineButton
+              type="button"
+              onClick={() => {
+                setShowThumbnailDialog(false);
+                setSelectedThumbnailUrl(null);
+              }}
+            >
+              Hủy
+            </DarkOutlineButton>
+            <Button
+              type="button"
+              onClick={handleConfirmThumbnail}
+              disabled={!selectedThumbnailUrl && thumbnailDialogTab === 'library'}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 

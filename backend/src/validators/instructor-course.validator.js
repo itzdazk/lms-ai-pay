@@ -76,9 +76,22 @@ export const createCourseValidator = [
         .withMessage('Short description must not exceed 500 characters'),
     body('thumbnailUrl')
         .optional()
-        .trim()
-        .isURL()
-        .withMessage('Thumbnail URL must be a valid URL'),
+        .custom((value) => {
+            // Allow null, undefined, or empty string to remove thumbnail
+            if (value === null || value === undefined || value === '') {
+                return true
+            }
+            // If value is provided, it must be a valid URL
+            const trimmedValue = String(value).trim()
+            if (trimmedValue === '') {
+                return true // Empty string is also allowed (treated as null)
+            }
+            const urlPattern = /^https?:\/\/.+/i
+            if (!urlPattern.test(trimmedValue)) {
+                throw new Error('Thumbnail URL must be a valid URL')
+            }
+            return true
+        }),
     body('videoPreviewUrl')
         .optional()
         .trim()
@@ -204,9 +217,22 @@ export const updateCourseValidator = [
         .withMessage('Short description must not exceed 500 characters'),
     body('thumbnailUrl')
         .optional()
-        .trim()
-        .isURL()
-        .withMessage('Thumbnail URL must be a valid URL'),
+        .custom((value) => {
+            // Allow null, undefined, or empty string to remove thumbnail
+            if (value === null || value === undefined || value === '') {
+                return true
+            }
+            // If value is provided, it must be a valid URL
+            const trimmedValue = String(value).trim()
+            if (trimmedValue === '') {
+                return true // Empty string is also allowed (treated as null)
+            }
+            const urlPattern = /^https?:\/\/.+/i
+            if (!urlPattern.test(trimmedValue)) {
+                throw new Error('Thumbnail URL must be a valid URL')
+            }
+            return true
+        }),
     body('videoPreviewUrl')
         .optional()
         .trim()

@@ -401,6 +401,7 @@ class InstructorCourseService {
                 instructorId: true,
                 slug: true,
                 status: true,
+                thumbnailUrl: true, // Need to get old thumbnail for deletion
             },
         })
 
@@ -440,6 +441,9 @@ class InstructorCourseService {
             tags, // Array of tag IDs to replace existing tags
         } = data
 
+        // Get old thumbnail URL before update (for file deletion)
+        const oldThumbnailUrl = existingCourse.thumbnailUrl
+
         // Build update data
         const updateData = {}
 
@@ -447,7 +451,25 @@ class InstructorCourseService {
         if (description !== undefined) updateData.description = description
         if (shortDescription !== undefined)
             updateData.shortDescription = shortDescription
-        if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl
+        if (thumbnailUrl !== undefined) {
+            updateData.thumbnailUrl = thumbnailUrl
+            // If thumbnailUrl is null, delete the old file
+            if (thumbnailUrl === null && oldThumbnailUrl) {
+                const oldPath = path.join(
+                    process.cwd(),
+                    oldThumbnailUrl.replace(/^\//, '')
+                )
+                if (fs.existsSync(oldPath)) {
+                    try {
+                        fs.unlinkSync(oldPath)
+                        logger.info(`Thumbnail file deleted: ${oldThumbnailUrl}`)
+                    } catch (error) {
+                        logger.error(`Error deleting thumbnail file: ${error.message}`)
+                        // Don't throw error, just log it
+                    }
+                }
+            }
+        }
         if (videoPreviewUrl !== undefined)
             updateData.videoPreviewUrl = videoPreviewUrl
         if (videoPreviewDuration !== undefined)
