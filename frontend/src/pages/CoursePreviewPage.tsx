@@ -5,7 +5,6 @@ import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   Dialog,
@@ -22,9 +21,14 @@ import {
   Download,
   Share2,
   ArrowLeft,
-  X
+  X,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../lib/api';
+import type { User } from '../lib/api/types';
+import { InstructorInfo } from '../components/Courses';
+import { getCourseLevelBadge } from '../lib/courseUtils';
 
 interface PreviewData {
   title: string;
@@ -51,6 +55,7 @@ export function CoursePreviewPage() {
   const { user: currentUser } = useAuth();
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [showPreviewVideo, setShowPreviewVideo] = useState(false);
+  const [instructorData, setInstructorData] = useState<User | null>(null);
 
   useEffect(() => {
     // Load preview data from sessionStorage
@@ -68,6 +73,23 @@ export function CoursePreviewPage() {
     }
   }, [navigate]);
 
+  // Fetch full user data to get bio
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (currentUser) {
+        try {
+          const fullUserData = await authApi.getCurrentUser();
+          setInstructorData(fullUserData);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          // Fallback to currentUser if API fails
+          setInstructorData(currentUser);
+        }
+      }
+    };
+    fetchUserData();
+  }, [currentUser]);
+
   if (!previewData) {
     return (
       <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
@@ -76,14 +98,8 @@ export function CoursePreviewPage() {
     );
   }
 
-  const levelLabels: Record<string, string> = {
-    BEGINNER: 'Cơ bản',
-    INTERMEDIATE: 'Trung cấp',
-    ADVANCED: 'Nâng cao',
-    beginner: 'Cơ bản',
-    intermediate: 'Trung cấp',
-    advanced: 'Nâng cao',
-  };
+  // Get level badge with colors
+  const levelBadge = getCourseLevelBadge(previewData.level);
 
   const finalPrice = previewData.discountPrice || previewData.price;
   const isFree = finalPrice === 0;
@@ -95,15 +111,29 @@ export function CoursePreviewPage() {
     }).format(price);
   };
 
+  // Transform User to Instructor format for InstructorInfo component
+  const instructorForDisplay = (user: User | null) => {
+    if (!user) return null;
+    return {
+      id: user.id,
+      userName: user.userName,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl || user.avatar,
+      bio: user.bio || undefined,
+      totalCourses: 0, // Not available in preview context
+      otherCourses: [], // Not available in preview context
+    };
+  };
+
   return (
     <div className="bg-background">
       {/* Hero Section */}
-      <section className="bg-background border-b border-gray-200">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-2 pb-7">
-          <div className="mb-3">
+      <section className="bg-gradient-to-b from-background via-background to-[#0F0F0F] border-b border-gray-200/10">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-6 pb-10">
+          <div className="mb-4">
             <Button
               variant="outline"
-              className="border-2 border-[#2D2D2D] !text-white bg-black hover:bg-[#1F1F1F] rounded-lg"
+              className="border-2 border-[#2D2D2D] !text-white bg-black/50 hover:bg-[#1F1F1F] hover:border-[#3D3D3D] rounded-lg backdrop-blur-sm transition-all duration-200"
               size="lg"
               onClick={() => window.close()}
             >
@@ -111,96 +141,131 @@ export function CoursePreviewPage() {
               Đóng
             </Button>
           </div>
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-[#1A1A1A] border-2 border-[#2D2D2D] rounded-xl p-6 overflow-hidden">
+          <div className="grid lg:grid-cols-3 gap-8 relative">
+            <div className="lg:col-span-2 bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-2 border-[#2D2D2D]/50 rounded-2xl p-8 overflow-hidden shadow-2xl hover:border-[#3D3D3D]/50 transition-all duration-300">
               {/* Breadcrumb */}
-              <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-                <span>Xem trước</span>
-                <span>/</span>
-                <span>{previewData.categoryName}</span>
+              <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
+                <span className="hover:text-white transition-colors cursor-default">Xem trước</span>
+                <span className="text-gray-600">/</span>
+                <span className="text-gray-300 font-medium">{previewData.categoryName}</span>
               </div>
 
               {/* Title & Badges */}
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <Badge className="bg-blue-600 text-white">
-                    {levelLabels[previewData.level] || previewData.level}
+              <div className="mb-8">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge className={`${levelBadge.className} shadow-lg transition-transform hover:scale-105`}>
+                    {levelBadge.label}
                   </Badge>
-                  <Badge variant="outline" className="text-white border-[#2D2D2D]">
+                  <Badge className="bg-orange-600 text-white hover:bg-orange-700 shadow-lg transition-transform hover:scale-105">
                     {previewData.categoryName}
                   </Badge>
                   {previewData.tagNames.length > 0 && previewData.tagNames.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-white border-[#2D2D2D]">
+                    <Badge key={index} className="bg-gray-600 text-white hover:bg-gray-700 shadow-lg transition-transform hover:scale-105">
                       {tag}
                     </Badge>
                   ))}
                 </div>
-                <h1 className="text-3xl md:text-4xl mb-3 text-white font-bold leading-tight">{previewData.title}</h1>
-                <p className="text-base text-gray-300 leading-relaxed">
+                <h1 className="text-4xl md:text-5xl mb-4 text-white font-bold leading-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  {previewData.title}
+                </h1>
+                <p className="text-lg text-gray-300 leading-relaxed mb-6">
                   {previewData.shortDescription || previewData.description}
                 </p>
+
+                {/* Course Info */}
+                <div className="bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] border border-[#2D2D2D]/50 rounded-xl p-5 space-y-3 shadow-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                    <p className="text-sm font-semibold text-white">Thông tin khóa học</p>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors">
+                      <BookOpen className="h-4 w-4 text-blue-500" />
+                      <span>Cấp độ: <span className="font-medium text-white">{levelBadge.label}</span></span>
+                    </div>
+                    {previewData.language && (
+                      <div className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors">
+                        <Globe className="h-4 w-4 text-blue-500" />
+                        <span>Ngôn ngữ: <span className="font-medium text-white">{previewData.language === 'vi' ? 'Tiếng Việt' : previewData.language}</span></span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors">
+                      <Users className="h-4 w-4 text-blue-500" />
+                      <span>Danh mục: <span className="font-medium text-white">{previewData.categoryName}</span></span>
+                    </div>
+                    {previewData.tagNames.length > 0 && (
+                      <div className="pt-3 border-t border-[#2D2D2D]">
+                        <p className="text-xs font-semibold text-gray-400 mb-2">Tags:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {previewData.tagNames.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs text-gray-400 border-[#2D2D2D] hover:border-gray-500 hover:text-gray-300 transition-colors">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2D2D2D]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-lg font-bold text-white">0</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Đánh giá</p>
-                </div>
-                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2D2D2D]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-lg font-bold text-white">0</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Học viên</p>
-                </div>
-                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2D2D2D]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <BookOpen className="h-4 w-4 text-gray-400" />
-                    <span className="text-lg font-bold text-white">0</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Bài học</p>
-                </div>
-                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2D2D2D]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                    <span className="text-lg font-bold text-white">0h</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Thời lượng</p>
-                </div>
-              </div>
-
-              {/* Instructor */}
-              {currentUser && (
-                <div className="flex items-center gap-3 p-3 bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg mb-6">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={currentUser.avatarUrl || currentUser.avatar} />
-                    <AvatarFallback className="bg-blue-600 text-white">{currentUser.fullName[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-xs text-gray-400 mb-0.5">Giảng viên</p>
-                    <p className="text-sm font-semibold text-white">{currentUser.fullName}</p>
-                  </div>
+              {/* Instructor Info */}
+              {(instructorData || currentUser) && (
+                <div className="mb-8">
+                  <InstructorInfo instructor={instructorForDisplay(instructorData || currentUser)!} />
                 </div>
               )}
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-yellow-500/50 transition-all duration-200 shadow-lg hover:shadow-yellow-500/10 group">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">0</span>
+                  </div>
+                  <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">Đánh giá</p>
+                </div>
+                <div className="bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-blue-500/10 group">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">0</span>
+                  </div>
+                  <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">Học viên</p>
+                </div>
+                <div className="bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-green-500/50 transition-all duration-200 shadow-lg hover:shadow-green-500/10 group">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="h-5 w-5 text-green-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">0</span>
+                  </div>
+                  <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">Bài học</p>
+                </div>
+                <div className="bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-purple-500/50 transition-all duration-200 shadow-lg hover:shadow-purple-500/10 group">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-5 w-5 text-purple-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">0h</span>
+                  </div>
+                  <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">Thời lượng</p>
+                </div>
+              </div>
 
             </div>
 
             {/* Sidebar Card */}
-            <div className="lg:col-span-1">
-              <Card className="sticky top-20 bg-[#1A1A1A] border-[#2D2D2D] overflow-hidden">
+            <div className="lg:col-span-1 lg:row-span-2">
+              <Card className="sticky top-20 bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-2 border-[#2D2D2D]/50 overflow-hidden self-start shadow-2xl hover:shadow-3xl hover:border-[#3D3D3D]/50 transition-all duration-300 rounded-2xl">
                 {previewData.thumbnailPreview ? (
-                  <div className="relative aspect-video overflow-hidden rounded-t-lg">
-                    <img src={previewData.thumbnailPreview} alt={previewData.title} className="w-full h-full object-cover" />
+                  <div className="relative aspect-video overflow-hidden">
+                    <img 
+                      src={previewData.thumbnailPreview} 
+                      alt={previewData.title} 
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" 
+                    />
                     {previewData.previewVideoPreview && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 via-black/30 to-transparent group">
                         <Button 
                           size="lg" 
                           variant="secondary" 
-                          className="rounded-full"
+                          className="rounded-full bg-white/90 hover:bg-white text-black shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-200"
                           onClick={() => setShowPreviewVideo(true)}
                         >
                           <PlayCircle className="mr-2 h-5 w-5" />
@@ -210,12 +275,12 @@ export function CoursePreviewPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="relative aspect-video overflow-hidden rounded-t-lg bg-[#1F1F1F] flex items-center justify-center">
+                  <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-[#1F1F1F] to-[#151515] flex items-center justify-center">
                     {previewData.previewVideoPreview ? (
                       <Button 
                         size="lg" 
                         variant="secondary" 
-                        className="rounded-full"
+                        className="rounded-full bg-white/90 hover:bg-white text-black shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-200"
                         onClick={() => setShowPreviewVideo(true)}
                       >
                         <PlayCircle className="mr-2 h-5 w-5" />
@@ -226,220 +291,246 @@ export function CoursePreviewPage() {
                     )}
                   </div>
                 )}
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-5 space-y-4">
                   {/* Price */}
-                  {isFree ? (
-                    <div className="text-3xl font-bold text-green-600">Miễn phí</div>
-                  ) : (
-                    <div>
-                      {previewData.discountPrice ? (
-                        <div>
-                          <div className="text-3xl font-bold text-blue-600 mb-1">{formatPriceLocal(finalPrice)}</div>
-                          <div className="text-lg text-gray-400 line-through">{formatPriceLocal(previewData.price)}</div>
-                          <Badge className="bg-red-500 mt-2">
-                            Giảm {Math.round((1 - previewData.discountPrice / previewData.price) * 100)}%
-                          </Badge>
+                  <div className="pb-3 border-b border-[#2D2D2D]/50">
+                    {isFree ? (
+                      <div className="text-center">
+                        <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xl font-bold shadow-md">
+                          Miễn phí
                         </div>
-                      ) : (
-                        <div className="text-3xl font-bold text-blue-600">{formatPriceLocal(finalPrice)}</div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <div>
+                        {previewData.discountPrice ? (
+                          <div className="space-y-1.5">
+                            <div className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                              {formatPriceLocal(finalPrice)}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm text-gray-400 line-through">{formatPriceLocal(previewData.price)}</div>
+                              <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs shadow-md">
+                                Giảm {Math.round((1 - previewData.discountPrice / previewData.price) * 100)}%
+                              </Badge>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                            {formatPriceLocal(finalPrice)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Notice */}
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                    <p className="text-sm text-yellow-500">
+                  <div className="bg-gradient-to-r from-yellow-500/20 via-yellow-500/15 to-yellow-500/20 border border-yellow-500/40 rounded-lg p-2.5 shadow-md">
+                    <p className="text-xs text-yellow-400 leading-relaxed">
                       ⚠️ Đây là bản xem trước. Khóa học chưa được lưu.
                     </p>
                   </div>
 
                   <div className="flex gap-2">
-                    <DarkOutlineButton className="flex-1">
-                      <Share2 className="h-4 w-4 mr-2" />
+                    <DarkOutlineButton className="flex-1 hover:bg-[#2D2D2D] hover:border-[#3D3D3D] transition-all duration-200 text-sm py-2">
+                      <Share2 className="h-3.5 w-3.5 mr-1.5" />
                       Chia sẻ
                     </DarkOutlineButton>
                   </div>
 
                   {/* Course Includes */}
-                  <div className="space-y-3 pt-4 border-t border-[#2D2D2D]">
-                    <p className="font-semibold text-white">Khóa học bao gồm:</p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <span className="text-white">Video bài giảng</span>
+                  <div className="space-y-2 pt-3 border-t border-[#2D2D2D]/50">
+                    <p className="font-semibold text-white text-sm mb-2">Khóa học bao gồm:</p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs text-gray-300">
+                        <Clock className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                        <span>Video bài giảng</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-blue-600" />
-                        <span className="text-white">Nội dung chi tiết</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-300">
+                        <BookOpen className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
+                        <span>Nội dung chi tiết</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Download className="h-4 w-4 text-blue-600" />
-                        <span className="text-white">Tài liệu tải về</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-300">
+                        <Download className="h-3.5 w-3.5 text-purple-400 flex-shrink-0" />
+                        <span>Tài liệu tải về</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-blue-600" />
-                        <span className="text-white">Truy cập mọi lúc, mọi nơi</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-300">
+                        <Globe className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0" />
+                        <span>Truy cập mọi lúc, mọi nơi</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Award className="h-4 w-4 text-blue-600" />
-                        <span className="text-white">Chứng chỉ hoàn thành</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-300">
+                        <Award className="h-3.5 w-3.5 text-yellow-400 flex-shrink-0" />
+                        <span>Chứng chỉ hoàn thành</span>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </div>
-      </section>
+            {/* Main Content - Tổng quan, Nội dung, Đánh giá */}
+            <div className="lg:col-span-2">
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="w-full justify-start bg-gradient-to-r from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl p-1 shadow-lg">
+                  <TabsTrigger 
+                    value="overview" 
+                    className="!text-gray-400 data-[state=active]:!text-white data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-blue-600 data-[state=active]:!to-blue-700 data-[state=active]:!shadow-lg transition-all duration-200 rounded-lg px-4 py-2"
+                  >
+                    Tổng quan
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="curriculum" 
+                    className="!text-gray-400 data-[state=active]:!text-white data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-green-600 data-[state=active]:!to-green-700 data-[state=active]:!shadow-lg transition-all duration-200 rounded-lg px-4 py-2"
+                  >
+                    Nội dung
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="reviews" 
+                    className="!text-gray-400 data-[state=active]:!text-white data-[state=active]:!bg-gradient-to-r data-[state=active]:!from-yellow-600 data-[state=active]:!to-yellow-700 data-[state=active]:!shadow-lg transition-all duration-200 rounded-lg px-4 py-2"
+                  >
+                    Đánh giá
+                  </TabsTrigger>
+                </TabsList>
 
-      {/* Main Content */}
-      <section className="container mx-auto px-4 md:px-6 lg:px-8 py-7 bg-background">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="w-full justify-start bg-[#1A1A1A] border border-[#2D2D2D]">
-                <TabsTrigger value="overview" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Tổng quan</TabsTrigger>
-                <TabsTrigger value="curriculum" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Nội dung</TabsTrigger>
-                <TabsTrigger value="reviews" className="!text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D] dark:data-[state=active]:!bg-white dark:data-[state=active]:!text-black">Đánh giá</TabsTrigger>
-              </TabsList>
-
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-4 mt-6">
-                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <CardHeader>
-                    <CardTitle className="text-white">Mô tả khóa học</CardTitle>
-                  </CardHeader>
-                  <CardContent className="prose max-w-none">
-                    <p className="text-gray-300 whitespace-pre-wrap">{previewData.description}</p>
-                  </CardContent>
-                </Card>
-
-                {previewData.whatYouLearn && (
-                  <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <CardHeader>
-                      <CardTitle className="text-white">Bạn sẽ học được gì?</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-gray-300 whitespace-pre-wrap">
-                        {previewData.whatYouLearn}
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6 mt-8">
+                  <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg hover:shadow-xl hover:border-blue-500/30 transition-all duration-300">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                          <BookOpen className="h-5 w-5 text-blue-400" />
+                        </div>
+                        <CardTitle className="text-white text-xl">Mô tả khóa học</CardTitle>
                       </div>
+                    </CardHeader>
+                    <CardContent className="prose max-w-none prose-invert">
+                      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{previewData.description}</p>
                     </CardContent>
                   </Card>
-                )}
 
-                {previewData.courseObjectives && (
-                  <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <CardHeader>
-                      <CardTitle className="text-white">Mục tiêu khóa học</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-gray-300 whitespace-pre-wrap">
-                        {previewData.courseObjectives}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {previewData.requirements && (
-                  <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <CardHeader>
-                      <CardTitle className="text-white">Yêu cầu</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-gray-300 whitespace-pre-wrap">
-                        {previewData.requirements}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {previewData.targetAudience && (
-                  <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <CardHeader>
-                      <CardTitle className="text-white">Đối tượng mục tiêu</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-gray-300 whitespace-pre-wrap">
-                        {previewData.targetAudience}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              {/* Curriculum Tab */}
-              <TabsContent value="curriculum" className="mt-6">
-                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <CardHeader>
-                    <CardTitle className="text-white">Nội dung khóa học</CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Nội dung sẽ được thêm sau khi khóa học được lưu
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-gray-400">
-                      <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-600" />
-                      <p>Chưa có bài học nào</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Reviews Tab */}
-              <TabsContent value="reviews" className="mt-6">
-                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <CardHeader>
-                    <CardTitle className="text-white">Đánh giá của học viên</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-gray-400">
-                      <Star className="h-12 w-12 mx-auto mb-4 text-gray-600" />
-                      <p>Chưa có đánh giá nào</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Right Sidebar - Related Courses */}
-          <div className="lg:col-span-1">
-            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-              <CardHeader>
-                <CardTitle className="text-white">Thông tin khóa học</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <BookOpen className="h-4 w-4" />
-                    <span className="text-sm">Cấp độ: {levelLabels[previewData.level] || previewData.level}</span>
-                  </div>
-                  {previewData.language && (
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Globe className="h-4 w-4" />
-                      <span className="text-sm">Ngôn ngữ: {previewData.language === 'vi' ? 'Tiếng Việt' : previewData.language}</span>
-                    </div>
+                  {previewData.whatYouLearn && (
+                    <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg hover:shadow-xl hover:border-green-500/30 transition-all duration-300">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                            <Award className="h-5 w-5 text-green-400" />
+                          </div>
+                          <CardTitle className="text-white text-xl">Bạn sẽ học được gì?</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {previewData.whatYouLearn}
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <Users className="h-4 w-4" />
-                    <span className="text-sm">Danh mục: {previewData.categoryName}</span>
-                  </div>
-                </div>
-                {previewData.tagNames.length > 0 && (
-                  <div className="pt-4 border-t border-[#2D2D2D]">
-                    <p className="text-sm font-semibold text-white mb-2">Tags:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {previewData.tagNames.map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-white border-[#2D2D2D]">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+
+                  {previewData.courseObjectives && (
+                    <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg hover:shadow-xl hover:border-purple-500/30 transition-all duration-300">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                            <Star className="h-5 w-5 text-purple-400" />
+                          </div>
+                          <CardTitle className="text-white text-xl">Mục tiêu khóa học</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {previewData.courseObjectives}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {previewData.requirements && (
+                    <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg hover:shadow-xl hover:border-orange-500/30 transition-all duration-300">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                            <CheckCircle className="h-5 w-5 text-orange-400" />
+                          </div>
+                          <CardTitle className="text-white text-xl">Yêu cầu</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {previewData.requirements}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {previewData.targetAudience && (
+                    <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg hover:shadow-xl hover:border-cyan-500/30 transition-all duration-300">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                            <Users className="h-5 w-5 text-cyan-400" />
+                          </div>
+                          <CardTitle className="text-white text-xl">Đối tượng mục tiêu</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {previewData.targetAudience}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                {/* Curriculum Tab */}
+                <TabsContent value="curriculum" className="mt-8">
+                  <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                          <BookOpen className="h-5 w-5 text-green-400" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-white text-xl">Nội dung khóa học</CardTitle>
+                          <CardDescription className="text-gray-400 mt-1">
+                            Nội dung sẽ được thêm sau khi khóa học được lưu
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center py-12 text-gray-400">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-4">
+                          <BookOpen className="h-10 w-10 text-green-500/50" />
+                        </div>
+                        <p className="text-lg font-medium">Chưa có bài học nào</p>
+                        <p className="text-sm text-gray-500 mt-2">Nội dung sẽ được hiển thị sau khi khóa học được lưu</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Reviews Tab */}
+                <TabsContent value="reviews" className="mt-8">
+                  <Card className="bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                          <Star className="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <CardTitle className="text-white text-xl">Đánh giá của học viên</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center py-12 text-gray-400">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-500/10 mb-4">
+                          <Star className="h-10 w-10 text-yellow-500/50" />
+                        </div>
+                        <p className="text-lg font-medium">Chưa có đánh giá nào</p>
+                        <p className="text-sm text-gray-500 mt-2">Hãy là người đầu tiên đánh giá khóa học này</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
       </section>
