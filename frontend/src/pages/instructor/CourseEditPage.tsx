@@ -43,37 +43,44 @@ export function CourseEditPage() {
   // Transform backend course data to frontend format
   const transformCourse = (course: any): Course => {
     return {
-      id: String(course.id),
+      id: Number(course.id) || 0,
       title: course.title || '',
       slug: course.slug || '',
       description: course.description || '',
       shortDescription: course.shortDescription || '',
       thumbnailUrl: course.thumbnailUrl || course.thumbnail || '',
       videoPreviewUrl: course.videoPreviewUrl || course.previewVideoUrl || '',
-      instructorId: String(course.instructorId || ''),
-      categoryId: String(course.categoryId || course.category?.id || ''),
+      instructorId: Number(course.instructorId) || 0,
+      categoryId: Number(course.categoryId || course.category?.id) || 0,
       category: course.category ? {
-        id: String(course.category.id),
-        name: course.category.name,
-        slug: course.category.slug,
+        id: Number(course.category.id) || 0,
+        name: course.category.name || '',
+        slug: course.category.slug || '',
+        description: course.category.description,
+        imageUrl: course.category.imageUrl,
+        parentId: course.category.parentId ? Number(course.category.parentId) : undefined,
+        sortOrder: course.category.sortOrder || 0,
+        isActive: course.category.isActive !== undefined ? course.category.isActive : true,
+        createdAt: course.category.createdAt || new Date().toISOString(),
+        updatedAt: course.category.updatedAt || new Date().toISOString(),
       } : undefined,
-      level: (course.level?.toLowerCase() as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
-      originalPrice: parseFloat(String(course.price || 0)) || 0,
+      level: (course.level?.toUpperCase() as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED') || 'BEGINNER',
+      price: parseFloat(String(course.price || 0)) || 0,
       discountPrice: course.discountPrice ? parseFloat(String(course.discountPrice)) : undefined,
-      isFree: parseFloat(String(course.price || 0)) === 0,
-      status: (course.status?.toLowerCase() as 'draft' | 'published' | 'archived') || 'draft',
-      featured: course.isFeatured || false,
-      viewsCount: course.viewsCount || 0,
-      enrolledCount: course.enrolledCount || 0,
+      durationHours: course.durationHours || 0,
+      totalLessons: course.totalLessons || 0,
+      language: course.language || 'vi',
+      status: (course.status?.toUpperCase() as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') || 'DRAFT',
+      isFeatured: course.isFeatured || false,
       ratingAvg: course.ratingAvg ? parseFloat(String(course.ratingAvg)) : 0,
       ratingCount: course.ratingCount || 0,
-      lessonsCount: course.lessonsCount || course.totalLessons || course._count?.lessons || 0,
-      durationMinutes: (course.durationHours || 0) * 60,
+      enrolledCount: course.enrolledCount || 0,
+      viewsCount: course.viewsCount || 0,
+      completionRate: course.completionRate ? parseFloat(String(course.completionRate)) : 0,
       requirements: course.requirements || '',
       whatYouLearn: course.whatYouLearn || '',
       courseObjectives: course.courseObjectives || '',
       targetAudience: course.targetAudience || '',
-      language: course.language || 'vi',
       tags: course.tags || course.courseTags?.map((ct: any) => ct.tag || ct) || [],
       createdAt: course.createdAt || new Date().toISOString(),
       updatedAt: course.updatedAt || new Date().toISOString(),
@@ -326,7 +333,7 @@ export function CourseEditPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
           <div className="flex items-center justify-between">

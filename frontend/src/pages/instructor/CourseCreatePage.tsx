@@ -162,7 +162,7 @@ export function CourseCreatePage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
           <div className="flex items-center justify-between">
