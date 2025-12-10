@@ -112,21 +112,40 @@ DarkOutlineTableFooter.displayName = "DarkOutlineTableFooter";
 
 /**
  * DarkOutlineTableRow - TableRow component với style dark theme chuẩn
- * Light mode: border-gray-300, hover:bg-gray-100
- * Dark mode: border-[#2D2D2D], hover:bg-[#1F1F1F]
+ * Light mode: border-gray-300, hover:bg-blue-50
+ * Dark mode: border-[#2D2D2D], hover:bg-blue-500/20
+ * 
+ * @param selected - Nếu true, hàng sẽ có background màu xanh để highlight
+ * @param onRowToggle - Callback được gọi khi click vào hàng, nhận vào trạng thái selected hiện tại
  */
 export const DarkOutlineTableRow = React.forwardRef<
   React.ElementRef<typeof TableRow>,
-  TableRowProps
->(({ className, ...props }, ref) => {
+  TableRowProps & { 
+    selected?: boolean;
+    onRowToggle?: (isSelected: boolean, event: React.MouseEvent<HTMLTableRowElement>) => void;
+  }
+>(({ className, selected, onRowToggle, onClick, ...props }, ref) => {
+  const handleClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
+    // Nếu có onRowToggle, gọi nó với trạng thái selected hiện tại
+    if (onRowToggle) {
+      onRowToggle(selected || false, e);
+    }
+    // Vẫn gọi onClick gốc nếu có
+    if (onClick) {
+      onClick(e);
+    }
+  };
+
   return (
     <TableRow
       ref={ref}
       className={cn(
-        "border-gray-300 hover:bg-gray-100",
-        "dark:border-[#2D2D2D] dark:hover:bg-[#1F1F1F]",
+        "border-gray-300 hover:bg-blue-50 transition-colors",
+        "dark:border-[#2D2D2D] dark:hover:bg-blue-500/20",
+        selected && "bg-blue-500/40 dark:bg-blue-500/40 border-blue-500/50 dark:border-blue-500/50",
         className
       )}
+      onClick={handleClick}
       {...props}
     />
   );

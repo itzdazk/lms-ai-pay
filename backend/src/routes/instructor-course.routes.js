@@ -5,6 +5,7 @@ import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
 import {
     getInstructorCoursesValidator,
+    getInstructorCourseByIdValidator,
     createCourseValidator,
     updateCourseValidator,
     deleteCourseValidator,
@@ -50,6 +51,30 @@ router.get(
 router.post('/', createCourseValidator, instructorCourseController.createCourse)
 
 /**
+ * @route   GET /api/v1/instructor/courses/:id/analytics
+ * @desc    Get detailed analytics for a course
+ * @access  Private (Instructor/Admin)
+ * @note    More specific route - MUST be defined BEFORE /:id route
+ */
+router.get(
+    '/:id/analytics',
+    getCourseAnalyticsValidator,
+    instructorCourseController.getCourseAnalytics
+)
+
+/**
+ * @route   GET /api/v1/instructor/courses/:id
+ * @desc    Get a single course by ID with full details
+ * @access  Private (Instructor/Admin)
+ * @note    Must be defined AFTER /:id/analytics route
+ */
+router.get(
+    '/:id',
+    getInstructorCourseByIdValidator,
+    instructorCourseController.getInstructorCourseById
+)
+
+/**
  * @route   PUT /api/v1/instructor/courses/:id
  * @desc    Update a course
  * @access  Private (Instructor/Admin)
@@ -91,17 +116,6 @@ router.patch(
     '/:id/preview',
     uploadVideoPreview,
     instructorCourseController.uploadVideoPreview
-)
-
-/**
- * @route   GET /api/v1/instructor/courses/:id/analytics
- * @desc    Get detailed analytics for a course
- * @access  Private (Instructor/Admin)
- */
-router.get(
-    '/:id/analytics',
-    getCourseAnalyticsValidator,
-    instructorCourseController.getCourseAnalytics
 )
 
 /**

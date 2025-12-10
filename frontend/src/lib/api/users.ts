@@ -22,7 +22,7 @@ export interface GetUsersParams {
   search?: string;
   role?: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED';
-  sortBy?: 'createdAt' | 'fullName' | 'email';
+  sortBy?: 'createdAt' | 'fullName' | 'email' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
 }
 

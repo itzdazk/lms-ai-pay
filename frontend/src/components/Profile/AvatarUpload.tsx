@@ -91,7 +91,7 @@ export function AvatarUpload({ user, onAvatarUpdated }: AvatarUploadProps) {
         errorMessage = error.message;
       }
       
-      toast.error(errorMessage);
+      // Error toast is already shown by API client interceptor
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

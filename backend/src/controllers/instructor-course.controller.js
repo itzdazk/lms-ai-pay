@@ -42,6 +42,28 @@ class InstructorCourseController {
     })
 
     /**
+     * @route   GET /api/v1/instructor/courses/:id
+     * @desc    Get a single course by ID with full details
+     * @access  Private (Instructor/Admin)
+     */
+    getInstructorCourseById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const instructorId = req.user.id
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const course = await instructorCourseService.getInstructorCourseById(
+            courseId,
+            instructorId
+        )
+
+        return ApiResponse.success(res, course, 'Course retrieved successfully')
+    })
+
+    /**
      * @route   POST /api/v1/instructor/courses
      * @desc    Create a new course
      * @access  Private (Instructor/Admin)

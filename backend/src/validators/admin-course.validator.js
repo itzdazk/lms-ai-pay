@@ -50,7 +50,9 @@ export const getAllCoursesValidator = [
             'newest',
             'oldest',
             'updated',
+            'updated-oldest',
             'popular',
+            'enrollments',
             'rating',
             'price_asc',
             'price_desc',
@@ -58,7 +60,7 @@ export const getAllCoursesValidator = [
             'title',
         ])
         .withMessage(
-            'Sort must be one of: newest, oldest, updated, popular, rating, price_asc, price_desc, views, title'
+            'Sort must be one of: newest, oldest, updated, updated-oldest, popular, enrollments, rating, price_asc, price_desc, views, title'
         ),
     query('minPrice')
         .optional()
