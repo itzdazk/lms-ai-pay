@@ -16,6 +16,7 @@ interface CourseListProps {
     totalPages: number
     onPageChange: (page: number) => void
     totalCourses?: number
+    limit?: number
     className?: string
 }
 
@@ -26,6 +27,7 @@ export function CourseList({
     totalPages,
     onPageChange,
     totalCourses = 0,
+    limit = 12,
     className = '',
 }: CourseListProps) {
     // Loading skeleton
@@ -36,13 +38,13 @@ export function CourseList({
                     {Array.from({ length: 6 }).map((_, i) => (
                         <Card
                             key={i}
-                            className='overflow-hidden bg-card border-border'
+                            className='overflow-hidden bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-2 border-[#2D2D2D]/50'
                         >
-                            <div className='aspect-video bg-muted animate-pulse' />
-                            <div className='p-6 space-y-4'>
-                                <div className='h-4 bg-muted rounded animate-pulse' />
-                                <div className='h-4 bg-muted rounded w-3/4 animate-pulse' />
-                                <div className='h-4 bg-muted rounded w-1/2 animate-pulse' />
+                            <div className='aspect-video bg-gradient-to-br from-[#1F1F1F] to-[#151515] animate-pulse' />
+                            <div className='p-5 space-y-3'>
+                                <div className='h-4 bg-[#2D2D2D] rounded animate-pulse' />
+                                <div className='h-4 bg-[#2D2D2D] rounded w-3/4 animate-pulse' />
+                                <div className='h-4 bg-[#2D2D2D] rounded w-1/2 animate-pulse' />
                             </div>
                         </Card>
                     ))}
@@ -56,13 +58,13 @@ export function CourseList({
     // Empty state
     if (courses.length === 0) {
         return (
-            <Card className='p-12 text-center bg-card border-border'>
-                <div className='space-y-3'>
+            <Card className='p-12 text-center bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-2 border-[#2D2D2D]/50'>
+                <div className='space-y-4'>
                     <div className='text-6xl'>📚</div>
-                    <h3 className='text-xl font-semibold text-foreground'>
+                    <h3 className='text-xl font-semibold text-white'>
                         Không tìm thấy khóa học
                     </h3>
-                    <p className='text-muted-foreground'>
+                    <p className='text-gray-400 max-w-md mx-auto'>
                         Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để xem thêm
                         khóa học
                     </p>
@@ -80,9 +82,12 @@ export function CourseList({
                 ))}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className='flex items-center justify-center gap-2 pt-4'>
+            {/* Pagination & Results Info */}
+            {(totalPages > 1 || totalCourses > 0) && (
+                <div className='bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl p-4 shadow-lg space-y-4'>
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className='flex items-center justify-center gap-2'>
                     <Button
                         variant='outline'
                         size='sm'
@@ -90,58 +95,93 @@ export function CourseList({
                             onPageChange(Math.max(1, currentPage - 1))
                         }
                         disabled={currentPage === 1}
-                        className='border-border text-foreground hover:bg-secondary disabled:opacity-50 cursor-pointer'
+                        className='border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'
                     >
                         <ChevronLeft className='h-4 w-4 mr-1' />
                         Trước
                     </Button>
 
                     <div className='flex items-center gap-1'>
+                        {/* Always show first page */}
+                        <Button
+                            variant={currentPage === 1 ? 'default' : 'outline'}
+                            size='sm'
+                            onClick={() => onPageChange(1)}
+                            className={
+                                currentPage === 1
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
+                                    : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
+                            }
+                        >
+                            1
+                        </Button>
+
+                        {/* Show ellipsis if there's a gap between page 1 and current page range */}
+                        {currentPage > 3 && (
+                            <span className='px-2 text-gray-400'>...</span>
+                        )}
+
+                        {/* Show pages around current page */}
                         {Array.from(
                             { length: totalPages },
                             (_, i) => i + 1
-                        ).map((page) => {
-                            // Show first page, last page, current page and adjacent pages
-                            if (
-                                page === 1 ||
-                                page === totalPages ||
-                                (page >= currentPage - 1 &&
-                                    page <= currentPage + 1)
-                            ) {
+                        )
+                            .filter((page) => {
+                                // Show pages that are:
+                                // - Not page 1 (already shown)
+                                // - Not last page (will be shown later)
+                                // - Within range of current page ± 1
                                 return (
-                                    <Button
-                                        key={page}
-                                        variant={
-                                            currentPage === page
-                                                ? 'default'
-                                                : 'outline'
-                                        }
-                                        size='sm'
-                                        onClick={() => onPageChange(page)}
-                                        className={
-                                            currentPage === page
-                                                ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
-                                                : 'border-border text-foreground hover:bg-secondary cursor-pointer'
-                                        }
-                                    >
-                                        {page}
-                                    </Button>
+                                    page !== 1 &&
+                                    page !== totalPages &&
+                                    page >= currentPage - 1 &&
+                                    page <= currentPage + 1
                                 )
-                            } else if (
-                                page === currentPage - 2 ||
-                                page === currentPage + 2
-                            ) {
-                                return (
-                                    <span
-                                        key={page}
-                                        className='px-2 text-muted-foreground'
-                                    >
-                                        ...
-                                    </span>
-                                )
-                            }
-                            return null
-                        })}
+                            })
+                            .map((page) => (
+                                <Button
+                                    key={page}
+                                    variant={
+                                        currentPage === page
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    size='sm'
+                                    onClick={() => onPageChange(page)}
+                                    className={
+                                        currentPage === page
+                                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
+                                            : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
+                                    }
+                                >
+                                    {page}
+                                </Button>
+                            ))}
+
+                        {/* Show ellipsis if there's a gap between current page range and last page */}
+                        {currentPage < totalPages - 2 && (
+                            <span className='px-2 text-gray-400'>...</span>
+                        )}
+
+                        {/* Always show last page (if more than 1 page) */}
+                        {totalPages > 1 && (
+                            <Button
+                                variant={
+                                    currentPage === totalPages
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                size='sm'
+                                onClick={() => onPageChange(totalPages)}
+                                className={
+                                    currentPage === totalPages
+                                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
+                                        : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
+                                }
+                            >
+                                {totalPages}
+                            </Button>
+                        )}
                     </div>
 
                     <Button
@@ -151,21 +191,35 @@ export function CourseList({
                             onPageChange(Math.min(totalPages, currentPage + 1))
                         }
                         disabled={currentPage === totalPages}
-                        className='border-border text-foreground hover:bg-secondary disabled:opacity-50 cursor-pointer'
+                        className='border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'
                     >
                         Sau
                         <ChevronRight className='h-4 w-4 ml-1' />
                     </Button>
-                </div>
-            )}
+                        </div>
+                    )}
 
-            {/* Results info */}
-            {totalCourses > 0 && (
-                <p className='text-center text-sm text-muted-foreground'>
-                    Hiển thị {(currentPage - 1) * 12 + 1}-
-                    {Math.min(currentPage * 12, totalCourses)} trong tổng số{' '}
-                    {totalCourses} khóa học
-                </p>
+                    {/* Results Info */}
+                    {totalCourses > 0 && (
+                        <div className='text-center'>
+                            <p className='text-sm text-gray-300'>
+                                Hiển thị{' '}
+                                <span className='text-white font-semibold'>
+                                    {(currentPage - 1) * limit + 1}
+                                </span>
+                                {' - '}
+                                <span className='text-white font-semibold'>
+                                    {Math.min(currentPage * limit, totalCourses)}
+                                </span>{' '}
+                                trong tổng số{' '}
+                                <span className='text-white font-semibold'>
+                                    {totalCourses}
+                                </span>{' '}
+                                khóa học
+                            </p>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     )
