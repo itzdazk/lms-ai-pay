@@ -277,6 +277,28 @@ export function Navbar() {
                     </span>
                 </Link>
 
+                {/* Navigation Links - Desktop */}
+                <nav className='hidden lg:flex items-center gap-6 ml-6'>
+                    <Link
+                        to='/courses'
+                        className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
+                    >
+                        Khóa học
+                    </Link>
+                    <Link
+                        to='/ai-chat'
+                        className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
+                    >
+                        AI Chat
+                    </Link>
+                    <Link
+                        to='/about'
+                        className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
+                    >
+                        Về chúng tôi
+                    </Link>
+                </nav>
+
                 {/* Search Bar - Desktop */}
                 <div className='hidden md:flex flex-1 max-w-xl mx-8'>
                     <div className='relative w-full'>
@@ -302,28 +324,6 @@ export function Navbar() {
                     </div>
                 </div>
 
-                {/* Navigation Links - Desktop */}
-                <nav className='hidden lg:flex items-center gap-6'>
-                    <Link
-                        to='/courses'
-                        className='text-gray-300 hover:text-blue-600 transition-colors'
-                    >
-                        Khóa học
-                    </Link>
-                    <Link
-                        to='/ai-chat'
-                        className='text-gray-300 hover:text-blue-600 transition-colors'
-                    >
-                        AI Chat
-                    </Link>
-                    <Link
-                        to='/about'
-                        className='text-gray-300 hover:text-blue-600 transition-colors'
-                    >
-                        Về chúng tôi
-                    </Link>
-                </nav>
-
                 {/* Right Side Actions */}
                 <div className='flex items-center gap-3'>
                     {/* Theme Toggle */}
@@ -331,7 +331,7 @@ export function Navbar() {
                         variant='outline'
                         size='sm'
                         onClick={toggleTheme}
-                        className='hidden md:flex items-center gap-2 border-[#2D2D2D] text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0'
+                        className='hidden md:flex items-center gap-2 border-[#2D2D2D] text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0 cursor-pointer'
                         title={
                             theme === 'dark'
                                 ? 'Chuyển sang Light Mode'
@@ -341,12 +341,12 @@ export function Navbar() {
                         {theme === 'dark' ? (
                             <>
                                 <Moon className='h-4 w-4' />
-                                <span>Dark Mode</span>
+                                {/* <span>Dark Mode</span> */}
                             </>
                         ) : (
                             <>
                                 <Sun className='h-4 w-4' />
-                                <span>Light Mode</span>
+                                {/* <span>Light Mode</span> */}
                             </>
                         )}
                     </Button>
@@ -433,7 +433,7 @@ export function Navbar() {
                                 <Button
                                     variant='outline'
                                     size='sm'
-                                    className='hidden sm:flex border-[#2D2D2D] text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0'
+                                    className='hidden sm:flex border-[#2D2D2D] text-white bg-black hover:bg-gray-300 hover:text-black focus-visible:ring-0 cursor-pointer'
                                 >
                                     Đăng nhập
                                 </Button>
@@ -441,7 +441,7 @@ export function Navbar() {
                             <Link to='/register'>
                                 <Button
                                     size='sm'
-                                    className='hidden sm:flex bg-blue-600 hover:bg-blue-700 text-white focus-visible:ring-0'
+                                    className='hidden sm:flex bg-white  hover:bg-gray-500 text-black hover:text-white focus-visible:ring-0 cursor-pointer'
                                 >
                                     Đăng ký
                                 </Button>
