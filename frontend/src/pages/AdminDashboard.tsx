@@ -243,7 +243,7 @@ export function AdminDashboard() {
             
             return (
               <div key={item.id}>
-                <button
+              <button
                   onClick={() => {
                     if (hasChildren) {
                       setExpandedMenus(prev => {
@@ -260,14 +260,14 @@ export function AdminDashboard() {
                     }
                   }}
                   className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
-                    isActive
-                      ? 'bg-[#2D2D2D] text-white'
-                      : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
-                  }`}
-                >
+                  isActive
+                    ? 'bg-[#2D2D2D] text-white'
+                    : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
+                }`}
+              >
                   <div className="flex items-center gap-3">
-                    <Icon className="h-5 w-5" />
-                    <span className="font-medium">{item.label}</span>
+                <Icon className="h-5 w-5" />
+                <span className="font-medium">{item.label}</span>
                   </div>
                   {hasChildren && (
                     isExpanded ? (
@@ -296,7 +296,7 @@ export function AdminDashboard() {
                         >
                           <ChildIcon className="h-4 w-4" />
                           <span className="text-sm font-medium">{child.label}</span>
-                        </button>
+              </button>
                       );
                     })}
                   </div>
