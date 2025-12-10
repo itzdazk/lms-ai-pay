@@ -34,7 +34,7 @@ export interface PaginatedApiResponse<T> {
     success: boolean
     message?: string
     data: T[]
-    pagination: {
+  pagination: {
         page: number
         limit: number
         total: number
@@ -150,7 +150,7 @@ export interface Course {
     price: number
     discountPrice?: number
     instructorId: number
-    instructor?: {
+  instructor?: {
         id: number
         fullName: string
         avatarUrl?: string
