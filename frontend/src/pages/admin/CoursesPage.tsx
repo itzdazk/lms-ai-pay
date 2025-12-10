@@ -1125,6 +1125,22 @@ export function CoursesPage() {
           {/* Pagination and Sort Row - 4 columns */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
+              <Label className="text-gray-400 text-sm">Giá</Label>
+              <Select
+                value={priceType}
+                onValueChange={(value) => handlePriceTypeChange(value as 'all' | 'free' | 'paid')}
+              >
+                <DarkOutlineSelectTrigger>
+                  <SelectValue placeholder="Tất cả" />
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="all">Tất cả</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="free">Miễn phí</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="paid">Có phí</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label className="text-gray-400 text-sm">Sắp xếp</Label>
               <Select
                 value={filters.sort || 'newest'}
@@ -1154,22 +1170,6 @@ export function CoursesPage() {
                   <DarkOutlineSelectItem value="price_desc">Giá: Cao đến thấp</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="views">Lượt xem</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="title">Tên A-Z</DarkOutlineSelectItem>
-                </DarkOutlineSelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-sm">Giá</Label>
-              <Select
-                value={priceType}
-                onValueChange={(value) => handlePriceTypeChange(value as 'all' | 'free' | 'paid')}
-              >
-                <DarkOutlineSelectTrigger>
-                  <SelectValue placeholder="Tất cả" />
-                </DarkOutlineSelectTrigger>
-                <DarkOutlineSelectContent>
-                  <DarkOutlineSelectItem value="all">Tất cả</DarkOutlineSelectItem>
-                  <DarkOutlineSelectItem value="free">Miễn phí</DarkOutlineSelectItem>
-                  <DarkOutlineSelectItem value="paid">Có phí</DarkOutlineSelectItem>
                 </DarkOutlineSelectContent>
               </Select>
             </div>
