@@ -48,8 +48,8 @@ export function CourseEditPage() {
       slug: course.slug || '',
       description: course.description || '',
       shortDescription: course.shortDescription || '',
-      thumbnail: course.thumbnailUrl || '',
-      previewVideoUrl: course.videoPreviewUrl || '',
+      thumbnailUrl: course.thumbnailUrl || course.thumbnail || '',
+      videoPreviewUrl: course.videoPreviewUrl || course.previewVideoUrl || '',
       instructorId: String(course.instructorId || ''),
       categoryId: String(course.categoryId || course.category?.id || ''),
       category: course.category ? {
