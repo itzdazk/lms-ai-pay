@@ -135,10 +135,16 @@ export function formatNumber(num: number): string {
  * Get course price display
  * @param course - Course object
  * @returns Object with price info
+ * 
+ * Logic:
+ * - If price = 0 → Free course
+ * - If discountPrice exists and > 0 and < price → Use discountPrice (has discount)
+ * - If discountPrice is null/undefined/0 or >= price → Use price (no discount)
  */
 export function getCoursePrice(course: {
     price: number
-    discountPrice?: number
+    discountPrice?: number | null
+    originalPrice?: number
 }): {
     isFree: boolean
     currentPrice: number
@@ -147,18 +153,29 @@ export function getCoursePrice(course: {
     discountPercentage: number
     displayPrice: string
 } {
-    const isFree = course.price === 0
-    const hasDiscount =
-        !!course.discountPrice && course.discountPrice < course.price
-    const currentPrice = hasDiscount ? course.discountPrice! : course.price
+    // Use originalPrice if available, otherwise use price
+    const originalPrice = course.originalPrice ?? course.price
+    const discountPrice = course.discountPrice
+    
+    // Course is free if original price is 0
+    const isFree = originalPrice === 0
+    
+    // Has discount if discountPrice exists, is > 0, and is less than original price
+    const hasDiscount = 
+        discountPrice != null && 
+        discountPrice > 0 && 
+        discountPrice < originalPrice
+    
+    // Current price: use discountPrice if has discount, otherwise use originalPrice
+    const currentPrice = hasDiscount ? discountPrice : originalPrice
 
     return {
         isFree,
         currentPrice,
-        originalPrice: course.price,
+        originalPrice,
         hasDiscount,
         discountPercentage: hasDiscount
-            ? calculateDiscount(course.price, course.discountPrice!)
+            ? calculateDiscount(originalPrice, discountPrice)
             : 0,
         displayPrice: isFree ? 'Miễn phí' : formatPrice(currentPrice),
     }

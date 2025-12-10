@@ -43,9 +43,10 @@ import {
 // THÊM: Các component và API mới
 import { LessonsList, InstructorInfo } from '../components/Courses'
 import { coursesApi } from '../lib/api'
-import type { Course, Instructor, Lesson } from '../lib/api/types'
+import type { Course, Lesson } from '../lib/api/types'
 import {
     formatDuration,
+    formatPrice,
     getCoursePrice,
     getCourseLevelBadge,
 } from '../lib/courseUtils'
@@ -57,7 +58,7 @@ export function CourseDetailPage() {
     // State quản lý dữ liệu từ API
     const [course, setCourse] = useState<Course | null>(null)
     const [lessons, setLessons] = useState<Lesson[]>([])
-    const [instructor, setInstructor] = useState<Instructor | null>(null)
+    const [instructor, setInstructor] = useState<Course['instructor'] | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isEnrolled, setIsEnrolled] = useState(false) // TODO: Kết nối với auth context sau
 
@@ -72,7 +73,7 @@ export function CourseDetailPage() {
                 const courseId = parseInt(id)
 
                 // Lấy thông tin khóa học
-                const courseData = await coursesApi.getCourseById(courseId)
+                const courseData = await coursesApi.getCourseById(String(courseId))
                 setCourse(courseData)
 
                 // Tăng lượt xem (fire and forget)
@@ -313,16 +314,11 @@ export function CourseDetailPage() {
                                             {priceInfo.hasDiscount && (
                                                 <>
                                                     <div className='text-lg text-gray-400 line-through'>
-                                                        {
-                                                            priceInfo.originalPrice
-                                                        }
+                                                        {formatPrice(priceInfo.originalPrice)}
                                                     </div>
                                                     <Badge className='bg-red-500 mt-2'>
                                                         Giảm{' '}
-                                                        {
-                                                            priceInfo.discountPercentage
-                                                        }
-                                                        %
+                                                        {priceInfo.discountPercentage}%
                                                     </Badge>
                                                 </>
                                             )}
