@@ -23,7 +23,7 @@ import {
   BarChart3,
   Loader2,
 } from 'lucide-react';
-import { coursesApi } from '../lib/api/courses';
+import { instructorCoursesApi } from '../lib/api/instructor-courses'
 import { useAuth } from '../contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { toast } from 'sonner';
@@ -37,45 +37,6 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-function translateErrorMessage(message: string): string {
-  if (!message) return 'Đã xảy ra lỗi';
-  
-  const lowerMessage = message.toLowerCase();
-  
-  // Course deletion errors
-  if (lowerMessage.includes('course not found') || lowerMessage.includes('không tìm thấy khóa học')) {
-    return 'Không tìm thấy khóa học';
-  }
-  if (lowerMessage.includes('permission') || lowerMessage.includes('quyền')) {
-    return 'Bạn không có quyền thực hiện thao tác này';
-  }
-  if (lowerMessage.includes('enrollments') || lowerMessage.includes('học viên đã đăng ký')) {
-    return 'Không thể xóa khóa học đã có học viên đăng ký. Vui lòng lưu trữ thay vì xóa';
-  }
-  if (lowerMessage.includes('active enrollments')) {
-    return 'Không thể xóa khóa học đã có học viên đăng ký. Vui lòng lưu trữ thay vì xóa';
-  }
-  
-  // Generic errors
-  if (lowerMessage.includes('not found')) {
-    return 'Không tìm thấy dữ liệu';
-  }
-  if (lowerMessage.includes('unauthorized') || lowerMessage.includes('chưa đăng nhập')) {
-    return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại';
-  }
-  if (lowerMessage.includes('forbidden') || lowerMessage.includes('không có quyền')) {
-    return 'Bạn không có quyền truy cập';
-  }
-  if (lowerMessage.includes('validation') || lowerMessage.includes('dữ liệu không hợp lệ')) {
-    return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại';
-  }
-  if (lowerMessage.includes('server error') || lowerMessage.includes('lỗi server')) {
-    return 'Lỗi server. Vui lòng thử lại sau';
-  }
-  
-  // Return original message if no translation found (might already be in Vietnamese)
-  return message;
-}
 
 export function InstructorDashboard() {
   const { user: currentUser, loading: authLoading } = useAuth();
@@ -96,7 +57,7 @@ export function InstructorDashboard() {
     total: 0,
     totalPages: 0,
   });
-  const [filters, setFilters] = useState({
+  const [filters] = useState({
     page: 1,
     limit: 10,
     search: '',
@@ -201,31 +162,37 @@ export function InstructorDashboard() {
   // Transform backend course data to frontend format
   const transformCourse = (course: any): Course => {
     return {
-      id: String(course.id),
+      id: Number(course.id),
       title: course.title || '',
       slug: course.slug || '',
       description: course.description || course.shortDescription || '',
-      thumbnail: course.thumbnailUrl || '',
-      previewVideoUrl: course.videoPreviewUrl || '',
-      instructorId: String(course.instructorId || ''),
-      categoryId: String(course.categoryId || course.category?.id || ''),
+      thumbnailUrl: course.thumbnailUrl || '',
+      videoPreviewUrl: course.videoPreviewUrl || '',
+      instructorId: Number(course.instructorId || 0),
+      categoryId: Number(course.categoryId || course.category?.id || 0),
       category: course.category ? {
-        id: String(course.category.id),
+        id: Number(course.category.id),
         name: course.category.name,
         slug: course.category.slug,
+        sortOrder: course.category.sortOrder || 0,
+        isActive: course.category.isActive !== undefined ? course.category.isActive : true,
+        createdAt: course.category.createdAt || new Date().toISOString(),
+        updatedAt: course.category.updatedAt || new Date().toISOString(),
       } : undefined,
-      level: course.level || 'beginner',
-      originalPrice: parseFloat(String(course.price || 0)) || 0,
+      level: (course.level || 'BEGINNER') as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED',
+      price: parseFloat(String(course.price || 0)) || 0,
       discountPrice: course.discountPrice ? parseFloat(String(course.discountPrice)) : undefined,
       isFree: parseFloat(String(course.price || 0)) === 0,
-      status: course.status ? (course.status.toLowerCase() as 'draft' | 'published' | 'archived') : 'draft',
-      featured: course.isFeatured || false,
+      status: course.status ? (course.status.toUpperCase() as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') : 'DRAFT',
+      isFeatured: course.isFeatured || false,
       viewsCount: course.viewsCount || 0,
       enrolledCount: course.enrolledCount || 0,
       ratingAvg: course.ratingAvg ? parseFloat(String(course.ratingAvg)) : 0,
       ratingCount: course.ratingCount || 0,
-      lessonsCount: course.lessonsCount || course.totalLessons || 0,
-      durationMinutes: (course.durationHours || 0) * 60,
+      totalLessons: course.totalLessons || course.lessonsCount || 0,
+      durationHours: course.durationHours || 0,
+      language: course.language || 'vi',
+      completionRate: course.completionRate || 0,
       createdAt: course.createdAt || new Date().toISOString(),
       updatedAt: course.updatedAt || new Date().toISOString(),
     };
@@ -243,7 +210,7 @@ export function InstructorDashboard() {
         ...(filters.level ? { level: filters.level } : {}),
         sort: filters.sort,
       };
-      const coursesData = await coursesApi.getInstructorCourses(requestParams);
+      const coursesData = await instructorCoursesApi.getInstructorCourses(requestParams);
       
       // Transform courses data - preserve order from backend
       const coursesArray: any[] = coursesData?.data || [];
@@ -277,7 +244,7 @@ export function InstructorDashboard() {
   const loadStats = async () => {
     try {
       // Get stats from API
-      const statsData = await coursesApi.getInstructorCourseStatistics();
+      const statsData = await instructorCoursesApi.getInstructorCourseStatistics();
       
       // Get all courses with pagination (max limit is 100)
       let allCourses: Course[] = [];
@@ -285,7 +252,7 @@ export function InstructorDashboard() {
       let hasMore = true;
       
       while (hasMore) {
-        const coursesData = await coursesApi.getInstructorCourses({ 
+        const coursesData = await instructorCoursesApi.getInstructorCourses({ 
           page, 
           limit: 100,
           sort: 'newest' // Always use newest for stats calculation
@@ -302,8 +269,8 @@ export function InstructorDashboard() {
       }
       
       const totalCourses = allCourses.length;
-      const publishedCourses = allCourses.filter((c: Course) => c.status === 'published').length;
-      const draftCourses = allCourses.filter((c: Course) => c.status === 'draft').length;
+      const publishedCourses = allCourses.filter((c: Course) => c.status === 'PUBLISHED').length;
+      const draftCourses = allCourses.filter((c: Course) => c.status === 'DRAFT').length;
       const totalStudents = allCourses.reduce((sum: number, c: Course) => sum + (c.enrolledCount || 0), 0);
       const totalRevenue = statsData?.totalRevenue || 0;
       const coursesWithRatings = allCourses.filter((c: Course) => (c.ratingCount || 0) > 0);
@@ -324,8 +291,8 @@ export function InstructorDashboard() {
       // If stats API fails, try to calculate from current courses
       if (courses.length > 0) {
         const totalCourses = courses.length;
-        const publishedCourses = courses.filter((c: Course) => c.status === 'published').length;
-        const draftCourses = courses.filter((c: Course) => c.status === 'draft').length;
+        const publishedCourses = courses.filter((c: Course) => c.status === 'PUBLISHED').length;
+        const draftCourses = courses.filter((c: Course) => c.status === 'DRAFT').length;
         const totalStudents = courses.reduce((sum: number, c: Course) => sum + (c.enrolledCount || 0), 0);
         const coursesWithRatings = courses.filter((c: Course) => (c.ratingCount || 0) > 0);
         const avgRating = coursesWithRatings.length > 0 
@@ -350,7 +317,7 @@ export function InstructorDashboard() {
     
     try {
       setActionLoading(true);
-      await coursesApi.deleteInstructorCourse(selectedCourse.id);
+      await instructorCoursesApi.deleteInstructorCourse(String(selectedCourse.id));
       toast.success('Xóa khóa học thành công');
       setIsDeleteDialogOpen(false);
       setSelectedCourse(null);
@@ -369,7 +336,7 @@ export function InstructorDashboard() {
     
     try {
       setActionLoading(true);
-      await coursesApi.changeCourseStatus(selectedCourse.id, newStatus);
+      await instructorCoursesApi.changeCourseStatus(String(selectedCourse.id), newStatus);
       toast.success('Thay đổi trạng thái thành công');
       setIsStatusDialogOpen(false);
       setSelectedCourse(null);
