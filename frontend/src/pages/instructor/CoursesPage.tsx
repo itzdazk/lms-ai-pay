@@ -860,7 +860,7 @@ export function CoursesPage() {
                 <DarkOutlineSelectContent>
                   <DarkOutlineSelectItem value="newest">Mới nhất</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="oldest">Cũ nhất</DarkOutlineSelectItem>
-                  <DarkOutlineSelectItem value="updated">Cập nhật gần nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="updated">Cập nhật mới nhất</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="updated-oldest">Cập nhật cũ nhất</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="popular">Phổ biến</DarkOutlineSelectItem>
                   <DarkOutlineSelectItem value="rating">Đánh giá</DarkOutlineSelectItem>

@@ -129,16 +129,25 @@ export function CourseForm({
   const [previewVideoPreview, setPreviewVideoPreview] = useState<string | null>(null);
   const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
   const [thumbnailRemoved, setThumbnailRemoved] = useState(false);
+  const [isDraggingPreview, setIsDraggingPreview] = useState(false);
+  const [videoPreviewRemoved, setVideoPreviewRemoved] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
   const [tagSearch, setTagSearch] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [initialFormData, setInitialFormData] = useState<CourseFormData | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<{ submitData: any; thumbnailFile?: File; previewFile?: File } | null>(null);
   const [showThumbnailDialog, setShowThumbnailDialog] = useState(false);
   const [availableThumbnails, setAvailableThumbnails] = useState<string[]>([]);
   const [loadingThumbnails, setLoadingThumbnails] = useState(false);
   const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null);
   const [thumbnailDialogTab, setThumbnailDialogTab] = useState<'library' | 'upload'>('upload');
+  const [showVideoPreviewDialog, setShowVideoPreviewDialog] = useState(false);
+  const [availableVideoPreviews, setAvailableVideoPreviews] = useState<string[]>([]);
+  const [loadingVideoPreviews, setLoadingVideoPreviews] = useState(false);
+  const [selectedVideoPreviewUrl, setSelectedVideoPreviewUrl] = useState<string | null>(null);
+  const [videoPreviewDialogTab, setVideoPreviewDialogTab] = useState<'library' | 'upload'>('upload');
   const [creatingTag, setCreatingTag] = useState(false);
   // Track newly created tags in this session (only when editing)
   const [newlyCreatedTagIds, setNewlyCreatedTagIds] = useState<Set<string>>(new Set());
@@ -252,8 +261,8 @@ export function CourseForm({
     }
   }, [course, course?.level]);
 
-  // Validate image aspect ratio (16:9)
-  const validateImageAspectRatio = (file: File): Promise<{ valid: boolean; width?: number; height?: number; aspectRatio?: number; error?: string }> => {
+  // Get image dimensions (for display only, no validation)
+  const getImageDimensions = (file: File): Promise<{ width?: number; height?: number; aspectRatio?: number; error?: string }> => {
     return new Promise((resolve) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -263,32 +272,17 @@ export function CourseForm({
         const width = img.width;
         const height = img.height;
         const aspectRatio = width / height;
-        const targetRatio = 16 / 9; // 1.777...
-        const tolerance = 0.05; // 5% tolerance (same as backend)
-        const ratioDifference = Math.abs(aspectRatio - targetRatio);
         
-        if (ratioDifference > tolerance) {
-          resolve({
-            valid: false,
-            width,
-            height,
-            aspectRatio,
-            error: `Tỷ lệ ảnh phải là 16:9. Ảnh hiện tại: ${width}×${height} (${aspectRatio.toFixed(2)}:1). Cho phép sai lệch: ±${(tolerance * 100).toFixed(0)}%`
-          });
-        } else {
-          resolve({
-            valid: true,
-            width,
-            height,
-            aspectRatio
-          });
-        }
+        resolve({
+          width,
+          height,
+          aspectRatio
+        });
       };
       
       img.onerror = () => {
         URL.revokeObjectURL(url);
         resolve({
-          valid: false,
           error: 'Không thể đọc thông tin ảnh. Vui lòng chọn file ảnh hợp lệ.'
         });
       };
@@ -308,10 +302,10 @@ export function CourseForm({
       return;
     }
 
-    // Validate aspect ratio
-    const validation = await validateImageAspectRatio(file);
-    if (!validation.valid) {
-      toast.error(validation.error || 'Ảnh không hợp lệ');
+    // Get image dimensions for display (no validation - backend will auto-crop to 16:9)
+    const dimensions = await getImageDimensions(file);
+    if (dimensions.error) {
+      toast.error(dimensions.error);
       return;
     }
 
@@ -320,7 +314,19 @@ export function CourseForm({
       setThumbnailPreview(reader.result as string);
       setThumbnailFile(file);
       setThumbnailRemoved(false); // Reset removed flag when new image is selected
-      toast.success(`Đã tải ảnh đại diện thành công (${validation.width}×${validation.height}, tỷ lệ 16:9)`);
+      
+      const aspectRatio = dimensions.aspectRatio || 0;
+      const targetRatio = 16 / 9;
+      const isRecommended = Math.abs(aspectRatio - targetRatio) <= 0.1; // Within 10% of 16:9
+      
+      if (isRecommended) {
+        toast.success(`Đã tải ảnh đại diện thành công (${dimensions.width}×${dimensions.height})`);
+      } else {
+        toast.success(
+          `Đã tải ảnh đại diện thành công (${dimensions.width}×${dimensions.height}). Hệ thống sẽ tự động cắt về tỷ lệ 16:9.`,
+          { duration: 4000 }
+        );
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -377,6 +383,25 @@ export function CourseForm({
     }
   };
 
+  // Load available video previews from instructor's courses
+  const loadAvailableVideoPreviews = async () => {
+    try {
+      setLoadingVideoPreviews(true);
+      const response = await coursesApi.getInstructorCourses({ limit: 100 });
+      const courses = response.data || [];
+      const videoPreviews = courses
+        .map((c: Course) => c.videoPreviewUrl || (c as any).previewVideoUrl)
+        .filter((url: string | undefined): url is string => !!url && url.trim() !== '');
+      // Remove duplicates
+      setAvailableVideoPreviews([...new Set(videoPreviews)]);
+    } catch (error) {
+      console.error('Error loading video previews:', error);
+      setAvailableVideoPreviews([]);
+    } finally {
+      setLoadingVideoPreviews(false);
+    }
+  };
+
   // Open thumbnail dialog
   const handleOpenThumbnailDialog = () => {
     setShowThumbnailDialog(true);
@@ -408,10 +433,44 @@ export function CourseForm({
     setShowThumbnailDialog(false);
   };
 
+  // Open video preview dialog
+  const handleOpenVideoPreviewDialog = () => {
+    setShowVideoPreviewDialog(true);
+    setSelectedVideoPreviewUrl(null);
+    loadAvailableVideoPreviews();
+  };
+
+  // Handle selecting video preview from library
+  const handleSelectVideoPreviewFromLibrary = (url: string) => {
+    setSelectedVideoPreviewUrl(url);
+  };
+
+  // Handle confirming video preview selection
+  const handleConfirmVideoPreview = () => {
+    if (selectedVideoPreviewUrl) {
+      setPreviewVideoPreview(selectedVideoPreviewUrl);
+      setPreviewFile(null); // Clear file since we're using URL
+      setVideoPreviewRemoved(false); // Reset removed flag when selecting from library
+      setShowVideoPreviewDialog(false);
+      toast.success('Đã chọn video giới thiệu');
+    }
+  };
+
+  // Handle upload in video preview dialog
+  const handleDialogVideoPreviewSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processPreviewFile(file);
+    setShowVideoPreviewDialog(false);
+  };
+
   const handlePreviewSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    processPreviewFile(file);
+  };
 
+  const processPreviewFile = (file: File) => {
     if (!file.type.startsWith('video/')) {
       toast.error('Vui lòng chọn file video');
       return;
@@ -423,8 +482,29 @@ export function CourseForm({
     }
 
     setPreviewFile(file);
+    setVideoPreviewRemoved(false); // Reset removed flag when new video is selected
     const url = URL.createObjectURL(file);
     setPreviewVideoPreview(url);
+    toast.success(`Đã tải video giới thiệu thành công (${formatFileSize(file.size)})`);
+  };
+
+  const handlePreviewDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingPreview(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    processPreviewFile(file);
+  };
+
+  const handlePreviewDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingPreview(true);
+  };
+
+  const handlePreviewDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingPreview(false);
   };
 
   const removeThumbnail = () => {
@@ -442,6 +522,7 @@ export function CourseForm({
       URL.revokeObjectURL(previewVideoPreview);
     }
     setPreviewVideoPreview(null);
+    setVideoPreviewRemoved(true); // Mark as removed for backend deletion
     if (previewInputRef.current) {
       previewInputRef.current.value = '';
     }
@@ -601,6 +682,11 @@ export function CourseForm({
       submitData.thumbnailUrl = null;
     }
 
+    // Handle video preview deletion: if editing and video preview was removed, send null to delete
+    if (course && videoPreviewRemoved && !previewFile && !previewVideoPreview) {
+      submitData.videoPreviewUrl = null;
+    }
+
     // Include tags in return object for parent component to handle separately
     // But don't send tags in the actual API request to avoid backend processing them
     if (tags.length > 0) {
@@ -691,16 +777,39 @@ export function CourseForm({
       return;
     }
 
+    // Prepare submit data
+    const submitData: any = prepareSubmitData();
+    
+    // Store pending submit data and show confirmation dialog
+    setPendingSubmitData({
+      submitData,
+      thumbnailFile: thumbnailFile || undefined,
+      previewFile: previewFile || undefined
+    });
+    setShowSubmitDialog(true);
+  };
+
+  // Actually submit the form after confirmation
+  const handleConfirmSubmit = async () => {
+    if (!pendingSubmitData) return;
+
     try {
-      const submitData: any = prepareSubmitData();
-      await onSubmit(submitData, thumbnailFile || undefined, previewFile || undefined);
+      await onSubmit(
+        pendingSubmitData.submitData,
+        pendingSubmitData.thumbnailFile,
+        pendingSubmitData.previewFile
+      );
       
       // Reset initial form data after successful submit to clear change indicators
       setInitialFormData({ ...formData });
       setThumbnailFile(null);
       setPreviewFile(null);
+      setShowSubmitDialog(false);
+      setPendingSubmitData(null);
     } catch (error) {
       // Error is handled by parent component
+      setShowSubmitDialog(false);
+      setPendingSubmitData(null);
       throw error;
     }
   };
@@ -870,6 +979,7 @@ export function CourseForm({
     setThumbnailFile(null);
     setPreviewFile(null);
     setThumbnailRemoved(false); // Reset removed flag
+    setVideoPreviewRemoved(false); // Reset removed flag
     
     // Reset previews to original course values
     // Support both field names for backward compatibility
@@ -972,6 +1082,15 @@ export function CourseForm({
       (initialThumbnailUrl && !currentThumbnailPreview) || // Had thumbnail, now removed
       (currentThumbnailPreview && currentThumbnailPreview !== initialThumbnailUrl); // Thumbnail changed
     
+    // Check video preview changes
+    const initialVideoPreviewUrl = (course as any)?.videoPreviewUrl || (course as any)?.previewVideoUrl || null;
+    const currentVideoPreview = previewVideoPreview;
+    const videoPreviewChanged = 
+      videoPreviewRemoved || // Video preview was removed
+      previewFile !== null || // New video file uploaded
+      (initialVideoPreviewUrl && !currentVideoPreview) || // Had video, now removed
+      (currentVideoPreview && currentVideoPreview !== initialVideoPreviewUrl); // Video changed
+    
     return (
       isFieldChanged('title') ||
       isFieldChanged('description') ||
@@ -988,7 +1107,7 @@ export function CourseForm({
       isFieldChanged('language') ||
       isFieldChanged('tags') ||
       thumbnailChanged ||
-      previewFile !== null
+      videoPreviewChanged
     );
   };
 
@@ -1546,7 +1665,7 @@ export function CourseForm({
             <div className="group relative">
               <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
               <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                Ảnh đại diện sẽ hiển thị trên trang danh sách và chi tiết khóa học. Kích thước tối đa 5MB, định dạng: JPG, PNG, GIF. <span className="text-yellow-400 font-medium">Tỷ lệ bắt buộc: 16:9</span> (cho phép sai lệch ±5%).
+                ảnh đại diện sẽ hiển thị trên trang danh sách và chi tiết khóa học. Kích thước tối đa 5MB, định dạng: JPG, PNG, GIF. <span className="text-blue-400 font-medium">Khuyến nghị tỷ lệ 16:9</span> - Hệ thống sẽ tự động cắt ảnh về tỷ lệ 16:9 nếu cần.
               </div>
             </div>
           </div>
@@ -1694,7 +1813,7 @@ export function CourseForm({
                     {isDraggingThumbnail ? 'Thả ảnh vào đây' : 'Kéo thả ảnh hoặc click để chọn'}
                   </p>
                   <p className="text-xs text-gray-400">
-                    JPG, PNG, GIF (tối đa 5MB) • <span className="text-yellow-400 font-medium">Tỷ lệ bắt buộc: 16:9</span> (±5%)
+                    JPG, PNG, GIF (tối đa 5MB) • <span className="text-blue-400 font-medium">Khuyến nghị: 16:9</span> (tự động cắt)
                   </p>
                 </div>
               </div>
@@ -1706,42 +1825,149 @@ export function CourseForm({
         <div className="border-t border-[#2D2D2D] my-6"></div>
 
         {/* Preview Video Section */}
-        <div className="space-y-2">
-          <Label className="text-white flex items-center gap-2">
-            <Video className="h-4 w-4 text-gray-400" />
-            <span>Video giới thiệu</span>
-            {previewFile !== null && (
-              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-            )}
-            <div className="group relative ml-auto">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-white flex items-center gap-2">
+              <Video className="h-4 w-4 text-gray-400" />
+              <span>Video giới thiệu</span>
+              {previewFile !== null && (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              )}
+              {course && videoPreviewRemoved && !previewFile && !previewVideoPreview && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/30 rounded-md">
+                  <AlertCircle className="h-3.5 w-3.5 text-green-400" />
+                  <span className="text-xs text-green-400 font-medium">Đã xóa video</span>
+                </div>
+              )}
+            </Label>
+            <div className="group relative">
               <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
               <div className="absolute right-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
                 Video giới thiệu sẽ được phát tự động trên trang chi tiết khóa học. Kích thước tối đa 100MB, định dạng: MP4, WebM, MOV.
               </div>
             </div>
-          </Label>
-          <div className="space-y-4">
-            {previewVideoPreview && (
-              <div className={`relative w-full max-w-2xl aspect-video rounded-lg overflow-hidden border bg-[#1F1F1F] ${
-                previewFile !== null ? 'border-green-500 ring-1 ring-green-500/50' : 'border-[#2D2D2D]'
+          </div>
+
+          {previewVideoPreview ? (
+            <div className="space-y-3">
+              {/* Preview Video */}
+              <div className={`relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border-2 transition-all group ${
+                previewFile !== null
+                  ? 'border-green-500 ring-2 ring-green-500/30 shadow-lg shadow-green-500/20'
+                  : course && videoPreviewRemoved
+                  ? 'border-green-500 ring-2 ring-green-500/30 shadow-lg shadow-green-500/20'
+                  : 'border-[#2D2D2D]'
               }`}>
                 <video
                   src={previewVideoPreview}
                   controls
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain bg-black"
                 >
                   Trình duyệt của bạn không hỗ trợ video.
                 </video>
-                <button
-                  type="button"
-                  onClick={removePreview}
-                  className="absolute top-2 right-2 p-1.5 bg-red-600 rounded-full hover:bg-red-700 z-10"
-                >
-                  <X className="h-4 w-4 text-white" />
-                </button>
+                {/* Overlay with actions */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3 pointer-events-none group/overlay">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenVideoPreviewDialog();
+                    }}
+                    className="bg-white/90 hover:bg-white text-gray-900 border-0 pointer-events-auto"
+                    size="sm"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    Thay đổi
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removePreview();
+                    }}
+                    className="bg-red-600/90 hover:bg-red-700 text-white border-0 pointer-events-auto"
+                    size="sm"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Xóa
+                  </Button>
+                </div>
+                {/* Status badge */}
+                {previewFile !== null && (
+                  <div className="absolute top-3 right-3 px-2 py-1 bg-green-500/90 backdrop-blur-sm rounded-md flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                    <span className="text-xs font-medium text-white">Mới tải lên</span>
+                  </div>
+                )}
+                {course && videoPreviewRemoved && !previewFile && (
+                  <div className="absolute top-3 right-3 px-2 py-1 bg-green-500/90 backdrop-blur-sm rounded-md flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-white" />
+                    <span className="text-xs font-medium text-white">Đã xóa</span>
+                  </div>
+                )}
               </div>
-            )}
-            <div>
+
+              {/* File Info */}
+              {previewFile && (
+                <div className="flex items-center justify-between p-3 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Video className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{previewFile.name}</p>
+                      <p className="text-xs text-gray-400">{formatFileSize(previewFile.size)}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removePreview}
+                    className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
+                    title="Xóa video"
+                  >
+                    <X className="h-4 w-4 text-gray-400 hover:text-red-400" />
+                  </button>
+                </div>
+              )}
+              {/* Always visible action buttons below preview */}
+              <div className="flex justify-center gap-3 mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleOpenVideoPreviewDialog}
+                  className="flex-1 bg-white/95 hover:bg-white text-gray-900 border-0 backdrop-blur-sm"
+                  size="sm"
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Thay đổi
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={removePreview}
+                  className="bg-red-600/95 hover:bg-red-700 text-white border-0 backdrop-blur-sm"
+                  size="sm"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Xóa
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Drag & Drop Area */
+            <div
+              onDrop={handlePreviewDrop}
+              onDragOver={handlePreviewDragOver}
+              onDragLeave={handlePreviewDragLeave}
+              onClick={handleOpenVideoPreviewDialog}
+              className={`relative w-full max-w-2xl mx-auto aspect-video rounded-lg border-2 border-dashed transition-all cursor-pointer group ${
+                isDraggingPreview
+                  ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
+                  : 'border-[#2D2D2D] bg-[#1F1F1F] hover:border-gray-600 hover:bg-[#2A2A2A]'
+              }`}
+            >
               <input
                 ref={previewInputRef}
                 type="file"
@@ -1749,17 +1975,25 @@ export function CourseForm({
                 onChange={handlePreviewSelect}
                 className="hidden"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => previewInputRef.current?.click()}
-                className="bg-[#1F1F1F] border-[#2D2D2D] text-white hover:bg-[#2D2D2D]"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {previewVideoPreview ? 'Thay đổi video' : 'Chọn video giới thiệu'}
-              </Button>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+                <div className={`p-4 rounded-full transition-colors ${
+                  isDraggingPreview ? 'bg-blue-500/20' : 'bg-gray-700/50 group-hover:bg-gray-600/50'
+                }`}>
+                  <Video className={`h-8 w-8 transition-colors ${
+                    isDraggingPreview ? 'text-blue-400' : 'text-gray-400 group-hover:text-gray-300'
+                  }`} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-white mb-1">
+                    {isDraggingPreview ? 'Thả video vào đây' : 'Kéo thả video hoặc click để chọn'}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    MP4, WebM, MOV (tối đa 100MB)
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2381,7 +2615,7 @@ export function CourseForm({
                       {isDraggingThumbnail ? 'Thả ảnh vào đây' : 'Kéo thả ảnh hoặc click để chọn'}
                     </p>
                     <p className="text-xs text-gray-400">
-                      JPG, PNG, GIF (tối đa 5MB) • <span className="text-yellow-400 font-medium">Tỷ lệ bắt buộc: 16:9</span> (±5%)
+                      JPG, PNG, GIF (tối đa 5MB) • <span className="text-blue-400 font-medium">Khuyến nghị: 16:9</span> (tự động cắt)
                     </p>
                   </div>
                 </div>
@@ -2406,6 +2640,179 @@ export function CourseForm({
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Video Preview Dialog */}
+      <Dialog open={showVideoPreviewDialog} onOpenChange={setShowVideoPreviewDialog}>
+        <DialogContent className="bg-[#1F1F1F] border-[#2D2D2D] text-white max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Chọn video giới thiệu
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Chọn video từ thư viện hoặc tải lên video mới từ máy tính
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={videoPreviewDialogTab} onValueChange={(v) => setVideoPreviewDialogTab(v as 'library' | 'upload')} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="bg-[#2A2A2A] border border-[#2D2D2D] mb-4">
+              <TabsTrigger value="library" className="data-[state=active]:bg-[#1F1F1F] data-[state=active]:text-white">
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Thư viện video
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="data-[state=active]:bg-[#1F1F1F] data-[state=active]:text-white">
+                <Upload className="h-4 w-4 mr-2" />
+                Tải lên mới
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="library" className="flex-1 overflow-y-auto mt-0">
+              {loadingVideoPreviews ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : availableVideoPreviews.length === 0 ? (
+                <div className="text-center py-12">
+                  <Video className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-400">Chưa có video nào trong thư viện</p>
+                  <p className="text-sm text-gray-500 mt-2">Tải lên video mới để thêm vào thư viện</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {availableVideoPreviews.map((url, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSelectVideoPreviewFromLibrary(url)}
+                      className={`relative aspect-video rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${
+                        selectedVideoPreviewUrl === url
+                          ? 'border-blue-500 ring-2 ring-blue-500/50'
+                          : 'border-[#2D2D2D] hover:border-gray-600'
+                      }`}
+                    >
+                      <video
+                        src={url}
+                        className="w-full h-full object-cover"
+                        muted
+                      />
+                      {selectedVideoPreviewUrl === url && (
+                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                          <CheckCircle2 className="h-8 w-8 text-blue-400" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="upload" className="flex-1 overflow-y-auto mt-0">
+              <div
+                onDrop={handlePreviewDrop}
+                onDragOver={handlePreviewDragOver}
+                onDragLeave={handlePreviewDragLeave}
+                onClick={() => previewInputRef.current?.click()}
+                className={`relative w-full aspect-video rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                  isDraggingPreview
+                    ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
+                    : 'border-[#2D2D2D] bg-[#1A1A1A] hover:border-gray-600 hover:bg-[#2A2A2A]'
+                }`}
+              >
+                <input
+                  ref={previewInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={handleDialogVideoPreviewSelect}
+                  className="hidden"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+                  <div className={`p-4 rounded-full transition-colors ${
+                    isDraggingPreview ? 'bg-blue-500/20' : 'bg-gray-700/50 group-hover:bg-gray-600/50'
+                  }`}>
+                    <Video className={`h-8 w-8 transition-colors ${
+                      isDraggingPreview ? 'text-blue-400' : 'text-gray-400 group-hover:text-gray-300'
+                    }`} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-white mb-1">
+                      {isDraggingPreview ? 'Thả video vào đây' : 'Kéo thả video hoặc click để chọn'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      MP4, WebM, MOV (tối đa 100MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-4">
+            <DarkOutlineButton
+              type="button"
+              onClick={() => {
+                setShowVideoPreviewDialog(false);
+                setSelectedVideoPreviewUrl(null);
+              }}
+            >
+              Hủy
+            </DarkOutlineButton>
+            <Button
+              type="button"
+              onClick={handleConfirmVideoPreview}
+              disabled={!selectedVideoPreviewUrl && videoPreviewDialogTab === 'library'}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Submit Confirmation Dialog */}
+      <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <DialogContent className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+              {course ? 'Xác nhận cập nhật khóa học' : 'Xác nhận tạo khóa học'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {course 
+                ? 'Bạn có chắc chắn muốn cập nhật khóa học này? Các thay đổi sẽ được lưu ngay lập tức.'
+                : 'Bạn có chắc chắn muốn tạo khóa học mới? Khóa học sẽ được tạo ở trạng thái "Nháp".'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <DarkOutlineButton
+              type="button"
+              onClick={() => {
+                setShowSubmitDialog(false);
+                setPendingSubmitData(null);
+              }}
+              disabled={loading}
+            >
+              Hủy
+            </DarkOutlineButton>
+            <Button
+              type="button"
+              onClick={handleConfirmSubmit}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                <>
+                  {course ? 'Cập nhật' : 'Tạo khóa học'}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
