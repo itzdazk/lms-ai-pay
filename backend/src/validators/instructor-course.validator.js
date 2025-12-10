@@ -38,9 +38,9 @@ export const getInstructorCoursesValidator = [
         ),
     query('sort')
         .optional()
-        .isIn(['newest', 'oldest', 'updated', 'popular', 'rating'])
+        .isIn(['newest', 'oldest', 'updated', 'updated-oldest', 'popular', 'rating'])
         .withMessage(
-            'Sort must be one of: newest, oldest, updated, popular, rating'
+            'Sort must be one of: newest, oldest, updated, updated-oldest, popular, rating'
         ),
     validate,
 ]
@@ -94,9 +94,22 @@ export const createCourseValidator = [
         }),
     body('videoPreviewUrl')
         .optional()
-        .trim()
-        .isURL()
-        .withMessage('Video preview URL must be a valid URL'),
+        .custom((value) => {
+            // Allow null, undefined, or empty string to remove video preview
+            if (value === null || value === undefined || value === '') {
+                return true
+            }
+            // If value is provided, it must be a valid URL
+            const trimmedValue = String(value).trim()
+            if (trimmedValue === '') {
+                return true // Empty string is also allowed (treated as null)
+            }
+            const urlPattern = /^https?:\/\/.+/i
+            if (!urlPattern.test(trimmedValue)) {
+                throw new Error('Video preview URL must be a valid URL')
+            }
+            return true
+        }),
     body('videoPreviewDuration')
         .optional()
         .isInt({ min: 0 })
@@ -235,9 +248,22 @@ export const updateCourseValidator = [
         }),
     body('videoPreviewUrl')
         .optional()
-        .trim()
-        .isURL()
-        .withMessage('Video preview URL must be a valid URL'),
+        .custom((value) => {
+            // Allow null, undefined, or empty string to remove video preview
+            if (value === null || value === undefined || value === '') {
+                return true
+            }
+            // If value is provided, it must be a valid URL
+            const trimmedValue = String(value).trim()
+            if (trimmedValue === '') {
+                return true // Empty string is also allowed (treated as null)
+            }
+            const urlPattern = /^https?:\/\/.+/i
+            if (!urlPattern.test(trimmedValue)) {
+                throw new Error('Video preview URL must be a valid URL')
+            }
+            return true
+        }),
     body('videoPreviewDuration')
         .optional()
         .isInt({ min: 0 })
