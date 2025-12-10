@@ -14,11 +14,13 @@ import { formatNumber, getCoursePrice } from '../../lib/courseUtils'
 interface InstructorInfoProps {
     instructor: Instructor
     className?: string
+    showOtherCourses?: boolean
 }
 
 export function InstructorInfo({
     instructor,
     className = '',
+    showOtherCourses = true,
 }: InstructorInfoProps) {
     return (
         <div className={`space-y-6 ${className}`}>
@@ -67,7 +69,7 @@ export function InstructorInfo({
             </Card>
 
             {/* Other Courses */}
-            {instructor.otherCourses && instructor.otherCourses.length > 0 && (
+            {showOtherCourses && instructor.otherCourses && instructor.otherCourses.length > 0 && (
                 <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                     <CardHeader>
                         <CardTitle className='text-white'>
