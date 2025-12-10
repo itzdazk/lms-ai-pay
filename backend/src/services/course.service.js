@@ -24,6 +24,7 @@ class CourseService {
             instructorId,
             sort,
             tagId,
+            tagIds,
         } = filters
 
         const skip = (page - 1) * limit
@@ -33,7 +34,20 @@ class CourseService {
             status: COURSE_STATUS.PUBLISHED,
         }
 
-        if (tagId) {
+        // Support multiple tagIds (preferred) or single tagId (legacy)
+        if (tagIds && tagIds.length > 0) {
+            // AND logic: course must have ALL selected tags
+            // For each tagId, there must be at least one courseTag with that tagId
+            const tagIdsInt = tagIds.map((id) => parseInt(id, 10))
+            where.AND = tagIdsInt.map((tid) => ({
+                courseTags: {
+                    some: {
+                        tagId: tid,
+                    },
+                },
+            }))
+        } else if (tagId) {
+            // Legacy support: single tagId
             where.courseTags = {
                 some: {
                     tagId: parseInt(tagId, 10),

@@ -22,7 +22,25 @@ class CourseController {
             instructorId,
             sort,
             tagId,
+            tagIds,
         } = req.query
+
+        // Support both tagId (single) and tagIds (array) for backward compatibility
+        let tagIdsArray = undefined
+        if (tagIds) {
+            // Handle comma-separated string or array
+            if (Array.isArray(tagIds)) {
+                tagIdsArray = tagIds.map((id) => parseInt(id)).filter((id) => !isNaN(id))
+            } else if (typeof tagIds === 'string') {
+                tagIdsArray = tagIds
+                    .split(',')
+                    .map((id) => parseInt(id.trim()))
+                    .filter((id) => !isNaN(id))
+            }
+        } else if (tagId) {
+            // Legacy support: single tagId
+            tagIdsArray = [parseInt(tagId)]
+        }
 
         const filters = {
             page: parseInt(page) || 1,
@@ -35,7 +53,8 @@ class CourseController {
             isFeatured: isFeatured || undefined,
             instructorId: instructorId || undefined,
             sort: sort || 'newest',
-            tagId: tagId || undefined,
+            tagId: tagId || undefined, // Legacy
+            tagIds: tagIdsArray,
         }
 
         const result = await courseService.getCourses(filters)

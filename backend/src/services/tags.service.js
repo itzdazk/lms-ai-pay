@@ -38,19 +38,37 @@ class TagsService {
                     slug: true,
                     description: true,
                     createdAt: true,
-                    _count: {
-                        select: {
-                            courses: true,
-                        },
-                    },
                 },
                 orderBy: { createdAt: 'desc' },
             }),
             prisma.tag.count({ where }),
         ])
 
+        // Get published courses count for each tag
+        const tagsWithCounts = await Promise.all(
+            tags.map(async (tag) => {
+                const publishedCoursesCount = await prisma.course.count({
+                    where: {
+                        status: COURSE_STATUS.PUBLISHED,
+                        courseTags: {
+                            some: {
+                                tagId: tag.id,
+                            },
+                        },
+                    },
+                })
+
+                return {
+                    ...tag,
+                    _count: {
+                        courses: publishedCoursesCount,
+                    },
+                }
+            })
+        )
+
         return {
-            tags,
+            tags: tagsWithCounts,
             pagination: {
                 page: pageNum,
                 limit: limitNum,
@@ -72,11 +90,6 @@ class TagsService {
                 slug: true,
                 description: true,
                 createdAt: true,
-                _count: {
-                    select: {
-                        courses: true,
-                    },
-                },
             },
         })
 
@@ -86,7 +99,24 @@ class TagsService {
             throw error
         }
 
-        return tag
+        // Get published courses count
+        const publishedCoursesCount = await prisma.course.count({
+            where: {
+                status: COURSE_STATUS.PUBLISHED,
+                courseTags: {
+                    some: {
+                        tagId: tag.id,
+                    },
+                },
+            },
+        })
+
+        return {
+            ...tag,
+            _count: {
+                courses: publishedCoursesCount,
+            },
+        }
     }
 
     /**

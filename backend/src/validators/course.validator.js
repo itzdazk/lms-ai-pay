@@ -65,6 +65,20 @@ const getCoursesValidator = [
         .isInt({ min: 1 })
         .withMessage('Tag ID must be a valid integer'),
 
+    query('tagIds')
+        .optional()
+        .custom((value) => {
+            if (Array.isArray(value)) {
+                return value.every((id) => !isNaN(parseInt(id)) && parseInt(id) > 0)
+            }
+            if (typeof value === 'string') {
+                const ids = value.split(',').map((id) => id.trim())
+                return ids.every((id) => !isNaN(parseInt(id)) && parseInt(id) > 0)
+            }
+            return false
+        })
+        .withMessage('Tag IDs must be valid integers (comma-separated or array)'),
+
     validate,
 ]
 
