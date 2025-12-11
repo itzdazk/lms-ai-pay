@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/button'
+import { DarkOutlineButton } from './ui/buttons'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import {
     DropdownMenu,
@@ -9,6 +10,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from './ui/dropdown-menu'
 import {
     Sheet,
@@ -32,6 +36,9 @@ import {
     Moon,
     Users,
     BookMarked,
+    ChevronRight,
+    Shield,
+    GraduationCap,
 } from 'lucide-react'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -111,70 +118,83 @@ export function Navbar() {
             case 'INSTRUCTOR':
                 return (
                     <>
+                        <DropdownMenuLabel className='text-white px-2 py-1.5'>
+                            <div className='flex items-center'>
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-blue-400' />
+                                <span className='font-medium'>Dashboard</span>
+                            </div>
+                        </DropdownMenuLabel>
                         <DropdownMenuItem
                             asChild
-                            className='text-white hover:bg-[#1F1F1F]'
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link
                                 to='/instructor/dashboard'
-                                className='cursor-pointer'
+                                className='flex items-center pl-6'
                             >
-                                <LayoutDashboard className='mr-2 h-4 w-4' />
-                                Instructor Dashboard
+                                <GraduationCap className='mr-2 h-4 w-4 text-blue-400' />
+                                Giảng viên
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             asChild
-                            className='text-white hover:bg-[#1F1F1F]'
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link
-                                to='/instructor/courses'
-                                className='cursor-pointer'
+                                to='/dashboard'
+                                className='flex items-center pl-6'
                             >
-                                <BookMarked className='mr-2 h-4 w-4' />
-                                Khóa học của tôi
+                                <User className='mr-2 h-4 w-4 text-green-400' />
+                                Học viên
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className='bg-[#2D2D2D]' />
                     </>
                 )
             case 'ADMIN':
                 return (
                     <>
+                        <DropdownMenuLabel className='text-white px-2 py-1.5'>
+                            <div className='flex items-center'>
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-purple-400' />
+                                <span className='font-medium'>Dashboard</span>
+                            </div>
+                        </DropdownMenuLabel>
                         <DropdownMenuItem
                             asChild
-                            className='text-white hover:bg-[#1F1F1F]'
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link
                                 to='/admin/dashboard'
-                                className='cursor-pointer'
+                                className='flex items-center pl-6'
                             >
-                                <LayoutDashboard className='mr-2 h-4 w-4' />
-                                Admin Dashboard
+                                <Shield className='mr-2 h-4 w-4 text-purple-400' />
+                                Quản trị viên
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             asChild
-                            className='text-white hover:bg-[#1F1F1F]'
-                        >
-                            <Link to='/admin/users' className='cursor-pointer'>
-                                <Users className='mr-2 h-4 w-4' />
-                                Quản lý Users
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            asChild
-                            className='text-white hover:bg-[#1F1F1F]'
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link
-                                to='/admin/courses'
-                                className='cursor-pointer'
+                                to='/instructor/dashboard'
+                                className='flex items-center pl-6'
                             >
-                                <BookMarked className='mr-2 h-4 w-4' />
-                                Quản lý Courses
+                                <GraduationCap className='mr-2 h-4 w-4 text-blue-400' />
+                                Giảng viên
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className='bg-[#2D2D2D]' />
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <User className='mr-2 h-4 w-4 text-green-400' />
+                                Học viên
+                            </Link>
+                        </DropdownMenuItem>
                     </>
                 )
             default:
@@ -182,14 +202,16 @@ export function Navbar() {
                     <>
                         <DropdownMenuItem
                             asChild
-                            className='text-white hover:bg-[#1F1F1F]'
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
-                            <Link to='/dashboard' className='cursor-pointer'>
-                                <LayoutDashboard className='mr-2 h-4 w-4' />
+                            <Link
+                                to='/dashboard'
+                                className='flex items-center'
+                            >
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-green-400' />
                                 Dashboard
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className='bg-[#2D2D2D]' />
                     </>
                 )
         }
@@ -209,15 +231,15 @@ export function Navbar() {
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <LayoutDashboard className='h-5 w-5' />
-                            Instructor Dashboard
+                            Dashboard Giảng viên
                         </Link>
                         <Link
-                            to='/instructor/courses'
+                            to='/dashboard'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <BookMarked className='h-5 w-5' />
-                            Khóa học của tôi
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Học viên
                         </Link>
                     </>
                 )
@@ -230,23 +252,23 @@ export function Navbar() {
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <LayoutDashboard className='h-5 w-5' />
-                            Admin Dashboard
+                            Dashboard Admin
                         </Link>
                         <Link
-                            to='/admin/users'
+                            to='/instructor/dashboard'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <Users className='h-5 w-5' />
-                            Quản lý Users
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Giảng viên
                         </Link>
                         <Link
-                            to='/admin/courses'
+                            to='/dashboard'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <BookMarked className='h-5 w-5' />
-                            Quản lý Courses
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Học viên
                         </Link>
                     </>
                 )
@@ -327,11 +349,10 @@ export function Navbar() {
                 {/* Right Side Actions */}
                 <div className='flex items-center gap-3'>
                     {/* Theme Toggle */}
-                    <Button
-                        variant='outline'
+                    <DarkOutlineButton
                         size='sm'
                         onClick={toggleTheme}
-                        className='hidden md:flex items-center gap-2 border-[#2D2D2D] text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0 cursor-pointer'
+                        className='hidden md:flex items-center gap-2'
                         title={
                             theme === 'dark'
                                 ? 'Chuyển sang Light Mode'
@@ -341,20 +362,19 @@ export function Navbar() {
                         {theme === 'dark' ? (
                             <>
                                 <Moon className='h-4 w-4' />
-                                {/* <span>Dark Mode</span> */}
+                                <span>Dark Mode</span>
                             </>
                         ) : (
                             <>
                                 <Sun className='h-4 w-4' />
-                                {/* <span>Light Mode</span> */}
+                                <span>Light Mode</span>
                             </>
                         )}
-                    </Button>
-                    <Button
-                        variant='ghost'
+                    </DarkOutlineButton>
+                    <DarkOutlineButton
                         size='icon'
                         onClick={toggleTheme}
-                        className='md:hidden text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0'
+                        className='md:hidden'
                         title={
                             theme === 'dark'
                                 ? 'Chuyển sang Light Mode'
@@ -366,7 +386,7 @@ export function Navbar() {
                         ) : (
                             <Sun className='h-5 w-5' />
                         )}
-                    </Button>
+                    </DarkOutlineButton>
 
                     {/* Notifications - Only show when authenticated */}
                     {isAuthenticated && (
@@ -430,31 +450,28 @@ export function Navbar() {
                     {!isAuthenticated && (
                         <div className='flex items-center gap-2'>
                             <Link to='/login'>
-                                <Button
-                                    variant='outline'
+                                <DarkOutlineButton
                                     size='sm'
-                                    className='hidden sm:flex border-[#2D2D2D] text-white bg-black hover:bg-gray-300 hover:text-black focus-visible:ring-0 cursor-pointer'
+                                    className='hidden sm:flex'
                                 >
                                     Đăng nhập
-                                </Button>
+                                </DarkOutlineButton>
                             </Link>
                             <Link to='/register'>
-                                <Button
+                                <DarkOutlineButton
                                     size='sm'
-                                    className='hidden sm:flex bg-white  hover:bg-gray-500 text-black hover:text-white focus-visible:ring-0 cursor-pointer'
+                                    className='hidden sm:flex'
                                 >
                                     Đăng ký
-                                </Button>
+                                </DarkOutlineButton>
                             </Link>
                             {/* Mobile Auth Button */}
                             <Link to='/login' className='sm:hidden'>
-                                <Button
-                                    variant='ghost'
+                                <DarkOutlineButton
                                     size='sm'
-                                    className='text-white hover:bg-[#1F1F1F]'
                                 >
                                     Đăng nhập
-                                </Button>
+                                </DarkOutlineButton>
                             </Link>
                         </div>
                     )}
@@ -480,19 +497,52 @@ export function Navbar() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                                 align='end'
-                                className='w-56 bg-[#1A1A1A] border-[#2D2D2D]'
+                                className='w-64 bg-[#1A1A1A] border-[#2D2D2D] shadow-xl'
                             >
-                                <DropdownMenuLabel className='text-white'>
-                                    <div>
-                                        <p className='text-white'>
-                                            {user.fullName}
-                                        </p>
-                                        <p className='text-xs text-gray-500'>
-                                            {user.email}
-                                        </p>
+                                <DropdownMenuLabel className='text-white px-3 py-3'>
+                                    <div className='flex items-center gap-3'>
+                                        <Avatar className='h-10 w-10 border border-white/20'>
+                                            <AvatarImage
+                                                src={user.avatarUrl || undefined}
+                                                alt={user.fullName}
+                                            />
+                                            <AvatarFallback className='bg-blue-600 text-white text-sm'>
+                                                {user.fullName
+                                                    .split(' ')
+                                                    .map((n) => n[0])
+                                                    .join('')}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='text-white font-medium truncate'>
+                                                {user.fullName}
+                                            </p>
+                                            <p className='text-xs text-gray-400 truncate'>
+                                                {user.email}
+                                            </p>
+                                            <div className='mt-1.5'>
+                                                <Badge
+                                                    className={`text-xs px-1.5 py-0.5 ${
+                                                        user.role === 'ADMIN'
+                                                            ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
+                                                            : user.role ===
+                                                              'INSTRUCTOR'
+                                                            ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                                                            : 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                    } border`}
+                                                >
+                                                    {user.role === 'ADMIN'
+                                                        ? 'Quản trị viên'
+                                                        : user.role ===
+                                                          'INSTRUCTOR'
+                                                        ? 'Giảng viên'
+                                                        : 'Học viên'}
+                                                </Badge>
+                                            </div>
+                                        </div>
                                     </div>
                                 </DropdownMenuLabel>
-                                <DropdownMenuSeparator className='bg-[#2D2D2D]' />
+                                <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
 
                                 {/* Role-specific menu items */}
                                 {renderRoleSpecificMenuItems()}
@@ -500,31 +550,31 @@ export function Navbar() {
                                 {/* Common menu items */}
                                 <DropdownMenuItem
                                     asChild
-                                    className='text-white hover:bg-[#1F1F1F]'
+                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                                 >
                                     <Link
                                         to='/profile'
-                                        className='cursor-pointer'
+                                        className='flex items-center'
                                     >
-                                        <User className='mr-2 h-4 w-4' />
+                                        <User className='mr-2 h-4 w-4 text-gray-300' />
                                         Hồ sơ
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     asChild
-                                    className='text-white hover:bg-[#1F1F1F]'
+                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                                 >
                                     <Link
                                         to='/settings'
-                                        className='cursor-pointer'
+                                        className='flex items-center'
                                     >
-                                        <Settings className='mr-2 h-4 w-4' />
+                                        <Settings className='mr-2 h-4 w-4 text-gray-300' />
                                         Cài đặt
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className='bg-[#2D2D2D]' />
+                                <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
                                 <DropdownMenuItem
-                                    className='text-red-400 hover:bg-[#1F1F1F] cursor-pointer'
+                                    className='text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer focus:bg-red-500/10 focus:text-red-300'
                                     onClick={handleLogout}
                                     disabled={isLoggingOut}
                                 >
@@ -588,12 +638,11 @@ export function Navbar() {
                                 </div>
 
                                 {/* Mobile Theme Toggle */}
-                                <Button
-                                    variant='outline'
+                                <DarkOutlineButton
                                     onClick={() => {
                                         toggleTheme()
                                     }}
-                                    className='w-full border-[#2D2D2D] text-white hover:bg-[#1F1F1F]'
+                                    className='w-full'
                                 >
                                     {theme === 'dark' ? (
                                         <>
@@ -606,7 +655,7 @@ export function Navbar() {
                                             Chuyển sang Dark Mode
                                         </>
                                     )}
-                                </Button>
+                                </DarkOutlineButton>
 
                                 {/* Mobile Navigation Links */}
                                 <nav className='flex flex-col space-y-2'>
