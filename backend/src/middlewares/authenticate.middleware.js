@@ -66,6 +66,58 @@ const authenticate = async (req, res, next) => {
             )
         }
 
+        // Check session if sessionId exists in token
+        if (decoded.sessionId) {
+            const session = await prisma.userSession.findUnique({
+                where: { id: decoded.sessionId },
+                select: {
+                    id: true,
+                    isActive: true,
+                    expiresAt: true,
+                    userId: true,
+                },
+            })
+
+            if (!session) {
+                return ApiResponse.unauthorized(
+                    res,
+                    'Session not found. Please login again.'
+                )
+            }
+
+            if (!session.isActive) {
+                return ApiResponse.unauthorized(
+                    res,
+                    'Session has been logged out. Please login again.'
+                )
+            }
+
+            if (session.userId !== user.id) {
+                return ApiResponse.unauthorized(
+                    res,
+                    'Session does not belong to this user.'
+                )
+            }
+
+            if (session.expiresAt < new Date()) {
+                // Deactivate expired session
+                await prisma.userSession.update({
+                    where: { id: session.id },
+                    data: { isActive: false },
+                })
+                return ApiResponse.unauthorized(
+                    res,
+                    'Session has expired. Please login again.'
+                )
+            }
+
+            // Update last activity
+            await prisma.userSession.update({
+                where: { id: session.id },
+                data: { lastActivityAt: new Date() },
+            })
+        }
+
         // Attach user to request
         req.user = user
         next()

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/button'
+import { DarkOutlineButton } from './ui/buttons'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import {
     DropdownMenu,
@@ -9,6 +10,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from './ui/dropdown-menu'
 import {
     Sheet,
@@ -30,6 +34,11 @@ import {
     MessageCircle,
     Sun,
     Moon,
+    Users,
+    BookMarked,
+    ChevronRight,
+    Shield,
+    GraduationCap,
 } from 'lucide-react'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -44,15 +53,7 @@ export function Navbar() {
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
     const { theme, toggleTheme } = useTheme()
-    const { user, logout } = useAuth()
-
-    // ✅ THAY ĐỔI: Dùng user từ AuthContext thay vì mock data
-    const currentUser = {
-        full_name: 'Nguyễn Văn A',
-        email: 'user@example.com',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=student',
-        role: 'student' as const,
-    }
+    const { user, logout, isAuthenticated } = useAuth()
 
     const handleVoiceSearch = () => {
         if (
@@ -78,7 +79,6 @@ export function Navbar() {
 
         recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript
-            // In real app, set this to search input
             console.log('Voice search:', transcript)
             setIsListening(false)
         }
@@ -96,18 +96,193 @@ export function Navbar() {
     }
 
     const handleLogout = async () => {
-        if (isLoggingOut) return // Tránh click nhiều lần
+        if (isLoggingOut) return
 
         try {
             setIsLoggingOut(true)
-            await logout() // Gọi logout từ AuthContext
+            await logout()
             toast.success('Đăng xuất thành công!')
-            // Không cần redirect vì logout() trong AuthContext đã xử lý
         } catch (error) {
             console.error('Logout error:', error)
             toast.error('Có lỗi xảy ra khi đăng xuất')
         } finally {
             setIsLoggingOut(false)
+        }
+    }
+
+    // Helper function để render menu items dựa trên role
+    const renderRoleSpecificMenuItems = () => {
+        if (!user) return null
+
+        switch (user.role) {
+            case 'INSTRUCTOR':
+                return (
+                    <>
+                        <DropdownMenuLabel className='text-white px-2 py-1.5'>
+                            <div className='flex items-center'>
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-blue-400' />
+                                <span className='font-medium'>Dashboard</span>
+                            </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/instructor/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <GraduationCap className='mr-2 h-4 w-4 text-blue-400' />
+                                Giảng viên
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <User className='mr-2 h-4 w-4 text-green-400' />
+                                Học viên
+                            </Link>
+                        </DropdownMenuItem>
+                    </>
+                )
+            case 'ADMIN':
+                return (
+                    <>
+                        <DropdownMenuLabel className='text-white px-2 py-1.5'>
+                            <div className='flex items-center'>
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-purple-400' />
+                                <span className='font-medium'>Dashboard</span>
+                            </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/admin/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <Shield className='mr-2 h-4 w-4 text-purple-400' />
+                                Quản trị viên
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/instructor/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <GraduationCap className='mr-2 h-4 w-4 text-blue-400' />
+                                Giảng viên
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <User className='mr-2 h-4 w-4 text-green-400' />
+                                Học viên
+                            </Link>
+                        </DropdownMenuItem>
+                    </>
+                )
+            default:
+                return (
+                    <>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/dashboard'
+                                className='flex items-center'
+                            >
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-green-400' />
+                                Dashboard
+                            </Link>
+                        </DropdownMenuItem>
+                    </>
+                )
+        }
+    }
+
+    // Helper function để render mobile menu items dựa trên role
+    const renderMobileRoleSpecificMenuItems = () => {
+        if (!user) return null
+
+        switch (user.role) {
+            case 'INSTRUCTOR':
+                return (
+                    <>
+                        <Link
+                            to='/instructor/dashboard'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Giảng viên
+                        </Link>
+                        <Link
+                            to='/dashboard'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Học viên
+                        </Link>
+                    </>
+                )
+            case 'ADMIN':
+                return (
+                    <>
+                        <Link
+                            to='/admin/dashboard'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Admin
+                        </Link>
+                        <Link
+                            to='/instructor/dashboard'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Giảng viên
+                        </Link>
+                        <Link
+                            to='/dashboard'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <LayoutDashboard className='h-5 w-5' />
+                            Dashboard Học viên
+                        </Link>
+                    </>
+                )
+            default:
+                return (
+                    <Link
+                        to='/dashboard'
+                        className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        <LayoutDashboard className='h-5 w-5' />
+                        Dashboard
+                    </Link>
+                )
         }
     }
 
@@ -123,6 +298,28 @@ export function Navbar() {
                         EduLearn
                     </span>
                 </Link>
+
+                {/* Navigation Links - Desktop */}
+                <nav className='hidden lg:flex items-center gap-6 ml-6'>
+                    <Link
+                        to='/courses'
+                        className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
+                    >
+                        Khóa học
+                    </Link>
+                    <Link
+                        to='/ai-chat'
+                        className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
+                    >
+                        AI Chat
+                    </Link>
+                    <Link
+                        to='/about'
+                        className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
+                    >
+                        Về chúng tôi
+                    </Link>
+                </nav>
 
                 {/* Search Bar - Desktop */}
                 <div className='hidden md:flex flex-1 max-w-xl mx-8'>
@@ -149,36 +346,13 @@ export function Navbar() {
                     </div>
                 </div>
 
-                {/* Navigation Links - Desktop */}
-                <nav className='hidden lg:flex items-center gap-6'>
-                    <Link
-                        to='/courses'
-                        className='text-gray-300 hover:text-blue-600 transition-colors'
-                    >
-                        Khóa học
-                    </Link>
-                    <Link
-                        to='/ai-chat'
-                        className='text-gray-300 hover:text-blue-600 transition-colors'
-                    >
-                        AI Chat
-                    </Link>
-                    <Link
-                        to='/about'
-                        className='text-gray-300 hover:text-blue-600 transition-colors'
-                    >
-                        Về chúng tôi
-                    </Link>
-                </nav>
-
                 {/* Right Side Actions */}
                 <div className='flex items-center gap-3'>
                     {/* Theme Toggle */}
-                    <Button
-                        variant='outline'
+                    <DarkOutlineButton
                         size='sm'
                         onClick={toggleTheme}
-                        className='hidden md:flex items-center gap-2 border-[#2D2D2D] text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0'
+                        className='hidden md:flex items-center gap-2'
                         title={
                             theme === 'dark'
                                 ? 'Chuyển sang Light Mode'
@@ -196,12 +370,11 @@ export function Navbar() {
                                 <span>Light Mode</span>
                             </>
                         )}
-                    </Button>
-                    <Button
-                        variant='ghost'
+                    </DarkOutlineButton>
+                    <DarkOutlineButton
                         size='icon'
                         onClick={toggleTheme}
-                        className='md:hidden text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0'
+                        className='md:hidden'
                         title={
                             theme === 'dark'
                                 ? 'Chuyển sang Light Mode'
@@ -213,143 +386,210 @@ export function Navbar() {
                         ) : (
                             <Sun className='h-5 w-5' />
                         )}
-                    </Button>
+                    </DarkOutlineButton>
 
-                    {/* Notifications */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant='ghost'
-                                size='icon'
-                                className='relative text-white hover:bg-[#1F1F1F]'
-                            >
-                                <Bell className='h-5 w-5' />
-                                <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
-                                    3
-                                </Badge>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            align='end'
-                            className='w-[480px] max-w-[90vw] bg-[#1A1A1A] border-[#2D2D2D]'
-                        >
-                            <DropdownMenuLabel className='text-white flex items-center justify-between gap-2'>
-                                <span>Thông báo</span>
-                                <Badge className='bg-blue-600 text-white'>
-                                    Mới
-                                </Badge>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator className='bg-[#2D2D2D]' />
-                            <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D]'>
-                                <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                    <p className='text-sm text-white font-semibold'>
-                                        Bạn đã hoàn thành bài học "React Hooks"
-                                    </p>
-                                    <p className='text-xs text-gray-500 mt-1'>
-                                        2 giờ trước
-                                    </p>
-                                </div>
-                                <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                    <p className='text-sm text-white font-semibold'>
-                                        Khóa học "Next.js Pro" vừa được cập nhật
-                                    </p>
-                                    <p className='text-xs text-gray-500 mt-1'>
-                                        Hôm qua
-                                    </p>
-                                </div>
-                                <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                    <p className='text-sm text-white font-semibold'>
-                                        Bạn có chứng chỉ mới cần tải xuống
-                                    </p>
-                                    <p className='text-xs text-gray-500 mt-1'>
-                                        2 ngày trước
-                                    </p>
-                                </div>
-                            </div>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {/* User Menu */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <div className='relative h-10 w-10 rounded-full border border-white/30 cursor-pointer hover:border-white transition-colors'>
-                                <Avatar className='h-full w-full'>
-                                    <AvatarImage
-                                        src={currentUser.avatar}
-                                        alt={currentUser.full_name}
-                                    />
-                                    <AvatarFallback className='bg-blue-600 text-white'>
-                                        {currentUser.full_name
-                                            .split(' ')
-                                            .map((n) => n[0])
-                                            .join('')}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            align='end'
-                            className='w-56 bg-[#1A1A1A] border-[#2D2D2D]'
-                        >
-                            <DropdownMenuLabel className='text-white'>
-                                <div>
-                                    <p className='text-white'>
-                                        {currentUser.full_name}
-                                    </p>
-                                    <p className='text-xs text-gray-500'>
-                                        {currentUser.email}
-                                    </p>
-                                </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator className='bg-[#2D2D2D]' />
-                            <DropdownMenuItem
-                                asChild
-                                className='text-white hover:bg-[#1F1F1F]'
-                            >
-                                <Link
-                                    to='/dashboard'
-                                    className='cursor-pointer'
+                    {/* Notifications - Only show when authenticated */}
+                    {isAuthenticated && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    className='relative text-white hover:bg-[#1F1F1F]'
                                 >
-                                    <LayoutDashboard className='mr-2 h-4 w-4' />
-                                    Dashboard
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                asChild
-                                className='text-white hover:bg-[#1F1F1F]'
+                                    <Bell className='h-5 w-5' />
+                                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
+                                        3
+                                    </Badge>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align='end'
+                                className='w-[480px] max-w-[90vw] bg-[#1A1A1A] border-[#2D2D2D]'
                             >
-                                <Link to='/profile' className='cursor-pointer'>
-                                    <User className='mr-2 h-4 w-4' />
-                                    Hồ sơ
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                asChild
-                                className='text-white hover:bg-[#1F1F1F]'
+                                <DropdownMenuLabel className='text-white flex items-center justify-between gap-2'>
+                                    <span>Thông báo</span>
+                                    <Badge className='bg-blue-600 text-white'>
+                                        Mới
+                                    </Badge>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator className='bg-[#2D2D2D]' />
+                                <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D]'>
+                                    <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
+                                        <p className='text-sm text-white font-semibold'>
+                                            Bạn đã hoàn thành bài học "React
+                                            Hooks"
+                                        </p>
+                                        <p className='text-xs text-gray-500 mt-1'>
+                                            2 giờ trước
+                                        </p>
+                                    </div>
+                                    <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
+                                        <p className='text-sm text-white font-semibold'>
+                                            Khóa học "Next.js Pro" vừa được cập
+                                            nhật
+                                        </p>
+                                        <p className='text-xs text-gray-500 mt-1'>
+                                            Hôm qua
+                                        </p>
+                                    </div>
+                                    <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
+                                        <p className='text-sm text-white font-semibold'>
+                                            Bạn có chứng chỉ mới cần tải xuống
+                                        </p>
+                                        <p className='text-xs text-gray-500 mt-1'>
+                                            2 ngày trước
+                                        </p>
+                                    </div>
+                                </div>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+
+                    {/* Auth Buttons - Only show when NOT authenticated */}
+                    {!isAuthenticated && (
+                        <div className='flex items-center gap-2'>
+                            <Link to='/login'>
+                                <DarkOutlineButton
+                                    size='sm'
+                                    className='hidden sm:flex'
+                                >
+                                    Đăng nhập
+                                </DarkOutlineButton>
+                            </Link>
+                            <Link to='/register'>
+                                <DarkOutlineButton
+                                    size='sm'
+                                    className='hidden sm:flex'
+                                >
+                                    Đăng ký
+                                </DarkOutlineButton>
+                            </Link>
+                            {/* Mobile Auth Button */}
+                            <Link to='/login' className='sm:hidden'>
+                                <DarkOutlineButton
+                                    size='sm'
+                                >
+                                    Đăng nhập
+                                </DarkOutlineButton>
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* User Menu - Only show when authenticated */}
+                    {isAuthenticated && user && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <div className='relative h-10 w-10 rounded-full border border-white/30 cursor-pointer hover:border-white transition-colors'>
+                                    <Avatar className='h-full w-full'>
+                                        <AvatarImage
+                                            src={user.avatarUrl || undefined}
+                                            alt={user.fullName}
+                                        />
+                                        <AvatarFallback className='bg-blue-600 text-white'>
+                                            {user.fullName
+                                                .split(' ')
+                                                .map((n) => n[0])
+                                                .join('')}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align='end'
+                                className='w-64 bg-[#1A1A1A] border-[#2D2D2D] shadow-xl'
                             >
-                                <Link to='/settings' className='cursor-pointer'>
-                                    <Settings className='mr-2 h-4 w-4' />
-                                    Cài đặt
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className='bg-[#2D2D2D]' />
-                            <DropdownMenuItem
-                                className='text-red-400 hover:bg-[#1F1F1F] cursor-pointer'
-                                onClick={handleLogout} // ✅ THAY ĐỔI: Gọi handleLogout
-                                disabled={isLoggingOut} // ✅ THÊM: Disable khi đang logout
-                            >
-                                {isLoggingOut ? (
-                                    <Loader2 className='mr-2 h-4 w-4 animate-spin' /> // ✅ THÊM: Hiển thị loading spinner
-                                ) : (
-                                    <LogOut className='mr-2 h-4 w-4' />
-                                )}
-                                {isLoggingOut
-                                    ? 'Đang đăng xuất...'
-                                    : 'Đăng xuất'}{' '}
-                                {/* ✅ THÊM: Text động */}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                <DropdownMenuLabel className='text-white px-3 py-3'>
+                                    <div className='flex items-center gap-3'>
+                                        <Avatar className='h-10 w-10 border border-white/20'>
+                                            <AvatarImage
+                                                src={user.avatarUrl || undefined}
+                                                alt={user.fullName}
+                                            />
+                                            <AvatarFallback className='bg-blue-600 text-white text-sm'>
+                                                {user.fullName
+                                                    .split(' ')
+                                                    .map((n) => n[0])
+                                                    .join('')}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='text-white font-medium truncate'>
+                                                {user.fullName}
+                                            </p>
+                                            <p className='text-xs text-gray-400 truncate'>
+                                                {user.email}
+                                            </p>
+                                            <div className='mt-1.5'>
+                                                <Badge
+                                                    className={`text-xs px-1.5 py-0.5 ${
+                                                        user.role === 'ADMIN'
+                                                            ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
+                                                            : user.role ===
+                                                              'INSTRUCTOR'
+                                                            ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                                                            : 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                    } border`}
+                                                >
+                                                    {user.role === 'ADMIN'
+                                                        ? 'Quản trị viên'
+                                                        : user.role ===
+                                                          'INSTRUCTOR'
+                                                        ? 'Giảng viên'
+                                                        : 'Học viên'}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
+
+                                {/* Role-specific menu items */}
+                                {renderRoleSpecificMenuItems()}
+
+                                {/* Common menu items */}
+                                <DropdownMenuItem
+                                    asChild
+                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                                >
+                                    <Link
+                                        to='/profile'
+                                        className='flex items-center'
+                                    >
+                                        <User className='mr-2 h-4 w-4 text-gray-300' />
+                                        Hồ sơ
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    asChild
+                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                                >
+                                    <Link
+                                        to='/settings'
+                                        className='flex items-center'
+                                    >
+                                        <Settings className='mr-2 h-4 w-4 text-gray-300' />
+                                        Cài đặt
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
+                                <DropdownMenuItem
+                                    className='text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer focus:bg-red-500/10 focus:text-red-300'
+                                    onClick={handleLogout}
+                                    disabled={isLoggingOut}
+                                >
+                                    {isLoggingOut ? (
+                                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                                    ) : (
+                                        <LogOut className='mr-2 h-4 w-4' />
+                                    )}
+                                    {isLoggingOut
+                                        ? 'Đang đăng xuất...'
+                                        : 'Đăng xuất'}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
 
                     {/* Mobile Menu Button */}
                     <Sheet
@@ -398,12 +638,11 @@ export function Navbar() {
                                 </div>
 
                                 {/* Mobile Theme Toggle */}
-                                <Button
-                                    variant='outline'
+                                <DarkOutlineButton
                                     onClick={() => {
                                         toggleTheme()
                                     }}
-                                    className='w-full border-[#2D2D2D] text-white hover:bg-[#1F1F1F]'
+                                    className='w-full'
                                 >
                                     {theme === 'dark' ? (
                                         <>
@@ -416,7 +655,7 @@ export function Navbar() {
                                             Chuyển sang Dark Mode
                                         </>
                                     )}
-                                </Button>
+                                </DarkOutlineButton>
 
                                 {/* Mobile Navigation Links */}
                                 <nav className='flex flex-col space-y-2'>
@@ -430,16 +669,8 @@ export function Navbar() {
                                         <BookOpen className='h-5 w-5' />
                                         Khóa học
                                     </Link>
-                                    <Link
-                                        to='/dashboard'
-                                        className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
-                                        onClick={() =>
-                                            setIsMobileMenuOpen(false)
-                                        }
-                                    >
-                                        <LayoutDashboard className='h-5 w-5' />
-                                        Dashboard
-                                    </Link>
+                                    {isAuthenticated &&
+                                        renderMobileRoleSpecificMenuItems()}
                                     <Link
                                         to='/ai-chat'
                                         className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
@@ -462,65 +693,70 @@ export function Navbar() {
                                     </Link>
                                 </nav>
 
-                                {/* Mobile User Info */}
-                                <div className='pt-4 border-t border-[#2D2D2D]'>
-                                    <div className='flex items-center gap-3 px-4 py-3'>
-                                        <Avatar>
-                                            <AvatarImage
-                                                src={currentUser.avatar}
-                                                alt={currentUser.full_name}
-                                            />
-                                            <AvatarFallback className='bg-blue-600 text-white'>
-                                                {currentUser.full_name
-                                                    .split(' ')
-                                                    .map((n) => n[0])
-                                                    .join('')}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className='text-sm font-medium text-white'>
-                                                {currentUser.full_name}
-                                            </p>
-                                            <p className='text-xs text-gray-500'>
-                                                {currentUser.email}
-                                            </p>
+                                {/* Mobile User Info - Only show when authenticated */}
+                                {isAuthenticated && user && (
+                                    <div className='pt-4 border-t border-[#2D2D2D]'>
+                                        <div className='flex items-center gap-3 px-4 py-3'>
+                                            <Avatar>
+                                                <AvatarImage
+                                                    src={
+                                                        user.avatarUrl ||
+                                                        undefined
+                                                    }
+                                                    alt={user.fullName}
+                                                />
+                                                <AvatarFallback className='bg-blue-600 text-white'>
+                                                    {user.fullName
+                                                        .split(' ')
+                                                        .map((n) => n[0])
+                                                        .join('')}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className='text-sm font-medium text-white'>
+                                                    {user.fullName}
+                                                </p>
+                                                <p className='text-xs text-gray-500'>
+                                                    {user.email}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className='mt-2 space-y-1'>
+                                            <Link
+                                                to='/profile'
+                                                className='block px-4 py-2 text-sm text-gray-300 hover:bg-[#1F1F1F] hover:text-white rounded-lg transition-colors'
+                                                onClick={() =>
+                                                    setIsMobileMenuOpen(false)
+                                                }
+                                            >
+                                                Hồ sơ
+                                            </Link>
+                                            <Link
+                                                to='/settings'
+                                                className='block px-4 py-2 text-sm text-gray-300 hover:bg-[#1F1F1F] hover:text-white rounded-lg transition-colors'
+                                                onClick={() =>
+                                                    setIsMobileMenuOpen(false)
+                                                }
+                                            >
+                                                Cài đặt
+                                            </Link>
+                                            <button
+                                                className='block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[#1F1F1F] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                                onClick={handleLogout}
+                                                disabled={isLoggingOut}
+                                            >
+                                                {isLoggingOut ? (
+                                                    <span className='flex items-center'>
+                                                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                                                        Đang đăng xuất...
+                                                    </span>
+                                                ) : (
+                                                    'Đăng xuất'
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className='mt-2 space-y-1'>
-                                        <Link
-                                            to='/profile'
-                                            className='block px-4 py-2 text-sm text-gray-300 hover:bg-[#1F1F1F] hover:text-white rounded-lg transition-colors'
-                                            onClick={() =>
-                                                setIsMobileMenuOpen(false)
-                                            }
-                                        >
-                                            Hồ sơ
-                                        </Link>
-                                        <Link
-                                            to='/settings'
-                                            className='block px-4 py-2 text-sm text-gray-300 hover:bg-[#1F1F1F] hover:text-white rounded-lg transition-colors'
-                                            onClick={() =>
-                                                setIsMobileMenuOpen(false)
-                                            }
-                                        >
-                                            Cài đặt
-                                        </Link>
-                                        <button
-                                            className='block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[#1F1F1F] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed' // ✅ THÊM: disabled styles
-                                            onClick={handleLogout} // ✅ THAY ĐỔI: Gọi handleLogout thay vì chỉ đóng menu
-                                            disabled={isLoggingOut} // ✅ THÊM: Disable khi đang logout
-                                        >
-                                            {isLoggingOut ? (
-                                                <span className='flex items-center'>
-                                                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                                                    Đang đăng xuất...
-                                                </span>
-                                            ) : (
-                                                'Đăng xuất'
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </SheetContent>
                     </Sheet>

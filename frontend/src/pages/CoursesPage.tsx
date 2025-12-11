@@ -13,7 +13,7 @@ import {
     CourseSortSelect,
     type CourseFiltersState,
     type SortOption,
-} from '../components/Courses'
+} from '../components/courses'
 import { coursesApi } from '../lib/api'
 import type { Category, Tag, PublicCourse } from '../lib/api/types'
 

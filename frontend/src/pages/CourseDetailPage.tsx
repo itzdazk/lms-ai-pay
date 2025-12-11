@@ -30,14 +30,13 @@ import {
     X,
 } from 'lucide-react'
 
-// THÊM: Các component và API mới
 import {
     LessonsList,
     CourseHeroSection,
     CourseSidebar,
 } from '../components/Courses'
 import { coursesApi } from '../lib/api'
-import type { Course, Lesson, Instructor } from '../lib/api/types'
+import type { PublicCourse, Lesson, Instructor } from '../lib/api/types'
 import { formatDuration } from '../lib/courseUtils'
 
 export function CourseDetailPage() {
@@ -45,7 +44,7 @@ export function CourseDetailPage() {
     const navigate = useNavigate()
 
     // State quản lý dữ liệu từ API
-    const [course, setCourse] = useState<Course | null>(null)
+    const [course, setCourse] = useState<PublicCourse | null>(null)
     const [lessons, setLessons] = useState<Lesson[]>([])
     const [instructor, setInstructor] = useState<Instructor | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -63,7 +62,9 @@ export function CourseDetailPage() {
                 const courseId = parseInt(id)
 
                 // Lấy thông tin khóa học
-                const courseData = await coursesApi.getCourseById(String(courseId))
+                const courseData = await coursesApi.getPublicCourseById(
+                    courseId
+                )
                 setCourse(courseData)
 
                 // Tăng lượt xem (fire and forget)

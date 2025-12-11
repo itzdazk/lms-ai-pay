@@ -1,8 +1,3 @@
-// ============================================
-// FILE: src/components/Courses/CourseCard.tsx (TẠO MỚI)
-// Reusable course card component
-// ============================================
-
 import { Link } from 'react-router-dom'
 import {
     Card,
@@ -15,7 +10,7 @@ import {
 import { Badge } from '../ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Star, Users, BookOpen, Clock } from 'lucide-react'
-import type { Course } from '../../lib/api/types'
+import type { PublicCourse } from '../../lib/api/types'
 import {
     formatDuration,
     getCoursePrice,
@@ -25,7 +20,7 @@ import {
 } from '../../lib/courseUtils'
 
 interface CourseCardProps {
-    course: Course
+    course: PublicCourse
     className?: string
 }
 

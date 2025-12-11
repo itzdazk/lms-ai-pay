@@ -74,7 +74,7 @@ export interface RefreshTokenRequest {
 // USER TYPES
 // =====================================================
 export interface User {
-    id: number
+    id: string
     userName: string
     email: string
     fullName: string
