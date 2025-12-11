@@ -225,50 +225,62 @@ export function Navbar() {
             case 'INSTRUCTOR':
                 return (
                     <>
+                        <div className='px-4 py-2'>
+                            <div className='flex items-center gap-2 text-gray-400 text-sm font-medium'>
+                                <LayoutDashboard className='h-4 w-4 text-blue-400' />
+                                Dashboard
+                            </div>
+                        </div>
                         <Link
                             to='/instructor/dashboard'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <LayoutDashboard className='h-5 w-5' />
-                            Dashboard Giảng viên
+                            <GraduationCap className='h-5 w-5 text-blue-400' />
+                            Giảng viên
                         </Link>
                         <Link
                             to='/dashboard'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <LayoutDashboard className='h-5 w-5' />
-                            Dashboard Học viên
+                            <User className='h-5 w-5 text-green-400' />
+                            Học viên
                         </Link>
                     </>
                 )
             case 'ADMIN':
                 return (
                     <>
+                        <div className='px-4 py-2'>
+                            <div className='flex items-center gap-2 text-gray-400 text-sm font-medium'>
+                                <LayoutDashboard className='h-4 w-4 text-purple-400' />
+                                Dashboard
+                            </div>
+                        </div>
                         <Link
                             to='/admin/dashboard'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <LayoutDashboard className='h-5 w-5' />
-                            Dashboard Admin
+                            <Shield className='h-5 w-5 text-purple-400' />
+                            Quản trị viên
                         </Link>
                         <Link
                             to='/instructor/dashboard'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <LayoutDashboard className='h-5 w-5' />
-                            Dashboard Giảng viên
+                            <GraduationCap className='h-5 w-5 text-blue-400' />
+                            Giảng viên
                         </Link>
                         <Link
                             to='/dashboard'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <LayoutDashboard className='h-5 w-5' />
-                            Dashboard Học viên
+                            <User className='h-5 w-5 text-green-400' />
+                            Học viên
                         </Link>
                     </>
                 )
