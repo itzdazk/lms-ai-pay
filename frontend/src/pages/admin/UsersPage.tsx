@@ -290,7 +290,11 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
 
   const handleChangeRole = (user: User) => {
     setSelectedUser(user);
-    setNewRole(user.role);
+    if (user.role === 'STUDENT' || user.role === 'INSTRUCTOR') {
+      setNewRole(user.role);
+    } else {
+      setNewRole('STUDENT'); // Default to STUDENT if role is ADMIN or GUEST
+    }
     setIsRoleDialogOpen(true);
   };
 
@@ -341,7 +345,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   // Show loading while checking auth
   if (authLoading) {
     return (
-      <div className="container mx-auto px-4 py-4 bg-background text-foreground min-h-screen flex items-center justify-center">
+      <div className="w-full px-4 py-4 bg-background text-foreground min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -353,8 +357,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 bg-background text-foreground min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full px-4 py-4 bg-background text-foreground min-h-screen">
+      <div className="w-full">
         <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3">
             <Users className="h-8 w-8" />
@@ -893,4 +897,3 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     </div>
   );
 }
-
