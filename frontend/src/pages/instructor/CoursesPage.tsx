@@ -29,12 +29,14 @@ import {
   BarChart3,
   Loader2,
   Search,
-  X
+  X,
+  TrendingUp
 } from 'lucide-react';
 import { coursesApi } from '../../lib/api/courses'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { useAuth } from '../../contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { CourseAnalytics } from '../../components/instructor/CourseAnalytics';
 import { toast } from 'sonner';
 import { formatDate } from '../../lib/utils';
 import type { Course, Category } from '../../lib/api/types';
@@ -63,6 +65,7 @@ function CourseRow({
   onEdit, 
   onDelete, 
   onChangeStatus,
+  onViewAnalytics,
   isSelected,
   onSelect
 }: { 
@@ -70,6 +73,7 @@ function CourseRow({
   onEdit: (course: Course) => void;
   onDelete: (course: Course) => void;
   onChangeStatus: (course: Course) => void;
+  onViewAnalytics: (course: Course) => void;
   isSelected: boolean;
   onSelect: (courseId: number | null) => void;
 }) {
@@ -331,6 +335,16 @@ function CourseRow({
           <div 
             className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer"
             onClick={() => {
+              onViewAnalytics(course);
+              setMenuOpen(false);
+            }}
+          >
+            <TrendingUp className="h-4 w-4" />
+            Phân tích
+          </div>
+          <div 
+            className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer"
+            onClick={() => {
               onEdit(course);
               setMenuOpen(false);
             }}
@@ -389,6 +403,7 @@ export function CoursesPage() {
   const [priceType, setPriceType] = useState<'all' | 'free' | 'paid'>('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
@@ -1048,6 +1063,10 @@ export function CoursesPage() {
                         setNewStatus(statusLower);
                         setIsStatusDialogOpen(true);
                       }}
+                      onViewAnalytics={(c) => {
+                        setSelectedCourse(c);
+                        setIsAnalyticsDialogOpen(true);
+                      }}
                       isSelected={selectedRowId === course.id}
                       onSelect={setSelectedRowId}
                     />
@@ -1100,6 +1119,23 @@ export function CoursesPage() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Analytics Dialog */}
+      <Dialog open={isAnalyticsDialogOpen} onOpenChange={setIsAnalyticsDialogOpen}>
+        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white">Phân tích khóa học</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {selectedCourse?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {selectedCourse && (
+              <CourseAnalytics courseId={String(selectedCourse.id)} />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
