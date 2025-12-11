@@ -17,8 +17,11 @@ class AuthService {
             email,
             password,
             fullName,
-            role = USER_ROLES.STUDENT,
+            // role is ignored - always set to STUDENT for security
         } = data
+
+        // Always set role to STUDENT to prevent unauthorized role assignment
+        const role = USER_ROLES.STUDENT
 
         // Check if user already exists
         const existingUser = await prisma.user.findFirst({
