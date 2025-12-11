@@ -1,11 +1,13 @@
 // src/routes/category.routes.js
 import express from 'express'
 import categoryController from '../controllers/category.controller.js'
+import categoryUploadController from '../controllers/category-upload.controller.js'
 import {
     authenticate,
     optionalAuthenticate,
 } from '../middlewares/authenticate.middleware.js'
 import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
+import { uploadCategoryImage } from '../config/multer.config.js'
 import {
     createCategoryValidator,
     updateCategoryValidator,
@@ -29,6 +31,31 @@ router.post(
     isInstructor,
     createCategoryValidator,
     categoryController.createCategory
+)
+
+/**
+ * @route   POST /api/v1/categories/:id/upload-image
+ * @desc    Upload category image
+ * @access  Private (Admin/Instructor)
+ */
+router.post(
+    '/:id/upload-image',
+    authenticate,
+    isInstructor,
+    uploadCategoryImage,
+    categoryUploadController.uploadImage
+)
+
+/**
+ * @route   DELETE /api/v1/categories/:id/image
+ * @desc    Delete category image
+ * @access  Private (Admin/Instructor)
+ */
+router.delete(
+    '/:id/image',
+    authenticate,
+    isInstructor,
+    categoryUploadController.deleteImage
 )
 
 /**
