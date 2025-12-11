@@ -68,7 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const register = async (data: RegisterData) => {
         const { user } = await authApi.register(data)
-        setUser(user)
+        // Don't set user in state if email is not verified yet
+        // User should verify email before being considered authenticated
+        if (user.emailVerified) {
+            setUser(user)
+        } else {
+            // Clear user from localStorage since email is not verified
+            localStorage.removeItem('user')
+        }
+        return { user }
     }
 
     const logout = async () => {
