@@ -23,10 +23,10 @@ import {
   Moon,
   LogOut,
   User as UserIcon,
-  ChevronDown,
   ChevronRight,
   Shield,
   GraduationCap,
+  Tag,
 } from 'lucide-react';
 import { dashboardApi } from '../lib/api/dashboard';
 import { UsersPage } from './admin/UsersPage';
@@ -51,23 +51,49 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-type AdminSection = 'dashboard' | 'users' | 'courses' | 'analytics' | 'orders' | 'categories' | 'settings';
+type AdminSection = 'dashboard' | 'users' | 'students' | 'instructors' | 'courses' | 'analytics' | 'orders' | 'categories' | 'settings' | 'tags';
 
 interface MenuItem {
   id: AdminSection;
   label: string;
   icon: React.ElementType;
+  color?: string;
   children?: MenuItem[];
 }
 
-const menuItems: MenuItem[] = [
-  { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'users', label: 'Quản lý người dùng', icon: Users },
-  { id: 'courses', label: 'Khóa học', icon: BookOpen },
-  { id: 'analytics', label: 'Phân tích', icon: BarChart3 },
-  { id: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
-  { id: 'categories', label: 'Danh mục', icon: FolderTree },
-  { id: 'settings', label: 'Cài đặt', icon: Settings },
+interface MenuGroup {
+  label: string;
+  items: MenuItem[];
+}
+
+const menuGroups: MenuGroup[] = [
+  {
+    label: 'Tổng quan',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-400' },
+      { id: 'analytics', label: 'Thống kê/Phân tích', icon: BarChart3, color: 'text-yellow-400' },
+    ],
+  },
+  {
+    label: 'Quản lý người dùng',
+    items: [
+      { id: 'users', label: 'Người dùng', icon: Users, color: 'text-purple-400' },
+    ],
+  },
+  {
+    label: 'Quản lý khóa học',
+    items: [
+      { id: 'courses', label: 'Khóa học', icon: BookOpen, color: 'text-green-400' },
+      { id: 'categories', label: 'Danh mục', icon: FolderTree, color: 'text-cyan-400' },
+      { id: 'tags', label: 'Tags', icon: Tag, color: 'text-pink-400' },
+    ],
+  },
+  {
+    label: 'Quản lý đơn hàng',
+    items: [
+      { id: 'orders', label: 'Đơn hàng', icon: ShoppingCart, color: 'text-orange-400' },
+    ],
+  },
 ];
 
 export function AdminDashboard() {
@@ -76,9 +102,9 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
   const [loading, setLoading] = useState(true);
+  const [sectionLoading, setSectionLoading] = useState(false);
   const [dashboard, setDashboard] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['users'])); // Default expand "Người dùng"
 
   // Check if user is admin
   useEffect(() => {
@@ -136,7 +162,9 @@ export function AdminDashboard() {
         </div>
       );
     }
-    const currentItem = menuItems.find((item) => item.id === activeSection);
+    const currentItem = menuGroups
+      .flatMap((group) => group.items)
+      .find((item) => item.id === activeSection);
     if (currentItem) {
       const CurrentIcon = currentItem.icon;
       return (
@@ -186,6 +214,8 @@ export function AdminDashboard() {
         return <OrdersManagement />;
       case 'categories':
         return <CategoriesManagement />;
+      case 'tags':
+        return <TagsManagement />;
       case 'settings':
         return <SettingsView />;
       default:
@@ -237,76 +267,49 @@ export function AdminDashboard() {
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 overflow-y-auto p-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const hasChildren = item.children && item.children.length > 0;
-            const isExpanded = expandedMenus.has(item.id);
-            const isActive = activeSection === item.id || (hasChildren && item.children?.some(child => activeSection === child.id));
-            
-            return (
-              <div key={item.id}>
-              <button
-                  onClick={() => {
-                    if (hasChildren) {
-                      setExpandedMenus(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has(item.id)) {
-                          newSet.delete(item.id);
-                        } else {
-                          newSet.add(item.id);
-                        }
-                        return newSet;
-                      });
-                    } else {
-                      setActiveSection(item.id);
-                    }
-                  }}
-                  className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
-                  isActive
-                    ? 'bg-[#2D2D2D] text-white'
-                    : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
-                }`}
-              >
-                  <div className="flex items-center gap-3">
-                <Icon className="h-5 w-5" />
-                <span className="font-medium">{item.label}</span>
-                  </div>
-                  {hasChildren && (
-                    isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )
-                  )}
-                </button>
-                
-                {/* Submenu Items */}
-                {hasChildren && isExpanded && (
-                  <div className="ml-4 space-y-1">
-                    {item.children?.map((child) => {
-                      const ChildIcon = child.icon;
-                      const isChildActive = activeSection === child.id;
-                      return (
-                        <button
-                          key={child.id}
-                          onClick={() => setActiveSection(child.id)}
-                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                            isChildActive
-                              ? 'bg-[#2D2D2D] text-white'
-                              : 'text-gray-400 hover:bg-[#1F1F1F] hover:text-white'
-                          }`}
-                        >
-                          <ChildIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{child.label}</span>
-              </button>
-                      );
-                    })}
-                  </div>
-                )}
+        <nav className="flex-1 overflow-y-auto p-3 custom-scrollbar space-y-4">
+          {menuGroups.map((group, groupIndex) => (
+            <div key={groupIndex} className="space-y-1">
+              {/* Group Label */}
+              <div className="px-4 py-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {group.label}
+                </span>
               </div>
-            );
-          })}
+              
+              {/* Group Items */}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                const itemColor = item.color || 'text-gray-400';
+                
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (item.id !== activeSection) {
+                        setSectionLoading(true);
+                        setActiveSection(item.id);
+                        // Reset loading after a short delay to allow component to mount
+                        setTimeout(() => {
+                          setSectionLoading(false);
+                        }, 200);
+                      }
+                    }}
+                    disabled={sectionLoading}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ${
+                      isActive
+                        ? 'bg-gradient-to-r from-[#2D2D2D] to-[#252525] text-white shadow-lg shadow-purple-500/10 border border-purple-500/20'
+                        : 'text-gray-400 hover:bg-gradient-to-r hover:from-[#1F1F1F] hover:to-[#1A1A1A] hover:text-white hover:shadow-md border border-transparent'
+                    } ${sectionLoading ? 'opacity-50 cursor-wait' : ''}`}
+                  >
+                    <Icon className={`h-5 w-5 transition-colors ${isActive ? itemColor : 'group-hover:' + itemColor}`} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Sidebar Footer */}
@@ -542,7 +545,15 @@ export function AdminDashboard() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background p-6">
+        <main className="flex-1 overflow-y-auto bg-background p-6 relative">
+          {sectionLoading && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <p className="text-sm text-gray-400">Đang tải...</p>
+              </div>
+            </div>
+          )}
           {renderContent()}
         </main>
       </div>
@@ -753,6 +764,25 @@ function CategoriesManagement() {
         </CardHeader>
         <CardContent>
           <p className="text-gray-400">Chức năng quản lý danh mục sẽ được triển khai sau.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Tags Management Component
+function TagsManagement() {
+  return (
+    <div className="space-y-6">
+      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+        <CardHeader>
+          <CardTitle className="text-white">Quản lý Tags</CardTitle>
+          <CardDescription className="text-gray-400">
+            Quản lý các tags của khóa học
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-400">Chức năng quản lý tags sẽ được triển khai sau.</p>
         </CardContent>
       </Card>
     </div>
