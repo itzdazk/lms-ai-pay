@@ -4,6 +4,8 @@ import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
 import config from '../config/app.config.js'
 import CookieUtil from '../utils/cookie.utils.js'
+import JWTUtil from '../utils/jwt.util.js'
+import logger from '../config/logger.config.js'
 
 class AuthController {
     /**
@@ -14,13 +16,16 @@ class AuthController {
     register = asyncHandler(async (req, res) => {
         const { userName, email, password, fullName, role } = req.body
 
-        const result = await authService.register({
-            userName,
-            email,
-            password,
-            fullName,
-            role,
-        })
+        const result = await authService.register(
+            {
+                userName,
+                email,
+                password,
+                fullName,
+                role,
+            },
+            req
+        )
 
         CookieUtil.setAuthTokens(res, result.tokens)
 
@@ -40,7 +45,7 @@ class AuthController {
      */
     login = asyncHandler(async (req, res) => {
         const { email, password } = req.body
-        const result = await authService.login(email, password)
+        const result = await authService.login(email, password, req)
 
         CookieUtil.setAuthTokens(res, result.tokens)
 
@@ -55,16 +60,52 @@ class AuthController {
 
     /**
      * @route   POST /api/v1/auth/logout
-     * @desc    Logout user
+     * @desc    Logout user (current session)
      * @access  Private
      */
     logout = asyncHandler(async (req, res) => {
-        await authService.invalidateAllTokens(req.user.id)
+        // Get sessionId from token
+        const token = req.cookies?.accessToken || req.headers.authorization?.substring(7)
+        if (token) {
+            try {
+                const decoded = JWTUtil.decode(token)
+                if (decoded?.sessionId) {
+                    await authService.logoutSession(decoded.sessionId, req.user.id)
+                }
+            } catch (error) {
+                // If token decode fails, just continue with logout
+                logger.debug('Failed to decode token for logout:', error.message)
+            }
+        }
 
         // Clear cookies
         CookieUtil.clearAuthTokens(res)
 
         return ApiResponse.success(res, null, 'Logout successful')
+    })
+
+    /**
+     * @route   GET /api/v1/auth/sessions
+     * @desc    Get all active sessions for current user
+     * @access  Private
+     */
+    getSessions = asyncHandler(async (req, res) => {
+        const sessions = await authService.getSessions(req.user.id)
+
+        return ApiResponse.success(res, { sessions }, 'Sessions retrieved successfully')
+    })
+
+    /**
+     * @route   DELETE /api/v1/auth/sessions/:sessionId
+     * @desc    Logout a specific session
+     * @access  Private
+     */
+    logoutSession = asyncHandler(async (req, res) => {
+        const { sessionId } = req.params
+
+        await authService.logoutSession(sessionId, req.user.id)
+
+        return ApiResponse.success(res, null, 'Session logged out successfully')
     })
 
     /**

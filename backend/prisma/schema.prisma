@@ -43,6 +43,7 @@ model User {
   aiRecommendations   AiRecommendation[]
   conversations       Conversation[]
   notifications       Notification[]
+  userSessions        UserSession[]
 
   @@index([email])
   @@index([userName])
@@ -458,4 +459,26 @@ model ChatMessage {
   @@index([createdAt])
   @@index([isHelpful])
   @@map("chat_messages")
+}
+
+// =====================================================
+// 15. USER SESSIONS
+// =====================================================
+model UserSession {
+  id             String   @id @default(uuid()) @db.Text
+  userId         Int      @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId       String?  @map("device_id") @db.VarChar(255)
+  deviceName     String?  @map("device_name") @db.VarChar(255)
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([expiresAt])
+  @@map("user_sessions")
 }

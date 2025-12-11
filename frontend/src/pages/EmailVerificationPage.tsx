@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
-import { Button } from '../components/ui/button'
+import { DarkOutlineButton } from '../components/ui/buttons'
 import {
     Card,
     CardContent,
@@ -9,7 +9,7 @@ import {
     CardHeader,
     CardTitle,
 } from '../components/ui/card'
-import { BookOpen, CheckCircle, XCircle, Loader2, Mail } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '../lib/api'
 
@@ -27,10 +27,11 @@ export function EmailVerificationPage() {
         if (token) {
             verifyEmail(token)
         } else {
-            setStatus('error')
-            setErrorMessage('Token không hợp lệ')
+            // Redirect if no token - this page should only be accessed via email link
+            toast.error('Link xác thực không hợp lệ')
+            navigate('/', { replace: true })
         }
-    }, [token])
+    }, [token, navigate])
 
     const verifyEmail = async (verificationToken: string) => {
         try {
@@ -98,20 +99,8 @@ export function EmailVerificationPage() {
     }
 
     return (
-        <div className='min-h-screen flex items-center justify-center bg-white dark:bg-black py-12 px-4'>
+        <div className='min-h-[calc(100vh-200px)] flex items-center justify-center bg-white dark:bg-black py-12 px-4'>
             <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8'>
-                {/* Logo */}
-                <Link
-                    to='/'
-                    className='flex items-center justify-center gap-2 mb-8'
-                >
-                    <div className='flex h-12 w-12 items-center justify-center rounded-lg bg-black border border-white/30'>
-                        <BookOpen className='h-7 w-7 text-white' />
-                    </div>
-                    <span className='text-2xl font-semibold text-white'>
-                        EduLearn
-                    </span>
-                </Link>
 
                 <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                     {/* Verifying State */}
@@ -154,12 +143,12 @@ export function EmailVerificationPage() {
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button
+                                <DarkOutlineButton
                                     onClick={() => navigate('/login')}
-                                    className='w-full bg-blue-600 hover:bg-blue-700 text-white'
+                                    className='w-full'
                                 >
                                     Đăng nhập ngay
-                                </Button>
+                                </DarkOutlineButton>
                             </CardFooter>
                         </>
                     )}
@@ -180,12 +169,12 @@ export function EmailVerificationPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardFooter className='flex flex-col gap-2'>
-                                <Button
+                                <DarkOutlineButton
                                     onClick={() => navigate('/login')}
-                                    className='w-full bg-blue-600 hover:bg-blue-700 text-white'
+                                    className='w-full'
                                 >
                                     Về trang đăng nhập
-                                </Button>
+                                </DarkOutlineButton>
                                 <Link
                                     to='/register'
                                     className='text-sm text-center w-full text-blue-600 hover:underline'
@@ -222,10 +211,10 @@ export function EmailVerificationPage() {
                                 </div>
                             </CardContent>
                             <CardFooter className='flex flex-col gap-2'>
-                                <Button
+                                <DarkOutlineButton
                                     onClick={handleResendVerification}
                                     disabled={isResending}
-                                    className='w-full bg-blue-600 hover:bg-blue-700 text-white'
+                                    className='w-full'
                                 >
                                     {isResending ? (
                                         <>
@@ -235,7 +224,7 @@ export function EmailVerificationPage() {
                                     ) : (
                                         'Gửi lại email xác thực'
                                     )}
-                                </Button>
+                                </DarkOutlineButton>
                                 <Link
                                     to='/login'
                                     className='text-sm text-center w-full text-blue-600 hover:underline'

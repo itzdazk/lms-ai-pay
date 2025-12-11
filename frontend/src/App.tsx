@@ -54,7 +54,6 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/verify-email" element={<EmailVerificationPage />} />
 
           {/* ========== PUBLIC ROUTES (With Navbar/Footer) ========== */}
           <Route
@@ -63,6 +62,7 @@ export default function App() {
               <PublicLayout>
               <Routes>
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/verify-email" element={<EmailVerificationPage />} />
                   <Route path="/courses" element={<CoursesPage />} />
                   <Route path="/courses/preview" element={<CoursePreviewPage />} />
                   <Route path="/courses/:id" element={<CourseDetailPage />} />
