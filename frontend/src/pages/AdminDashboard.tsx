@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { DarkOutlineButton } from '../components/ui/buttons';
 import {
   Users,
   BookOpen,
@@ -24,6 +25,8 @@ import {
   User as UserIcon,
   ChevronDown,
   ChevronRight,
+  Shield,
+  GraduationCap,
 } from 'lucide-react';
 import { dashboardApi } from '../lib/api/dashboard';
 import { UsersPage } from './admin/UsersPage';
@@ -341,11 +344,10 @@ export function AdminDashboard() {
           {/* Right Side Actions */}
           <div className="flex items-center gap-3">
             {/* Theme Toggle */}
-            <Button
-              variant="outline"
+            <DarkOutlineButton
               size="sm"
               onClick={toggleTheme}
-              className="hidden md:flex items-center gap-2 border-[#2D2D2D] text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0"
+              className="hidden md:flex items-center gap-2"
               title={theme === 'dark' ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
             >
               {theme === 'dark' ? (
@@ -359,12 +361,11 @@ export function AdminDashboard() {
                   <span>Light Mode</span>
                 </>
               )}
-            </Button>
-            <Button
-              variant="ghost"
+            </DarkOutlineButton>
+            <DarkOutlineButton
               size="icon"
               onClick={toggleTheme}
-              className="md:hidden text-white bg-black hover:!bg-black hover:!text-white focus-visible:ring-0"
+              className="md:hidden"
               title={theme === 'dark' ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
             >
               {theme === 'dark' ? (
@@ -372,7 +373,7 @@ export function AdminDashboard() {
               ) : (
                 <Sun className="h-5 w-5" />
               )}
-            </Button>
+            </DarkOutlineButton>
 
             {/* Notifications */}
             <DropdownMenu>
@@ -424,39 +425,113 @@ export function AdminDashboard() {
                   </Avatar>
                 </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-[#1A1A1A] border-[#2D2D2D]">
-                <DropdownMenuLabel className="text-white">
-                  <div>
-                    <p className="text-white">{currentUser?.fullName || 'Admin'}</p>
-                    <p className="text-xs text-gray-500">{currentUser?.email || ''}</p>
+              <DropdownMenuContent align="end" className="w-64 bg-[#1A1A1A] border-[#2D2D2D] shadow-xl">
+                <DropdownMenuLabel className="text-white px-3 py-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border border-white/20">
+                      <AvatarImage
+                        src={currentUser?.avatarUrl || currentUser?.avatar}
+                        alt={currentUser?.fullName || 'Admin'}
+                      />
+                      <AvatarFallback className="bg-blue-600 text-white text-sm">
+                        {currentUser?.fullName
+                          ? currentUser.fullName.split(' ').map(n => n[0]).join('')
+                          : 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">
+                        {currentUser?.fullName || 'Admin'}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {currentUser?.email || ''}
+                      </p>
+                      <div className="mt-1.5">
+                        <Badge className="text-xs px-1.5 py-0.5 bg-purple-600/20 text-purple-400 border-purple-500/30 border">
+                          Quản trị viên
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-[#2D2D2D]" />
-                <DropdownMenuItem asChild className="text-white hover:bg-[#1F1F1F]">
-                  <Link to="/dashboard" className="cursor-pointer">
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
+                <DropdownMenuSeparator className="bg-[#2D2D2D] my-1" />
+                
+                {/* Dashboard Menu Items */}
+                <DropdownMenuLabel className="text-white px-2 py-1.5">
+                  <div className="flex items-center">
+                    <LayoutDashboard className="mr-2 h-4 w-4 text-purple-400" />
+                    <span className="font-medium">Dashboard</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  asChild
+                  className="text-white hover:bg-[#252525] transition-colors cursor-pointer"
+                >
+                  <Link
+                    to="/admin/dashboard"
+                    className="flex items-center pl-6"
+                  >
+                    <Shield className="mr-2 h-4 w-4 text-purple-400" />
+                    Quản trị viên
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-white hover:bg-[#1F1F1F]">
-                  <Link to="/profile" className="cursor-pointer">
-                    <UserIcon className="mr-2 h-4 w-4" />
+                <DropdownMenuItem
+                  asChild
+                  className="text-white hover:bg-[#252525] transition-colors cursor-pointer"
+                >
+                  <Link
+                    to="/instructor/dashboard"
+                    className="flex items-center pl-6"
+                  >
+                    <GraduationCap className="mr-2 h-4 w-4 text-blue-400" />
+                    Giảng viên
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  asChild
+                  className="text-white hover:bg-[#252525] transition-colors cursor-pointer"
+                >
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center pl-6"
+                  >
+                    <UserIcon className="mr-2 h-4 w-4 text-green-400" />
+                    Học viên
+                  </Link>
+                </DropdownMenuItem>
+
+                {/* Common menu items */}
+                <DropdownMenuItem
+                  asChild
+                  className="text-white hover:bg-[#252525] transition-colors cursor-pointer"
+                >
+                  <Link
+                    to="/profile"
+                    className="flex items-center"
+                  >
+                    <UserIcon className="mr-2 h-4 w-4 text-gray-300" />
                     Hồ sơ
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-white hover:bg-[#1F1F1F]">
-                  <Link to="/settings" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
+                <DropdownMenuItem
+                  asChild
+                  className="text-white hover:bg-[#252525] transition-colors cursor-pointer"
+                >
+                  <Link
+                    to="/settings"
+                    className="flex items-center"
+                  >
+                    <Settings className="mr-2 h-4 w-4 text-gray-300" />
                     Cài đặt
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-[#2D2D2D]" />
+                <DropdownMenuSeparator className="bg-[#2D2D2D] my-1" />
                 <DropdownMenuItem
                   onClick={async () => {
                     await logout();
                     navigate('/');
                   }}
-                  className="text-red-400 hover:bg-[#1F1F1F] cursor-pointer"
+                  className="text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer focus:bg-red-500/10 focus:text-red-300"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Đăng xuất
