@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -11,15 +11,39 @@ import {
     CardHeader,
     CardTitle,
 } from '../components/ui/card'
-import { BookOpen, ArrowLeft, Mail, Loader2, CheckCircle } from 'lucide-react'
+import { BookOpen, ArrowLeft, Mail, Loader2, CheckCircle, Moon, Sun, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '../lib/api'
+import { useTheme } from '../contexts/ThemeContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export function ForgotPasswordPage() {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const { theme, toggleTheme } = useTheme()
+    const { isAuthenticated, user } = useAuth()
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
     const [errors, setErrors] = useState<{ email?: string }>({})
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            // Redirect to previous page or home
+            const from = (location.state as any)?.from?.pathname
+            if (from) {
+                navigate(from, { replace: true })
+            } else {
+                // Go back in history if possible, otherwise go to home
+                if (window.history.length > 1) {
+                    navigate(-1)
+                } else {
+                    navigate('/', { replace: true })
+                }
+            }
+        }
+    }, [isAuthenticated, user, navigate, location])
 
     const validateEmail = () => {
         const newErrors: typeof errors = {}
@@ -38,6 +62,10 @@ export function ForgotPasswordPage() {
         e.preventDefault()
 
         if (!validateEmail()) {
+            // Focus vào field bị lỗi
+            if (errors.email) {
+                document.getElementById('email')?.focus()
+            }
             return
         }
 
@@ -65,7 +93,25 @@ export function ForgotPasswordPage() {
     if (isSuccess) {
         return (
             <div className='min-h-screen flex items-center justify-center bg-white dark:bg-black py-8 px-4'>
-                <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8'>
+                <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8 relative'>
+                    {/* Theme Toggle Button */}
+                    <div className='absolute top-4 right-4'>
+                        <DarkOutlineButton
+                            size='icon'
+                            onClick={toggleTheme}
+                            title={
+                                theme === 'dark'
+                                    ? 'Chuyển sang Light Mode'
+                                    : 'Chuyển sang Dark Mode'
+                            }
+                        >
+                            {theme === 'dark' ? (
+                                <Moon className='h-5 w-5' />
+                            ) : (
+                                <Sun className='h-5 w-5' />
+                            )}
+                        </DarkOutlineButton>
+                    </div>
                     {/* Logo */}
                     <Link
                         to='/'
@@ -131,7 +177,25 @@ export function ForgotPasswordPage() {
 
     return (
         <div className='min-h-screen flex items-center justify-center bg-white dark:bg-black py-8 px-4'>
-            <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8'>
+            <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8 relative'>
+                {/* Theme Toggle Button */}
+                <div className='absolute top-4 right-4'>
+                    <DarkOutlineButton
+                        size='icon'
+                        onClick={toggleTheme}
+                        title={
+                            theme === 'dark'
+                                ? 'Chuyển sang Light Mode'
+                                : 'Chuyển sang Dark Mode'
+                        }
+                    >
+                        {theme === 'dark' ? (
+                            <Moon className='h-5 w-5' />
+                        ) : (
+                            <Sun className='h-5 w-5' />
+                        )}
+                    </DarkOutlineButton>
+                </div>
                 {/* Logo */}
                 <Link
                     to='/'
@@ -155,7 +219,7 @@ export function ForgotPasswordPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit} className='space-y-4'>
+                        <form onSubmit={handleSubmit} className='space-y-4' noValidate>
                             <div className='space-y-2'>
                                 <Label htmlFor='email' className='text-white'>
                                     Email
@@ -167,17 +231,21 @@ export function ForgotPasswordPage() {
                                         type='email'
                                         placeholder='name@example.com'
                                         value={email}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setEmail(e.target.value)
-                                        }
+                                            // Clear error when user starts typing
+                                            if (errors.email) {
+                                                setErrors({})
+                                            }
+                                        }}
                                         className={`pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
                                             errors.email ? 'border-red-500' : ''
                                         }`}
-                                        required
                                     />
                                 </div>
                                 {errors.email && (
-                                    <p className='text-xs text-red-500'>
+                                    <p className='text-xs text-red-500 flex items-center gap-1'>
+                                        <AlertCircle className='h-3 w-3' />
                                         {errors.email}
                                     </p>
                                 )}

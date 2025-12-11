@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -11,14 +11,17 @@ import {
     CardTitle,
 } from '../components/ui/card'
 import { Checkbox } from '../components/ui/checkbox'
-import { BookOpen, AlertCircle, Loader2, Lock, Eye, EyeOff } from 'lucide-react'
+import { BookOpen, AlertCircle, Loader2, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { toast } from 'sonner'
 
 export function LoginPage() {
     const navigate = useNavigate()
-    const { login } = useAuth()
+    const location = useLocation()
+    const { login, isAuthenticated, user } = useAuth()
+    const { theme, toggleTheme } = useTheme()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [rememberMe, setRememberMe] = useState(false)
@@ -29,6 +32,32 @@ export function LoginPage() {
         {}
     )
 
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            // Redirect based on user role
+            if (user.role === 'ADMIN') {
+                navigate('/admin/dashboard', { replace: true })
+            } else if (user.role === 'INSTRUCTOR') {
+                navigate('/instructor/dashboard', { replace: true })
+            } else {
+                navigate('/dashboard', { replace: true })
+            }
+        }
+    }, [isAuthenticated, user, navigate])
+
+    // Show message from register page
+    useEffect(() => {
+        const message = (location.state as any)?.message
+        if (message) {
+            toast.info(message, {
+                duration: 6000,
+            })
+            // Clear state to prevent showing message again on refresh
+            navigate(location.pathname, { replace: true, state: {} })
+        }
+    }, [location, navigate])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -36,14 +65,28 @@ export function LoginPage() {
         setError('')
         setErrors({})
 
-        // Validate inputs
-        if (!email || !password) {
-            setError('Vui lòng nhập email và mật khẩu')
-            return
+        // Validate inputs với thông báo cụ thể
+        const newErrors: { email?: string; password?: string } = {}
+
+        if (!email.trim()) {
+            newErrors.email = 'Vui lòng nhập email'
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            newErrors.email = 'Email không hợp lệ'
         }
 
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError('Email không hợp lệ')
+        if (!password.trim()) {
+            newErrors.password = 'Vui lòng nhập mật khẩu'
+        }
+
+        // Nếu có lỗi, hiển thị và dừng lại
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors)
+            // Focus vào field đầu tiên bị lỗi
+            if (newErrors.email) {
+                document.getElementById('email')?.focus()
+            } else if (newErrors.password) {
+                document.getElementById('password')?.focus()
+            }
             return
         }
 
@@ -104,7 +147,25 @@ export function LoginPage() {
 
     return (
         <div className='min-h-screen flex items-center justify-center bg-white dark:bg-black py-8 px-4'>
-            <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8'>
+            <div className='w-full max-w-md bg-black border border-[#2D2D2D] rounded-3xl p-8 relative'>
+                {/* Theme Toggle Button */}
+                <div className='absolute top-4 right-4'>
+                    <DarkOutlineButton
+                        size='icon'
+                        onClick={toggleTheme}
+                        title={
+                            theme === 'dark'
+                                ? 'Chuyển sang Light Mode'
+                                : 'Chuyển sang Dark Mode'
+                        }
+                    >
+                        {theme === 'dark' ? (
+                            <Moon className='h-5 w-5' />
+                        ) : (
+                            <Sun className='h-5 w-5' />
+                        )}
+                    </DarkOutlineButton>
+                </div>
                 {/* Logo */}
                 <Link
                     to='/'
@@ -136,7 +197,7 @@ export function LoginPage() {
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className='space-y-4'>
+                        <form onSubmit={handleSubmit} className='space-y-4' noValidate>
                             <div className='space-y-2'>
                                 <Label htmlFor='email' className='text-white'>
                                     Email
@@ -146,11 +207,24 @@ export function LoginPage() {
                                     type='email'
                                     placeholder='name@example.com'
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                    onChange={(e) => {
+                                        setEmail(e.target.value)
+                                        // Clear error when user starts typing
+                                        if (errors.email) {
+                                            setErrors({ ...errors, email: undefined })
+                                        }
+                                    }}
+                                    className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
+                                        errors.email ? 'border-red-500' : ''
+                                    }`}
                                     disabled={loading}
-                                    required
                                 />
+                                {errors.email && (
+                                    <p className='text-xs text-red-500 flex items-center gap-1'>
+                                        <AlertCircle className='h-3 w-3' />
+                                        {errors.email}
+                                    </p>
+                                )}
                             </div>
                             <div className='space-y-2'>
                                 <div className='flex items-center justify-between'>
@@ -176,12 +250,17 @@ export function LoginPage() {
                                         }
                                         placeholder='••••••••'
                                         value={password}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setPassword(e.target.value)
-                                        }
-                                        className='pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                            // Clear error when user starts typing
+                                            if (errors.password) {
+                                                setErrors({ ...errors, password: undefined })
+                                            }
+                                        }}
+                                        className={`pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
+                                            errors.password ? 'border-red-500' : ''
+                                        }`}
                                         disabled={loading}
-                                        required
                                     />
                                     <button
                                         type='button'
@@ -197,6 +276,12 @@ export function LoginPage() {
                                         )}
                                     </button>
                                 </div>
+                                {errors.password && (
+                                    <p className='text-xs text-red-500 flex items-center gap-1'>
+                                        <AlertCircle className='h-3 w-3' />
+                                        {errors.password}
+                                    </p>
+                                )}
                             </div>
                             <div className='flex items-center space-x-2'>
                                 <Checkbox
