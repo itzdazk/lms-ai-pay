@@ -34,7 +34,7 @@ export interface PaginatedApiResponse<T> {
     success: boolean
     message?: string
     data: T[]
-  pagination: {
+    pagination: {
         page: number
         limit: number
         total: number
@@ -150,7 +150,7 @@ export interface Course {
     price: number
     discountPrice?: number
     instructorId: number
-  instructor?: {
+    instructor?: {
         id: number
         fullName: string
         avatarUrl?: string
@@ -258,7 +258,12 @@ export interface Lesson {
     videoUrl?: string
     videoDuration?: number
     transcriptUrl?: string
-    transcriptStatus: 'idle' | 'processing' | 'completed' | 'failed' | 'cancelled'
+    transcriptStatus:
+        | 'idle'
+        | 'processing'
+        | 'completed'
+        | 'failed'
+        | 'cancelled'
     transcriptJsonUrl?: string
     lessonOrder: number
     isPreview: boolean
@@ -339,7 +344,12 @@ export interface Order {
     finalPrice: number
     paymentMethod?: string
     paymentGateway: 'VNPay' | 'MoMo'
-    paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'PARTIALLY_REFUNDED'
+    paymentStatus:
+        | 'PENDING'
+        | 'PAID'
+        | 'FAILED'
+        | 'REFUNDED'
+        | 'PARTIALLY_REFUNDED'
     transactionId?: string
     refundAmount: number
     refundedAt?: string
@@ -367,7 +377,12 @@ export interface CreateOrderRequest {
 export interface OrderFilters {
     page?: number
     limit?: number
-    paymentStatus?: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'PARTIALLY_REFUNDED'
+    paymentStatus?:
+        | 'PENDING'
+        | 'PAID'
+        | 'FAILED'
+        | 'REFUNDED'
+        | 'PARTIALLY_REFUNDED'
     paymentGateway?: 'VNPay' | 'MoMo'
     startDate?: string
     endDate?: string
@@ -535,7 +550,17 @@ export interface Notification {
     id: number
     userId: number
     user?: User
-    type: 'COURSE_ENROLLED' | 'LESSON_COMPLETED' | 'COURSE_COMPLETED' | 'QUIZ_PASSED' | 'QUIZ_FAILED' | 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED' | 'ORDER_CANCELLED' | 'NEW_COURSE_PUBLISHED' | 'COURSE_UPDATE'
+    type:
+        | 'COURSE_ENROLLED'
+        | 'LESSON_COMPLETED'
+        | 'COURSE_COMPLETED'
+        | 'QUIZ_PASSED'
+        | 'QUIZ_FAILED'
+        | 'PAYMENT_SUCCESS'
+        | 'PAYMENT_FAILED'
+        | 'ORDER_CANCELLED'
+        | 'NEW_COURSE_PUBLISHED'
+        | 'COURSE_UPDATE'
     title: string
     message: string
     relatedId?: number
@@ -565,7 +590,14 @@ export interface AiRecommendation {
     user?: User
     courseId: number
     course?: Course
-    recommendationType?: 'QUICK_QA' | 'LESSON_HELP' | 'COURSE_RECOMMENDATION' | 'COURSE_OVERVIEW' | 'CONCEPT_EXPLANATION' | 'CODE_REVIEW' | 'GENERAL_CHAT'
+    recommendationType?:
+        | 'QUICK_QA'
+        | 'LESSON_HELP'
+        | 'COURSE_RECOMMENDATION'
+        | 'COURSE_OVERVIEW'
+        | 'CONCEPT_EXPLANATION'
+        | 'CODE_REVIEW'
+        | 'GENERAL_CHAT'
     score?: number
     reason?: string
     isViewed: boolean
@@ -595,7 +627,14 @@ export interface Conversation {
     }
     title?: string
     aiModel: string
-    contextType?: 'QUICK_QA' | 'LESSON_HELP' | 'COURSE_RECOMMENDATION' | 'COURSE_OVERVIEW' | 'CONCEPT_EXPLANATION' | 'CODE_REVIEW' | 'GENERAL_CHAT'
+    contextType?:
+        | 'QUICK_QA'
+        | 'LESSON_HELP'
+        | 'COURSE_RECOMMENDATION'
+        | 'COURSE_OVERVIEW'
+        | 'CONCEPT_EXPLANATION'
+        | 'CODE_REVIEW'
+        | 'GENERAL_CHAT'
     isActive: boolean
     isArchived: boolean
     createdAt: string
@@ -717,7 +756,14 @@ export interface UploadResponse {
 
 export interface UploadRequest {
     file: File
-    type: 'avatar' | 'thumbnail' | 'general' | 'lesson' | 'preview' | 'transcript' | 'material'
+    type:
+        | 'avatar'
+        | 'thumbnail'
+        | 'general'
+        | 'lesson'
+        | 'preview'
+        | 'transcript'
+        | 'material'
 }
 
 // =====================================================

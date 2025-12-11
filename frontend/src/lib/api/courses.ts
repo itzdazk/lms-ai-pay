@@ -155,6 +155,108 @@ export const coursesApi = {
         return response.data.data
     },
 
+    // Get all categories with optional filters
+    async getCategoriesWithFilter(filters?: {
+        page?: number
+        limit?: number
+        parentId?: number
+        isActive?: boolean
+        search?: string
+    }): Promise<{
+        categories: Category[]
+        pagination: {
+            page: number
+            limit: number
+            total: number
+            totalPages: number
+        }
+    }> {
+        const params = new URLSearchParams()
+
+        if (filters?.page) params.append('page', filters.page.toString())
+        if (filters?.limit) params.append('limit', filters.limit.toString())
+        if (filters?.parentId)
+            params.append('parentId', filters.parentId.toString())
+        if (filters?.isActive !== undefined)
+            params.append('isActive', filters.isActive.toString())
+        if (filters?.search) params.append('search', filters.search)
+
+        const response = await apiClient.get<
+            ApiResponse<{
+                categories: Category[]
+                pagination: {
+                    page: number
+                    limit: number
+                    total: number
+                    totalPages: number
+                }
+            }>
+        >(`/categories?${params.toString()}`)
+
+        console.log(response.data.data)
+
+        return response.data.data
+    },
+
+    // Get category by ID
+    async getCategoryById(id: number): Promise<Category> {
+        const response = await apiClient.get<ApiResponse<Category>>(
+            `/categories/${id}`
+        )
+        return response.data.data
+    },
+
+    // Get courses by category ID
+    async getCoursesByCategory(
+        id: number,
+        filters?: {
+            page?: number
+            limit?: number
+            level?: string
+            sort?: string
+        }
+    ): Promise<{
+        courses: PublicCourse[]
+        total: number
+        category: {
+            id: number
+            name: string
+            slug: string
+        }
+        pagination: {
+            page: number
+            limit: number
+            total: number
+            totalPages: number
+        }
+    }> {
+        const params = new URLSearchParams()
+
+        if (filters?.page) params.append('page', filters.page.toString())
+        if (filters?.limit) params.append('limit', filters.limit.toString())
+        if (filters?.level) params.append('level', filters.level)
+        if (filters?.sort) params.append('sort', filters.sort)
+
+        const response = await apiClient.get<
+            ApiResponse<{
+                courses: PublicCourse[]
+                total: number
+                category: {
+                    id: number
+                    name: string
+                    slug: string
+                }
+                pagination: {
+                    page: number
+                    limit: number
+                    total: number
+                    totalPages: number
+                }
+            }>
+        >(`/categories/${id}/courses?${params.toString()}`)
+        return response.data.data
+    },
+
     async getCourseTags(params?: {
         page?: number
         limit?: number
