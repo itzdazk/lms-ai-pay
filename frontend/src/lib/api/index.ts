@@ -7,6 +7,7 @@ export { instructorCoursesApi } from './instructor-courses'
 export { dashboardApi } from './dashboard'
 export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
+export { lessonsApi } from './lessons'
 export type {
     UpdateProfileRequest,
     ChangePasswordRequest,
