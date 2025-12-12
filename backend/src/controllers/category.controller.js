@@ -213,6 +213,50 @@ class CategoryController {
             'Courses retrieved successfully'
         )
     })
+
+    /**
+     * @route   POST /api/v1/categories/:id/upload-image
+     * @desc    Upload category image
+     * @access  Private (Admin/Instructor)
+     */
+    uploadImage = asyncHandler(async (req, res) => {
+        const { id } = req.params
+
+        // Check if file was uploaded
+        if (!req.file) {
+            return ApiResponse.badRequest(res, 'No image file provided')
+        }
+
+        const result = await categoryService.uploadCategoryImage(
+            parseInt(id),
+            req.file
+        )
+
+        return ApiResponse.success(
+            res,
+            result,
+            'Category image uploaded successfully'
+        )
+    })
+
+    /**
+     * @route   DELETE /api/v1/categories/:id/image
+     * @desc    Delete category image
+     * @access  Private (Admin/Instructor)
+     */
+    deleteImage = asyncHandler(async (req, res) => {
+        const { id } = req.params
+
+        const updatedCategory = await categoryService.deleteCategoryImage(
+            parseInt(id)
+        )
+
+        return ApiResponse.success(
+            res,
+            updatedCategory,
+            'Category image deleted successfully'
+        )
+    })
 }
 
 export default new CategoryController()

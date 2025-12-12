@@ -2,6 +2,9 @@
 import { prisma } from '../config/database.config.js'
 import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
+import config from '../config/app.config.js'
+import fs from 'fs/promises'
+import path from 'path'
 
 class CategoryService {
     /**
@@ -90,7 +93,9 @@ class CategoryService {
             })
 
             if (slugExists) {
-                const error = new Error('Category with this slug already exists')
+                const error = new Error(
+                    'Category with this slug already exists'
+                )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -474,6 +479,147 @@ class CategoryService {
 
         // Reuse getCoursesByCategory method
         return await this.getCoursesByCategory(category.id, filters)
+    }
+
+    /**
+     * Upload category image
+     */
+    async uploadCategoryImage(categoryId, file) {
+        // Check if category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+        })
+
+        if (!category) {
+            const error = new Error('Category not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        try {
+            // Delete old image if exists
+            if (category.imageUrl) {
+                const oldImagePath = path.join(
+                    process.cwd(),
+                    'uploads',
+                    'categories',
+                    path.basename(category.imageUrl)
+                )
+                await fs.unlink(oldImagePath).catch(() => {
+                    // Ignore if file doesn't exist
+                    logger.debug(`Old image file not found: ${oldImagePath}`)
+                })
+            }
+
+            // Generate image URL
+            const imageUrl = `/uploads/categories/${file.filename}`
+
+            // Update category with new image URL
+            const updatedCategory = await prisma.category.update({
+                where: { id: categoryId },
+                data: { imageUrl },
+                include: {
+                    parent: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                    children: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                },
+            })
+
+            logger.info(
+                `Category image uploaded: ${category.name} (ID: ${category.id})`
+            )
+
+            return {
+                category: updatedCategory,
+                imageUrl,
+            }
+        } catch (error) {
+            // Delete uploaded file if database update fails
+            if (file) {
+                await fs.unlink(file.path).catch(() => {
+                    logger.debug(`Failed to delete file: ${file.path}`)
+                })
+            }
+            throw error
+        }
+    }
+
+    /**
+     * Delete category image
+     */
+    async deleteCategoryImage(categoryId) {
+        // Check if category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+        })
+
+        if (!category) {
+            const error = new Error('Category not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        if (!category.imageUrl) {
+            const error = new Error('Category has no image')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        try {
+            // Delete image file
+            const imagePath = path.join(
+                process.cwd(),
+                'uploads',
+                'categories',
+                path.basename(category.imageUrl)
+            )
+            await fs.unlink(imagePath).catch(() => {
+                // Ignore if file doesn't exist
+                logger.warn(`Image file not found: ${imagePath}`)
+            })
+
+            // Update category to remove image URL
+            const updatedCategory = await prisma.category.update({
+                where: { id: categoryId },
+                data: { imageUrl: null },
+                include: {
+                    parent: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                    children: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                },
+            })
+
+            logger.info(
+                `Category image deleted: ${category.name} (ID: ${category.id})`
+            )
+
+            return updatedCategory
+        } catch (error) {
+            logger.error('Error deleting category image:', error)
+            throw error
+        }
     }
 }
 

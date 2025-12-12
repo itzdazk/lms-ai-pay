@@ -1,7 +1,6 @@
 // src/routes/category.routes.js
 import express from 'express'
 import categoryController from '../controllers/category.controller.js'
-import categoryUploadController from '../controllers/category-upload.controller.js'
 import {
     authenticate,
     optionalAuthenticate,
@@ -43,7 +42,7 @@ router.post(
     authenticate,
     isInstructor,
     uploadCategoryImage,
-    categoryUploadController.uploadImage
+    categoryController.uploadImage
 )
 
 /**
@@ -55,7 +54,7 @@ router.delete(
     '/:id/image',
     authenticate,
     isInstructor,
-    categoryUploadController.deleteImage
+    categoryController.deleteImage
 )
 
 /**
