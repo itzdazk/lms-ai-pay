@@ -287,7 +287,7 @@ export const coursesApi = {
     // Get user enrollments
     async getEnrollments(): Promise<Enrollment[]> {
         const response = await apiClient.get<ApiResponse<Enrollment[]>>(
-            '/courses/enrollments'
+            '/enrollments'
         )
         return response.data.data
     },

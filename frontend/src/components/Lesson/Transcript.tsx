@@ -8,7 +8,7 @@ interface TranscriptItem {
 }
 
 interface TranscriptProps {
-  transcriptUrl?: string;
+  transcriptJsonUrl?: string;
   transcriptJson?: any;
   transcriptText?: string;
   onTimeClick?: (time: number) => void;
@@ -17,7 +17,7 @@ interface TranscriptProps {
 }
 
 export function Transcript({
-  transcriptUrl,
+  transcriptJsonUrl,
   transcriptJson,
   transcriptText,
   onTimeClick,
@@ -28,6 +28,7 @@ export function Transcript({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const loadedUrlRef = useRef<string | null>(null);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -38,6 +39,20 @@ export function Transcript({
 
   // Parse transcript from different formats
   useEffect(() => {
+    // If no transcript data is provided, don't load anything
+    if (!transcriptJsonUrl && !transcriptJson && !transcriptText) {
+      setTranscript([]);
+      setLoading(false);
+      loadedUrlRef.current = null;
+      return;
+    }
+
+    // Prevent duplicate fetches for the same URL
+    const currentUrl = transcriptJsonUrl || (transcriptJson ? 'json' : 'text');
+    if (loadedUrlRef.current === currentUrl) {
+      return;
+    }
+
     const loadTranscript = async () => {
       setLoading(true);
       setError(null);
@@ -77,13 +92,29 @@ export function Transcript({
             }));
           }
         }
-        // If transcriptUrl is provided, fetch it
-        else if (transcriptUrl) {
-          const response = await fetch(transcriptUrl);
-          if (!response.ok) {
-            throw new Error('Failed to load transcript');
+        // If transcriptJsonUrl is provided, fetch it
+        else if (transcriptJsonUrl) {
+          // Handle both relative and absolute URLs
+          let url = transcriptJsonUrl;
+          if (transcriptJsonUrl.startsWith('/')) {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+            const baseUrl = API_BASE_URL.replace('/api/v1', '');
+            url = `${baseUrl}${transcriptJsonUrl}`;
           }
+          
+          console.log('Fetching transcript JSON from URL:', url);
+          
+          const response = await fetch(url, {
+            credentials: 'include',
+          });
+          
+          if (!response.ok) {
+            console.error('Transcript JSON fetch failed:', response.status, response.statusText);
+            throw new Error(`Failed to load transcript JSON: ${response.status} ${response.statusText}`);
+          }
+          
           const data = await response.json();
+          console.log('Transcript JSON data received:', data);
           
           if (Array.isArray(data)) {
             items = data.map((item: any) => ({
@@ -95,23 +126,31 @@ export function Transcript({
               time: segment.start || segment.time || 0,
               text: segment.text || segment.content || '',
             }));
+          } else {
+            console.warn('Unexpected transcript JSON format:', data);
           }
+          
+          console.log('Parsed transcript items:', items.length);
         }
 
         setTranscript(items);
+        loadedUrlRef.current = currentUrl;
       } catch (err: any) {
         setError(err.message || 'Failed to load transcript');
+        loadedUrlRef.current = null;
       } finally {
         setLoading(false);
       }
     };
 
     loadTranscript();
-  }, [transcriptUrl, transcriptJson, transcriptText]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcriptJsonUrl, transcriptJson, transcriptText]);
 
-  // Auto-scroll to current time
+  // Auto-scroll to current time (only within transcript container, not the whole page)
   useEffect(() => {
     if (!transcriptRef.current || transcript.length === 0) return;
+    if (currentTime === 0) return; // Don't scroll when video just starts
 
     // Find the current transcript item
     const currentItemIndex = transcript.findIndex(
@@ -122,9 +161,19 @@ export function Transcript({
     );
 
     if (currentItemIndex >= 0) {
-      const element = transcriptRef.current.children[currentItemIndex] as HTMLElement;
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const container = transcriptRef.current;
+      const element = container.children[currentItemIndex] as HTMLElement;
+      if (element && container) {
+        // Scroll only within the container, not the whole page
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const elementTop = elementRect.top - containerRect.top + container.scrollTop;
+        const elementCenter = elementTop - (containerRect.height / 2) + (elementRect.height / 2);
+        
+        container.scrollTo({
+          top: elementCenter,
+          behavior: 'smooth',
+        });
       }
     }
   }, [currentTime, transcript]);
@@ -142,28 +191,15 @@ export function Transcript({
     );
   }
 
+  // If error occurred, log it but don't show error (transcript is optional)
   if (error) {
-    return (
-      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
-        <CardContent className="pt-6">
-          <div className="text-center py-12">
-            <p className="text-gray-400">{error}</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    console.error('Transcript error:', error, 'URL:', transcriptJsonUrl);
+    return null;
   }
 
-  if (transcript.length === 0) {
-    return (
-      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
-        <CardContent className="pt-6">
-          <div className="text-center py-12">
-            <p className="text-gray-400">Chưa có transcript cho bài học này</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  // If no transcript data available after loading, don't render anything (transcript is optional)
+  if (!loading && transcript.length === 0) {
+    return null;
   }
 
   return (

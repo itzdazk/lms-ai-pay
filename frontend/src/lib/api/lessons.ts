@@ -18,10 +18,18 @@ export const lessonsApi = {
         return response.data.data
     },
 
-    // Get lesson transcript
-    async getLessonTranscript(lessonId: string | number): Promise<{ transcript: string; transcriptJson?: any }> {
-        const response = await apiClient.get<ApiResponse<{ transcript: string; transcriptJson?: any }>>(`/lessons/${lessonId}/transcript`)
-        return response.data.data
+    // Get lesson transcript URL
+    async getLessonTranscript(lessonId: string | number): Promise<{ id: number; title: string; transcriptUrl: string } | null> {
+        try {
+            const response = await apiClient.get<ApiResponse<{ id: number; title: string; transcriptUrl: string }>>(`/lessons/${lessonId}/transcript`)
+            return response.data.data
+        } catch (error: any) {
+            // Return null if transcript not available (404)
+            if (error.response?.status === 404) {
+                return null
+            }
+            throw error
+        }
     },
 
     // Get all lessons for a course

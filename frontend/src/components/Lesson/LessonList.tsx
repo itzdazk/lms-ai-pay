@@ -23,6 +23,10 @@ export function LessonList({
   isEnrolled = false,
   courseTitle,
 }: LessonListProps) {
+  // Ensure enrollmentProgress is a number
+  const progress = typeof enrollmentProgress === 'number' 
+    ? enrollmentProgress 
+    : parseFloat(String(enrollmentProgress)) || 0;
   // Format duration from seconds to readable format
   const formatDuration = (seconds?: number): string => {
     if (!seconds) return '0 phút';
@@ -73,9 +77,9 @@ export function LessonList({
         )}
         {isEnrolled && (
           <>
-            <Progress value={enrollmentProgress} className="mt-2" />
+            <Progress value={progress} className="mt-2" />
             <p className="text-sm text-gray-400 mt-2">
-              {enrollmentProgress.toFixed(0)}% hoàn thành
+              {progress.toFixed(0)}% hoàn thành
             </p>
           </>
         )}

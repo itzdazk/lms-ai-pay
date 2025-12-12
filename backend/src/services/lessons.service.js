@@ -156,12 +156,7 @@ class LessonsService {
             throw error
         }
 
-        if (!lesson.transcriptUrl) {
-            const error = new Error('Transcript not available for this lesson')
-            error.statusCode = HTTP_STATUS.NOT_FOUND
-            throw error
-        }
-
+        // Transcript is optional, return lesson even if transcriptUrl is null
         return lesson
     }
 

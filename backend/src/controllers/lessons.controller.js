@@ -51,6 +51,11 @@ class LessonsController {
         const { id } = req.params
         const result = await lessonsService.getLessonTranscript(parseInt(id))
 
+        // If no transcript, return 404 (frontend will handle silently)
+        if (!result.transcriptUrl) {
+            return ApiResponse.notFound(res, 'Transcript not available for this lesson')
+        }
+
         return ApiResponse.success(
             res,
             {

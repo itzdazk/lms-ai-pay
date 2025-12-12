@@ -35,7 +35,6 @@ export function LessonPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
-  const [transcriptData, setTranscriptData] = useState<{ transcript?: string; transcriptJson?: any } | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,29 +131,54 @@ export function LessonPage() {
     loadData();
   }, [courseSlug, lessonId, user?.id]);
 
+  // Track previous lesson ID to prevent unnecessary reloads
+  const previousLessonIdRef = useRef<number | null>(null);
+
   // Load video and transcript when lesson changes
   useEffect(() => {
     const loadLessonData = async () => {
       if (!selectedLesson) return;
 
+      // Prevent reload if same lesson ID
+      if (previousLessonIdRef.current === selectedLesson.id) {
+        return;
+      }
+      previousLessonIdRef.current = selectedLesson.id;
+
       try {
         setVideoLoading(true);
         setVideoUrl('');
-        setTranscriptData(null);
         setInitialVideoTime(0);
 
-        // Load video URL and transcript in parallel
-        const [videoData, transcriptData] = await Promise.all([
+        // Load video URL and lesson details (to get both transcriptUrl and transcriptJsonUrl) in parallel
+        const [videoData, lessonDetails] = await Promise.all([
           lessonsApi.getLessonVideo(selectedLesson.id).catch(() => ({ videoUrl: selectedLesson.videoUrl || '' })),
-          lessonsApi.getLessonTranscript(selectedLesson.id).catch(() => null),
+          lessonsApi.getLessonById(selectedLesson.id).catch((err) => {
+            console.error('Error loading lesson details:', err);
+            return null;
+          }),
         ]);
 
         setVideoUrl(videoData.videoUrl || selectedLesson.videoUrl || '');
         
-        if (transcriptData) {
-          setTranscriptData(transcriptData);
-        } else if (selectedLesson.transcriptUrl) {
-          setTranscriptData({ transcript: undefined, transcriptJson: undefined });
+        console.log('Lesson details:', lessonDetails);
+        console.log('transcriptUrl:', lessonDetails?.transcriptUrl);
+        console.log('transcriptJsonUrl:', lessonDetails?.transcriptJsonUrl);
+        
+        // Update selectedLesson with transcriptJsonUrl only if it's different
+        if (lessonDetails) {
+          setSelectedLesson(prev => {
+            if (!prev) return null;
+            // Only update if transcriptJsonUrl actually changed
+            if (prev.transcriptJsonUrl !== lessonDetails.transcriptJsonUrl) {
+              return { 
+                ...prev, 
+                transcriptUrl: lessonDetails.transcriptUrl,
+                transcriptJsonUrl: lessonDetails.transcriptJsonUrl,
+              };
+            }
+            return prev;
+          });
         }
 
         // Load progress for this lesson (if enrolled)
@@ -177,7 +201,7 @@ export function LessonPage() {
     };
 
     loadLessonData();
-  }, [selectedLesson, enrollment]);
+  }, [selectedLesson?.id, enrollment]);
 
   // Handle lesson selection
   const handleLessonSelect = (lesson: Lesson) => {
@@ -279,7 +303,9 @@ export function LessonPage() {
     );
   }
 
-  const enrollmentProgress = enrollment?.progressPercentage || 0;
+  const enrollmentProgress = typeof enrollment?.progressPercentage === 'number' 
+    ? enrollment.progressPercentage 
+    : parseFloat(String(enrollment?.progressPercentage || 0)) || 0;
   const isEnrolled = !!enrollment;
 
   return (
@@ -318,7 +344,7 @@ export function LessonPage() {
               <div>
                 <h2 className="font-semibold line-clamp-1 text-white">{course.title}</h2>
                 <p className="text-sm text-gray-400">
-                  {enrollmentProgress.toFixed(0)}% hoàn thành
+                  {Number(enrollmentProgress).toFixed(0)}% hoàn thành
                 </p>
               </div>
             </div>
@@ -439,9 +465,7 @@ export function LessonPage() {
               <TabsContent value="transcript" className="mt-6">
                 {selectedLesson && (
                   <Transcript
-                    transcriptUrl={selectedLesson.transcriptUrl}
-                    transcriptJson={transcriptData?.transcriptJson}
-                    transcriptText={transcriptData?.transcript}
+                    transcriptJsonUrl={selectedLesson.transcriptJsonUrl}
                     onTimeClick={handleTranscriptTimeClick}
                     currentTime={currentTime}
                   />
