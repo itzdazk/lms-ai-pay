@@ -22,7 +22,7 @@ import { AboutPage } from './pages/AboutPage';
 
 // Student Pages
 import { StudentDashboard } from './pages/StudentDashboard';
-import { VideoPlayerPage } from './pages/VideoPlayerPage';
+import { LessonPage } from './pages/LessonPage';
 import { AIChatPage } from './pages/AIChatPage';
 import { PaymentCheckoutPage } from './pages/PaymentCheckoutPage';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
@@ -80,10 +80,18 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="/learn/:id"
+                    path="/courses/:id/lessons"
                     element={
                       <ProtectedRoute>
-                        <VideoPlayerPage />
+                        <LessonPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/courses/:id/lessons/:lessonId"
+                    element={
+                      <ProtectedRoute>
+                        <LessonPage />
                       </ProtectedRoute>
                     }
                   />
