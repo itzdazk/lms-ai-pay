@@ -28,6 +28,7 @@ import uploadRoutes from './upload.routes.js'
 import healthRoutes from './health.routes.js'
 import adminDashboardRoutes from './admin-dashboard.routes.js'
 import aiRoutes from './ai.routes.js'
+import lessonNotesRoutes from './lesson-notes.routes.js'
 
 const router = express.Router()
 
@@ -66,6 +67,7 @@ router.get('/', (req, res) => {
             health: '/api/v1/health',
             adminDashboard: '/api/v1/dashboard/admin',
             ai: '/api/v1/ai',
+            notes: '/api/v1/notes',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -108,6 +110,7 @@ router.use('/uploads', uploadRoutes)
 router.use('/health', healthRoutes)
 router.use('/dashboard/admin', adminDashboardRoutes)
 router.use('/ai', aiRoutes)
+router.use('/notes', lessonNotesRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

@@ -44,6 +44,7 @@ model User {
   conversations       Conversation[]
   notifications       Notification[]
   userSessions        UserSession[]
+  lessonNotes         LessonNote[]
 
   @@index([email])
   @@index([userName])
@@ -191,6 +192,7 @@ model Lesson {
   progress      Progress[]
   quizzes       Quiz[]
   conversations Conversation[]
+  lessonNotes   LessonNote[]
 
   @@unique([courseId, slug])
   @@index([courseId])
@@ -481,4 +483,26 @@ model UserSession {
   @@index([userId, isActive])
   @@index([expiresAt])
   @@map("user_sessions")
+}
+
+// =====================================================
+// 16. LESSON NOTES
+// =====================================================
+model LessonNote {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  Int      @map("lesson_id")
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  courseId  Int      @map("course_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([courseId])
+  @@index([createdAt])
+  @@map("lesson_notes")
 }
