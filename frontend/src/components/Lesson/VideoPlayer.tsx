@@ -9,6 +9,7 @@ import {
   SkipBack,
   SkipForward,
   Loader2,
+  Subtitles,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
@@ -21,6 +22,7 @@ import {
 
 interface VideoPlayerProps {
   videoUrl?: string;
+  subtitleUrl?: string; // WebVTT subtitle URL
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
   initialTime?: number;
@@ -29,6 +31,7 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({
   videoUrl,
+  subtitleUrl,
   onTimeUpdate,
   onEnded,
   initialTime = 0,
@@ -45,6 +48,7 @@ export function VideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSubtitles, setShowSubtitles] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Format time to MM:SS
@@ -205,6 +209,18 @@ export function VideoPlayer({
     };
   }, [onTimeUpdate, onEnded, initialTime]);
 
+  // Sync subtitle track when subtitleUrl or showSubtitles changes
+  useEffect(() => {
+    if (videoRef.current && subtitleUrl) {
+      const tracks = videoRef.current.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        if (tracks[i].kind === 'subtitles') {
+          tracks[i].mode = showSubtitles ? 'showing' : 'hidden';
+        }
+      }
+    }
+  }, [subtitleUrl, showSubtitles]);
+
   if (!videoUrl) {
     return (
       <div className={`relative bg-black aspect-video flex items-center justify-center ${className}`}>
@@ -232,7 +248,17 @@ export function VideoPlayer({
         src={videoUrl}
         className="w-full h-full"
         onClick={togglePlay}
-      />
+      >
+        {subtitleUrl && (
+          <track
+            kind="subtitles"
+            srcLang="vi"
+            label="Tiếng Việt"
+            src={subtitleUrl}
+            default={showSubtitles}
+          />
+        )}
+      </video>
 
       {/* Loading overlay */}
       {isLoading && (
@@ -337,6 +363,26 @@ export function VideoPlayer({
                   <SelectItem value="2" className="text-white">2x</SelectItem>
                 </SelectContent>
               </Select>
+              {subtitleUrl && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={`text-white hover:bg-white/20 ${showSubtitles ? 'bg-white/20' : ''}`}
+                  onClick={() => {
+                    const newValue = !showSubtitles;
+                    setShowSubtitles(newValue);
+                    if (videoRef.current) {
+                      const tracks = videoRef.current.textTracks;
+                      for (let i = 0; i < tracks.length; i++) {
+                        tracks[i].mode = newValue ? 'showing' : 'hidden';
+                      }
+                    }
+                  }}
+                  title={showSubtitles ? 'Tắt phụ đề' : 'Bật phụ đề'}
+                >
+                  <Subtitles className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 size="icon"
                 variant="ghost"

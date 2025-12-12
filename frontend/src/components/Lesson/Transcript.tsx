@@ -29,6 +29,10 @@ export function Transcript({
   const [error, setError] = useState<string | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const loadedUrlRef = useRef<string | null>(null);
+  const isUserScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<number | null>(null);
+  const isAutoScrollingRef = useRef(false);
+  const lastScrollTopRef = useRef<number>(0);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -147,10 +151,51 @@ export function Transcript({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcriptJsonUrl, transcriptJson, transcriptText]);
 
-  // Auto-scroll to current time (only within transcript container, not the whole page)
+  // Handle user scroll - pause auto-scroll when user is scrolling manually
+  useEffect(() => {
+    const container = transcriptRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // If this scroll is from auto-scroll, ignore it
+      if (isAutoScrollingRef.current) {
+        isAutoScrollingRef.current = false;
+        lastScrollTopRef.current = container.scrollTop;
+        return;
+      }
+
+      // Check if scroll position actually changed (user scroll)
+      const currentScrollTop = container.scrollTop;
+      if (Math.abs(currentScrollTop - lastScrollTopRef.current) > 5) {
+        isUserScrollingRef.current = true;
+        lastScrollTopRef.current = currentScrollTop;
+        
+        // Clear existing timeout
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        
+        // Reset flag after user stops scrolling for 3 seconds
+        scrollTimeoutRef.current = window.setTimeout(() => {
+          isUserScrollingRef.current = false;
+        }, 3000);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-scroll to current time (only when user is not scrolling manually)
   useEffect(() => {
     if (!transcriptRef.current || transcript.length === 0) return;
     if (currentTime === 0) return; // Don't scroll when video just starts
+    if (isUserScrollingRef.current) return; // Don't auto-scroll if user is scrolling
 
     // Find the current transcript item
     const currentItemIndex = transcript.findIndex(
@@ -164,16 +209,39 @@ export function Transcript({
       const container = transcriptRef.current;
       const element = container.children[currentItemIndex] as HTMLElement;
       if (element && container) {
-        // Scroll only within the container, not the whole page
         const containerRect = container.getBoundingClientRect();
         const elementRect = element.getBoundingClientRect();
-        const elementTop = elementRect.top - containerRect.top + container.scrollTop;
-        const elementCenter = elementTop - (containerRect.height / 2) + (elementRect.height / 2);
         
-        container.scrollTo({
-          top: elementCenter,
-          behavior: 'smooth',
-        });
+        // Calculate element position relative to container
+        const elementTopRelative = elementRect.top - containerRect.top + container.scrollTop;
+        const elementBottomRelative = elementTopRelative + elementRect.height;
+        const viewportTop = container.scrollTop;
+        const viewportBottom = container.scrollTop + containerRect.height;
+        
+        // Check if element is fully visible in viewport (with some margin)
+        const margin = 50; // 50px margin
+        const isFullyVisible = 
+          elementTopRelative >= viewportTop + margin &&
+          elementBottomRelative <= viewportBottom - margin;
+        
+        // Only scroll if element is not fully visible
+        if (!isFullyVisible) {
+          // Mark that we're auto-scrolling
+          isAutoScrollingRef.current = true;
+          
+          const elementCenter = elementTopRelative - (containerRect.height / 2) + (elementRect.height / 2);
+          
+          container.scrollTo({
+            top: elementCenter,
+            behavior: 'smooth',
+          });
+          
+          // Reset flag after scroll animation (smooth scroll takes ~500ms)
+          setTimeout(() => {
+            isAutoScrollingRef.current = false;
+            lastScrollTopRef.current = container.scrollTop;
+          }, 600);
+        }
       }
     }
   }, [currentTime, transcript]);
@@ -208,6 +276,26 @@ export function Transcript({
         <div
           ref={transcriptRef}
           className="space-y-4 max-h-96 overflow-y-auto"
+          onWheel={() => {
+            // User is scrolling with mouse wheel
+            isUserScrollingRef.current = true;
+            if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+            }
+            scrollTimeoutRef.current = window.setTimeout(() => {
+              isUserScrollingRef.current = false;
+            }, 3000);
+          }}
+          onTouchStart={() => {
+            // User is scrolling on touch device
+            isUserScrollingRef.current = true;
+            if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+            }
+            scrollTimeoutRef.current = window.setTimeout(() => {
+              isUserScrollingRef.current = false;
+            }, 3000);
+          }}
         >
           {transcript.map((item, index) => {
             const isActive = currentTime >= item.time && 

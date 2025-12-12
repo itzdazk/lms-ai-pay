@@ -8,6 +8,13 @@ export { dashboardApi } from './dashboard'
 export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
 export { lessonsApi } from './lessons'
+export { lessonNotesApi } from './lesson-notes'
+export type {
+    LessonNote,
+    LessonNoteResponse,
+    CourseNotesResponse,
+    UpsertLessonNoteRequest,
+} from './lesson-notes'
 export type {
     UpdateProfileRequest,
     ChangePasswordRequest,

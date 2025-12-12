@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { lessonNotesApi } from '../../lib/api';
 
 interface NotesProps {
   lessonId: number;
@@ -21,6 +22,7 @@ export function Notes({
   const [notes, setNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   useEffect(() => {
     setNotes(initialNotes);
@@ -28,25 +30,35 @@ export function Notes({
   }, [initialNotes, lessonId]);
 
   const handleSave = async () => {
-    if (!onSave) {
-      // If no onSave handler, just save to localStorage
-      try {
-        localStorage.setItem(`lesson-notes-${lessonId}`, notes);
-        toast.success('Ghi chú đã được lưu');
-        setHasChanges(false);
-      } catch (error) {
-        toast.error('Không thể lưu ghi chú');
-      }
-      return;
-    }
-
     try {
       setIsSaving(true);
-      await onSave(notes);
-      toast.success('Ghi chú đã được lưu');
+      setSaveStatus('saving');
+      
+      if (onSave) {
+        // Use custom onSave handler if provided
+        await onSave(notes);
+      } else {
+        // Use API to save notes
+        await lessonNotesApi.upsertLessonNote(lessonId, notes);
+      }
+      
+      // Also save to localStorage as backup
+      try {
+        localStorage.setItem(`lesson-notes-${lessonId}`, notes);
+      } catch (error) {
+        // Ignore localStorage errors
+      }
+      
       setHasChanges(false);
+      setSaveStatus('saved');
+      
+      // Hide "saved" message after 2 seconds
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
     } catch (error: any) {
       toast.error(error.message || 'Không thể lưu ghi chú');
+      setSaveStatus('idle');
     } finally {
       setIsSaving(false);
     }
@@ -72,17 +84,6 @@ export function Notes({
     return () => clearTimeout(timer);
   }, [notes, lessonId]);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedNotes = localStorage.getItem(`lesson-notes-${lessonId}`);
-      if (savedNotes && !initialNotes) {
-        setNotes(savedNotes);
-      }
-    } catch (error) {
-      // Ignore localStorage errors
-    }
-  }, [lessonId, initialNotes]);
 
   return (
     <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
@@ -100,9 +101,16 @@ export function Notes({
             />
           </div>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500">
-              Ghi chú sẽ được tự động lưu vào trình duyệt của bạn
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-500">
+                Ghi chú sẽ được lưu vào tài khoản của bạn và đồng bộ trên mọi thiết bị
+              </p>
+              {saveStatus === 'saved' && (
+                <span className="text-xs text-green-500 font-medium">
+                  ✓ Lưu thành công
+                </span>
+              )}
+            </div>
             <Button
               onClick={handleSave}
               disabled={isSaving || !hasChanges}

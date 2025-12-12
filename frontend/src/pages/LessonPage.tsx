@@ -19,9 +19,10 @@ import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
 import { Notes } from '../components/Lesson/Notes';
-import { coursesApi, lessonsApi } from '../lib/api';
+import { coursesApi, lessonsApi, lessonNotesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
+import { convertTranscriptToVTT, createVTTBlobURL } from '../lib/transcriptUtils';
 import type { Course, Lesson, Enrollment, CourseLessonsResponse } from '../lib/api/types';
 
 export function LessonPage() {
@@ -35,7 +36,10 @@ export function LessonPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
+  const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const [lessonNotes, setLessonNotes] = useState<string>('');
+  const [notesLoading, setNotesLoading] = useState(false);
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [videoLoading, setVideoLoading] = useState(false);
@@ -44,6 +48,7 @@ export function LessonPage() {
   
   const progressSaveTimeoutRef = useRef<number | null>(null);
   const previousCourseSlugRef = useRef<string | null>(null);
+  const subtitleBlobUrlRef = useRef<string | null>(null);
 
   // Save referrer when entering lesson page for the first time (when courseSlug changes)
   useEffect(() => {
@@ -134,6 +139,16 @@ export function LessonPage() {
   // Track previous lesson ID to prevent unnecessary reloads
   const previousLessonIdRef = useRef<number | null>(null);
 
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (subtitleBlobUrlRef.current) {
+        URL.revokeObjectURL(subtitleBlobUrlRef.current);
+        subtitleBlobUrlRef.current = null;
+      }
+    };
+  }, []);
+
   // Load video and transcript when lesson changes
   useEffect(() => {
     const loadLessonData = async () => {
@@ -181,6 +196,65 @@ export function LessonPage() {
           });
         }
 
+        // Load and convert transcript to VTT for subtitle
+        // Clean up previous blob URL
+        if (subtitleBlobUrlRef.current) {
+          URL.revokeObjectURL(subtitleBlobUrlRef.current);
+          subtitleBlobUrlRef.current = null;
+        }
+
+        if (lessonDetails?.transcriptJsonUrl) {
+          try {
+            // Handle both relative and absolute URLs
+            let url = lessonDetails.transcriptJsonUrl;
+            if (lessonDetails.transcriptJsonUrl.startsWith('/')) {
+              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+              const baseUrl = API_BASE_URL.replace('/api/v1', '');
+              url = `${baseUrl}${lessonDetails.transcriptJsonUrl}`;
+            }
+
+            const response = await fetch(url, {
+              credentials: 'include',
+            });
+
+            if (response.ok) {
+              const transcriptData = await response.json();
+              
+              // Parse transcript items
+              let items: Array<{ time: number; text: string }> = [];
+              if (Array.isArray(transcriptData)) {
+                items = transcriptData.map((item: any) => ({
+                  time: item.start || item.time || 0,
+                  text: item.text || item.content || '',
+                }));
+              } else if (transcriptData.segments && Array.isArray(transcriptData.segments)) {
+                items = transcriptData.segments.map((segment: any) => ({
+                  time: segment.start || segment.time || 0,
+                  text: segment.text || segment.content || '',
+                }));
+              }
+
+              // Convert to VTT and create blob URL
+              if (items.length > 0) {
+                const vttContent = convertTranscriptToVTT(items);
+                const blobUrl = createVTTBlobURL(vttContent);
+                subtitleBlobUrlRef.current = blobUrl;
+                setSubtitleUrl(blobUrl);
+              } else {
+                setSubtitleUrl(undefined);
+              }
+            } else {
+              setSubtitleUrl(undefined);
+            }
+          } catch (error) {
+            console.error('Error loading transcript for subtitle:', error);
+            // Subtitle is optional, don't show error
+            setSubtitleUrl(undefined);
+          }
+        } else {
+          setSubtitleUrl(undefined);
+        }
+
         // Load progress for this lesson (if enrolled)
         if (enrollment) {
           try {
@@ -191,6 +265,25 @@ export function LessonPage() {
           } catch (error) {
             // Ignore progress errors
           }
+        }
+
+        // Load notes for this lesson
+        if (enrollment && user) {
+          try {
+            setNotesLoading(true);
+            const noteData = await lessonNotesApi.getLessonNote(selectedLesson.id);
+            setLessonNotes(noteData.note?.content || '');
+          } catch (error: any) {
+            // If note doesn't exist (404), that's okay - just set empty
+            if (error.response?.status !== 404) {
+              console.error('Error loading lesson notes:', error);
+            }
+            setLessonNotes('');
+          } finally {
+            setNotesLoading(false);
+          }
+        } else {
+          setLessonNotes('');
         }
       } catch (error: any) {
         console.error('Error loading lesson data:', error);
@@ -368,6 +461,7 @@ export function LessonPage() {
             <Card className="overflow-hidden bg-[#1A1A1A] border-[#2D2D2D]">
               <VideoPlayer
                 videoUrl={videoUrl}
+                subtitleUrl={subtitleUrl}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleVideoEnded}
                 initialTime={initialVideoTime}
@@ -476,7 +570,7 @@ export function LessonPage() {
                 {selectedLesson && (
                   <Notes
                     lessonId={selectedLesson.id}
-                    initialNotes=""
+                    initialNotes={lessonNotes}
                   />
                 )}
               </TabsContent>
