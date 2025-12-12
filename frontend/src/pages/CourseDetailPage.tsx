@@ -40,7 +40,7 @@ import type { PublicCourse, Lesson, Instructor } from '../lib/api/types'
 import { formatDuration } from '../lib/courseUtils'
 
 export function CourseDetailPage() {
-    const { id } = useParams<{ id: string }>()
+    const { slug } = useParams<{ slug: string }>()
     const navigate = useNavigate()
 
     // State quản lý dữ liệu từ API
@@ -51,20 +51,18 @@ export function CourseDetailPage() {
     const [isEnrolled] = useState(false) // TODO: Kết nối với auth context sau
     const [showPreviewVideo, setShowPreviewVideo] = useState(false)
 
-    // Fetch dữ liệu khi component mount hoặc id thay đổi
+    // Fetch dữ liệu khi component mount hoặc slug thay đổi
     useEffect(() => {
         const fetchCourseData = async () => {
-            if (!id) return
+            if (!slug) return
 
             try {
                 setIsLoading(true)
 
-                const courseId = parseInt(id)
+                // Lấy thông tin khóa học bằng slug (public pages use slug)
+                const courseData = await coursesApi.getCourseBySlug(slug)
+                const courseId = courseData.id
 
-                // Lấy thông tin khóa học
-                const courseData = await coursesApi.getPublicCourseById(
-                    courseId
-                )
                 setCourse(courseData)
 
                 // Tăng lượt xem (fire and forget)
@@ -91,7 +89,7 @@ export function CourseDetailPage() {
         }
 
         fetchCourseData()
-    }, [id])
+    }, [slug])
 
     // Loading state
     if (isLoading) {
@@ -171,7 +169,7 @@ export function CourseDetailPage() {
                             enrollmentProgress={0}
                             onVideoPreviewClick={() => setShowPreviewVideo(true)}
                             checkoutUrl={`/checkout/${course.id}`}
-                            learnUrl={`/learn/${course.id}`}
+                            learnUrl={course.slug ? `/courses/${course.slug}/lessons` : undefined}
                         />
                         {/* Main Content - Tổng quan, Nội dung, Đánh giá */}
                         <div className='lg:col-span-2'>

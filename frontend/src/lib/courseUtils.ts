@@ -198,3 +198,17 @@ export function getCoursePrice(course: {
         displayPrice: isFree ? 'Miễn phí' : formatPrice(currentPrice),
     }
 }
+
+/**
+ * Generate course URL for public pages using slug
+ * @param course - Course object with slug
+ * @returns URL path like "/courses/javascript-basics"
+ * @throws Error if course doesn't have a slug (required for public pages)
+ */
+export function getCourseUrl(course: { id: number; slug: string }): string {
+    if (!course.slug) {
+        console.error('Course missing slug:', course)
+        throw new Error(`Course ${course.id} is missing slug. All public courses must have a slug.`)
+    }
+    return `/courses/${course.slug}`
+}

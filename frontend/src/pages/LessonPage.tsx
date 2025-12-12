@@ -25,8 +25,8 @@ import { toast } from 'sonner';
 import type { Course, Lesson, Enrollment, CourseLessonsResponse } from '../lib/api/types';
 
 export function LessonPage() {
-  const params = useParams<{ id: string; lessonId?: string }>();
-  const courseId = params.id;
+  const params = useParams<{ slug: string; lessonId?: string }>();
+  const courseSlug = params.slug;
   const lessonId = params.lessonId;
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -43,21 +43,57 @@ export function LessonPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
   
-  const progressSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  const progressSaveTimeoutRef = useRef<number | null>(null);
+  const previousCourseSlugRef = useRef<string | null>(null);
+
+  // Save referrer when entering lesson page for the first time (when courseSlug changes)
+  useEffect(() => {
+    if (courseSlug && courseSlug !== previousCourseSlugRef.current) {
+      // Course slug changed, meaning we're entering lesson page from outside
+      const referrerKey = `lesson_referrer_${courseSlug}`;
+      
+      // Only save referrer if we don't have one for this course yet
+      if (!sessionStorage.getItem(referrerKey)) {
+        // Try to get referrer from document.referrer
+        const documentReferrer = document.referrer;
+        let referrerPath = `/courses/${courseSlug}`; // Default fallback to course detail page
+        
+        if (documentReferrer) {
+          try {
+            const referrerUrl = new URL(documentReferrer);
+            const referrerPathname = referrerUrl.pathname;
+            
+            // Only use referrer if it's from our app and not from lesson pages
+            if (referrerPathname && !referrerPathname.includes('/lessons/')) {
+              referrerPath = referrerPathname;
+            }
+          } catch (e) {
+            // Invalid URL, use default
+          }
+        }
+        
+        // Save referrer for this course
+        sessionStorage.setItem(referrerKey, referrerPath);
+      }
+      
+      previousCourseSlugRef.current = courseSlug;
+    }
+  }, [courseSlug]);
 
   // Load course and lessons
   useEffect(() => {
     const loadData = async () => {
-      if (!courseId) return;
+      if (!courseSlug) return;
 
       try {
         setLoading(true);
         
-        // Load course and lessons in parallel
-        const [courseData, lessonsData] = await Promise.all([
-          coursesApi.getCourseById(courseId),
-          lessonsApi.getCourseLessons(courseId),
-        ]);
+        // Load course by slug first (public pages use slug)
+        const courseData = await coursesApi.getCourseBySlug(courseSlug);
+        const courseId = courseData.id;
+        
+        // Then load lessons using courseId
+        const lessonsData = await lessonsApi.getCourseLessons(courseId);
 
         setCourse(courseData);
         setLessons(lessonsData.lessons || []);
@@ -66,7 +102,7 @@ export function LessonPage() {
         try {
           const enrollments = await coursesApi.getEnrollments();
           const userEnrollment = enrollments.find(
-            (e) => e.courseId === Number(courseId) && e.userId === Number(user?.id)
+            (e) => e.courseId === courseId && e.userId === Number(user?.id)
           );
           setEnrollment(userEnrollment || null);
         } catch (error) {
@@ -94,7 +130,7 @@ export function LessonPage() {
     };
 
     loadData();
-  }, [courseId, lessonId, user?.id]);
+  }, [courseSlug, lessonId, user?.id]);
 
   // Load video and transcript when lesson changes
   useEffect(() => {
@@ -146,9 +182,9 @@ export function LessonPage() {
   // Handle lesson selection
   const handleLessonSelect = (lesson: Lesson) => {
     setSelectedLesson(lesson);
-    // Update URL without navigation
-    if (courseId) {
-      window.history.pushState({}, '', `/courses/${courseId}/lessons/${lesson.id}`);
+    // Update URL without navigation (using slug for public pages)
+    if (courseSlug) {
+      window.history.pushState({}, '', `/courses/${courseSlug}/lessons/${lesson.id}`);
     }
   };
 
@@ -253,11 +289,31 @@ export function LessonPage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" asChild className="!text-white hover:bg-white/10">
-                <Link to="/dashboard">
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Dashboard
-                </Link>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  if (courseSlug) {
+                    // Get saved referrer for this course
+                    const referrerKey = `lesson_referrer_${courseSlug}`;
+                    const savedReferrer = sessionStorage.getItem(referrerKey);
+                    
+                    if (savedReferrer && !savedReferrer.includes('/lessons')) {
+                      // Navigate to saved referrer (course detail page or other page)
+                      navigate(savedReferrer);
+                    } else {
+                      // Fallback to course detail page using slug
+                      navigate(`/courses/${courseSlug}`);
+                    }
+                  } else {
+                    // Last resort: go back in history
+                    navigate(-1);
+                  }
+                }}
+                className="!text-white hover:bg-white/10"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Quay lại
               </Button>
               <div>
                 <h2 className="font-semibold line-clamp-1 text-white">{course.title}</h2>

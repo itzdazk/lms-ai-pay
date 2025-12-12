@@ -17,6 +17,7 @@ import {
     getCourseLevelBadge,
     formatNumber,
     formatPrice,
+    getCourseUrl,
 } from '../../lib/courseUtils'
 
 interface CourseCardProps {
@@ -34,7 +35,7 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
         <Card
             className={`overflow-hidden hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 flex flex-col bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-2 border-[#2D2D2D]/50 hover:border-[#3D3D3D]/70 group ${className}`}
         >
-            <Link to={`/courses/${course.id}`}>
+            <Link to={getCourseUrl(course)}>
                 <div className='relative aspect-video overflow-hidden rounded-t-lg bg-gradient-to-br from-[#1F1F1F] to-[#151515]'>
                     <img
                         src={
@@ -76,7 +77,7 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                     </span>
                 </div>
                 <CardTitle className='line-clamp-2 hover:text-blue-400 transition-colors text-white text-base font-bold mb-1.5 group-hover:text-blue-400'>
-                    <Link to={`/courses/${course.id}`}>{course.title}</Link>
+                    <Link to={getCourseUrl(course)}>{course.title}</Link>
                 </CardTitle>
                 <CardDescription className='line-clamp-3 text-gray-400 leading-relaxed text-sm'>
                     {course.shortDescription ||

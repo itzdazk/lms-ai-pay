@@ -65,7 +65,7 @@ export default function App() {
                   <Route path="/verify-email" element={<EmailVerificationPage />} />
                   <Route path="/courses" element={<CoursesPage />} />
                   <Route path="/courses/preview" element={<CoursePreviewPage />} />
-                  <Route path="/courses/:id" element={<CourseDetailPage />} />
+                  <Route path="/courses/:slug" element={<CourseDetailPage />} />
                   <Route path="/about" element={<AboutPage />} />
 
                   {/* ========== STUDENT ROUTES (Protected) ========== */}
@@ -80,7 +80,7 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="/courses/:id/lessons"
+                    path="/courses/:slug/lessons"
                     element={
                       <ProtectedRoute>
                         <LessonPage />
@@ -88,7 +88,7 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="/courses/:id/lessons/:lessonId"
+                    path="/courses/:slug/lessons/:lessonId"
                     element={
                       <ProtectedRoute>
                         <LessonPage />
