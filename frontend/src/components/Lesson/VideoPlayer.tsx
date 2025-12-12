@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { SubtitleSettingsDialog, type SubtitleSettings, DEFAULT_SETTINGS } from './SubtitleSettingsDialog';
 
 interface VideoPlayerProps {
   videoUrl?: string;
@@ -46,10 +47,17 @@ export function VideoPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenContainer, setFullscreenContainer] = useState<HTMLElement | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [showSubtitles, setShowSubtitles] = useState(false);
+  const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false);
+  const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>(DEFAULT_SETTINGS);
+  const [isDragging, setIsDragging] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const subtitleStyleRef = useRef<HTMLStyleElement | null>(null);
+  const isDraggingRef = useRef(false);
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -103,14 +111,52 @@ export function VideoPlayer({
 
   // Handle seek
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (videoRef.current && duration > 0) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
+    if (videoRef.current && duration > 0 && progressBarRef.current) {
+      const rect = progressBarRef.current.getBoundingClientRect();
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const newTime = pos * duration;
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
   };
+
+  // Handle drag start
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (videoRef.current && duration > 0) {
+      isDraggingRef.current = true;
+      setIsDragging(true);
+      setShowControls(true);
+      handleSeek(e);
+    }
+  };
+
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingRef.current && videoRef.current && duration > 0 && progressBarRef.current) {
+        const rect = progressBarRef.current.getBoundingClientRect();
+        const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const newTime = pos * duration;
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, duration]);
 
   // Handle fullscreen
   const toggleFullscreen = () => {
@@ -186,7 +232,9 @@ export function VideoPlayer({
     const handlePause = () => setIsPlaying(false);
 
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFullscreenNow = !!document.fullscreenElement;
+      setIsFullscreen(isFullscreenNow);
+      setFullscreenContainer(isFullscreenNow ? (document.fullscreenElement as HTMLElement) : null);
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -209,6 +257,243 @@ export function VideoPlayer({
     };
   }, [onTimeUpdate, onEnded, initialTime]);
 
+  // Load subtitle settings from localStorage (only once on mount)
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  useEffect(() => {
+    if (settingsLoaded) return; // Only load once
+    
+    try {
+      const saved = localStorage.getItem('subtitle-settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migrate old format to new format
+        if ('textStroke' in parsed) {
+          parsed.textEffect = parsed.textStroke ? 'stroke' : 'none';
+          delete parsed.textStroke;
+          delete parsed.strokeColor;
+        }
+        // Ensure all required fields exist
+        const migrated = {
+          fontSize: parsed.fontSize || 20,
+          color: parsed.color || '#FFFFFF',
+          textOpacity: parsed.textOpacity !== undefined ? parsed.textOpacity : 100,
+          fontFamily: parsed.fontFamily || 'Arial',
+          textEffect: parsed.textEffect || 'stroke',
+          backgroundColor: parsed.backgroundColor || '#000000',
+          backgroundOpacity: parsed.backgroundOpacity !== undefined ? parsed.backgroundOpacity : 0,
+        };
+        setSubtitleSettings(migrated);
+      } else {
+        // Only set default if nothing is saved
+        setSubtitleSettings(DEFAULT_SETTINGS);
+      }
+      setSettingsLoaded(true);
+    } catch (error) {
+      console.error('Error loading subtitle settings:', error);
+      setSubtitleSettings(DEFAULT_SETTINGS);
+      setSettingsLoaded(true);
+    }
+  }, [settingsLoaded]);
+
+  // Apply subtitle styles
+  useEffect(() => {
+    if (!subtitleSettings) return;
+    if (!videoRef.current) return;
+    
+    // Determine subtitle position based on controls visibility
+    // When controls are visible, push subtitle higher to avoid overlap
+    // Controls take up about 80-100px from bottom, so we need to push subtitle higher
+    const subtitleBottom = showControls ? '30%' : '5%';
+
+    // Remove old style if exists
+    const oldStyle = document.getElementById('subtitle-styles');
+    if (oldStyle) {
+      oldStyle.remove();
+    }
+
+    // Create new style element
+    const style = document.createElement('style');
+    style.id = 'subtitle-styles';
+    document.head.appendChild(style);
+    subtitleStyleRef.current = style;
+    
+    // Ensure video has an ID
+    if (!videoRef.current.id) {
+      videoRef.current.id = 'lesson-video-player';
+    }
+    const bgColor = subtitleSettings.backgroundColor || '#000000';
+    const bgOpacity = (subtitleSettings.backgroundOpacity !== undefined ? subtitleSettings.backgroundOpacity : 0) / 100;
+    
+    // Parse hex color safely
+    let bgR = 0, bgG = 0, bgB = 0;
+    try {
+      if (bgColor.startsWith('#')) {
+        const hex = bgColor.slice(1);
+        if (hex.length === 6) {
+          const r = parseInt(hex.slice(0, 2), 16);
+          const g = parseInt(hex.slice(2, 4), 16);
+          const b = parseInt(hex.slice(4, 6), 16);
+          bgR = isNaN(r) ? 0 : r;
+          bgG = isNaN(g) ? 0 : g;
+          bgB = isNaN(b) ? 0 : b;
+        } else if (hex.length === 3) {
+          const r = parseInt(hex[0] + hex[0], 16);
+          const g = parseInt(hex[1] + hex[1], 16);
+          const b = parseInt(hex[2] + hex[2], 16);
+          bgR = isNaN(r) ? 0 : r;
+          bgG = isNaN(g) ? 0 : g;
+          bgB = isNaN(b) ? 0 : b;
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing background color:', error);
+    }
+    const bgRgba = `rgba(${bgR}, ${bgG}, ${bgB}, ${bgOpacity})`;
+
+    // Text color with opacity
+    const textColor = subtitleSettings.color || '#FFFFFF';
+    const textOpacity = (subtitleSettings.textOpacity || 100) / 100;
+    let textR = 255, textG = 255, textB = 255;
+    try {
+      if (textColor.startsWith('#')) {
+        const hex = textColor.slice(1);
+        if (hex.length === 6) {
+          const r = parseInt(hex.slice(0, 2), 16);
+          const g = parseInt(hex.slice(2, 4), 16);
+          const b = parseInt(hex.slice(4, 6), 16);
+          textR = isNaN(r) ? 255 : r;
+          textG = isNaN(g) ? 255 : g;
+          textB = isNaN(b) ? 255 : b;
+        } else if (hex.length === 3) {
+          const r = parseInt(hex[0] + hex[0], 16);
+          const g = parseInt(hex[1] + hex[1], 16);
+          const b = parseInt(hex[2] + hex[2], 16);
+          textR = isNaN(r) ? 255 : r;
+          textG = isNaN(g) ? 255 : g;
+          textB = isNaN(b) ? 255 : b;
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing text color:', error);
+    }
+    const textRgba = `rgba(${textR}, ${textG}, ${textB}, ${textOpacity})`;
+
+    // Text effect
+    let textEffectStyle = '';
+    const textEffect = subtitleSettings.textEffect || 'stroke';
+    if (textEffect === 'stroke') {
+      // Use text-shadow to create outline effect instead of stroke to preserve text color
+      textEffectStyle = `text-shadow: -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.8) !important;`;
+    } else if (textEffect === 'shadow') {
+      textEffectStyle = `text-shadow: 2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8) !important;`;
+    }
+    // 'none' doesn't need any style
+
+    // Get video element ID for more specific selector
+    const videoId = videoRef.current.id || 'lesson-video-player';
+    const videoSelector = `#${videoId}`;
+    
+    // Apply styles with more specific selectors
+    // Use both standard and webkit selectors for better browser compatibility
+    style.textContent = `
+      ${videoSelector}::cue,
+      video::cue {
+        font-size: ${subtitleSettings.fontSize || 20}px !important;
+        color: ${textRgba} !important;
+        font-family: "${subtitleSettings.fontFamily || 'Arial'}", sans-serif !important;
+        ${textEffectStyle}
+        background-color: ${bgRgba} !important;
+        background: ${bgRgba} !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        line-height: 1.4 !important;
+        white-space: pre-wrap !important;
+        outline: none !important;
+      }
+      ${videoSelector}::-webkit-media-text-track-display {
+        font-size: ${subtitleSettings.fontSize || 20}px !important;
+        color: ${textRgba} !important;
+        font-family: "${subtitleSettings.fontFamily || 'Arial'}", sans-serif !important;
+        ${textEffectStyle}
+        background-color: ${bgRgba} !important;
+        background: ${bgRgba} !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+      }
+      ${videoSelector}::-webkit-media-text-track-container {
+        font-size: ${subtitleSettings.fontSize || 20}px !important;
+      }
+      ${videoSelector}::cue(v[lang="vi"]) {
+        bottom: ${subtitleBottom} !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        position: absolute !important;
+        width: auto !important;
+        max-width: 90% !important;
+        z-index: 10 !important;
+        transition: bottom 0.3s ease !important;
+      }
+      /* Additional selectors for better browser support */
+      *::cue {
+        font-size: ${subtitleSettings.fontSize || 20}px !important;
+        color: ${textRgba} !important;
+        font-family: "${subtitleSettings.fontFamily || 'Arial'}", sans-serif !important;
+        ${textEffectStyle}
+        background-color: ${bgRgba} !important;
+        background: ${bgRgba} !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+      }
+    `;
+    
+    // Debug: Log current settings
+    
+    // Force a re-render of the subtitle track after CSS is applied
+    // Only do this when subtitleSettings change, not when showControls changes
+    // to avoid flickering when controls appear/disappear
+    if (videoRef.current && showSubtitles) {
+      setTimeout(() => {
+        const tracks = videoRef.current?.textTracks;
+        if (tracks) {
+          for (let i = 0; i < tracks.length; i++) {
+            if (tracks[i].kind === 'subtitles' && tracks[i].mode === 'showing') {
+              // Force cue update by toggling
+              tracks[i].mode = 'hidden';
+              setTimeout(() => {
+                if (videoRef.current) {
+                  tracks[i].mode = 'showing';
+                }
+              }, 50);
+            }
+          }
+        }
+      }, 100);
+    }
+  }, [subtitleSettings, showSubtitles]);
+  
+  // Separate effect to update subtitle position when controls visibility changes
+  // This only updates CSS, doesn't toggle track mode to avoid flickering
+  useEffect(() => {
+    if (!videoRef.current || !showSubtitles || !subtitleSettings) return;
+    
+    const subtitleBottom = showControls ? '30%' : '5%';
+    const style = document.getElementById('subtitle-styles');
+    if (style && style.textContent) {
+      const videoId = videoRef.current.id || 'lesson-video-player';
+      const videoSelector = `#${videoId}`;
+      
+      // Update only the bottom value in CSS without toggling track
+      const currentCSS = style.textContent;
+      const regex = new RegExp(`(${videoSelector.replace('#', '\\#')}::cue\\(v\\[lang="vi"\\]\\s*\\{[^}]*bottom:\\s*)[\\d.]+%`, 'g');
+      const newCSS = currentCSS.replace(regex, `$1${subtitleBottom}`);
+      
+      if (newCSS !== currentCSS) {
+        style.textContent = newCSS;
+      }
+    }
+  }, [showControls, showSubtitles, subtitleSettings]);
+  
+
   // Sync subtitle track when subtitleUrl or showSubtitles changes
   useEffect(() => {
     if (videoRef.current && subtitleUrl) {
@@ -220,6 +505,48 @@ export function VideoPlayer({
       }
     }
   }, [subtitleUrl, showSubtitles]);
+
+  // Force update subtitle track when settings change
+  useEffect(() => {
+    if (videoRef.current && subtitleUrl && showSubtitles) {
+      // Force browser to re-render cues by toggling track mode
+      const tracks = videoRef.current.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        if (tracks[i].kind === 'subtitles') {
+          const currentMode = tracks[i].mode;
+          if (currentMode === 'showing') {
+            tracks[i].mode = 'hidden';
+            // Use setTimeout to ensure style is applied before showing again
+            setTimeout(() => {
+              if (videoRef.current) {
+                tracks[i].mode = 'showing';
+                // Force a repaint by accessing video properties
+                const video = videoRef.current;
+                const currentTime = video.currentTime;
+                // Trigger a small time change to force cue re-render
+                video.currentTime = currentTime + 0.001;
+                setTimeout(() => {
+                  if (video) {
+                    video.currentTime = currentTime;
+                  }
+                }, 10);
+              }
+            }, 150);
+          }
+        }
+      }
+    }
+  }, [subtitleSettings, subtitleUrl, showSubtitles]);
+
+  // Save subtitle settings to localStorage
+  const handleSubtitleSettingsChange = (settings: SubtitleSettings) => {
+    try {
+      localStorage.setItem('subtitle-settings', JSON.stringify(settings));
+      setSubtitleSettings(settings);
+    } catch (error) {
+      console.error('Error saving subtitle settings:', error);
+    }
+  };
 
   if (!videoUrl) {
     return (
@@ -245,6 +572,7 @@ export function VideoPlayer({
     >
       <video
         ref={videoRef}
+        id="lesson-video-player"
         src={videoUrl}
         className="w-full h-full"
         onClick={togglePlay}
@@ -276,12 +604,21 @@ export function VideoPlayer({
         {/* Progress bar */}
         <div className="absolute bottom-16 left-0 right-0 px-4">
           <div
-            className="h-1 bg-white/30 rounded-full overflow-hidden cursor-pointer group/progress hover:h-2 transition-all"
+            ref={progressBarRef}
+            className="h-2 bg-white/20 rounded-full overflow-visible cursor-pointer group/progress hover:h-3 transition-all relative"
             onClick={handleSeek}
+            onMouseDown={handleDragStart}
           >
             <div
               className="h-full bg-blue-600 transition-all group-hover/progress:bg-blue-500"
               style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+            />
+            {/* Progress thumb */}
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full transition-opacity shadow-lg cursor-grab active:cursor-grabbing ${
+                isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover/progress:opacity-100'
+              }`}
+              style={{ left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 8px)` }}
             />
           </div>
         </div>
@@ -364,24 +701,55 @@ export function VideoPlayer({
                 </SelectContent>
               </Select>
               {subtitleUrl && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={`text-white hover:bg-white/20 ${showSubtitles ? 'bg-white/20' : ''}`}
-                  onClick={() => {
-                    const newValue = !showSubtitles;
-                    setShowSubtitles(newValue);
-                    if (videoRef.current) {
-                      const tracks = videoRef.current.textTracks;
-                      for (let i = 0; i < tracks.length; i++) {
-                        tracks[i].mode = newValue ? 'showing' : 'hidden';
+                <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={`text-white hover:bg-white/20 ${showSubtitles ? 'bg-white/20' : ''}`}
+                    onClick={() => {
+                      const newValue = !showSubtitles;
+                      setShowSubtitles(newValue);
+                      if (videoRef.current) {
+                        const tracks = videoRef.current.textTracks;
+                        for (let i = 0; i < tracks.length; i++) {
+                          tracks[i].mode = newValue ? 'showing' : 'hidden';
+                        }
                       }
-                    }
-                  }}
-                  title={showSubtitles ? 'Tắt phụ đề' : 'Bật phụ đề'}
-                >
-                  <Subtitles className="h-4 w-4" />
-                </Button>
+                    }}
+                    title={showSubtitles ? 'Tắt phụ đề' : 'Bật phụ đề'}
+                  >
+                    <Subtitles className="h-4 w-4" />
+                  </Button>
+                  {showSubtitles && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-white hover:bg-white/20"
+                      onClick={() => setSubtitleSettingsOpen(true)}
+                      title="Cài đặt phụ đề"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    </Button>
+                  )}
+                </>
               )}
               <Button
                 size="icon"
@@ -399,6 +767,17 @@ export function VideoPlayer({
           </div>
         </div>
       </div>
+
+      {/* Subtitle Settings Dialog */}
+      <SubtitleSettingsDialog
+        open={subtitleSettingsOpen}
+        onOpenChange={setSubtitleSettingsOpen}
+        settings={subtitleSettings}
+        onSettingsChange={handleSubtitleSettingsChange}
+        container={fullscreenContainer || undefined}
+      />
+      {/* Debug: Uncomment to check fullscreen container */}
+      {/* {isFullscreen && console.log('Fullscreen container:', fullscreenContainer, 'Fullscreen element:', document.fullscreenElement)} */}
     </div>
   );
 }
