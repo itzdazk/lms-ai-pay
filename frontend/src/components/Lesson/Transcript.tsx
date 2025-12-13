@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileX } from 'lucide-react';
 
 interface TranscriptItem {
   time: number; // Time in seconds
@@ -262,12 +262,30 @@ export function Transcript({
   // If error occurred, log it but don't show error (transcript is optional)
   if (error) {
     console.error('Transcript error:', error, 'URL:', transcriptJsonUrl);
-    return null;
+    return (
+      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-12">
+            <FileX className="h-12 w-12 text-gray-500 mb-3" />
+            <p className="text-gray-400">Chưa có transcript</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
-  // If no transcript data available after loading, don't render anything (transcript is optional)
+  // If no transcript data available after loading, show message
   if (!loading && transcript.length === 0) {
-    return null;
+    return (
+      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-12">
+            <FileX className="h-12 w-12 text-gray-500 mb-3" />
+            <p className="text-gray-400">Chưa có transcript</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

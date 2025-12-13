@@ -58,6 +58,7 @@ export function VideoPlayer({
   const subtitleStyleRef = useRef<HTMLStyleElement | null>(null);
   const isDraggingRef = useRef(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const hasAttemptedAutoplayRef = useRef(false);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -211,6 +212,15 @@ export function VideoPlayer({
       if (initialTime > 0) {
         video.currentTime = initialTime;
         setCurrentTime(initialTime);
+      }
+      // Auto-play video when metadata is loaded (with sound)
+      if (!hasAttemptedAutoplayRef.current) {
+        hasAttemptedAutoplayRef.current = true;
+        video.play().catch((error) => {
+          // Autoplay may be blocked by browser, that's okay
+          // User will need to click play manually
+          console.log('Autoplay prevented:', error);
+        });
       }
     };
 
@@ -538,6 +548,38 @@ export function VideoPlayer({
     }
   }, [subtitleSettings, subtitleUrl, showSubtitles]);
 
+  // Auto-play when videoUrl changes
+  useEffect(() => {
+    if (videoRef.current && videoUrl) {
+      // Reset autoplay attempt flag when videoUrl changes
+      hasAttemptedAutoplayRef.current = false;
+      
+      const video = videoRef.current;
+      // Wait for video to be ready
+      const handleCanPlay = () => {
+        if (!hasAttemptedAutoplayRef.current) {
+          hasAttemptedAutoplayRef.current = true;
+          // Try autoplay with sound
+          video.play().catch((error) => {
+            // Autoplay may be blocked by browser, that's okay
+            // User will need to click play manually
+            console.log('Autoplay prevented:', error);
+          });
+        }
+      };
+      
+      if (video.readyState >= 3) {
+        // Video is already loaded enough to play
+        handleCanPlay();
+      } else {
+        video.addEventListener('canplay', handleCanPlay, { once: true });
+        return () => {
+          video.removeEventListener('canplay', handleCanPlay);
+        };
+      }
+    }
+  }, [videoUrl]);
+
   // Save subtitle settings to localStorage
   const handleSubtitleSettingsChange = (settings: SubtitleSettings) => {
     try {
@@ -576,6 +618,8 @@ export function VideoPlayer({
         src={videoUrl}
         className="w-full h-full"
         onClick={togglePlay}
+        autoPlay
+        playsInline
       >
         {subtitleUrl && (
           <track
