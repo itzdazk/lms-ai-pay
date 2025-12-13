@@ -10,16 +10,21 @@ import {
   SkipForward,
   Loader2,
   Subtitles,
+  Settings,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '../ui/dropdown-menu';
+import { toast } from 'sonner';
 import { SubtitleSettingsDialog, type SubtitleSettings, DEFAULT_SETTINGS } from './SubtitleSettingsDialog';
+import { PlaybackRateDialog } from './PlaybackRateDialog';
 
 interface VideoPlayerProps {
   videoUrl?: string;
@@ -40,6 +45,7 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -53,6 +59,7 @@ export function VideoPlayer({
   const [showSubtitles, setShowSubtitles] = useState(false);
   const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false);
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>(DEFAULT_SETTINGS);
+  const [playbackRateDialogOpen, setPlaybackRateDialogOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const subtitleStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -731,19 +738,6 @@ export function VideoPlayer({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Select value={playbackRate.toString()} onValueChange={handlePlaybackRateChange}>
-                <SelectTrigger className="w-20 h-8 bg-white/10 border-white/20 text-white hover:bg-white/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <SelectItem value="0.5" className="text-white">0.5x</SelectItem>
-                  <SelectItem value="0.75" className="text-white">0.75x</SelectItem>
-                  <SelectItem value="1" className="text-white">1x</SelectItem>
-                  <SelectItem value="1.25" className="text-white">1.25x</SelectItem>
-                  <SelectItem value="1.5" className="text-white">1.5x</SelectItem>
-                  <SelectItem value="2" className="text-white">2x</SelectItem>
-                </SelectContent>
-              </Select>
               {subtitleUrl && (
                 <>
                   <Button
@@ -764,35 +758,62 @@ export function VideoPlayer({
                   >
                     <Subtitles className="h-4 w-4" />
                   </Button>
-                  {showSubtitles && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-white hover:bg-white/20"
-                      onClick={() => setSubtitleSettingsOpen(true)}
-                      title="Cài đặt phụ đề"
-                    >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        ref={settingsButtonRef}
+                        size="icon"
+                        variant="ghost"
+                        className="text-white hover:bg-white/20"
+                        title="Cài đặt"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                    </Button>
-                  )}
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      className="bg-[#1A1A1A] border-[#2D2D2D] text-white min-w-[200px] !z-[9999] py-1"
+                      align="end"
+                      container={fullscreenContainer || undefined}
+                    >
+                      <DropdownMenuLabel className="text-white text-sm font-semibold px-3 py-1.5">
+                        Cài đặt
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-[#2D2D2D] my-1" />
+                      <DropdownMenuItem
+                        className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
+                        onClick={() => {
+                          // TODO: Implement quality selection
+                          toast.info('Tính năng chọn chất lượng đang được phát triển');
+                        }}
+                      >
+                        <span>Chất lượng</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-sm">Auto (1080P)</span>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
+                        onClick={() => setSubtitleSettingsOpen(true)}
+                      >
+                        <span>Phụ đề</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-sm">Tuỳ chỉnh</span>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
+                        onClick={() => setPlaybackRateDialogOpen(true)}
+                      >
+                        <span>Tốc độ</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-sm">{playbackRate}x</span>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
               <Button
@@ -818,6 +839,13 @@ export function VideoPlayer({
         onOpenChange={setSubtitleSettingsOpen}
         settings={subtitleSettings}
         onSettingsChange={handleSubtitleSettingsChange}
+        container={fullscreenContainer || undefined}
+      />
+      <PlaybackRateDialog
+        open={playbackRateDialogOpen}
+        onOpenChange={setPlaybackRateDialogOpen}
+        currentRate={playbackRate}
+        onRateChange={(rate) => handlePlaybackRateChange(rate.toString())}
         container={fullscreenContainer || undefined}
       />
       {/* Debug: Uncomment to check fullscreen container */}

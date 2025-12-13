@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../ui/dialog';
 import { Button } from '../ui/button';
+import { DarkOutlineButton } from '../ui/buttons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -274,23 +268,21 @@ export function SubtitleSettingsDialog({
       </div>
 
       <div className="flex items-center justify-between px-4 py-3 border-t border-[#2D2D2D]">
-        <Button
-          variant="outline"
+        <DarkOutlineButton
           onClick={handleReset}
           size="sm"
-          className="border-[#2D2D2D] text-white hover:bg-[#2D2D2D] text-xs h-7 px-3"
+          className="text-xs h-7 px-3"
         >
           Mặc định
-        </Button>
+        </DarkOutlineButton>
         <div className="flex gap-1.5">
-          <Button
-            variant="outline"
+          <DarkOutlineButton
             onClick={() => onOpenChange(false)}
             size="sm"
-            className="border-[#2D2D2D] text-white hover:bg-[#2D2D2D] text-xs h-7 px-3"
+            className="text-xs h-7 px-3"
           >
             Hủy
-          </Button>
+          </DarkOutlineButton>
           <Button
             onClick={handleSave}
             size="sm"
@@ -339,8 +331,9 @@ export function SubtitleSettingsDialog({
     </DropdownMenu>
   );
 
-  // If container is provided (fullscreen mode), render directly into it
-  if (container && open) {
+  // Always use the same UI (fullscreen style) regardless of container
+  if (open) {
+    const targetContainer = container || document.body;
     return createPortal(
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
         <div 
@@ -359,210 +352,10 @@ export function SubtitleSettingsDialog({
           {renderContent()}
         </div>
       </div>,
-      container
+      targetContainer
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-xs p-0 z-[100]"
-      >
-        <DialogHeader className="px-4 pt-4 pb-3">
-          <DialogTitle className="text-white text-base">Cài đặt phụ đề</DialogTitle>
-          <DialogDescription className="sr-only">
-            Tùy chỉnh giao diện phụ đề theo ý thích của bạn
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="px-4 pb-4 space-y-0">
-          {/* Màu chữ */}
-          <SettingItem
-            label="Màu chữ"
-            value={
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="w-3.5 h-3.5 rounded-full border border-[#2D2D2D]"
-                  style={{ backgroundColor: localSettings.color }}
-                />
-                <span className="text-gray-300 text-xs">{getColorName(localSettings.color)}</span>
-              </div>
-            }
-            onSelect={() => {}}
-          >
-            {PRESET_COLORS.map((color) => (
-              <DropdownMenuItem
-                key={color.value}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, color: color.value })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center gap-1.5 text-xs py-1.5"
-              >
-                <div
-                  className="w-3.5 h-3.5 rounded-full border border-[#2D2D2D]"
-                  style={{ backgroundColor: color.value }}
-                />
-                <span>{color.name}</span>
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-
-          {/* Cỡ chữ */}
-          <SettingItem
-            label="Cỡ chữ"
-            value={<span className="text-gray-300 text-xs">{localSettings.fontSize}pt</span>}
-            onSelect={() => {}}
-          >
-            {PRESET_FONT_SIZES.map((size) => (
-              <DropdownMenuItem
-                key={size}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, fontSize: size })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
-              >
-                {size}pt
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-
-          {/* Độ trong */}
-          <SettingItem
-            label="Độ trong"
-            value={<span className="text-gray-300 text-xs">{localSettings.textOpacity}%</span>}
-            onSelect={() => {}}
-          >
-            {OPACITY_OPTIONS.map((opacity) => (
-              <DropdownMenuItem
-                key={opacity}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, textOpacity: opacity })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
-              >
-                {opacity}%
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-
-          {/* Font chữ */}
-          <SettingItem
-            label="Font chữ"
-            value={<span className="text-gray-300 text-xs">{localSettings.fontFamily}</span>}
-            onSelect={() => {}}
-          >
-            {PRESET_FONTS.map((font) => (
-              <DropdownMenuItem
-                key={font}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, fontFamily: font })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
-              >
-                {font}
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-
-          {/* Viền chữ */}
-          <SettingItem
-            label="Viền chữ"
-            value={<span className="text-gray-300 text-xs">{getTextEffectLabel(localSettings.textEffect)}</span>}
-            onSelect={() => {}}
-          >
-            {TEXT_EFFECT_OPTIONS.map((effect) => (
-              <DropdownMenuItem
-                key={effect.value}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, textEffect: effect.value as 'none' | 'stroke' | 'shadow' })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
-              >
-                {effect.label}
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-
-          {/* Màu nền */}
-          <SettingItem
-            label="Màu nền"
-            value={
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="w-3.5 h-3.5 rounded-full border border-[#2D2D2D]"
-                  style={{ backgroundColor: localSettings.backgroundColor }}
-                />
-                <span className="text-gray-300 text-xs">{getColorName(localSettings.backgroundColor)}</span>
-              </div>
-            }
-            onSelect={() => {}}
-          >
-            {PRESET_COLORS.map((color) => (
-              <DropdownMenuItem
-                key={color.value}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, backgroundColor: color.value })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center gap-1.5 text-xs py-1.5"
-              >
-                <div
-                  className="w-3.5 h-3.5 rounded-full border border-[#2D2D2D]"
-                  style={{ backgroundColor: color.value }}
-                />
-                <span>{color.name}</span>
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-
-          {/* Độ trong Nền */}
-          <SettingItem
-            label="Độ trong Nền"
-            value={<span className="text-gray-300 text-xs">{localSettings.backgroundOpacity}%</span>}
-            onSelect={() => {}}
-          >
-            {OPACITY_OPTIONS.map((opacity) => (
-              <DropdownMenuItem
-                key={opacity}
-                onClick={() =>
-                  setLocalSettings({ ...localSettings, backgroundOpacity: opacity })
-                }
-                className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
-              >
-                {opacity}%
-              </DropdownMenuItem>
-            ))}
-          </SettingItem>
-        </div>
-
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#2D2D2D]">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            size="sm"
-            className="border-[#2D2D2D] text-white hover:bg-[#2D2D2D] text-xs h-7 px-3"
-          >
-            Mặc định
-          </Button>
-          <div className="flex gap-1.5">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              size="sm"
-              className="border-[#2D2D2D] text-white hover:bg-[#2D2D2D] text-xs h-7 px-3"
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleSave}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-3"
-            >
-              Lưu
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  return null;
 }
 

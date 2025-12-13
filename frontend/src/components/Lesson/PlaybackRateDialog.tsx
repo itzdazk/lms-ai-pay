@@ -1,0 +1,90 @@
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import * as React from 'react';
+import { Button } from '../ui/button';
+import { DarkOutlineButton } from '../ui/buttons';
+import { Check } from 'lucide-react';
+
+interface PlaybackRateDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  currentRate: number;
+  onRateChange: (rate: number) => void;
+  container?: HTMLElement | null;
+}
+
+const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+
+export function PlaybackRateDialog({
+  open,
+  onOpenChange,
+  currentRate,
+  onRateChange,
+  container,
+}: PlaybackRateDialogProps) {
+  const [selectedRate, setSelectedRate] = useState(currentRate);
+
+  useEffect(() => {
+    setSelectedRate(currentRate);
+  }, [currentRate, open]);
+
+  const handleRateSelect = (rate: number) => {
+    setSelectedRate(rate);
+    onRateChange(rate);
+    onOpenChange(false);
+  };
+
+  // Always use the same UI (fullscreen style) regardless of container
+  if (open) {
+    const targetContainer = container || document.body;
+    return createPortal(
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
+        <div 
+          className="bg-[#1A1A1A] border-[#2D2D2D] text-white w-[180px] rounded-lg shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 pt-3 pb-2 border-b border-[#2D2D2D] relative">
+            <h2 className="text-white text-sm font-semibold">Tốc độ</h2>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white w-5 h-5 flex items-center justify-center rounded hover:bg-[#2D2D2D] text-xs"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="px-3 py-2 space-y-0.5">
+            {PLAYBACK_RATES.map((rate) => (
+              <button
+                key={rate}
+                onClick={() => handleRateSelect(rate)}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-white hover:bg-[#2D2D2D] cursor-pointer transition-colors ${
+                  selectedRate === rate ? 'bg-[#2D2D2D]' : ''
+                }`}
+              >
+                <span className="text-xs">{rate}x</span>
+                {selectedRate === rate && (
+                  <Check className="h-3.5 w-3.5 text-yellow-400" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-end px-3 py-2 border-t border-[#2D2D2D]">
+            <DarkOutlineButton
+              onClick={() => onOpenChange(false)}
+              size="sm"
+              className="text-xs h-6 px-2.5"
+            >
+              Hủy
+            </DarkOutlineButton>
+          </div>
+        </div>
+      </div>,
+      targetContainer
+    );
+  }
+
+  return null;
+}
+

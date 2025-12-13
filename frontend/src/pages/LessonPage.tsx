@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Tabs, TabsContent } from '../components/ui/tabs';
+import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
 import {
   ChevronLeft,
   FileText,
@@ -480,41 +481,35 @@ export function LessonPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
+                      <DarkOutlineButton
                         size="sm"
-                        className="border-[#2D2D2D] !text-white hover:bg-[#1F1F1F]"
                         onClick={handleMarkComplete}
                         disabled={!isEnrolled || completedLessonIds.includes(selectedLesson.id)}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         {completedLessonIds.includes(selectedLesson.id) ? 'Đã hoàn thành' : 'Đánh dấu hoàn thành'}
-                      </Button>
+                      </DarkOutlineButton>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <Button
-                      variant="outline"
+                    <DarkOutlineButton
                       size="sm"
-                      className="border-[#2D2D2D] !text-white hover:bg-[#1F1F1F]"
                       onClick={() => navigateToLesson('prev')}
                       disabled={!lessons.find((l) => l.id === selectedLesson.id) || lessons.findIndex((l) => l.id === selectedLesson.id) === 0}
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Bài trước
-                    </Button>
-                    <Button
-                      variant="outline"
+                    </DarkOutlineButton>
+                    <DarkOutlineButton
                       size="sm"
-                      className="border-[#2D2D2D] !text-white hover:bg-[#1F1F1F]"
                       onClick={() => navigateToLesson('next')}
                       disabled={!lessons.find((l) => l.id === selectedLesson.id) || lessons.findIndex((l) => l.id === selectedLesson.id) === lessons.length - 1}
                     >
                       Bài tiếp theo
                       <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
+                    </DarkOutlineButton>
                   </div>
                 </CardContent>
               </Card>
@@ -522,19 +517,19 @@ export function LessonPage() {
 
             {/* Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="w-full bg-[#1A1A1A] border border-[#2D2D2D]">
-                <TabsTrigger value="overview" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
+              <DarkTabsList>
+                <DarkTabsTrigger value="overview" variant="blue">
                   Tổng quan
-                </TabsTrigger>
-                <TabsTrigger value="transcript" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
+                </DarkTabsTrigger>
+                <DarkTabsTrigger value="transcript" variant="blue">
                   <FileText className="h-4 w-4 mr-2" />
                   Transcript
-                </TabsTrigger>
-                <TabsTrigger value="notes" className="flex-1 !text-white data-[state=active]:!text-white data-[state=active]:bg-[#2D2D2D]">
+                </DarkTabsTrigger>
+                <DarkTabsTrigger value="notes" variant="blue">
                   <BookOpen className="h-4 w-4 mr-2" />
                   Ghi chú
-                </TabsTrigger>
-              </TabsList>
+                </DarkTabsTrigger>
+              </DarkTabsList>
 
               <TabsContent value="overview" className="mt-6">
                 <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
