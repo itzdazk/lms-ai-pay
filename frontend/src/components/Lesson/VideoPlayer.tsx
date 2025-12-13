@@ -57,6 +57,7 @@ export function VideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [showSubtitles, setShowSubtitles] = useState(false);
+  const [showCenterPlayButton, setShowCenterPlayButton] = useState(false);
   const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false);
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>(DEFAULT_SETTINGS);
   const [playbackRateDialogOpen, setPlaybackRateDialogOpen] = useState(false);
@@ -83,6 +84,9 @@ export function VideoPlayer({
         videoRef.current.play();
       }
       setIsPlaying(!isPlaying);
+      // Show center play button
+      setShowCenterPlayButton(true);
+      setTimeout(() => setShowCenterPlayButton(false), 1000);
     }
   };
 
@@ -138,7 +142,6 @@ export function VideoPlayer({
     }
   };
 
-
   // Add global mouse event listeners for dragging
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -184,14 +187,14 @@ export function VideoPlayer({
   // Handle skip backward (10 seconds)
   const skipBackward = () => {
     if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(0, currentTime - 10);
+      videoRef.current.currentTime = Math.max(0, currentTime - 5);
     }
   };
 
-  // Handle skip forward (10 seconds)
+  // Handle skip forward (5 seconds)
   const skipForward = () => {
     if (videoRef.current) {
-      videoRef.current.currentTime = Math.min(duration, currentTime + 10);
+      videoRef.current.currentTime = Math.min(duration, currentTime + 5);
     }
   };
 
@@ -646,17 +649,52 @@ export function VideoPlayer({
         </div>
       )}
 
+      {/* Clickable overlay for play/pause */}
+      <div 
+        className="absolute inset-0 z-40 cursor-pointer"
+        onClick={(e) => {
+          // Don't toggle if clicking on controls
+          const target = e.target as HTMLElement;
+          if (!target.closest('.controls-container') && !target.closest('button')) {
+            togglePlay();
+          }
+        }}
+      >
+        {/* Center Play/Pause Button */}
+        {showCenterPlayButton && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="bg-black/60 rounded-full p-4 transition-opacity duration-300">
+              {isPlaying ? (
+                <Pause className="h-16 w-16 text-white" />
+              ) : (
+                <Play className="h-16 w-16 text-white" />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Controls overlay */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 controls-container ${
           showControls ? 'opacity-100' : 'opacity-0'
         }`}
       >
         {/* Progress bar */}
         <div className="absolute bottom-16 left-0 right-0 px-4">
+          {/* Timeline */}
+          <div className="flex items-center justify-between mb-1 px-0.5">
+            <span className="text-white text-xs font-medium">
+              {formatTime(currentTime)}
+            </span>
+            <span className="text-white text-xs font-medium">
+              {formatTime(duration)}
+            </span>
+          </div>
+          {/* Slider */}
           <div
             ref={progressBarRef}
-            className="h-2 bg-white/20 rounded-full overflow-visible cursor-pointer group/progress hover:h-3 transition-all relative"
+            className="h-3 bg-white/20 rounded-full overflow-visible cursor-pointer group/progress hover:h-4 transition-all relative"
             onClick={handleSeek}
             onMouseDown={handleDragStart}
           >
@@ -666,10 +704,10 @@ export function VideoPlayer({
             />
             {/* Progress thumb */}
             <div
-              className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full transition-opacity shadow-lg cursor-grab active:cursor-grabbing ${
+              className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-blue-600 rounded-full transition-opacity shadow-lg cursor-grab active:cursor-grabbing ${
                 isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover/progress:opacity-100'
               }`}
-              style={{ left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 8px)` }}
+              style={{ left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 10px)` }}
             />
           </div>
         </div>
@@ -691,20 +729,26 @@ export function VideoPlayer({
                 )}
               </Button>
               <Button
-                size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-8 px-2.5"
                 onClick={skipBackward}
+                title="Lùi 5 giây"
               >
-                <SkipBack className="h-4 w-4" />
+                <div className="flex items-center gap-1">
+                  <SkipBack className="h-3.5 w-3.5" />
+                  <span className="text-xs font-semibold">5s</span>
+                </div>
               </Button>
               <Button
-                size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-8 px-2.5"
                 onClick={skipForward}
+                title="Tiến 5 giây"
               >
-                <SkipForward className="h-4 w-4" />
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-semibold">5s</span>
+                  <SkipForward className="h-3.5 w-3.5" />
+                </div>
               </Button>
               <div className="flex items-center gap-2 ml-2">
                 <Button
