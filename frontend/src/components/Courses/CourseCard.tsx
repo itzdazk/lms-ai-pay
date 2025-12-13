@@ -25,8 +25,6 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, className = '' }: CourseCardProps) {
-    console.log('CourseCard.tsx:', course)
-
     const levelBadge = getCourseLevelBadge(course.level)
     const priceInfo = getCoursePrice(course)
 

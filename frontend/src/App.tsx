@@ -20,7 +20,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage'
 import { CoursePreviewPage } from './pages/CoursePreviewPage'
 import { AboutPage } from './pages/AboutPage'
 import { CategoriesPage } from './pages/CategoriesPage'
-import { CategoriesDetailPage } from './pages/CategoriesDetail'
+import { CategoriesDetailPage } from './pages/CategoriesDetailPage'
 
 // Student Pages
 import { StudentDashboard } from './pages/StudentDashboard'
