@@ -85,7 +85,7 @@ export function LessonList({
         )}
       </CardHeader>
       <CardContent>
-        <div className="space-y-1 max-h-[600px] overflow-y-auto">
+        <div className="space-y-1 max-h-[600px] overflow-y-auto custom-scrollbar">
           {sortedLessons.map((lesson, index) => {
             const isSelected = selectedLessonId === lesson.id;
             const isCompleted = completedLessonIds.includes(lesson.id);

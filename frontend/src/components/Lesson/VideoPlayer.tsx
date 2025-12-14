@@ -32,6 +32,7 @@ interface VideoPlayerProps {
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
   initialTime?: number;
+  seekTo?: number; // Seek to this time when it changes
   className?: string;
 }
 
@@ -41,6 +42,7 @@ export function VideoPlayer({
   onTimeUpdate,
   onEnded,
   initialTime = 0,
+  seekTo,
   className = '',
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -56,8 +58,17 @@ export function VideoPlayer({
   const [fullscreenContainer, setFullscreenContainer] = useState<HTMLElement | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [showSubtitles, setShowSubtitles] = useState(false);
+  // Load subtitle visibility state from localStorage
+  const [showSubtitles, setShowSubtitles] = useState(() => {
+    try {
+      const saved = localStorage.getItem('subtitle-visible');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [showCenterPlayButton, setShowCenterPlayButton] = useState(false);
+  const [showInitialPlayButton, setShowInitialPlayButton] = useState(false);
   const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false);
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>(DEFAULT_SETTINGS);
   const [playbackRateDialogOpen, setPlaybackRateDialogOpen] = useState(false);
@@ -66,7 +77,6 @@ export function VideoPlayer({
   const subtitleStyleRef = useRef<HTMLStyleElement | null>(null);
   const isDraggingRef = useRef(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const hasAttemptedAutoplayRef = useRef(false);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -84,6 +94,8 @@ export function VideoPlayer({
         videoRef.current.play();
       }
       setIsPlaying(!isPlaying);
+      // Hide initial play button when user starts playing
+      setShowInitialPlayButton(false);
       // Show center play button
       setShowCenterPlayButton(true);
       setTimeout(() => setShowCenterPlayButton(false), 1000);
@@ -222,15 +234,9 @@ export function VideoPlayer({
       if (initialTime > 0) {
         video.currentTime = initialTime;
         setCurrentTime(initialTime);
-      }
-      // Auto-play video when metadata is loaded (with sound)
-      if (!hasAttemptedAutoplayRef.current) {
-        hasAttemptedAutoplayRef.current = true;
-        video.play().catch((error) => {
-          // Autoplay may be blocked by browser, that's okay
-          // User will need to click play manually
-          console.log('Autoplay prevented:', error);
-        });
+      } else {
+        // Show initial play button when video is loaded and not playing
+        setShowInitialPlayButton(true);
       }
     };
 
@@ -248,7 +254,10 @@ export function VideoPlayer({
       }
     };
 
-    const handlePlay = () => setIsPlaying(true);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setShowInitialPlayButton(false);
+    };
     const handlePause = () => setIsPlaying(false);
 
     const handleFullscreenChange = () => {
@@ -558,37 +567,19 @@ export function VideoPlayer({
     }
   }, [subtitleSettings, subtitleUrl, showSubtitles]);
 
-  // Auto-play when videoUrl changes
+  // Reset initial play button when videoUrl changes
   useEffect(() => {
-    if (videoRef.current && videoUrl) {
-      // Reset autoplay attempt flag when videoUrl changes
-      hasAttemptedAutoplayRef.current = false;
-      
-      const video = videoRef.current;
-      // Wait for video to be ready
-      const handleCanPlay = () => {
-        if (!hasAttemptedAutoplayRef.current) {
-          hasAttemptedAutoplayRef.current = true;
-          // Try autoplay with sound
-          video.play().catch((error) => {
-            // Autoplay may be blocked by browser, that's okay
-            // User will need to click play manually
-            console.log('Autoplay prevented:', error);
-          });
-        }
-      };
-      
-      if (video.readyState >= 3) {
-        // Video is already loaded enough to play
-        handleCanPlay();
-      } else {
-        video.addEventListener('canplay', handleCanPlay, { once: true });
-        return () => {
-          video.removeEventListener('canplay', handleCanPlay);
-        };
-      }
-    }
+    setShowInitialPlayButton(false);
+    setIsLoading(true);
   }, [videoUrl]);
+
+  // Handle seek from external (e.g., transcript click)
+  useEffect(() => {
+    if (seekTo !== undefined && seekTo !== null && videoRef.current) {
+      videoRef.current.currentTime = seekTo;
+      setCurrentTime(seekTo);
+    }
+  }, [seekTo]);
 
   // Save subtitle settings to localStorage
   const handleSubtitleSettingsChange = (settings: SubtitleSettings) => {
@@ -627,8 +618,6 @@ export function VideoPlayer({
         id="lesson-video-player"
         src={videoUrl}
         className="w-full h-full"
-        onClick={togglePlay}
-        autoPlay
         playsInline
       >
         {subtitleUrl && (
@@ -649,39 +638,57 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Clickable overlay for play/pause */}
-      <div 
-        className="absolute inset-0 z-40 cursor-pointer"
-        onClick={(e) => {
-          // Don't toggle if clicking on controls
-          const target = e.target as HTMLElement;
-          if (!target.closest('.controls-container') && !target.closest('button')) {
-            togglePlay();
-          }
-        }}
-      >
-        {/* Center Play/Pause Button */}
-        {showCenterPlayButton && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/60 rounded-full p-4 transition-opacity duration-300">
-              {isPlaying ? (
-                <Pause className="h-16 w-16 text-white" />
-              ) : (
-                <Play className="h-16 w-16 text-white" />
-              )}
+      {/* Clickable overlay for play/pause - placed before controls */}
+      {!(subtitleSettingsOpen || playbackRateDialogOpen) && (
+        <div 
+          className="absolute inset-0 z-40 cursor-pointer"
+          onClick={(e) => {
+            // Don't toggle if clicking on controls or buttons
+            const target = e.target as HTMLElement;
+            const clickedElement = target.closest('.controls-container') || 
+                                   target.closest('button') || 
+                                   target.closest('[role="button"]') || 
+                                   target.closest('[role="menuitem"]') ||
+                                   target.closest('[role="menu"]') ||
+                                   target.closest('[data-radix-portal]') ||
+                                   target.closest('[data-slot="dropdown-menu-content"]') ||
+                                   target.closest('[data-slot="select-content"]');
+            
+            if (!clickedElement) {
+              togglePlay();
+            }
+          }}
+        >
+          {/* Center Play/Pause Button */}
+          {(showCenterPlayButton || showInitialPlayButton) && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="relative">
+                {/* Glow effect */}
+                <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-lg animate-pulse" />
+                {/* Main button */}
+                <div className="relative bg-gradient-to-br from-black/90 via-black/80 to-black/90 rounded-full p-4 shadow-2xl border border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-110">
+                  <div className="relative">
+                    {isPlaying ? (
+                      <Pause className="h-14 w-14 text-white drop-shadow-lg" fill="currentColor" />
+                    ) : (
+                      <Play className="h-14 w-14 text-white drop-shadow-lg ml-1" fill="currentColor" />
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Controls overlay */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 controls-container ${
+        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 controls-container z-50 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
         }`}
       >
         {/* Progress bar */}
-        <div className="absolute bottom-16 left-0 right-0 px-4">
+        <div className="absolute bottom-16 left-0 right-0 px-4 pointer-events-auto">
           {/* Timeline */}
           <div className="flex items-center justify-between mb-1 px-0.5">
             <span className="text-white text-xs font-medium">
@@ -713,7 +720,7 @@ export function VideoPlayer({
         </div>
 
         {/* Controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-2">
               <Button
@@ -736,7 +743,7 @@ export function VideoPlayer({
               >
                 <div className="flex items-center gap-1">
                   <SkipBack className="h-3.5 w-3.5" />
-                  <span className="text-xs font-semibold">5s</span>
+                  <span className="text-xs font-semibold">5</span>
                 </div>
               </Button>
               <Button
@@ -746,7 +753,7 @@ export function VideoPlayer({
                 title="Tiến 5 giây"
               >
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold">5s</span>
+                  <span className="text-xs font-semibold">5</span>
                   <SkipForward className="h-3.5 w-3.5" />
                 </div>
               </Button>
@@ -791,6 +798,12 @@ export function VideoPlayer({
                     onClick={() => {
                       const newValue = !showSubtitles;
                       setShowSubtitles(newValue);
+                      // Save to localStorage
+                      try {
+                        localStorage.setItem('subtitle-visible', String(newValue));
+                      } catch (error) {
+                        console.error('Error saving subtitle visibility:', error);
+                      }
                       if (videoRef.current) {
                         const tracks = videoRef.current.textTracks;
                         for (let i = 0; i < tracks.length; i++) {
@@ -876,6 +889,7 @@ export function VideoPlayer({
           </div>
         </div>
       </div>
+
 
       {/* Subtitle Settings Dialog */}
       <SubtitleSettingsDialog

@@ -126,9 +126,10 @@ export function SubtitleSettingsDialog({
           {PRESET_COLORS.map((color) => (
             <DropdownMenuItem
               key={color.value}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, color: color.value })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, color: color.value });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center gap-1.5 text-xs py-1.5"
             >
               <div
@@ -149,9 +150,10 @@ export function SubtitleSettingsDialog({
           {PRESET_FONT_SIZES.map((size) => (
             <DropdownMenuItem
               key={size}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, fontSize: size })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, fontSize: size });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
             >
               {size}pt
@@ -168,9 +170,10 @@ export function SubtitleSettingsDialog({
           {OPACITY_OPTIONS.map((opacity) => (
             <DropdownMenuItem
               key={opacity}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, textOpacity: opacity })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, textOpacity: opacity });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
             >
               {opacity}%
@@ -187,9 +190,10 @@ export function SubtitleSettingsDialog({
           {PRESET_FONTS.map((font) => (
             <DropdownMenuItem
               key={font}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, fontFamily: font })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, fontFamily: font });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
             >
               {font}
@@ -206,9 +210,10 @@ export function SubtitleSettingsDialog({
           {TEXT_EFFECT_OPTIONS.map((effect) => (
             <DropdownMenuItem
               key={effect.value}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, textEffect: effect.value as 'none' | 'stroke' | 'shadow' })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, textEffect: effect.value as 'none' | 'stroke' | 'shadow' });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
             >
               {effect.label}
@@ -233,9 +238,10 @@ export function SubtitleSettingsDialog({
           {PRESET_COLORS.map((color) => (
             <DropdownMenuItem
               key={color.value}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, backgroundColor: color.value })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, backgroundColor: color.value });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center gap-1.5 text-xs py-1.5"
             >
               <div
@@ -256,9 +262,10 @@ export function SubtitleSettingsDialog({
           {OPACITY_OPTIONS.map((opacity) => (
             <DropdownMenuItem
               key={opacity}
-              onClick={() =>
-                setLocalSettings({ ...localSettings, backgroundOpacity: opacity })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalSettings({ ...localSettings, backgroundOpacity: opacity });
+              }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer text-xs py-1.5"
             >
               {opacity}%
@@ -306,7 +313,7 @@ export function SubtitleSettingsDialog({
     onSelect: () => void;
     children: React.ReactNode;
   }) => (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           className="w-full flex items-center justify-between py-2 px-0 hover:bg-[#2D2D2D] transition-colors rounded relative z-[105]"
@@ -325,6 +332,22 @@ export function SubtitleSettingsDialog({
       <DropdownMenuContent
         align="end"
         className="bg-[#1A1A1A] border-[#2D2D2D] text-white min-w-[160px] z-[110]"
+        container={container || undefined}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking inside the dialog or on dialog backdrop
+          const target = e.target as HTMLElement;
+          const dialogElement = target.closest('[role="dialog"]') || 
+                                target.closest('.bg-black\\/50') ||
+                                target.closest('.bg-\\[\\#1A1A1A\\]');
+          if (dialogElement) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          // Prevent closing dropdown when pressing escape (let dialog handle it)
+          e.preventDefault();
+        }}
       >
         {children}
       </DropdownMenuContent>
@@ -335,10 +358,28 @@ export function SubtitleSettingsDialog({
   if (open) {
     const targetContainer = container || document.body;
     return createPortal(
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
+      <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" 
+        onClick={(e) => {
+          // Only close if clicking directly on backdrop, not on dropdown menus
+          const target = e.target as HTMLElement;
+          if (target.classList.contains('bg-black') || target.classList.contains('bg-black/50')) {
+            onOpenChange(false);
+          }
+        }}
+        onPointerDown={(e) => {
+          // Prevent closing when clicking on dropdown menus
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-slot="dropdown-menu-content"]') || 
+              target.closest('[data-radix-portal]')) {
+            e.stopPropagation();
+          }
+        }}
+      >
         <div 
           className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-xs w-full rounded-lg shadow-lg"
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="px-4 pt-4 pb-3 border-b border-[#2D2D2D] relative">
             <h2 className="text-white text-base font-semibold">Cài đặt phụ đề</h2>

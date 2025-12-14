@@ -293,7 +293,7 @@ export function Transcript({
       <CardContent className="pt-6">
         <div
           ref={transcriptRef}
-          className="space-y-4 max-h-96 overflow-y-auto"
+          className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar"
           onWheel={() => {
             // User is scrolling with mouse wheel
             isUserScrollingRef.current = true;

@@ -46,6 +46,7 @@ export function LessonPage() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
+  const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
   
   const progressSaveTimeoutRef = useRef<number | null>(null);
   const previousCourseSlugRef = useRef<string | null>(null);
@@ -358,8 +359,11 @@ export function LessonPage() {
 
   // Handle transcript time click
   const handleTranscriptTimeClick = (time: number) => {
-    // This will be handled by VideoPlayer component
-    // We need to pass a ref to VideoPlayer to control it
+    setSeekTo(time);
+    // Reset seekTo after a short delay to allow seeking to the same time again if needed
+    setTimeout(() => {
+      setSeekTo(undefined);
+    }, 100);
   };
 
   // Navigate to next/previous lesson
@@ -466,6 +470,7 @@ export function LessonPage() {
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleVideoEnded}
                 initialTime={initialVideoTime}
+                seekTo={seekTo}
               />
             </Card>
 
