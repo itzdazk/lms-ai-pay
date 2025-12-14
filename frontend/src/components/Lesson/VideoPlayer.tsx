@@ -70,7 +70,10 @@ export function VideoPlayer({
   const [showCenterPlayButton, setShowCenterPlayButton] = useState(false);
   const [showInitialPlayButton, setShowInitialPlayButton] = useState(false);
   const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false);
-  const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>(DEFAULT_SETTINGS);
+  // Don't initialize with DEFAULT_SETTINGS - wait for localStorage to load
+  // This prevents applying white color styles before the saved settings are loaded
+  // Use null initially, then set to actual settings once loaded
+  const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings | null>(null);
   const [playbackRateDialogOpen, setPlaybackRateDialogOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -238,6 +241,23 @@ export function VideoPlayer({
         // Show initial play button when video is loaded and not playing
         setShowInitialPlayButton(true);
       }
+      // Force re-apply subtitle settings when video metadata is loaded
+      // This ensures settings are applied even after page reload
+      if (subtitleSettings && showSubtitles) {
+        setTimeout(() => {
+          const tracks = video.textTracks;
+          for (let i = 0; i < tracks.length; i++) {
+            if (tracks[i].kind === 'subtitles' && tracks[i].mode === 'showing') {
+              tracks[i].mode = 'hidden';
+              setTimeout(() => {
+                if (video) {
+                  tracks[i].mode = 'showing';
+                }
+              }, 50);
+            }
+          }
+        }, 200);
+      }
     };
 
     const handleTimeUpdate = () => {
@@ -295,6 +315,7 @@ export function VideoPlayer({
       const saved = localStorage.getItem('subtitle-settings');
       if (saved) {
         const parsed = JSON.parse(saved);
+        console.log('[VideoPlayer] Loading subtitle settings from localStorage:', parsed);
         // Migrate old format to new format
         if ('textStroke' in parsed) {
           parsed.textEffect = parsed.textStroke ? 'stroke' : 'none';
@@ -311,12 +332,15 @@ export function VideoPlayer({
           backgroundColor: parsed.backgroundColor || '#000000',
           backgroundOpacity: parsed.backgroundOpacity !== undefined ? parsed.backgroundOpacity : 0,
         };
+        console.log('[VideoPlayer] Migrated settings:', migrated);
         setSubtitleSettings(migrated);
+        setSettingsLoaded(true);
       } else {
         // Only set default if nothing is saved
+        console.log('[VideoPlayer] No saved settings, using defaults');
         setSubtitleSettings(DEFAULT_SETTINGS);
+        setSettingsLoaded(true);
       }
-      setSettingsLoaded(true);
     } catch (error) {
       console.error('Error loading subtitle settings:', error);
       setSubtitleSettings(DEFAULT_SETTINGS);
@@ -324,10 +348,101 @@ export function VideoPlayer({
     }
   }, [settingsLoaded]);
 
+  // Debug: Log when subtitleSettings changes
+  useEffect(() => {
+    if (subtitleSettings) {
+      console.log('[VideoPlayer] subtitleSettings state updated:', subtitleSettings);
+    }
+  }, [subtitleSettings]);
+
+  // Re-apply subtitle settings when video is ready and settings are loaded (after page reload)
+  useEffect(() => {
+    console.log('[VideoPlayer] Re-apply effect triggered:', {
+      hasVideo: !!videoRef.current,
+      hasSettings: !!subtitleSettings,
+      settingsLoaded,
+      videoReadyState: videoRef.current?.readyState
+    });
+    
+    if (!videoRef.current || !subtitleSettings || !settingsLoaded) {
+      console.log('[VideoPlayer] Re-apply check failed - waiting for conditions');
+      return;
+    }
+    
+    const video = videoRef.current;
+    // Wait for video to have metadata
+    const checkAndApply = () => {
+      if (video.readyState >= 1) {
+        console.log('[VideoPlayer] Video ready with settings loaded, forcing subtitle re-render', subtitleSettings);
+        // Force re-render of subtitle track to apply loaded settings
+        // Styles should already be applied by the other useEffect, just need to refresh the track
+        setTimeout(() => {
+          if (video && showSubtitles) {
+            const tracks = video.textTracks;
+            for (let i = 0; i < tracks.length; i++) {
+              if (tracks[i].kind === 'subtitles') {
+                const wasShowing = tracks[i].mode === 'showing';
+                if (wasShowing) {
+                  tracks[i].mode = 'hidden';
+                  setTimeout(() => {
+                    if (video) {
+                      tracks[i].mode = 'showing';
+                      console.log('[VideoPlayer] Subtitle track re-enabled with new settings');
+                    }
+                  }, 200);
+                }
+              }
+            }
+          }
+        }, 300); // Wait for styles to be applied first
+      } else {
+        // Wait for metadata
+        const handleMetadata = () => {
+          console.log('[VideoPlayer] Metadata loaded, will apply settings after styles are ready');
+          // Styles will be applied by the other useEffect when video ref is ready
+          // Just refresh the track after a delay to ensure styles are applied
+          setTimeout(() => {
+            if (video && showSubtitles) {
+              const tracks = video.textTracks;
+              for (let i = 0; i < tracks.length; i++) {
+                if (tracks[i].kind === 'subtitles' && tracks[i].mode === 'showing') {
+                  tracks[i].mode = 'hidden';
+                  setTimeout(() => {
+                    if (video) {
+                      tracks[i].mode = 'showing';
+                      console.log('[VideoPlayer] Subtitle track refreshed after metadata load');
+                    }
+                  }, 200);
+                }
+              }
+            }
+          }, 500);
+        };
+        video.addEventListener('loadedmetadata', handleMetadata, { once: true });
+        return () => {
+          video.removeEventListener('loadedmetadata', handleMetadata);
+        };
+      }
+    };
+    
+    checkAndApply();
+  }, [settingsLoaded, videoUrl, subtitleSettings, showSubtitles]); // Include subtitleSettings to re-apply when it changes
+
   // Apply subtitle styles
   useEffect(() => {
-    if (!subtitleSettings) return;
-    if (!videoRef.current) return;
+    if (!subtitleSettings) {
+      console.log('[VideoPlayer] No subtitle settings, skipping style application');
+      return;
+    }
+    if (!videoRef.current) {
+      console.log('[VideoPlayer] No video ref, skipping style application');
+      return;
+    }
+    if (!settingsLoaded) {
+      console.log('[VideoPlayer] Settings not loaded yet, skipping style application');
+      return;
+    }
+    console.log('[VideoPlayer] Applying subtitle styles:', subtitleSettings);
     
     // Determine subtitle position based on controls visibility
     // When controls are visible, push subtitle higher to avoid overlap
@@ -352,6 +467,14 @@ export function VideoPlayer({
     }
     const bgColor = subtitleSettings.backgroundColor || '#000000';
     const bgOpacity = (subtitleSettings.backgroundOpacity !== undefined ? subtitleSettings.backgroundOpacity : 0) / 100;
+    
+    console.log('[VideoPlayer] Applying background color from settings:', {
+      rawBgColor: subtitleSettings.backgroundColor,
+      bgColor,
+      backgroundOpacity: subtitleSettings.backgroundOpacity,
+      bgOpacity,
+      settings: subtitleSettings
+    });
     
     // Parse hex color safely
     let bgR = 0, bgG = 0, bgB = 0;
@@ -378,10 +501,16 @@ export function VideoPlayer({
       console.error('Error parsing background color:', error);
     }
     const bgRgba = `rgba(${bgR}, ${bgG}, ${bgB}, ${bgOpacity})`;
+    console.log('[VideoPlayer] Parsed background color RGBA:', bgRgba, { bgR, bgG, bgB, bgOpacity });
 
     // Text color with opacity
     const textColor = subtitleSettings.color || '#FFFFFF';
-    const textOpacity = (subtitleSettings.textOpacity || 100) / 100;
+    console.log('[VideoPlayer] Applying text color from settings:', {
+      rawColor: subtitleSettings.color,
+      textColor,
+      settings: subtitleSettings
+    });
+    const textOpacity = (subtitleSettings.textOpacity !== undefined ? subtitleSettings.textOpacity : 100) / 100;
     let textR = 255, textG = 255, textB = 255;
     try {
       if (textColor.startsWith('#')) {
@@ -406,6 +535,7 @@ export function VideoPlayer({
       console.error('Error parsing text color:', error);
     }
     const textRgba = `rgba(${textR}, ${textG}, ${textB}, ${textOpacity})`;
+    console.log('[VideoPlayer] Parsed text color RGBA:', textRgba, { textR, textG, textB, textOpacity });
 
     // Text effect
     let textEffectStyle = '';
@@ -421,6 +551,15 @@ export function VideoPlayer({
     // Get video element ID for more specific selector
     const videoId = videoRef.current.id || 'lesson-video-player';
     const videoSelector = `#${videoId}`;
+    
+    console.log('[VideoPlayer] Creating CSS with:', {
+      videoSelector,
+      textRgba,
+      bgRgba,
+      fontSize: subtitleSettings.fontSize,
+      fontFamily: subtitleSettings.fontFamily,
+      textEffect: subtitleSettings.textEffect
+    });
     
     // Apply styles with more specific selectors
     // Use both standard and webkit selectors for better browser compatibility
@@ -475,7 +614,8 @@ export function VideoPlayer({
       }
     `;
     
-    // Debug: Log current settings
+    console.log('[VideoPlayer] CSS applied, first 300 chars:', style.textContent.substring(0, 300));
+    console.log('[VideoPlayer] Background RGBA in CSS:', bgRgba);
     
     // Force a re-render of the subtitle track after CSS is applied
     // Only do this when subtitleSettings change, not when showControls changes
@@ -498,7 +638,7 @@ export function VideoPlayer({
         }
       }, 100);
     }
-  }, [subtitleSettings, showSubtitles]);
+  }, [subtitleSettings, showSubtitles, settingsLoaded, videoUrl]); // Add videoUrl to re-apply when video changes
   
   // Separate effect to update subtitle position when controls visibility changes
   // This only updates CSS, doesn't toggle track mode to avoid flickering
@@ -584,8 +724,10 @@ export function VideoPlayer({
   // Save subtitle settings to localStorage
   const handleSubtitleSettingsChange = (settings: SubtitleSettings) => {
     try {
+      console.log('[VideoPlayer] Saving subtitle settings:', settings);
       localStorage.setItem('subtitle-settings', JSON.stringify(settings));
       setSubtitleSettings(settings);
+      console.log('[VideoPlayer] Settings saved and state updated');
     } catch (error) {
       console.error('Error saving subtitle settings:', error);
     }
@@ -685,10 +827,18 @@ export function VideoPlayer({
       <div
         className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 controls-container z-50 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
-        }`}
+        } ${subtitleSettingsOpen || playbackRateDialogOpen ? 'pointer-events-none' : ''}`}
+        style={{ 
+          pointerEvents: (subtitleSettingsOpen || playbackRateDialogOpen) ? 'none' : undefined 
+        }}
       >
         {/* Progress bar */}
-        <div className="absolute bottom-16 left-0 right-0 px-4 pointer-events-auto">
+        <div 
+          className="absolute bottom-16 left-0 right-0 px-4 pointer-events-auto"
+          style={{ 
+            pointerEvents: (subtitleSettingsOpen || playbackRateDialogOpen) ? 'none' : 'auto' 
+          }}
+        >
           {/* Timeline */}
           <div className="flex items-center justify-between mb-1 px-0.5">
             <span className="text-white text-xs font-medium">
@@ -720,7 +870,12 @@ export function VideoPlayer({
         </div>
 
         {/* Controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
+        <div 
+          className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto"
+          style={{ 
+            pointerEvents: (subtitleSettingsOpen || playbackRateDialogOpen) ? 'none' : 'auto' 
+          }}
+        >
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-2">
               <Button
@@ -892,13 +1047,15 @@ export function VideoPlayer({
 
 
       {/* Subtitle Settings Dialog */}
-      <SubtitleSettingsDialog
-        open={subtitleSettingsOpen}
-        onOpenChange={setSubtitleSettingsOpen}
-        settings={subtitleSettings}
-        onSettingsChange={handleSubtitleSettingsChange}
-        container={fullscreenContainer || undefined}
-      />
+      {subtitleSettings && (
+        <SubtitleSettingsDialog
+          open={subtitleSettingsOpen}
+          onOpenChange={setSubtitleSettingsOpen}
+          settings={subtitleSettings}
+          onSettingsChange={handleSubtitleSettingsChange}
+          container={fullscreenContainer || undefined}
+        />
+      )}
       <PlaybackRateDialog
         open={playbackRateDialogOpen}
         onOpenChange={setPlaybackRateDialogOpen}
