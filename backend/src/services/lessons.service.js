@@ -195,6 +195,7 @@ class LessonsService {
             lessonOrder,
             isPreview,
             isPublished,
+            chapterId,
         } = data
 
         // Check if course exists and user is instructor
@@ -209,6 +210,26 @@ class LessonsService {
 
         if (!course) {
             throw new Error('Course not found')
+        }
+
+        // If chapterId is provided, verify it belongs to the course
+        let chapter = null
+        if (chapterId) {
+            chapter = await prisma.chapter.findUnique({
+                where: { id: parseInt(chapterId) },
+                select: {
+                    id: true,
+                    courseId: true,
+                },
+            })
+
+            if (!chapter) {
+                throw new Error('Chapter not found')
+            }
+
+            if (chapter.courseId !== courseId) {
+                throw new Error('Chapter does not belong to this course')
+            }
         }
 
         // Generate slug from title if not provided
@@ -248,20 +269,31 @@ class LessonsService {
         }
 
         // Get max lessonOrder if not provided
+        // If chapterId is provided, calculate order within chapter, otherwise within course
         let finalLessonOrder = lessonOrder
         if (!finalLessonOrder) {
+            const whereClause = chapterId
+                ? { chapterId: parseInt(chapterId) }
+                : { courseId, chapterId: null }
             const maxOrder = await prisma.lesson.aggregate({
-                where: { courseId },
+                where: whereClause,
                 _max: { lessonOrder: true },
             })
             finalLessonOrder = (maxOrder._max.lessonOrder || 0) + 1
         } else {
             // If order is provided, shift other lessons
+            const whereClause = chapterId
+                ? {
+                      chapterId: parseInt(chapterId),
+                      lessonOrder: { gte: finalLessonOrder },
+                  }
+                : {
+                      courseId,
+                      chapterId: null,
+                      lessonOrder: { gte: finalLessonOrder },
+                  }
             await prisma.lesson.updateMany({
-                where: {
-                    courseId,
-                    lessonOrder: { gte: finalLessonOrder },
-                },
+                where: whereClause,
                 data: {
                     lessonOrder: {
                         increment: 1,
@@ -273,6 +305,7 @@ class LessonsService {
         const lesson = await prisma.lesson.create({
             data: {
                 courseId,
+                chapterId: chapterId ? parseInt(chapterId) : null,
                 title,
                 slug: lessonSlug,
                 description,

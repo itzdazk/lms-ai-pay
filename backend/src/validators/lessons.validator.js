@@ -72,6 +72,11 @@ const createLessonValidator = [
         .isBoolean()
         .withMessage('isPublished must be a boolean'),
 
+    body('chapterId')
+        .optional()
+        .isInt({ min: 1 })
+        .withMessage('Chapter ID must be a positive integer'),
+
     validate,
 ]
 
