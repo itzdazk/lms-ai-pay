@@ -20,6 +20,8 @@ interface LessonListProps {
   completedLessonIds?: number[];
   isEnrolled?: boolean;
   courseTitle?: string;
+  completedLessons?: number;
+  totalLessons?: number;
 }
 
 export function LessonList({
@@ -31,6 +33,8 @@ export function LessonList({
   completedLessonIds = [],
   isEnrolled = false,
   courseTitle,
+  completedLessons = 0,
+  totalLessons = 0,
 }: LessonListProps) {
   // Ensure enrollmentProgress is a number
   const progress = typeof enrollmentProgress === 'number' 
@@ -113,7 +117,7 @@ export function LessonList({
   }, [selectedLessonId, chapters]);
 
   return (
-    <Card className="sticky top-24 bg-[#1A1A1A] border-[#2D2D2D]">
+    <Card className="sticky top-4 bg-[#1A1A1A] border-[#2D2D2D]">
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-white">
           <span>Nội dung khóa học</span>
@@ -121,15 +125,17 @@ export function LessonList({
             {chapters.length > 0 ? `${chapters.length} chương • ${totalLessonsCount} bài` : `${totalLessonsCount} bài`}
           </Badge>
         </CardTitle>
-        {courseTitle && (
-          <p className="text-sm text-gray-400 mt-1 line-clamp-2">{courseTitle}</p>
-        )}
         {isEnrolled && (
           <>
             <Progress value={progress} className="mt-2" />
             <p className="text-sm text-gray-400 mt-2">
               {progress.toFixed(0)}% hoàn thành
             </p>
+            {totalLessons > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {completedLessons}/{totalLessons} bài học đã hoàn thành
+              </p>
+            )}
           </>
         )}
       </CardHeader>

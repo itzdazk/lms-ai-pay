@@ -14,6 +14,10 @@ import {
   Loader2,
   ArrowLeft,
   ArrowRight,
+  Sun,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
@@ -21,6 +25,7 @@ import { Transcript } from '../components/Lesson/Transcript';
 import { Notes } from '../components/Lesson/Notes';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
 import { convertTranscriptToVTT, createVTTBlobURL } from '../lib/transcriptUtils';
 import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
@@ -30,12 +35,15 @@ export function LessonPage() {
   const courseSlug = params.slug;
   const lessonId = params.lessonId;
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -443,16 +451,29 @@ export function LessonPage() {
     : parseFloat(String(enrollment?.progressPercentage || 0)) || 0;
   const isEnrolled = !!enrollment;
 
+  // Calculate total lessons and completed lessons
+  const allLessons: Lesson[] = [];
+  if (chapters.length > 0) {
+    chapters.forEach((chapter) => {
+      if (chapter.lessons) {
+        allLessons.push(...chapter.lessons);
+      }
+    });
+  } else {
+    allLessons.push(...lessons);
+  }
+  const totalLessons = allLessons.length;
+  const completedLessons = completedLessonIds.length;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
-      <div className="bg-[#1A1A1A] border-b border-[#2D2D2D] sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3">
+      <div className="bg-[#1A1A1A] border-b border-[#2D2D2D] sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+            <div className="flex items-center gap-3">
+              <DarkOutlineButton
+                size="icon"
                 onClick={() => {
                   if (courseSlug) {
                     // Get saved referrer for this course
@@ -471,19 +492,29 @@ export function LessonPage() {
                     navigate(-1);
                   }
                 }}
-                className="!text-white hover:bg-white/10"
+                title="Quay lại"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Quay lại
-              </Button>
+                <ChevronLeft className="h-4 w-4" />
+              </DarkOutlineButton>
               <div>
-                <h2 className="font-semibold line-clamp-1 text-white">{course.title}</h2>
-                <p className="text-sm text-gray-400">
+                <h2 className="text-sm font-semibold line-clamp-1 text-white">{course.title}</h2>
+                <p className="text-xs text-gray-400">
                   {Number(enrollmentProgress).toFixed(0)}% hoàn thành
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <DarkOutlineButton
+                size="icon"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
+              >
+                {theme === 'dark' ? (
+                  <Moon className="h-5 w-5" />
+                ) : (
+                  <Sun className="h-5 w-5" />
+                )}
+              </DarkOutlineButton>
               <DarkOutlineButton size="sm" asChild>
                 <Link to="/ai-chat">
                   <MessageCircle className="h-4 w-4 mr-2" />
@@ -495,10 +526,10 @@ export function LessonPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
+      <div className="container mx-auto px-4 py-4 pb-20">
+        <div className={`grid gap-6 items-start transition-all duration-300 ${showSidebar ? 'lg:grid-cols-4' : 'lg:grid-cols-1'}`}>
           {/* Video Player Section */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className={`space-y-4 ${showSidebar ? 'lg:col-span-3' : 'lg:col-span-1'}`}>
             {/* Video Player */}
             <Card className="overflow-hidden bg-[#1A1A1A] border-[#2D2D2D]">
               <VideoPlayer
@@ -508,6 +539,8 @@ export function LessonPage() {
                 onEnded={handleVideoEnded}
                 initialTime={initialVideoTime}
                 seekTo={seekTo}
+                title={selectedLesson?.title}
+                showSidebar={showSidebar}
               />
             </Card>
 
@@ -534,57 +567,11 @@ export function LessonPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <DarkOutlineButton
-                      size="sm"
-                      onClick={() => navigateToLesson('prev')}
-                      disabled={(() => {
-                        const allLessons: Lesson[] = [];
-                        if (chapters.length > 0) {
-                          chapters.forEach((chapter) => {
-                            if (chapter.lessons) {
-                              allLessons.push(...chapter.lessons);
-                            }
-                          });
-                        } else {
-                          allLessons.push(...lessons);
-                        }
-                        const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                        return currentIndex === -1 || currentIndex === 0;
-                      })()}
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Bài trước
-                    </DarkOutlineButton>
-                    <DarkOutlineButton
-                      size="sm"
-                      onClick={() => navigateToLesson('next')}
-                      disabled={(() => {
-                        const allLessons: Lesson[] = [];
-                        if (chapters.length > 0) {
-                          chapters.forEach((chapter) => {
-                            if (chapter.lessons) {
-                              allLessons.push(...chapter.lessons);
-                            }
-                          });
-                        } else {
-                          allLessons.push(...lessons);
-                        }
-                        const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                        return currentIndex === -1 || currentIndex === allLessons.length - 1;
-                      })()}
-                    >
-                      Bài tiếp theo
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </DarkOutlineButton>
-                  </div>
-                </CardContent>
               </Card>
             )}
 
             {/* Tabs */}
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <DarkTabsList>
                 <DarkTabsTrigger value="overview" variant="blue">
                   Tổng quan
@@ -641,20 +628,130 @@ export function LessonPage() {
           </div>
 
           {/* Sidebar - Course Content */}
-          <div className="lg:col-span-1">
-            <LessonList
-              lessons={lessons}
-              chapters={chapters}
-              selectedLessonId={selectedLesson?.id}
-              onLessonSelect={handleLessonSelect}
-              enrollmentProgress={enrollmentProgress}
-              completedLessonIds={completedLessonIds}
-              isEnrolled={isEnrolled}
-              courseTitle={course.title}
-            />
-          </div>
+          {showSidebar && (
+            <div className="lg:col-span-1">
+              <LessonList
+                lessons={lessons}
+                chapters={chapters}
+                selectedLessonId={selectedLesson?.id}
+                onLessonSelect={handleLessonSelect}
+                enrollmentProgress={enrollmentProgress}
+                completedLessonIds={completedLessonIds}
+                isEnrolled={isEnrolled}
+                courseTitle={course.title}
+                completedLessons={completedLessons}
+                totalLessons={totalLessons}
+              />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Bottom Bar - Navigation */}
+      {selectedLesson && (
+        <div className="fixed bottom-0 left-0 right-0 bg-[#1A1A1A] border-t border-[#2D2D2D] z-50">
+          <div className="container mx-auto px-4 py-2">
+            <div className="flex items-center justify-between">
+              {/* Notes Button - Left */}
+              <DarkOutlineButton
+                size="sm"
+                onClick={() => {
+                  setActiveTab('notes');
+                  // Scroll to tabs section
+                  setTimeout(() => {
+                    const tabsElement = document.querySelector('[data-slot="tabs"]');
+                    if (tabsElement) {
+                      tabsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 100);
+                }}
+                title="Mở ghi chú"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Ghi chú
+              </DarkOutlineButton>
+              <div className="flex items-center justify-center gap-4 flex-1">
+              <DarkOutlineButton
+                size="sm"
+                onClick={() => navigateToLesson('prev')}
+                disabled={(() => {
+                  const allLessons: Lesson[] = [];
+                  if (chapters.length > 0) {
+                    chapters.forEach((chapter) => {
+                      if (chapter.lessons) {
+                        allLessons.push(...chapter.lessons);
+                      }
+                    });
+                  } else {
+                    allLessons.push(...lessons);
+                  }
+                  const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+                  return currentIndex === -1 || currentIndex === 0;
+                })()}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Bài trước
+              </DarkOutlineButton>
+              <Button
+                variant="blue"
+                size="sm"
+                onClick={() => navigateToLesson('next')}
+                disabled={(() => {
+                  const allLessons: Lesson[] = [];
+                  if (chapters.length > 0) {
+                    chapters.forEach((chapter) => {
+                      if (chapter.lessons) {
+                        allLessons.push(...chapter.lessons);
+                      }
+                    });
+                  } else {
+                    allLessons.push(...lessons);
+                  }
+                  const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+                  return currentIndex === -1 || currentIndex === allLessons.length - 1;
+                })()}
+              >
+                Bài tiếp theo
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+              </div>
+              {/* Toggle Sidebar Button - Right */}
+              {selectedLesson && (() => {
+                const allLessons: Lesson[] = [];
+                if (chapters.length > 0) {
+                  chapters.forEach((chapter) => {
+                    if (chapter.lessons) {
+                      allLessons.push(...chapter.lessons);
+                    }
+                  });
+                } else {
+                  allLessons.push(...lessons);
+                }
+                const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+                const lessonNumber = currentIndex !== -1 ? currentIndex + 1 : 0;
+                
+                return (
+                  <DarkOutlineButton
+                    size="sm"
+                    onClick={() => setShowSidebar(!showSidebar)}
+                    title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
+                    className="flex items-center gap-2"
+                  >
+                    <span className="text-xs text-white font-medium max-w-[200px] truncate">
+                      Bài {lessonNumber}: {selectedLesson.title}
+                    </span>
+                    {showSidebar ? (
+                      <PanelLeftClose className="h-4 w-4" />
+                    ) : (
+                      <PanelLeftOpen className="h-4 w-4" />
+                    )}
+                  </DarkOutlineButton>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

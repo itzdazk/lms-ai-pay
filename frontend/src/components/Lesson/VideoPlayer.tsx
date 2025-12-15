@@ -34,6 +34,8 @@ interface VideoPlayerProps {
   initialTime?: number;
   seekTo?: number; // Seek to this time when it changes
   className?: string;
+  title?: string; // Lesson title
+  showSidebar?: boolean; // Whether sidebar is visible
 }
 
 export function VideoPlayer({
@@ -44,6 +46,8 @@ export function VideoPlayer({
   initialTime = 0,
   seekTo,
   className = '',
+  title,
+  showSidebar = true,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -747,7 +751,8 @@ export function VideoPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black aspect-video group ${className}`}
+      className={`relative bg-black aspect-[16/9] group ${className}`}
+      style={{ maxHeight: showSidebar ? '65vh' : '70vh' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
         if (isPlaying) {
@@ -755,6 +760,16 @@ export function VideoPlayer({
         }
       }}
     >
+      {/* Title overlay - shows/hides with controls */}
+      {title && (
+        <div 
+          className={`absolute top-0 left-0 right-0 z-30 bg-gradient-to-b from-black/80 to-transparent px-4 py-3 transition-opacity duration-300 ${
+            showControls ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <h3 className="text-white text-base font-semibold line-clamp-2">{title}</h3>
+        </div>
+      )}
       <video
         ref={videoRef}
         id="lesson-video-player"
@@ -834,24 +849,24 @@ export function VideoPlayer({
       >
         {/* Progress bar */}
         <div 
-          className="absolute bottom-16 left-0 right-0 px-4 pointer-events-auto"
+          className="absolute bottom-12 left-0 right-0 px-2 pointer-events-auto"
           style={{ 
             pointerEvents: (subtitleSettingsOpen || playbackRateDialogOpen) ? 'none' : 'auto' 
           }}
         >
           {/* Timeline */}
-          <div className="flex items-center justify-between mb-1 px-0.5">
-            <span className="text-white text-xs font-medium">
+          <div className="flex items-center justify-between mb-0.5 px-0.5">
+            <span className="text-white text-[10px] font-medium">
               {formatTime(currentTime)}
             </span>
-            <span className="text-white text-xs font-medium">
+            <span className="text-white text-[10px] font-medium">
               {formatTime(duration)}
             </span>
           </div>
           {/* Slider */}
           <div
             ref={progressBarRef}
-            className="h-3 bg-white/20 rounded-full overflow-visible cursor-pointer group/progress hover:h-4 transition-all relative"
+            className="h-2 bg-white/20 rounded-full overflow-visible cursor-pointer group/progress hover:h-2.5 transition-all relative"
             onClick={handleSeek}
             onMouseDown={handleDragStart}
           >
@@ -861,71 +876,71 @@ export function VideoPlayer({
             />
             {/* Progress thumb */}
             <div
-              className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-blue-600 rounded-full transition-opacity shadow-lg cursor-grab active:cursor-grabbing ${
+              className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full transition-opacity shadow-lg cursor-grab active:cursor-grabbing ${
                 isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover/progress:opacity-100'
               }`}
-              style={{ left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 10px)` }}
+              style={{ left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 8px)` }}
             />
           </div>
         </div>
 
         {/* Controls */}
         <div 
-          className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto"
+          className="absolute bottom-0 left-0 right-0 p-2 pointer-events-auto"
           style={{ 
             pointerEvents: (subtitleSettingsOpen || playbackRateDialogOpen) ? 'none' : 'auto' 
           }}
         >
           <div className="flex items-center justify-between text-white">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-7 w-7"
                 onClick={togglePlay}
               >
                 {isPlaying ? (
-                  <Pause className="h-5 w-5" />
+                  <Pause className="h-4 w-4" />
                 ) : (
-                  <Play className="h-5 w-5" />
+                  <Play className="h-4 w-4" />
                 )}
               </Button>
               <Button
                 variant="ghost"
-                className="text-white hover:bg-white/20 h-8 px-2.5"
+                className="text-white hover:bg-white/20 h-7 px-2"
                 onClick={skipBackward}
                 title="Lùi 5 giây"
               >
-                <div className="flex items-center gap-1">
-                  <SkipBack className="h-3.5 w-3.5" />
-                  <span className="text-xs font-semibold">5</span>
+                <div className="flex items-center gap-0.5">
+                  <SkipBack className="h-3 w-3" />
+                  <span className="text-[10px] font-semibold">5</span>
                 </div>
               </Button>
               <Button
                 variant="ghost"
-                className="text-white hover:bg-white/20 h-8 px-2.5"
+                className="text-white hover:bg-white/20 h-7 px-2"
                 onClick={skipForward}
                 title="Tiến 5 giây"
               >
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold">5</span>
-                  <SkipForward className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-0.5">
+                  <span className="text-[10px] font-semibold">5</span>
+                  <SkipForward className="h-3 w-3" />
                 </div>
               </Button>
-              <div className="flex items-center gap-2 ml-2">
+              <div className="flex items-center gap-1.5 ml-1">
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="text-white hover:bg-white/20"
+                  className="text-white hover:bg-white/20 h-7 w-7"
                   onClick={toggleMute}
                 >
                   {isMuted ? (
-                    <VolumeX className="h-4 w-4" />
+                    <VolumeX className="h-3.5 w-3.5" />
                   ) : (
-                    <Volume2 className="h-4 w-4" />
+                    <Volume2 className="h-3.5 w-3.5" />
                   )}
                 </Button>
-                <div className="w-20 h-1 bg-white/30 rounded-full cursor-pointer">
+                <div className="w-16 h-0.5 bg-white/30 rounded-full cursor-pointer">
                   <div
                     className="h-full bg-white rounded-full"
                     style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
@@ -939,17 +954,17 @@ export function VideoPlayer({
                   />
                 </div>
               </div>
-              <span className="text-sm ml-2">
+              <span className="text-xs ml-1.5">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {subtitleUrl && (
                 <>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className={`text-white hover:bg-white/20 ${showSubtitles ? 'bg-white/20' : ''}`}
+                    className={`text-white hover:bg-white/20 h-7 w-7 ${showSubtitles ? 'bg-white/20' : ''}`}
                     onClick={() => {
                       const newValue = !showSubtitles;
                       setShowSubtitles(newValue);
@@ -968,7 +983,7 @@ export function VideoPlayer({
                     }}
                     title={showSubtitles ? 'Tắt phụ đề' : 'Bật phụ đề'}
                   >
-                    <Subtitles className="h-4 w-4" />
+                    <Subtitles className="h-3.5 w-3.5" />
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -976,10 +991,10 @@ export function VideoPlayer({
                         ref={settingsButtonRef}
                         size="icon"
                         variant="ghost"
-                        className="text-white hover:bg-white/20"
+                        className="text-white hover:bg-white/20 h-7 w-7"
                         title="Cài đặt"
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent 
@@ -1031,13 +1046,14 @@ export function VideoPlayer({
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-7 w-7"
                 onClick={toggleFullscreen}
+                title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
               >
                 {isFullscreen ? (
-                  <Minimize className="h-4 w-4" />
+                  <Minimize className="h-3.5 w-3.5" />
                 ) : (
-                  <Maximize className="h-4 w-4" />
+                  <Maximize className="h-3.5 w-3.5" />
                 )}
               </Button>
             </div>
