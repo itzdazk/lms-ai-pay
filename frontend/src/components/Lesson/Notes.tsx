@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
+import { DarkOutlineButton } from '../ui/buttons';
 import { Textarea } from '../ui/textarea';
 import { Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,14 +10,20 @@ interface NotesProps {
   lessonId: number;
   initialNotes?: string;
   onSave?: (notes: string) => Promise<void>;
+  onCancel?: () => void;
   className?: string;
+  showActions?: boolean; // Control whether to show action buttons
+  onNotesChange?: (notes: string, hasChanges: boolean) => void; // Callback for notes changes
 }
 
 export function Notes({
   lessonId,
   initialNotes = '',
   onSave,
+  onCancel,
   className = '',
+  showActions = true,
+  onNotesChange,
 }: NotesProps) {
   const [notes, setNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +72,11 @@ export function Notes({
 
   const handleChange = (value: string) => {
     setNotes(value);
-    setHasChanges(value !== initialNotes);
+    const hasChanges = value !== initialNotes;
+    setHasChanges(hasChanges);
+    if (onNotesChange) {
+      onNotesChange(value, hasChanges);
+    }
   };
 
   // Auto-save to localStorage as backup
@@ -86,31 +96,38 @@ export function Notes({
 
 
   return (
-    <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
-      <CardContent className="pt-6">
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-white mb-2 block">
-              Ghi chú của bạn
-            </label>
-            <Textarea
-              value={notes}
-              onChange={(e) => handleChange(e.target.value)}
-              placeholder="Viết ghi chú của bạn ở đây..."
-              className="min-h-48 p-4 border border-[#2D2D2D] rounded-lg bg-[#1F1F1F] text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
+    <div className={`h-full w-full ${className}`}>
+      <Textarea
+        value={notes}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder="Viết ghi chú của bạn ở đây..."
+        className="w-full h-full p-3 border-0 bg-transparent text-white placeholder:text-gray-500 focus:outline-none resize-none custom-scrollbar"
+        style={{ 
+          height: '100%',
+          overflowY: 'auto'
+        }}
+      />
+      {showActions && (
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-500">
+              Ghi chú sẽ được lưu vào tài khoản của bạn và đồng bộ trên mọi thiết bị
+            </p>
+            {saveStatus === 'saved' && (
+              <span className="text-xs text-green-500 font-medium">
+                ✓ Lưu thành công
+              </span>
+            )}
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500">
-                Ghi chú sẽ được lưu vào tài khoản của bạn và đồng bộ trên mọi thiết bị
-              </p>
-              {saveStatus === 'saved' && (
-                <span className="text-xs text-green-500 font-medium">
-                  ✓ Lưu thành công
-                </span>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            {onCancel && (
+              <DarkOutlineButton
+                size="sm"
+                onClick={onCancel}
+              >
+                Hủy
+              </DarkOutlineButton>
+            )}
             <Button
               onClick={handleSave}
               disabled={isSaving || !hasChanges}
@@ -130,8 +147,8 @@ export function Notes({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
 

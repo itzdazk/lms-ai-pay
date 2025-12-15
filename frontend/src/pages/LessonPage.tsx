@@ -22,7 +22,7 @@ import {
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
-import { Notes } from '../components/Lesson/Notes';
+import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -44,6 +44,7 @@ export function LessonPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showNotesDrawer, setShowNotesDrawer] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -580,10 +581,6 @@ export function LessonPage() {
                   <FileText className="h-4 w-4 mr-2" />
                   Transcript
                 </DarkTabsTrigger>
-                <DarkTabsTrigger value="notes" variant="blue">
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Ghi chú
-                </DarkTabsTrigger>
               </DarkTabsList>
 
               <TabsContent value="overview" className="mt-6">
@@ -612,15 +609,6 @@ export function LessonPage() {
                     transcriptJsonUrl={selectedLesson.transcriptJsonUrl}
                     onTimeClick={handleTranscriptTimeClick}
                     currentTime={currentTime}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="notes" className="mt-6">
-                {selectedLesson && (
-                  <Notes
-                    lessonId={selectedLesson.id}
-                    initialNotes={lessonNotes}
                   />
                 )}
               </TabsContent>
@@ -655,20 +643,11 @@ export function LessonPage() {
               {/* Notes Button - Left */}
               <DarkOutlineButton
                 size="sm"
-                onClick={() => {
-                  setActiveTab('notes');
-                  // Scroll to tabs section
-                  setTimeout(() => {
-                    const tabsElement = document.querySelector('[data-slot="tabs"]');
-                    if (tabsElement) {
-                      tabsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }, 100);
-                }}
+                onClick={() => setShowNotesDrawer(true)}
                 title="Mở ghi chú"
               >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Ghi chú
+                <BookOpen className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Ghi chú</span>
               </DarkOutlineButton>
               <div className="flex items-center justify-center gap-4 flex-1">
               <DarkOutlineButton
@@ -689,8 +668,8 @@ export function LessonPage() {
                   return currentIndex === -1 || currentIndex === 0;
                 })()}
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Bài trước
+                <ArrowLeft className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Bài trước</span>
               </DarkOutlineButton>
               <Button
                 variant="blue"
@@ -711,8 +690,8 @@ export function LessonPage() {
                   return currentIndex === -1 || currentIndex === allLessons.length - 1;
                 })()}
               >
-                Bài tiếp theo
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <span className="hidden md:inline">Bài tiếp theo</span>
+                <ArrowRight className="h-4 w-4 md:ml-2" />
               </Button>
               </div>
               {/* Toggle Sidebar Button - Right */}
@@ -737,7 +716,7 @@ export function LessonPage() {
                     title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
                     className="flex items-center gap-2"
                   >
-                    <span className="text-xs text-white font-medium max-w-[200px] truncate">
+                    <span className="hidden md:inline text-xs text-white font-medium max-w-[200px] truncate">
                       Bài {lessonNumber}: {selectedLesson.title}
                     </span>
                     {showSidebar ? (
@@ -752,6 +731,32 @@ export function LessonPage() {
           </div>
         </div>
       )}
+
+      {/* Notes Drawer */}
+      {selectedLesson && (() => {
+        // Find chapter containing the selected lesson
+        let currentChapter: Chapter | null = null;
+        if (chapters.length > 0) {
+          for (const chapter of chapters) {
+            if (chapter.lessons?.some((l) => l.id === selectedLesson.id)) {
+              currentChapter = chapter;
+              break;
+            }
+          }
+        }
+        
+        return (
+          <NotesDrawer
+            isOpen={showNotesDrawer}
+            onClose={() => setShowNotesDrawer(false)}
+            lessonId={selectedLesson.id}
+            initialNotes={lessonNotes}
+            showSidebar={showSidebar}
+            chapterTitle={currentChapter?.title}
+            lessonTitle={selectedLesson.title}
+          />
+        );
+      })()}
     </div>
   );
 }
