@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Notes, NotesRef } from './Notes';
 import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
-import { Save, Loader2, PenTool } from 'lucide-react';
+import { Loader2, PenTool, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { lessonNotesApi } from '../../lib/api';
 
@@ -102,11 +102,20 @@ export function NotesDrawer({
         <div className="flex flex-col" style={{ height: showSidebar ? '30vh' : '35vh' }}>
           {/* Header with indicator */}
           {isOpen && (
-            <div className="px-3 py-2 border-b border-[#2D2D2D] bg-[#1F1F1F] flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-              <PenTool className="h-4 w-4 text-blue-500" />
-              <span className="text-xs text-gray-400">
-                Viết ghi chú của bạn ở đây để lưu lại những điều quan trọng
-              </span>
+            <div className="px-3 py-2 border-b border-[#2D2D2D] bg-[#1F1F1F] flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-2">
+                <PenTool className="h-4 w-4 text-blue-500" />
+                <span className="text-xs text-gray-400">
+                  Viết ghi chú của bạn ở đây để lưu lại những điều quan trọng
+                </span>
+              </div>
+              <DarkOutlineButton
+                size="icon"
+                onClick={onClose}
+                title="Đóng ghi chú"
+              >
+                <X className="h-4 w-4" />
+              </DarkOutlineButton>
             </div>
           )}
           
@@ -143,10 +152,7 @@ export function NotesDrawer({
                     Đang lưu...
                   </>
                 ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Lưu
-                  </>
+                  'Lưu'
                 )}
               </Button>
             </div>

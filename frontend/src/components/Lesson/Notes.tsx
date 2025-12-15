@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
 import { Textarea } from '../ui/textarea';
@@ -14,9 +14,14 @@ interface NotesProps {
   className?: string;
   showActions?: boolean; // Control whether to show action buttons
   onNotesChange?: (notes: string, hasChanges: boolean) => void; // Callback for notes changes
+  autoFocus?: boolean; // Auto focus textarea when component mounts
 }
 
-export function Notes({
+export interface NotesRef {
+  focus: () => void;
+}
+
+export const Notes = forwardRef<NotesRef, NotesProps>(({
   lessonId,
   initialNotes = '',
   onSave,
@@ -24,16 +29,36 @@ export function Notes({
   className = '',
   showActions = true,
   onNotesChange,
-}: NotesProps) {
+  autoFocus = false,
+}, ref) => {
   const [notes, setNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Expose focus method via ref
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus();
+    },
+  }));
 
   useEffect(() => {
     setNotes(initialNotes);
     setHasChanges(false);
   }, [initialNotes, lessonId]);
+
+  // Auto focus when autoFocus prop is true
+  useEffect(() => {
+    if (autoFocus && textareaRef.current) {
+      // Small delay to ensure drawer animation completes
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 350); // Slightly longer than drawer animation (300ms)
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
 
   const handleSave = async () => {
     try {
@@ -98,6 +123,7 @@ export function Notes({
   return (
     <div className={`h-full w-full ${className}`}>
       <Textarea
+        ref={textareaRef}
         value={notes}
         onChange={(e) => handleChange(e.target.value)}
         placeholder="Viết ghi chú của bạn ở đây..."
@@ -150,6 +176,8 @@ export function Notes({
       )}
     </div>
   );
-}
+});
+
+Notes.displayName = 'Notes';
 
 

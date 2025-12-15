@@ -117,30 +117,17 @@ export function LessonList({
   }, [selectedLessonId, chapters]);
 
   return (
-    <Card className="sticky top-4 bg-[#1A1A1A] border-[#2D2D2D]">
-      <CardHeader>
+    <Card className="bg-[#1A1A1A] border-[#2D2D2D] h-full flex flex-col rounded-none">
+      <CardHeader className="flex-shrink-0 rounded-none">
         <CardTitle className="flex items-center justify-between text-white">
           <span>Nội dung khóa học</span>
           <Badge variant="outline" className="border-[#2D2D2D] text-gray-300">
             {chapters.length > 0 ? `${chapters.length} chương • ${totalLessonsCount} bài` : `${totalLessonsCount} bài`}
           </Badge>
         </CardTitle>
-        {isEnrolled && (
-          <>
-            <Progress value={progress} className="mt-2" />
-            <p className="text-sm text-gray-400 mt-2">
-              {progress.toFixed(0)}% hoàn thành
-            </p>
-            {totalLessons > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                {completedLessons}/{totalLessons} bài học đã hoàn thành
-              </p>
-            )}
-          </>
-        )}
       </CardHeader>
-      <CardContent>
-        <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+      <CardContent className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+        <div>
           {chapters.length > 0 ? (
             <Accordion 
               type="multiple" 
@@ -158,12 +145,12 @@ export function LessonList({
                 };
 
                 return (
-                  <AccordionItem
-                    key={chapter.id}
-                    value={`chapter-${chapter.id}`}
-                    className="border border-[#2D2D2D] rounded-lg bg-[#151515]"
-                  >
-                    <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-[#1A1A1A] rounded-t-lg">
+                <AccordionItem
+                  key={chapter.id}
+                  value={`chapter-${chapter.id}`}
+                  className="border border-[#2D2D2D] bg-[#151515] rounded-none"
+                >
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-[#1A1A1A] rounded-none">
                       <div className="flex items-center justify-between w-full pr-2">
                         <div className="flex items-center gap-2">
                           <BookOpen className="h-4 w-4 text-blue-400 flex-shrink-0" />
@@ -183,8 +170,8 @@ export function LessonList({
                         </Badge>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-3 pb-2">
-                      <div className="space-y-1 mt-2">
+                  <AccordionContent className="px-3 pb-2 rounded-none">
+                    <div className="space-y-1 mt-2 rounded-none">
                         {chapterLessons.map((lesson) => {
                           const globalIndex = getLessonGlobalIndex(lesson);
                           const isSelected = selectedLessonId === lesson.id;
@@ -199,7 +186,7 @@ export function LessonList({
                                   onLessonSelect(lesson);
                                 }
                               }}
-                              className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                            className={`flex items-center justify-between p-2 rounded-none transition-colors ${
                                 isSelected
                                   ? 'bg-blue-600/20 border border-blue-600'
                                   : isLocked
@@ -259,7 +246,7 @@ export function LessonList({
               })}
             </Accordion>
           ) : (
-            <div className="space-y-1">
+                <div className="space-y-1 rounded-none">
               {sortedLessons.map((lesson, index) => {
                 const isSelected = selectedLessonId === lesson.id;
                 const isCompleted = completedLessonIds.includes(lesson.id);
@@ -273,7 +260,7 @@ export function LessonList({
                         onLessonSelect(lesson);
                       }
                     }}
-                    className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                  className={`flex items-center justify-between p-3 rounded-none transition-colors ${
                       isSelected
                         ? 'bg-blue-600/20 border border-blue-600'
                         : isLocked

@@ -453,8 +453,8 @@ export function LessonPage() {
       {/* Top Bar */}
       <div className="bg-black border-b border-[#2D2D2D] flex-shrink-0 z-50">
         <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
               <DarkOutlineButton
                 size="icon"
                 onClick={() => {
@@ -479,24 +479,24 @@ export function LessonPage() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </DarkOutlineButton>
-              <h2 className="text-sm font-semibold line-clamp-1 text-white">{course.title}</h2>
+              <h2 className="text-xs md:text-sm font-semibold line-clamp-1 text-white">{course.title}</h2>
             </div>
             {isEnrolled && (
-              <div className="flex-1 flex flex-col items-center mx-4">
+              <div className="hidden sm:flex flex-1 flex-col items-center mx-2 md:mx-4 min-w-0">
                 <Progress value={enrollmentProgress} className="h-1.5 w-full max-w-xs" />
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-xs text-gray-400">
+                <div className="hidden md:flex items-center gap-2 mt-1">
+                  <p className="text-xs text-gray-400 whitespace-nowrap">
                     {Number(enrollmentProgress).toFixed(0)}% hoàn thành
                   </p>
                   {totalLessons > 0 && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 whitespace-nowrap">
                       • {completedLessons}/{totalLessons} bài học đã hoàn thành
                     </p>
                   )}
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
               <DarkOutlineButton
                 size="icon"
                 onClick={toggleTheme}
