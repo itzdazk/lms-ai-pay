@@ -183,7 +183,7 @@ class CategoryService {
         // Check if category has courses
         if (category._count.courses > 0) {
             const error = new Error(
-                `Cannot delete category with ${category._count.courses} active courses. Please reassign courses first.`
+                `Không thể xóa danh mục khi đang có ${category._count.courses} khóa học đang hoạt động. Vui lòng phân bổ lại các khóa học trước.`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -192,7 +192,7 @@ class CategoryService {
         // Check if category has children
         if (category._count.children > 0) {
             const error = new Error(
-                `Cannot delete category with ${category._count.children} subcategories. Please delete subcategories first.`
+                `Không thể xóa danh mục có ${category._count.children} danh mục con. Vui lòng xóa danh mục con trước.`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
