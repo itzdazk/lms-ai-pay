@@ -12,6 +12,7 @@ import {
   Subtitles,
   Settings,
   ChevronRight,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
@@ -86,6 +87,8 @@ export function VideoPlayer({
   const progressBarRef = useRef<HTMLDivElement>(null);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
+  const [isVideoFocused, setIsVideoFocused] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -163,6 +166,77 @@ export function VideoPlayer({
     }
   };
 
+  // Keyboard shortcuts: arrow left/right to seek, up/down to change volume
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!videoRef.current || !isVideoFocused) return;
+
+      const target = e.target as HTMLElement | null;
+      // Don't respond if user is typing in an input/textarea
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (subtitleSettingsOpen || playbackRateDialogOpen) return;
+
+      const seekBy = (delta: number) => {
+        if (!videoRef.current) return;
+        const newTime = Math.min(Math.max(0, videoRef.current.currentTime + delta), duration);
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      };
+
+      const changeVolume = (delta: number) => {
+        const baseVolume = isMuted ? 0 : volume;
+        const newVolume = Math.min(1, Math.max(0, baseVolume + delta));
+        handleVolumeChange(newVolume);
+      };
+
+      switch (e.key) {
+        case ' ':
+        case 'Space':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          seekBy(-5);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          seekBy(5);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          changeVolume(0.05);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          changeVolume(-0.05);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [duration, isMuted, volume, subtitleSettingsOpen, playbackRateDialogOpen, isVideoFocused, isPlaying]);
+
+  // Handle click outside to unfocus video
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsVideoFocused(false);
+      }
+    };
+
+    if (isVideoFocused) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isVideoFocused]);
+
   // Add global mouse event listeners for dragging
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -205,20 +279,6 @@ export function VideoPlayer({
     }
   };
 
-  // Handle skip backward (10 seconds)
-  const skipBackward = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(0, currentTime - 5);
-    }
-  };
-
-  // Handle skip forward (5 seconds)
-  const skipForward = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.min(duration, currentTime + 5);
-    }
-  };
-
   // Show controls on mouse move
   const handleMouseMove = () => {
     setShowControls(true);
@@ -232,6 +292,16 @@ export function VideoPlayer({
     }, 3000);
   };
 
+  // Check if video URL is missing
+  useEffect(() => {
+    if (!videoUrl || videoUrl.trim() === '') {
+      setVideoError('Video không tồn tại hoặc chưa được tải lên');
+      setIsLoading(false);
+    } else {
+      setVideoError(null);
+    }
+  }, [videoUrl]);
+
   // Event handlers
   useEffect(() => {
     const video = videoRef.current;
@@ -240,6 +310,7 @@ export function VideoPlayer({
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
       setIsLoading(false);
+      setVideoError(null); // Clear error if video loads successfully
       if (initialTime > 0) {
         video.currentTime = initialTime;
         setCurrentTime(initialTime);
@@ -263,6 +334,33 @@ export function VideoPlayer({
             }
           }
         }, 200);
+      }
+    };
+
+    const handleError = () => {
+      setIsLoading(false);
+      const error = video.error;
+      if (error) {
+        let errorMessage = 'Không thể tải video';
+        switch (error.code) {
+          case error.MEDIA_ERR_ABORTED:
+            errorMessage = 'Video bị hủy khi đang tải';
+            break;
+          case error.MEDIA_ERR_NETWORK:
+            errorMessage = 'Lỗi kết nối mạng khi tải video';
+            break;
+          case error.MEDIA_ERR_DECODE:
+            errorMessage = 'Lỗi giải mã video';
+            break;
+          case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorMessage = 'Định dạng video không được hỗ trợ';
+            break;
+          default:
+            errorMessage = 'Không thể tải video';
+        }
+        setVideoError(errorMessage);
+      } else {
+        setVideoError('Không thể tải video');
       }
     };
 
@@ -293,6 +391,7 @@ export function VideoPlayer({
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('error', handleError);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('ended', handleEnded);
     video.addEventListener('play', handlePlay);
@@ -301,16 +400,15 @@ export function VideoPlayer({
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('error', handleError);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
-  }, [onTimeUpdate, onEnded, initialTime]);
+  }, [onTimeUpdate, onEnded, initialTime, subtitleSettings, showSubtitles]);
 
   // Load subtitle settings from localStorage (only once on mount)
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -761,6 +859,14 @@ export function VideoPlayer({
           setTimeout(() => setShowControls(false), 2000);
         }
       }}
+      onClick={() => setIsVideoFocused(true)}
+      onBlur={(e) => {
+        // Only blur if focus is moving outside the container
+        if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+          setIsVideoFocused(false);
+        }
+      }}
+      tabIndex={0}
     >
       {/* Title overlay - shows/hides with controls */}
       {title && (
@@ -778,6 +884,7 @@ export function VideoPlayer({
         src={videoUrl}
         className="w-full h-full"
         playsInline
+        onClick={() => setIsVideoFocused(true)}
       >
         {subtitleUrl && (
           <track
@@ -791,9 +898,22 @@ export function VideoPlayer({
       </video>
 
       {/* Loading overlay */}
-      {isLoading && (
+      {isLoading && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <Loader2 className="h-12 w-12 text-white animate-spin" />
+        </div>
+      )}
+
+      {/* Video Error overlay */}
+      {videoError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50">
+          <div className="flex flex-col items-center gap-4 text-center px-6">
+            <AlertCircle className="h-16 w-16 text-red-500" />
+            <div className="space-y-2">
+              <h3 className="text-white text-xl font-semibold">Không thể phát video</h3>
+              <p className="text-gray-300 text-sm max-w-md">{videoError}</p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -835,10 +955,12 @@ export function VideoPlayer({
               </div>
             </div>
           )}
+
         </div>
       )}
 
       {/* Controls overlay */}
+      {!videoError && (
       <div
         className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 controls-container z-50 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
@@ -936,7 +1058,11 @@ export function VideoPlayer({
               <Button
                 variant="ghost"
                 className="text-white hover:bg-white/20 h-7 px-2"
-                onClick={skipBackward}
+                onClick={() => {
+                  if (videoRef.current) {
+                    videoRef.current.currentTime = Math.max(0, currentTime - 5);
+                  }
+                }}
                 title="Lùi 5 giây"
               >
                 <SkipBack className="h-3 w-3" />
@@ -944,7 +1070,11 @@ export function VideoPlayer({
               <Button
                 variant="ghost"
                 className="text-white hover:bg-white/20 h-7 px-2"
-                onClick={skipForward}
+                onClick={() => {
+                  if (videoRef.current) {
+                    videoRef.current.currentTime = Math.min(duration, currentTime + 5);
+                  }
+                }}
                 title="Tiến 5 giây"
               >
                 <SkipForward className="h-3 w-3" />
@@ -1082,6 +1212,7 @@ export function VideoPlayer({
           </div>
         </div>
       </div>
+      )}
 
 
       {/* Subtitle Settings Dialog */}
