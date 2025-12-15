@@ -94,7 +94,6 @@ export function NotesSidebar({
       
       setNotes(filteredNotes);
     } catch (error: any) {
-      console.error('Error loading notes:', error);
       toast.error('Không thể tải ghi chú');
     } finally {
       setLoading(false);
