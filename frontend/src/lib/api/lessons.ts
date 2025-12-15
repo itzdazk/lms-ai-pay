@@ -12,6 +12,12 @@ export const lessonsApi = {
         return response.data.data
     },
 
+    // Get lesson by slug
+    async getLessonBySlug(courseSlug: string, lessonSlug: string): Promise<Lesson> {
+        const response = await apiClient.get<ApiResponse<Lesson>>(`/courses/slug/${courseSlug}/lessons/${lessonSlug}`)
+        return response.data.data
+    },
+
     // Get lesson video URL
     async getLessonVideo(lessonId: string | number): Promise<{ videoUrl: string }> {
         const response = await apiClient.get<ApiResponse<{ videoUrl: string }>>(`/lessons/${lessonId}/video`)

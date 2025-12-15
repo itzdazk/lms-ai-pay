@@ -48,9 +48,9 @@ import { authApi } from '../lib/api';
 import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
 
 export function LessonPage() {
-  const params = useParams<{ slug: string; lessonId?: string }>();
+  const params = useParams<{ slug: string; lessonSlug?: string }>();
   const courseSlug = params.slug;
-  const lessonId = params.lessonId;
+  const lessonSlug = params.lessonSlug;
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
@@ -73,6 +73,7 @@ export function LessonPage() {
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [lessonNotFound, setLessonNotFound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
@@ -149,46 +150,64 @@ export function LessonPage() {
           setEnrollment(null);
         }
 
-        // Select initial lesson
-        // First try to find in chapters, then fallback to lessons array
+        // Select initial lesson by slug only
         let initialLesson: Lesson | null = null;
-        if (lessonId) {
-          // Search in chapters first
+        if (lessonSlug) {
+          // Search in chapters first by slug
           for (const chapter of chaptersData) {
-            const lesson = chapter.lessons?.find((l) => String(l.id) === lessonId);
-          if (lesson) {
+            const lesson = chapter.lessons?.find((l) => l.slug === lessonSlug);
+            if (lesson) {
               initialLesson = lesson;
               break;
             }
           }
-          // Fallback to lessons array
+          // Fallback to lessons array by slug
           if (!initialLesson) {
-            initialLesson = lessonsData.lessons.find((l) => String(l.id) === lessonId) || null;
+            initialLesson = lessonsData.lessons.find((l) => l.slug === lessonSlug) || null;
           }
-        }
-        
-        // If no lesson found by ID, get first available lesson
-        if (!initialLesson) {
+          // If still not found, try to load from API
+          if (!initialLesson) {
+            try {
+              initialLesson = await lessonsApi.getLessonBySlug(courseSlug, lessonSlug);
+            } catch (error) {
+              console.error('Error loading lesson by slug:', error);
+              setLessonNotFound(true);
+              setLoading(false);
+              return;
+            }
+          }
+          
+          // If lesson not found by slug, show error page
+          if (!initialLesson) {
+            setLessonNotFound(true);
+            setLoading(false);
+            return;
+          }
+        } else {
+          // If no lessonSlug provided, get first available lesson
           if (chaptersData.length > 0 && chaptersData[0].lessons && chaptersData[0].lessons.length > 0) {
             initialLesson = chaptersData[0].lessons[0];
           } else if (lessonsData.lessons.length > 0) {
             initialLesson = lessonsData.lessons[0];
           }
-          }
+        }
         
         if (initialLesson) {
           setSelectedLesson(initialLesson);
         }
       } catch (error: any) {
         console.error('Error loading course data:', error);
-        toast.error('Không thể tải thông tin khóa học');
+        // Don't show toast if lesson not found (already handled above)
+        if (!lessonNotFound) {
+          toast.error('Không thể tải thông tin khóa học');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [courseSlug, lessonId, user?.id]);
+  }, [courseSlug, lessonSlug, user?.id]);
 
   // Track previous lesson ID to prevent unnecessary reloads
   const previousLessonIdRef = useRef<number | null>(null);
@@ -353,9 +372,9 @@ export function LessonPage() {
   // Handle lesson selection
   const handleLessonSelect = (lesson: Lesson) => {
     setSelectedLesson(lesson);
-    // Update URL without navigation (using slug for public pages)
-    if (courseSlug) {
-      window.history.pushState({}, '', `/courses/${courseSlug}/lessons/${lesson.id}`);
+    // Update URL without navigation (using slug)
+    if (courseSlug && lesson.slug) {
+      window.history.pushState({}, '', `/courses/${courseSlug}/lessons/${lesson.slug}`);
     }
   };
 
@@ -400,7 +419,7 @@ export function LessonPage() {
     }, 100);
   };
 
-  // Navigate to next/previous lesson
+  // Navigate to next/previous lesson using slug
   const navigateToLesson = (direction: 'next' | 'prev') => {
     if (!selectedLesson) return;
 
@@ -438,10 +457,24 @@ export function LessonPage() {
     );
   }
 
+  if (lessonNotFound) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
+        <h1 className="text-3xl mb-4 text-foreground">Không tìm thấy bài học</h1>
+        <p className="text-muted-foreground mb-8">Bài học bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+        {courseSlug && (
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Link to={`/courses/${courseSlug}`}>Quay lại khóa học</Link>
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (!course) {
     return (
       <div className="container mx-auto px-4 py-20 text-center bg-background min-h-screen">
-        <h1 className="text-3xl mb-4 text-white">Không tìm thấy khóa học</h1>
+        <h1 className="text-3xl mb-4 text-foreground">Không tìm thấy khóa học</h1>
         <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
           <Link to="/dashboard">Quay lại Dashboard</Link>
         </Button>
@@ -1006,7 +1039,7 @@ export function LessonPage() {
               lessonIds: ch.lessons?.map(l => l.id) || [],
             }))}
             currentLessonId={selectedLesson?.id}
-            onLessonSelect={(lessonId) => {
+            onLessonSelect={(lessonInfo) => {
               const allLessons: Lesson[] = [];
               if (chapters.length > 0) {
                 chapters.forEach((chapter) => {
@@ -1017,7 +1050,7 @@ export function LessonPage() {
               } else {
                 allLessons.push(...lessons);
               }
-              const lesson = allLessons.find((l) => l.id === lessonId);
+              const lesson = allLessons.find((l) => l.id === lessonInfo.id);
               if (lesson) {
                 handleLessonSelect(lesson);
                 setShowNotesSidebar(false);

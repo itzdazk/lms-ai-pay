@@ -28,7 +28,7 @@ interface NotesSidebarProps {
   currentChapterLessonIds?: number[];
   chapters?: ChapterInfo[];
   currentLessonId?: number;
-  onLessonSelect?: (lessonId: number) => void;
+  onLessonSelect?: (lesson: { id: number; slug: string; courseId: number }) => void;
 }
 
 export function NotesSidebar({
@@ -346,7 +346,11 @@ export function NotesSidebar({
                                     className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80"
                                     onClick={() => {
                                       if (onLessonSelect && !selectedNote) {
-                                        onLessonSelect(note.lesson.id);
+                                        onLessonSelect({
+                                          id: note.lesson.id,
+                                          slug: note.lesson.slug,
+                                          courseId: courseId,
+                                        });
                                       }
                                     }}
                                   >
@@ -474,7 +478,11 @@ export function NotesSidebar({
                             className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80"
                             onClick={() => {
                               if (onLessonSelect && !selectedNote) {
-                                onLessonSelect(note.lesson.id);
+                                onLessonSelect({
+                                  id: note.lesson.id,
+                                  slug: note.lesson.slug,
+                                  courseId: courseId,
+                                });
                               }
                             }}
                           >

@@ -65,7 +65,7 @@ export default function App() {
             }
           />
           <Route
-            path="/courses/:slug/lessons/:lessonId"
+            path="/courses/:slug/lessons/:lessonSlug"
             element={
               <ProtectedRoute>
                 <LessonPage />

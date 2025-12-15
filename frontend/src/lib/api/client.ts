@@ -54,6 +54,12 @@ apiClient.interceptors.response.use(
             return Promise.reject(error)
         }
 
+        // Skip toast for lesson by slug endpoint (404) - let component handle it
+        if (status === 404 && requestUrl.includes('/courses/slug/') && requestUrl.includes('/lessons/')) {
+            // Don't show toast, let component handle it with error page
+            return Promise.reject(error)
+        }
+
         // Skip toast for validation errors from lesson/course endpoints (422)
         // Let components handle validation errors themselves to avoid duplicates
         if (status === 422 && (requestUrl.includes('/lessons/') || requestUrl.includes('/courses/'))) {
