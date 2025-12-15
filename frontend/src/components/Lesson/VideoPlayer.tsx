@@ -84,6 +84,8 @@ export function VideoPlayer({
   const subtitleStyleRef = useRef<HTMLStyleElement | null>(null);
   const isDraggingRef = useRef(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverPercent, setHoverPercent] = useState<number | null>(null);
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -752,7 +754,7 @@ export function VideoPlayer({
     <div
       ref={containerRef}
       className={`relative bg-black aspect-[16/9] group ${className}`}
-      style={{ maxHeight: showSidebar ? '65vh' : '70vh' }}
+      style={{ maxHeight: showSidebar ? '70vh' : '75vh' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
         if (isPlaying) {
@@ -820,15 +822,13 @@ export function VideoPlayer({
           {(showCenterPlayButton || showInitialPlayButton) && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-lg animate-pulse" />
                 {/* Main button */}
-                <div className="relative bg-gradient-to-br from-black/90 via-black/80 to-black/90 rounded-full p-4 shadow-2xl border border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-110">
+                <div className="relative bg-gradient-to-br from-black/80 via-black/70 to-black/80 rounded-full p-3 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105">
                   <div className="relative">
                     {isPlaying ? (
-                      <Pause className="h-14 w-14 text-white drop-shadow-lg" fill="currentColor" />
+                      <Pause className="h-10 w-10 text-gray-200" fill="currentColor" />
                     ) : (
-                      <Play className="h-14 w-14 text-white drop-shadow-lg ml-1" fill="currentColor" />
+                      <Play className="h-10 w-10 text-gray-200 ml-0.5" fill="currentColor" />
                     )}
                   </div>
                 </div>
@@ -869,7 +869,35 @@ export function VideoPlayer({
             className="h-2 bg-white/20 rounded-full overflow-visible cursor-pointer group/progress hover:h-2.5 transition-all relative"
             onClick={handleSeek}
             onMouseDown={handleDragStart}
+            onMouseMove={(e) => {
+              const rect = progressBarRef.current?.getBoundingClientRect();
+              if (!rect || duration <= 0) {
+                setHoverTime(null);
+                setHoverPercent(null);
+                return;
+              }
+              const pos = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+              const percent = pos / rect.width;
+              setHoverPercent(percent * 100);
+              setHoverTime(percent * duration);
+            }}
+            onMouseLeave={() => {
+              setHoverTime(null);
+              setHoverPercent(null);
+            }}
           >
+            {hoverTime !== null && hoverPercent !== null && (
+              <div
+                className="absolute -top-8 px-2.5 py-1.5 rounded bg-black/85 text-white text-xs font-semibold shadow-lg pointer-events-none select-none"
+                style={{
+                  left: `${hoverPercent}%`,
+                  transform: 'translateX(-50%)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {formatTime(hoverTime)}
+              </div>
+            )}
             <div
               className="h-full bg-blue-600 transition-all group-hover/progress:bg-blue-500"
               style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}

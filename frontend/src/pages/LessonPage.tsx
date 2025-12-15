@@ -36,6 +36,7 @@ export function LessonPage() {
   const lessonId = params.lessonId;
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
   const navigate = useNavigate();
   
   const [course, setCourse] = useState<Course | null>(null);
@@ -485,11 +486,11 @@ export function LessonPage() {
               <div className="hidden sm:flex flex-1 flex-col items-center mx-2 md:mx-4 min-w-0">
                 <Progress value={enrollmentProgress} className="h-1.5 w-full max-w-xs" />
                 <div className="hidden md:flex items-center gap-2 mt-1">
-                  <p className="text-xs text-gray-400 whitespace-nowrap">
+                  <p className="text-xs whitespace-nowrap text-gray-400">
                     {Number(enrollmentProgress).toFixed(0)}% hoàn thành
                   </p>
                   {totalLessons > 0 && (
-                    <p className="text-xs text-gray-500 whitespace-nowrap">
+                    <p className="text-xs whitespace-nowrap text-gray-500">
                       • {completedLessons}/{totalLessons} bài học đã hoàn thành
                     </p>
                   )}
@@ -530,7 +531,7 @@ export function LessonPage() {
             }}
           >
             {/* Video Player */}
-            <Card className="overflow-hidden bg-[#1A1A1A] border-[#2D2D2D] rounded-none">
+            <Card className="overflow-hidden bg-card border-none rounded-none shadow-none">
               <VideoPlayer
                 videoUrl={videoUrl}
                 subtitleUrl={subtitleUrl}
@@ -545,11 +546,11 @@ export function LessonPage() {
 
             {/* Lesson Info and Navigation */}
             {selectedLesson && (
-              <Card className="bg-[#1A1A1A] border-[#2D2D2D] rounded-none ">
+              <Card className="bg-card border-border rounded-none ">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-white">{selectedLesson.title}</CardTitle>
+                  <CardTitle className="text-foreground">{selectedLesson.title}</CardTitle>
                   {selectedLesson.description && (
-                    <p className="text-sm text-gray-400 mt-2">{selectedLesson.description}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{selectedLesson.description}</p>
                   )}
                 </CardHeader>
               </Card>
@@ -557,25 +558,37 @@ export function LessonPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full !gap-0">
-              <DarkTabsList className="!rounded-none">
-                <DarkTabsTrigger value="overview" variant="blue" className="!rounded-none">
+              <DarkTabsList
+                className={`!rounded-none ${
+                  isDark ? '' : '!bg-white !text-gray-900 !border-gray-200'
+                }`}
+              >
+                <DarkTabsTrigger
+                  value="overview"
+                  variant="blue"
+                  className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
+                >
                   Tổng quan
                 </DarkTabsTrigger>
-                <DarkTabsTrigger value="transcript" variant="blue" className="!rounded-none">
+                <DarkTabsTrigger
+                  value="transcript"
+                  variant="blue"
+                  className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Transcript
                 </DarkTabsTrigger>
               </DarkTabsList>
 
               <TabsContent value="overview" className="" >
-                <Card className="bg-[#1A1A1A] border-[#2D2D2D] rounded-none">
+                <Card className="bg-card border-border rounded-none">
                   <CardContent className="pt-6">
                     <div className="prose max-w-none">
-                      <h3 className="text-white">Trong bài học này bạn sẽ học:</h3>
+                      <h3 className="text-foreground">Trong bài học này bạn sẽ học:</h3>
                       {selectedLesson?.content ? (
-                        <div className="text-gray-300 whitespace-pre-wrap">{selectedLesson.content}</div>
+                        <div className="text-muted-foreground whitespace-pre-wrap">{selectedLesson.content}</div>
                       ) : (
-                        <ul className="text-gray-300">
+                        <ul className="text-muted-foreground">
                           <li>Khái niệm cơ bản về {selectedLesson?.title}</li>
                           <li>Cách triển khai và áp dụng vào dự án</li>
                           <li>Best practices và tips</li>
@@ -622,7 +635,7 @@ export function LessonPage() {
 
       {/* Bottom Bar - Navigation */}
       {selectedLesson && (
-        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#2D2D2D] z-50">
+        <div className="bg-black border-t border-[#2D2D2D] fixed bottom-0 left-0 right-0 z-50">
           <div className="container mx-auto px-4 py-2">
             <div className="flex items-center justify-between">
               {/* Notes Button - Left */}

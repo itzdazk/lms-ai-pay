@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Loader2, FileX } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface TranscriptItem {
   time: number; // Time in seconds
@@ -24,6 +25,8 @@ export function Transcript({
   currentTime = 0,
   className = '',
 }: TranscriptProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -248,11 +251,11 @@ export function Transcript({
 
   if (loading) {
     return (
-      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
+      <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} ${className}`}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-            <span className="ml-2 text-gray-400">Đang tải transcript...</span>
+            <Loader2 className={`h-8 w-8 animate-spin ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <span className={`ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Đang tải transcript...</span>
           </div>
         </CardContent>
       </Card>
@@ -263,11 +266,11 @@ export function Transcript({
   if (error) {
     console.error('Transcript error:', error, 'URL:', transcriptJsonUrl);
     return (
-      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
+      <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} ${className}`}>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-center py-12">
-            <FileX className="h-12 w-12 text-gray-500 mb-3" />
-            <p className="text-gray-400">Chưa có transcript</p>
+            <FileX className={`h-12 w-12 mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Chưa có transcript</p>
           </div>
         </CardContent>
       </Card>
@@ -277,11 +280,11 @@ export function Transcript({
   // If no transcript data available after loading, show message
   if (!loading && transcript.length === 0) {
     return (
-      <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
+      <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} ${className}`}>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-center py-12">
-            <FileX className="h-12 w-12 text-gray-500 mb-3" />
-            <p className="text-gray-400">Chưa có transcript</p>
+            <FileX className={`h-12 w-12 mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Chưa có transcript</p>
           </div>
         </CardContent>
       </Card>
@@ -289,7 +292,7 @@ export function Transcript({
   }
 
   return (
-    <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className}`}>
+    <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} ${className}`}>
       <CardContent className="pt-6">
         <div
           ref={transcriptRef}
@@ -330,19 +333,21 @@ export function Transcript({
                 className={`flex gap-4 p-2 rounded cursor-pointer transition-colors ${
                   isActive
                     ? 'bg-blue-600/20 border-l-2 border-blue-600'
-                    : 'hover:bg-[#1F1F1F]'
+                    : isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-100'
                 }`}
               >
                 <span
                   className={`text-sm font-mono flex-shrink-0 ${
-                    isActive ? 'text-blue-500' : 'text-gray-500'
+                    isActive ? 'text-blue-500' : isDark ? 'text-gray-500' : 'text-gray-600'
                   }`}
                 >
                   {formatTime(item.time)}
                 </span>
                 <p
                   className={`text-sm flex-1 ${
-                    isActive ? 'text-white' : 'text-gray-300'
+                    isActive 
+                      ? isDark ? 'text-white' : 'text-gray-900'
+                      : isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   {item.text}

@@ -9,6 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../ui/accordion';
+import { useTheme } from '../../contexts/ThemeContext';
 import type { Lesson, Chapter } from '../../lib/api/types';
 
 interface LessonListProps {
@@ -36,6 +37,8 @@ export function LessonList({
   completedLessons = 0,
   totalLessons = 0,
 }: LessonListProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   // Ensure enrollmentProgress is a number
   const progress = typeof enrollmentProgress === 'number' 
     ? enrollmentProgress 
@@ -117,11 +120,14 @@ export function LessonList({
   }, [selectedLessonId, chapters]);
 
   return (
-    <Card className="bg-[#1A1A1A] border-[#2D2D2D] h-full flex flex-col rounded-none">
+    <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} h-full flex flex-col rounded-none`}>
       <CardHeader className="flex-shrink-0 rounded-none">
-        <CardTitle className="flex items-center justify-between text-white">
+        <CardTitle className={`flex items-center justify-between ${isDark ? 'text-white' : 'text-gray-900'}`}>
           <span>Nội dung khóa học</span>
-          <Badge variant="outline" className="border-[#2D2D2D] text-gray-300">
+          <Badge
+            variant="outline"
+            className={`${isDark ? 'border-[#2D2D2D] text-gray-300' : 'border-gray-300 text-gray-700'}`}
+          >
             {chapters.length > 0 ? `${chapters.length} chương • ${totalLessonsCount} bài` : `${totalLessonsCount} bài`}
           </Badge>
         </CardTitle>
@@ -148,24 +154,33 @@ export function LessonList({
                 <AccordionItem
                   key={chapter.id}
                   value={`chapter-${chapter.id}`}
-                  className="border border-[#2D2D2D] bg-[#151515] rounded-none"
+                  className={`border rounded-none ${
+                    isDark ? 'border-[#2D2D2D] bg-[#151515]' : 'border-gray-200 bg-white'
+                  }`}
                 >
-                  <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-[#1A1A1A] rounded-none">
+                  <AccordionTrigger
+                    className={`px-3 py-2 hover:no-underline rounded-none ${
+                      isDark ? 'hover:bg-[#1A1A1A]' : 'hover:bg-gray-100'
+                    }`}
+                  >
                       <div className="flex items-center justify-between w-full pr-2">
                         <div className="flex items-center gap-2">
                           <BookOpen className="h-4 w-4 text-blue-400 flex-shrink-0" />
                           <div className="text-left">
-                            <p className="text-sm font-medium text-white">
+                            <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                               {chapter.title}
                             </p>
                             {chapter.description && (
-                              <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                              <p className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                                 {chapter.description}
                               </p>
                             )}
                           </div>
                         </div>
-                        <Badge variant="outline" className="text-xs border-[#2D2D2D] text-gray-400">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${isDark ? 'border-[#2D2D2D] text-gray-400' : 'border-gray-300 text-gray-700'}`}
+                        >
                           {chapterLessons.length} bài
                         </Badge>
                       </div>
@@ -174,6 +189,7 @@ export function LessonList({
                     <div className="space-y-1 mt-2 rounded-none">
                         {chapterLessons.map((lesson) => {
                           const globalIndex = getLessonGlobalIndex(lesson);
+                          const lessonNumber = globalIndex + 1;
                           const isSelected = selectedLessonId === lesson.id;
                           const isCompleted = completedLessonIds.includes(lesson.id);
                           const isLocked = isLessonLocked(lesson, globalIndex, allLessons);
@@ -189,9 +205,11 @@ export function LessonList({
                             className={`flex items-center justify-between p-2 rounded-none transition-colors ${
                                 isSelected
                                   ? 'bg-blue-600/20 border border-blue-600'
-                                  : isLocked
+                                : isLocked
                                   ? 'opacity-50 cursor-not-allowed'
-                                  : 'hover:bg-[#1F1F1F] cursor-pointer'
+                                  : isDark
+                                    ? 'border border-transparent hover:bg-[#1F1F1F] cursor-pointer'
+                                    : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                               }`}
                             >
                               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -218,13 +236,13 @@ export function LessonList({
                                 <div className="flex-1 min-w-0">
                                   <p
                                     className={`text-xs font-medium truncate ${
-                                      isSelected ? 'text-blue-400' : 'text-white'
+                                      isSelected ? 'text-blue-500 dark:text-blue-400' : isDark ? 'text-white' : 'text-gray-900'
                                     }`}
                                   >
-                                    {lesson.title}
+                                    Bài {lessonNumber}. {lesson.title}
                                   </p>
                                   <div className="flex items-center gap-2 mt-0.5">
-                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <div className={`flex items-center gap-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                                       <Clock className="h-2.5 w-2.5" />
                                       <span>{formatDuration(lesson.videoDuration)}</span>
                                     </div>
@@ -248,6 +266,7 @@ export function LessonList({
           ) : (
                 <div className="space-y-1 rounded-none">
               {sortedLessons.map((lesson, index) => {
+                const lessonNumber = index + 1;
                 const isSelected = selectedLessonId === lesson.id;
                 const isCompleted = completedLessonIds.includes(lesson.id);
                 const isLocked = isLessonLocked(lesson, index, allLessons);
@@ -265,7 +284,9 @@ export function LessonList({
                         ? 'bg-blue-600/20 border border-blue-600'
                         : isLocked
                         ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-[#1F1F1F] cursor-pointer'
+                        : isDark
+                          ? 'border border-transparent hover:bg-[#1F1F1F] cursor-pointer'
+                          : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -292,13 +313,13 @@ export function LessonList({
                       <div className="flex-1 min-w-0">
                         <p
                           className={`text-sm font-medium truncate ${
-                            isSelected ? 'text-blue-400' : 'text-white'
+                            isSelected ? 'text-blue-500 dark:text-blue-400' : isDark ? 'text-white' : 'text-gray-900'
                           }`}
                         >
-                          {lesson.title}
+                          Bài {lessonNumber}. {lesson.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <div className={`flex items-center gap-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                             <Clock className="h-3 w-3" />
                             <span>{formatDuration(lesson.videoDuration)}</span>
                           </div>

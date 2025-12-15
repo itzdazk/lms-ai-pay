@@ -5,6 +5,7 @@ import { DarkOutlineButton } from '../ui/buttons';
 import { Loader2, PenTool, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { lessonNotesApi } from '../../lib/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface NotesDrawerProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export function NotesDrawer({
   chapterTitle,
   lessonTitle,
 }: NotesDrawerProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [notes, setNotes] = useState(initialNotes || '');
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -89,23 +92,30 @@ export function NotesDrawer({
     <>
       {/* Drawer */}
       <div
-        className={`fixed bottom-0 bg-[#1A1A1A] border-t border-[#2D2D2D] z-[60] transform transition-all duration-300 ease-out ${
+        className={`fixed bottom-0 z-[60] transform transition-all duration-300 ease-out ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{
-          height: showSidebar ? '30vh' : '35vh',
+          height: showSidebar ? '30vh' : '28vh',
           left: '0',
           width: showSidebar ? '75%' : '100%',
           pointerEvents: isOpen ? 'auto' : 'none',
         }}
       >
-        <div className="flex flex-col" style={{ height: showSidebar ? '30vh' : '35vh' }}>
+        <div
+          className={`flex flex-col ${isDark ? 'bg-[#1A1A1A] border-t border-[#2D2D2D]' : 'bg-white border-t border-gray-200'}`}
+          style={{ height: showSidebar ? '30vh' : '28vh' }}
+        >
           {/* Header with indicator */}
           {isOpen && (
-            <div className="px-3 py-2 border-b border-[#2D2D2D] bg-[#1F1F1F] flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div
+              className={`px-3 py-1 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-300 border-b ${
+                isDark ? 'border-[#2D2D2D] bg-[#1F1F1F]' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
               <div className="flex items-center gap-2">
-                <PenTool className="h-4 w-4 text-blue-500" />
-                <span className="text-xs text-gray-400">
+                <PenTool className="h-3.5 w-3.5 text-blue-500" />
+                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   Viết ghi chú của bạn ở đây để lưu lại những điều quan trọng
                 </span>
               </div>
@@ -114,7 +124,7 @@ export function NotesDrawer({
                 onClick={onClose}
                 title="Đóng ghi chú"
               >
-                <X className="h-4 w-4" />
+                <X className={`h-4 w-4 ${isDark ? 'text-gray-400' : 'text-blue-600'}`} />
               </DarkOutlineButton>
             </div>
           )}
@@ -133,8 +143,12 @@ export function NotesDrawer({
           </div>
 
           {/* Footer - Fixed at bottom */}
-          <div className="flex items-center justify-between px-2 py-2 border-t border-[#2D2D2D] bg-[#1A1A1A]">
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div
+            className={`flex items-center justify-between h-12 px-4 border-t ${
+              isDark ? 'bg-[#1F1F1F] border-[#2D2D2D]' : 'bg-white border-gray-200'
+            }`}
+          >
+            <div className={`flex items-center gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               <DarkOutlineButton
                 size="sm"
                 onClick={onClose}
@@ -156,7 +170,7 @@ export function NotesDrawer({
                 )}
               </Button>
             </div>
-            <span className="whitespace-nowrap text-xs text-gray-400">
+            <span className={`whitespace-nowrap text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
               <span className="font-semibold"><strong>Ghi chú của bạn</strong></span>
               {chapterTitle && ` • ${chapterTitle}`}
               {lessonTitle && ` • ${lessonTitle}`}

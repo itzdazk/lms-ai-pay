@@ -5,6 +5,7 @@ import { Textarea } from '../ui/textarea';
 import { Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { lessonNotesApi } from '../../lib/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface NotesProps {
   lessonId: number;
@@ -31,6 +32,8 @@ export const Notes = forwardRef<NotesRef, NotesProps>(({
   onNotesChange,
   autoFocus = false,
 }, ref) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [notes, setNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -127,7 +130,9 @@ export const Notes = forwardRef<NotesRef, NotesProps>(({
         value={notes}
         onChange={(e) => handleChange(e.target.value)}
         placeholder="Viết ghi chú của bạn ở đây..."
-        className="w-full h-full p-3 border-0 bg-transparent text-white placeholder:text-gray-500 focus:outline-none resize-none custom-scrollbar"
+        className={`w-full h-full p-3 bg-transparent resize-none custom-scrollbar border border-blue-500/70 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          isDark ? 'text-white placeholder:text-gray-500' : 'text-gray-900 placeholder:text-gray-500'
+        }`}
         style={{ 
           height: '100%',
           overflowY: 'auto'
