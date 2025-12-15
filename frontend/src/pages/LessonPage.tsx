@@ -8,6 +8,7 @@ import { Tabs, TabsContent } from '../components/ui/tabs';
 import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
 import {
   ChevronLeft,
+  ChevronRight,
   FileText,
   MessageCircle,
   BookOpen,
@@ -18,11 +19,13 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  PenTool,
 } from 'lucide-react';
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
 import { NotesDrawer } from '../components/Lesson/NotesDrawer';
+import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -46,6 +49,7 @@ export function LessonPage() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [showNotesDrawer, setShowNotesDrawer] = useState(false);
+  const [showNotesSidebar, setShowNotesSidebar] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -498,6 +502,15 @@ export function LessonPage() {
               </div>
             )}
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              {isEnrolled && (
+                <DarkOutlineButton
+                  size="icon"
+                  onClick={() => setShowNotesSidebar(true)}
+                  title="Ghi chú"
+                >
+                  <BookOpen className="h-4 w-4" />
+                </DarkOutlineButton>
+              )}
               <DarkOutlineButton
                 size="icon"
                 onClick={toggleTheme}
@@ -644,8 +657,8 @@ export function LessonPage() {
                 onClick={() => setShowNotesDrawer(true)}
                 title="Mở ghi chú"
               >
-                <BookOpen className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Ghi chú</span>
+                <PenTool className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline" spellCheck={false}>Ghi chú</span>
               </DarkOutlineButton>
               <div className="flex items-center justify-center gap-4 flex-1">
               <DarkOutlineButton
@@ -752,6 +765,57 @@ export function LessonPage() {
             showSidebar={showSidebar}
             chapterTitle={currentChapter?.title}
             lessonTitle={selectedLesson.title}
+          />
+        );
+      })()}
+
+      {/* Notes Sidebar */}
+      {course && isEnrolled && (() => {
+        // Find current chapter and its lesson IDs
+        let currentChapter: Chapter | null = null;
+        let currentChapterLessonIds: number[] = [];
+        
+        if (chapters.length > 0 && selectedLesson) {
+          for (const chapter of chapters) {
+            if (chapter.lessons?.some((l) => l.id === selectedLesson.id)) {
+              currentChapter = chapter;
+              currentChapterLessonIds = chapter.lessons?.map(l => l.id) || [];
+              break;
+            }
+          }
+        }
+        
+        return (
+          <NotesSidebar
+            isOpen={showNotesSidebar}
+            onClose={() => setShowNotesSidebar(false)}
+            courseId={course.id}
+            currentChapterId={currentChapter?.id}
+            currentChapterTitle={currentChapter?.title}
+            currentChapterLessonIds={currentChapterLessonIds}
+            chapters={chapters.map(ch => ({
+              id: ch.id,
+              title: ch.title,
+              lessonIds: ch.lessons?.map(l => l.id) || [],
+            }))}
+            currentLessonId={selectedLesson?.id}
+            onLessonSelect={(lessonId) => {
+              const allLessons: Lesson[] = [];
+              if (chapters.length > 0) {
+                chapters.forEach((chapter) => {
+                  if (chapter.lessons) {
+                    allLessons.push(...chapter.lessons);
+                  }
+                });
+              } else {
+                allLessons.push(...lessons);
+              }
+              const lesson = allLessons.find((l) => l.id === lessonId);
+              if (lesson) {
+                handleLessonSelect(lesson);
+                setShowNotesSidebar(false);
+              }
+            }}
           />
         );
       })()}

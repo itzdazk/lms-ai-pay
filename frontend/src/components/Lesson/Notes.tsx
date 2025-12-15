@@ -130,6 +130,7 @@ export const Notes = forwardRef<NotesRef, NotesProps>(({
         value={notes}
         onChange={(e) => handleChange(e.target.value)}
         placeholder="Viết ghi chú của bạn ở đây..."
+        spellCheck={false}
         className={`w-full h-full p-3 bg-transparent resize-none custom-scrollbar border border-blue-500/70 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           isDark ? 'text-white placeholder:text-gray-500' : 'text-gray-900 placeholder:text-gray-500'
         }`}
