@@ -10,7 +10,6 @@ import {
   FileText,
   MessageCircle,
   BookOpen,
-  ClipboardList,
   CheckCircle,
   Loader2,
   ArrowLeft,
@@ -20,11 +19,11 @@ import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
 import { Notes } from '../components/Lesson/Notes';
-import { coursesApi, lessonsApi, lessonNotesApi } from '../lib/api';
+import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { convertTranscriptToVTT, createVTTBlobURL } from '../lib/transcriptUtils';
-import type { Course, Lesson, Enrollment, CourseLessonsResponse } from '../lib/api/types';
+import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
 
 export function LessonPage() {
   const params = useParams<{ slug: string; lessonId?: string }>();
@@ -35,6 +34,7 @@ export function LessonPage() {
   
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
@@ -98,7 +98,11 @@ export function LessonPage() {
         const courseData = await coursesApi.getCourseBySlug(courseSlug);
         const courseId = courseData.id;
         
-        // Then load lessons using courseId
+        // Load chapters with lessons
+        const chaptersData = await chaptersApi.getChaptersByCourse(courseId, true);
+        setChapters(chaptersData || []);
+        
+        // Then load lessons using courseId (fallback)
         const lessonsData = await lessonsApi.getCourseLessons(courseId);
 
         setCourse(courseData);
@@ -117,15 +121,34 @@ export function LessonPage() {
         }
 
         // Select initial lesson
+        // First try to find in chapters, then fallback to lessons array
+        let initialLesson: Lesson | null = null;
         if (lessonId) {
-          const lesson = lessonsData.lessons.find((l) => String(l.id) === lessonId);
-          if (lesson) {
-            setSelectedLesson(lesson);
-          } else if (lessonsData.lessons.length > 0) {
-            setSelectedLesson(lessonsData.lessons[0]);
+          // Search in chapters first
+          for (const chapter of chaptersData) {
+            const lesson = chapter.lessons?.find((l) => String(l.id) === lessonId);
+            if (lesson) {
+              initialLesson = lesson;
+              break;
+            }
           }
-        } else if (lessonsData.lessons.length > 0) {
-          setSelectedLesson(lessonsData.lessons[0]);
+          // Fallback to lessons array
+          if (!initialLesson) {
+            initialLesson = lessonsData.lessons.find((l) => String(l.id) === lessonId) || null;
+          }
+        }
+        
+        // If no lesson found by ID, get first available lesson
+        if (!initialLesson) {
+          if (chaptersData.length > 0 && chaptersData[0].lessons && chaptersData[0].lessons.length > 0) {
+            initialLesson = chaptersData[0].lessons[0];
+          } else if (lessonsData.lessons.length > 0) {
+            initialLesson = lessonsData.lessons[0];
+          }
+        }
+        
+        if (initialLesson) {
+          setSelectedLesson(initialLesson);
         }
       } catch (error: any) {
         console.error('Error loading course data:', error);
@@ -368,14 +391,28 @@ export function LessonPage() {
 
   // Navigate to next/previous lesson
   const navigateToLesson = (direction: 'next' | 'prev') => {
-    if (!selectedLesson || lessons.length === 0) return;
+    if (!selectedLesson) return;
 
-    const currentIndex = lessons.findIndex((l) => l.id === selectedLesson.id);
+    // Flatten all lessons from chapters
+    const allLessons: Lesson[] = [];
+    if (chapters.length > 0) {
+      chapters.forEach((chapter) => {
+        if (chapter.lessons) {
+          allLessons.push(...chapter.lessons);
+        }
+      });
+    } else {
+      allLessons.push(...lessons);
+    }
+
+    if (allLessons.length === 0) return;
+
+    const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
     if (currentIndex === -1) return;
 
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (newIndex >= 0 && newIndex < lessons.length) {
-      handleLessonSelect(lessons[newIndex]);
+    if (newIndex >= 0 && newIndex < allLessons.length) {
+      handleLessonSelect(allLessons[newIndex]);
     }
   };
 
@@ -502,7 +539,20 @@ export function LessonPage() {
                     <DarkOutlineButton
                       size="sm"
                       onClick={() => navigateToLesson('prev')}
-                      disabled={!lessons.find((l) => l.id === selectedLesson.id) || lessons.findIndex((l) => l.id === selectedLesson.id) === 0}
+                      disabled={(() => {
+                        const allLessons: Lesson[] = [];
+                        if (chapters.length > 0) {
+                          chapters.forEach((chapter) => {
+                            if (chapter.lessons) {
+                              allLessons.push(...chapter.lessons);
+                            }
+                          });
+                        } else {
+                          allLessons.push(...lessons);
+                        }
+                        const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+                        return currentIndex === -1 || currentIndex === 0;
+                      })()}
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Bài trước
@@ -510,7 +560,20 @@ export function LessonPage() {
                     <DarkOutlineButton
                       size="sm"
                       onClick={() => navigateToLesson('next')}
-                      disabled={!lessons.find((l) => l.id === selectedLesson.id) || lessons.findIndex((l) => l.id === selectedLesson.id) === lessons.length - 1}
+                      disabled={(() => {
+                        const allLessons: Lesson[] = [];
+                        if (chapters.length > 0) {
+                          chapters.forEach((chapter) => {
+                            if (chapter.lessons) {
+                              allLessons.push(...chapter.lessons);
+                            }
+                          });
+                        } else {
+                          allLessons.push(...lessons);
+                        }
+                        const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+                        return currentIndex === -1 || currentIndex === allLessons.length - 1;
+                      })()}
                     >
                       Bài tiếp theo
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -581,6 +644,7 @@ export function LessonPage() {
           <div className="lg:col-span-1">
             <LessonList
               lessons={lessons}
+              chapters={chapters}
               selectedLessonId={selectedLesson?.id}
               onLessonSelect={handleLessonSelect}
               enrollmentProgress={enrollmentProgress}
@@ -588,23 +652,6 @@ export function LessonPage() {
               isEnrolled={isEnrolled}
               courseTitle={course.title}
             />
-
-            <div className="mt-4 space-y-2">
-              <DarkOutlineButton className="w-full" asChild>
-                <Link to="/ai-chat">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Hỏi AI Tutor
-                </Link>
-              </DarkOutlineButton>
-              {selectedLesson && (
-                <DarkOutlineButton className="w-full" asChild>
-                  <Link to={`/quiz/${selectedLesson.id}`}>
-                    <ClipboardList className="h-4 w-4 mr-2" />
-                    Làm Quiz
-                  </Link>
-                </DarkOutlineButton>
-              )}
-            </div>
           </div>
         </div>
       </div>
