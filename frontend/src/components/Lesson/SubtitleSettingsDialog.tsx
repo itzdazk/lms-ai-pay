@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   fontFamily: 'Arial',
   textEffect: 'stroke',
   backgroundColor: '#000000',
-  backgroundOpacity: 0,
+  backgroundOpacity: 100,
 };
 
 // Màu có sẵn

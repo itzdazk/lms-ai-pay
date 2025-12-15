@@ -89,6 +89,7 @@ export function VideoPlayer({
   const isDraggingVolumeRef = useRef(false);
   const previousSubtitleSettingsRef = useRef<string>('');
   const previousShowControlsRef = useRef<boolean | null>(null);
+  const previousIsFullscreenRef = useRef<boolean | null>(null);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
   const [isVideoFocused, setIsVideoFocused] = useState(false);
@@ -567,10 +568,12 @@ export function VideoPlayer({
     }
     console.log('[VideoPlayer] Applying subtitle styles:', subtitleSettings);
     
-    // Determine subtitle position based on controls visibility
+    // Determine subtitle position based on controls visibility and fullscreen mode
     // When controls are visible, push subtitle higher to avoid overlap
-    // Controls take up about 80-100px from bottom, so we need to push subtitle higher
-    const subtitleBottom = showControls ? '5%' : '0%';
+    // In fullscreen, use slightly lower position
+    const subtitleBottom = isFullscreen 
+      ? (showControls ? '4%' : '1%')
+      : (showControls ? '6%' : '2%');
 
     // Get or create style element (don't remove and recreate to avoid flicker)
     let style = document.getElementById('subtitle-styles') as HTMLStyleElement;
@@ -667,6 +670,37 @@ export function VideoPlayer({
       textEffectStyle = `text-shadow: 2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8) !important;`;
     }
     // 'none' doesn't need any style
+    
+    // Background color for text only - combine text effect with background
+    // For video subtitles, background-color without padding will only apply to text, not a block
+    let combinedStyle = textEffectStyle;
+    if (bgOpacity > 0) {
+      // Extract text-shadow values from textEffectStyle if it exists
+      let effectShadows = '';
+      if (textEffectStyle) {
+        // Extract shadows from textEffectStyle (remove "text-shadow: " and " !important;")
+        const effectMatch = textEffectStyle.match(/text-shadow:\s*(.+?)\s*!important;/);
+        if (effectMatch) {
+          effectShadows = effectMatch[1];
+        }
+      }
+      
+      // Create multiple text-shadow layers to simulate background around text
+      // This creates background only around the text characters, not a block
+      const shadowLayers = [];
+      // Create a solid background effect using multiple shadow layers
+      for (let x = -2; x <= 2; x++) {
+        for (let y = -2; y <= 2; y++) {
+          // Skip the center to avoid covering the text
+          if (x === 0 && y === 0) continue;
+          shadowLayers.push(`${x}px ${y}px 0 ${bgRgba}`);
+        }
+      }
+      
+      // Combine text effect shadows with background shadows
+      const allShadows = effectShadows ? [effectShadows, ...shadowLayers] : shadowLayers;
+      combinedStyle = `text-shadow: ${allShadows.join(', ')} !important;`;
+    }
 
     // Get video element ID for more specific selector
     const videoId = videoRef.current.id || 'lesson-video-player';
@@ -689,11 +723,7 @@ export function VideoPlayer({
         font-size: ${subtitleSettings.fontSize || 20}px !important;
         color: ${textRgba} !important;
         font-family: "${subtitleSettings.fontFamily || 'Arial'}", sans-serif !important;
-        ${textEffectStyle}
-        background-color: ${bgRgba} !important;
-        background: ${bgRgba} !important;
-        padding: 4px 8px !important;
-        border-radius: 4px !important;
+        ${combinedStyle}
         line-height: 1.4 !important;
         white-space: normal !important;
         word-wrap: break-word !important;
@@ -705,11 +735,7 @@ export function VideoPlayer({
         font-size: ${subtitleSettings.fontSize || 20}px !important;
         color: ${textRgba} !important;
         font-family: "${subtitleSettings.fontFamily || 'Arial'}", sans-serif !important;
-        ${textEffectStyle}
-        background-color: ${bgRgba} !important;
-        background: ${bgRgba} !important;
-        padding: 4px 8px !important;
-        border-radius: 4px !important;
+        ${combinedStyle}
         bottom: ${subtitleBottom} !important;
         top: auto !important;
         left: 50% !important;
@@ -739,6 +765,7 @@ export function VideoPlayer({
         text-align: center !important;
         word-wrap: break-word !important;
         white-space: normal !important;
+        ${combinedStyle}
         z-index: 10 !important;
         transition: none !important;
       }
@@ -747,11 +774,7 @@ export function VideoPlayer({
         font-size: ${subtitleSettings.fontSize || 20}px !important;
         color: ${textRgba} !important;
         font-family: "${subtitleSettings.fontFamily || 'Arial'}", sans-serif !important;
-        ${textEffectStyle}
-        background-color: ${bgRgba} !important;
-        background: ${bgRgba} !important;
-        padding: 4px 8px !important;
-        border-radius: 4px !important;
+        ${combinedStyle}
         text-align: center !important;
         word-wrap: break-word !important;
         white-space: normal !important;
@@ -790,20 +813,24 @@ export function VideoPlayer({
     }
   }, [subtitleSettings, showSubtitles, settingsLoaded, videoUrl]); // Add videoUrl to re-apply when video changes
   
-  // Quick update subtitle position when showControls changes (without recreating entire CSS)
+  // Quick update subtitle position when showControls or isFullscreen changes (without recreating entire CSS)
   useEffect(() => {
     if (!videoRef.current || !showSubtitles || !subtitleSettings) {
       previousShowControlsRef.current = showControls;
+      previousIsFullscreenRef.current = isFullscreen;
       return;
     }
     
-    // Only update if showControls actually changed
-    if (previousShowControlsRef.current === showControls) {
+    // Update if showControls or isFullscreen changed
+    if (previousShowControlsRef.current === showControls && previousIsFullscreenRef.current === isFullscreen) {
       return;
     }
     previousShowControlsRef.current = showControls;
+    previousIsFullscreenRef.current = isFullscreen;
     
-    const subtitleBottom = showControls ? '5%' : '0%';
+    const subtitleBottom = isFullscreen 
+      ? (showControls ? '4%' : '1%')
+      : (showControls ? '6%' : '2%');
     const style = document.getElementById('subtitle-styles');
     if (style && style.textContent) {
       // Update all bottom values in CSS
@@ -819,7 +846,7 @@ export function VideoPlayer({
         style.textContent = newCSS;
       }
     }
-  }, [showControls, showSubtitles, subtitleSettings]);
+  }, [showControls, showSubtitles, subtitleSettings, isFullscreen]);
 
   // Sync subtitle track when subtitleUrl or showSubtitles changes
   useEffect(() => {
@@ -930,7 +957,7 @@ export function VideoPlayer({
       {/* Title overlay - shows/hides with controls */}
       {title && (
         <div 
-          className={`absolute top-0 left-0 right-0 z-30 px-4 py-3 transition-opacity duration-300 ${
+          className={`absolute top-0 left-0 right-0 z-30 bg-gradient-to-b from-black/50 to-transparent px-4 py-3 transition-opacity duration-300 ${
             showControls ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -1021,7 +1048,7 @@ export function VideoPlayer({
       {/* Controls overlay */}
       {!videoError && (
       <div
-        className={`absolute inset-0 transition-opacity duration-300 controls-container z-50 pointer-events-none ${
+        className={`absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent transition-opacity duration-300 controls-container z-50 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
         } ${subtitleSettingsOpen || playbackRateDialogOpen ? 'pointer-events-none' : ''}`}
         style={{ 
@@ -1218,6 +1245,7 @@ export function VideoPlayer({
                     <DropdownMenuContent 
                       className="bg-[#1A1A1A] border-[#2D2D2D] text-white min-w-[200px] !z-[9999] py-1"
                       align="end"
+                      side="top"
                       container={fullscreenContainer || undefined}
                     >
                       <DropdownMenuLabel className="text-white text-sm font-semibold px-3 py-1.5">

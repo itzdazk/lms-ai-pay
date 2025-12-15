@@ -40,29 +40,29 @@ export function PlaybackRateDialog({
     return createPortal(
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
         <div 
-          className="bg-[#1A1A1A] border-[#2D2D2D] text-white w-[220px] rounded-lg shadow-lg"
+          className="bg-[#1A1A1A] border-[#2D2D2D] text-white w-[180px] rounded-lg shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-4 pt-4 pb-3 border-b border-[#2D2D2D] relative">
-            <h2 className="text-white text-base font-semibold">Tốc độ</h2>
+          <div className="px-3 pt-3 pb-2 border-b border-[#2D2D2D] relative">
+            <h2 className="text-white text-sm font-semibold">Tốc độ</h2>
             <button
               onClick={() => onOpenChange(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white w-6 h-6 flex items-center justify-center rounded hover:bg-[#2D2D2D]"
+              className="absolute top-3 right-3 text-gray-400 hover:text-white w-5 h-5 flex items-center justify-center rounded hover:bg-[#2D2D2D]"
             >
               ✕
             </button>
           </div>
           
-          <div className="px-4 py-3 space-y-1">
+          <div className="px-3 py-2 space-y-1">
             {PLAYBACK_RATES.map((rate) => (
               <button
                 key={rate}
                 onClick={() => handleRateSelect(rate)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded text-white hover:bg-[#2D2D2D] cursor-pointer transition-colors ${
+                className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-white hover:bg-[#2D2D2D] cursor-pointer transition-colors ${
                   selectedRate === rate ? 'bg-[#2D2D2D]' : ''
                 }`}
               >
-                <span className="text-sm">{rate}x</span>
+                <span className="text-xs">{rate}x</span>
                 {selectedRate === rate && (
                   <Check className="h-4 w-4 text-yellow-400" />
                 )}
@@ -70,11 +70,11 @@ export function PlaybackRateDialog({
             ))}
           </div>
 
-          <div className="flex items-center justify-end px-4 py-3 border-t border-[#2D2D2D]">
+          <div className="flex items-center justify-end px-3 py-2 border-t border-[#2D2D2D]">
             <DarkOutlineButton
               onClick={() => onOpenChange(false)}
               size="sm"
-              className="text-xs h-7 px-3"
+              className="text-xs h-6 px-2"
             >
               Hủy
             </DarkOutlineButton>

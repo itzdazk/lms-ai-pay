@@ -156,7 +156,7 @@ export function LessonPage() {
           // Search in chapters first
           for (const chapter of chaptersData) {
             const lesson = chapter.lessons?.find((l) => String(l.id) === lessonId);
-            if (lesson) {
+          if (lesson) {
               initialLesson = lesson;
               break;
             }
@@ -174,7 +174,7 @@ export function LessonPage() {
           } else if (lessonsData.lessons.length > 0) {
             initialLesson = lessonsData.lessons[0];
           }
-        }
+          }
         
         if (initialLesson) {
           setSelectedLesson(initialLesson);
@@ -506,7 +506,7 @@ export function LessonPage() {
                 <Progress value={enrollmentProgress} className="h-1.5 w-full max-w-xs" />
                 <div className="hidden md:flex items-center gap-2 mt-1">
                   <p className="text-xs whitespace-nowrap text-gray-400">
-                    {Number(enrollmentProgress).toFixed(0)}% hoàn thành
+                  {Number(enrollmentProgress).toFixed(0)}% hoàn thành
                   </p>
                   {totalLessons > 0 && (
                     <p className="text-xs whitespace-nowrap text-gray-500">
@@ -666,9 +666,9 @@ export function LessonPage() {
                           </p>
                           <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                             {user.email}
-                          </p>
-                        </div>
-                      </div>
+                </p>
+              </div>
+            </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
                     <DropdownMenuItem
@@ -708,7 +708,7 @@ export function LessonPage() {
                       <Link to="/settings" className="flex items-center">
                         <Settings className="mr-2 h-4 w-4" />
                         Cài đặt
-                      </Link>
+                </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
                     <DropdownMenuItem
@@ -769,7 +769,7 @@ export function LessonPage() {
               <Card className="bg-card border-border rounded-none ">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-foreground">{selectedLesson.title}</CardTitle>
-                  {selectedLesson.description && (
+                      {selectedLesson.description && (
                     <p className="text-sm text-muted-foreground mt-2">{selectedLesson.description}</p>
                   )}
                 </CardHeader>
@@ -836,22 +836,22 @@ export function LessonPage() {
           {/* Sidebar - Course Content */}
           {showSidebar && (
             <div className="lg:col-span-1 h-full overflow-y-auto custom-scrollbar">
-              <LessonList
-                lessons={lessons}
+            <LessonList
+              lessons={lessons}
                 chapters={chapters}
-                selectedLessonId={selectedLesson?.id}
-                onLessonSelect={handleLessonSelect}
-                enrollmentProgress={enrollmentProgress}
-                completedLessonIds={completedLessonIds}
-                isEnrolled={isEnrolled}
-                courseTitle={course.title}
+              selectedLessonId={selectedLesson?.id}
+              onLessonSelect={handleLessonSelect}
+              enrollmentProgress={enrollmentProgress}
+              completedLessonIds={completedLessonIds}
+              isEnrolled={isEnrolled}
+              courseTitle={course.title}
                 completedLessons={completedLessons}
                 totalLessons={totalLessons}
               />
             </div>
-          )}
-        </div>
-      </div>
+              )}
+            </div>
+          </div>
 
       {/* Bottom Bar - Navigation */}
       {selectedLesson && (
@@ -945,8 +945,8 @@ export function LessonPage() {
                   </DarkOutlineButton>
                 );
               })()}
-            </div>
-          </div>
+        </div>
+      </div>
         </div>
       )}
 
