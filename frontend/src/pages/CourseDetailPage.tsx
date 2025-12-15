@@ -35,8 +35,8 @@ import {
     CourseHeroSection,
     CourseSidebar,
 } from '../components/Courses'
-import { coursesApi } from '../lib/api'
-import type { PublicCourse, Lesson, Instructor } from '../lib/api/types'
+import { coursesApi, chaptersApi } from '../lib/api'
+import type { PublicCourse, Lesson, Instructor, Chapter } from '../lib/api/types'
 import { formatDuration } from '../lib/courseUtils'
 
 export function CourseDetailPage() {
@@ -46,6 +46,7 @@ export function CourseDetailPage() {
     // State quản lý dữ liệu từ API
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [lessons, setLessons] = useState<Lesson[]>([])
+    const [chapters, setChapters] = useState<Chapter[]>([])
     const [instructor, setInstructor] = useState<Instructor | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isEnrolled] = useState(false) // TODO: Kết nối với auth context sau
@@ -68,7 +69,14 @@ export function CourseDetailPage() {
                 // Tăng lượt xem (fire and forget)
                 coursesApi.incrementViewCount(courseId).catch(() => {})
 
-                // Lấy danh sách bài học
+                // Lấy danh sách chapters với lessons
+                const chaptersData = await chaptersApi.getChaptersByCourse(
+                    courseId,
+                    true
+                )
+                setChapters(chaptersData || [])
+
+                // Lấy danh sách bài học (fallback nếu không có chapters)
                 const lessonsData = await coursesApi.getCourseLessons(courseId)
                 setLessons(lessonsData.lessons || [])
 
@@ -321,6 +329,7 @@ export function CourseDetailPage() {
                                         <CardContent>
                                             <LessonsList
                                                 lessons={lessons}
+                                                chapters={chapters}
                                                 isEnrolled={isEnrolled}
                                                 totalDuration={course.durationHours * 60}
                                             />
