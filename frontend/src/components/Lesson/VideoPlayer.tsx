@@ -87,6 +87,8 @@ export function VideoPlayer({
   const progressBarRef = useRef<HTMLDivElement>(null);
   const volumeBarRef = useRef<HTMLDivElement>(null);
   const isDraggingVolumeRef = useRef(false);
+  const previousSubtitleSettingsRef = useRef<string>('');
+  const previousShowControlsRef = useRef<boolean | null>(null);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
   const [isVideoFocused, setIsVideoFocused] = useState(false);
@@ -547,7 +549,7 @@ export function VideoPlayer({
     };
     
     checkAndApply();
-  }, [settingsLoaded, videoUrl, subtitleSettings, showSubtitles]); // Include subtitleSettings to re-apply when it changes
+  }, [settingsLoaded, videoUrl, subtitleSettings, showSubtitles]); // Don't include showControls to avoid recreating CSS on every controls change
 
   // Apply subtitle styles
   useEffect(() => {
@@ -568,18 +570,15 @@ export function VideoPlayer({
     // Determine subtitle position based on controls visibility
     // When controls are visible, push subtitle higher to avoid overlap
     // Controls take up about 80-100px from bottom, so we need to push subtitle higher
-    const subtitleBottom = showControls ? '30%' : '5%';
+    const subtitleBottom = showControls ? '5%' : '0%';
 
-    // Remove old style if exists
-    const oldStyle = document.getElementById('subtitle-styles');
-    if (oldStyle) {
-      oldStyle.remove();
+    // Get or create style element (don't remove and recreate to avoid flicker)
+    let style = document.getElementById('subtitle-styles') as HTMLStyleElement;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'subtitle-styles';
+      document.head.appendChild(style);
     }
-
-    // Create new style element
-    const style = document.createElement('style');
-    style.id = 'subtitle-styles';
-    document.head.appendChild(style);
     subtitleStyleRef.current = style;
     
     // Ensure video has an ID
@@ -696,7 +695,10 @@ export function VideoPlayer({
         padding: 4px 8px !important;
         border-radius: 4px !important;
         line-height: 1.4 !important;
-        white-space: pre-wrap !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        text-align: center !important;
+        max-width: 80% !important;
         outline: none !important;
       }
       ${videoSelector}::-webkit-media-text-track-display {
@@ -708,19 +710,37 @@ export function VideoPlayer({
         background: ${bgRgba} !important;
         padding: 4px 8px !important;
         border-radius: 4px !important;
-      }
-      ${videoSelector}::-webkit-media-text-track-container {
-        font-size: ${subtitleSettings.fontSize || 20}px !important;
-      }
-      ${videoSelector}::cue(v[lang="vi"]) {
         bottom: ${subtitleBottom} !important;
+        top: auto !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         position: absolute !important;
         width: auto !important;
-        max-width: 90% !important;
+        max-width: 80% !important;
+        text-align: center !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        transition: none !important;
+      }
+      ${videoSelector}::-webkit-media-text-track-container {
+        font-size: ${subtitleSettings.fontSize || 20}px !important;
+        bottom: ${subtitleBottom} !important;
+        top: auto !important;
+        transition: none !important;
+      }
+      ${videoSelector}::cue {
+        bottom: ${subtitleBottom} !important;
+        top: auto !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        position: absolute !important;
+        width: auto !important;
+        max-width: 80% !important;
+        text-align: center !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
         z-index: 10 !important;
-        transition: bottom 0.3s ease !important;
+        transition: none !important;
       }
       /* Additional selectors for better browser support */
       *::cue {
@@ -732,6 +752,10 @@ export function VideoPlayer({
         background: ${bgRgba} !important;
         padding: 4px 8px !important;
         border-radius: 4px !important;
+        text-align: center !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        max-width: 80% !important;
       }
     `;
     
@@ -739,50 +763,63 @@ export function VideoPlayer({
     console.log('[VideoPlayer] Background RGBA in CSS:', bgRgba);
     
     // Force a re-render of the subtitle track after CSS is applied
-    // Only do this when subtitleSettings change, not when showControls changes
+    // Only do this when subtitleSettings actually change, not on every render
     // to avoid flickering when controls appear/disappear
-    if (videoRef.current && showSubtitles) {
-      setTimeout(() => {
-        const tracks = videoRef.current?.textTracks;
-        if (tracks) {
-          for (let i = 0; i < tracks.length; i++) {
-            if (tracks[i].kind === 'subtitles' && tracks[i].mode === 'showing') {
-              // Force cue update by toggling
-              tracks[i].mode = 'hidden';
-              setTimeout(() => {
-                if (videoRef.current) {
-                  tracks[i].mode = 'showing';
-                }
-              }, 50);
+    if (videoRef.current && showSubtitles && subtitleSettings) {
+      const settingsKey = JSON.stringify(subtitleSettings);
+      // Only toggle if settings actually changed
+      if (previousSubtitleSettingsRef.current !== settingsKey) {
+        previousSubtitleSettingsRef.current = settingsKey;
+        setTimeout(() => {
+          const tracks = videoRef.current?.textTracks;
+          if (tracks) {
+            for (let i = 0; i < tracks.length; i++) {
+              if (tracks[i].kind === 'subtitles' && tracks[i].mode === 'showing') {
+                // Force cue update by toggling (only when settings change)
+                tracks[i].mode = 'hidden';
+                setTimeout(() => {
+                  if (videoRef.current) {
+                    tracks[i].mode = 'showing';
+                  }
+                }, 50);
+              }
             }
           }
-        }
-      }, 100);
+        }, 100);
+      }
     }
   }, [subtitleSettings, showSubtitles, settingsLoaded, videoUrl]); // Add videoUrl to re-apply when video changes
   
-  // Separate effect to update subtitle position when controls visibility changes
-  // This only updates CSS, doesn't toggle track mode to avoid flickering
+  // Quick update subtitle position when showControls changes (without recreating entire CSS)
   useEffect(() => {
-    if (!videoRef.current || !showSubtitles || !subtitleSettings) return;
+    if (!videoRef.current || !showSubtitles || !subtitleSettings) {
+      previousShowControlsRef.current = showControls;
+      return;
+    }
     
-    const subtitleBottom = showControls ? '30%' : '5%';
+    // Only update if showControls actually changed
+    if (previousShowControlsRef.current === showControls) {
+      return;
+    }
+    previousShowControlsRef.current = showControls;
+    
+    const subtitleBottom = showControls ? '5%' : '0%';
     const style = document.getElementById('subtitle-styles');
     if (style && style.textContent) {
-      const videoId = videoRef.current.id || 'lesson-video-player';
-      const videoSelector = `#${videoId}`;
-      
-      // Update only the bottom value in CSS without toggling track
+      // Update all bottom values in CSS
       const currentCSS = style.textContent;
-      const regex = new RegExp(`(${videoSelector.replace('#', '\\#')}::cue\\(v\\[lang="vi"\\]\\s*\\{[^}]*bottom:\\s*)[\\d.]+%`, 'g');
-      const newCSS = currentCSS.replace(regex, `$1${subtitleBottom}`);
+      const regex = /bottom:\s*[\d.]+%\s*(!important)?/gi;
+      const newCSS = currentCSS.replace(regex, (match) => {
+        const hasImportant = match.includes('!important');
+        return hasImportant ? `bottom: ${subtitleBottom} !important` : `bottom: ${subtitleBottom}`;
+      });
       
+      // Update CSS without removing element to avoid flicker
       if (newCSS !== currentCSS) {
         style.textContent = newCSS;
       }
     }
   }, [showControls, showSubtitles, subtitleSettings]);
-  
 
   // Sync subtitle track when subtitleUrl or showSubtitles changes
   useEffect(() => {
@@ -796,10 +833,17 @@ export function VideoPlayer({
     }
   }, [subtitleUrl, showSubtitles]);
 
-  // Force update subtitle track when settings change
+  // Force update subtitle track when settings change (but not on every render)
   useEffect(() => {
-    if (videoRef.current && subtitleUrl && showSubtitles) {
-      // Force browser to re-render cues by toggling track mode
+    if (videoRef.current && subtitleUrl && showSubtitles && subtitleSettings) {
+      // Only force update if settings actually changed
+      const settingsKey = JSON.stringify(subtitleSettings);
+      if (previousSubtitleSettingsRef.current === settingsKey) {
+        return; // Settings haven't changed, skip
+      }
+      previousSubtitleSettingsRef.current = settingsKey;
+      
+      // Force browser to re-render cues by toggling track mode (only when settings change)
       const tracks = videoRef.current.textTracks;
       for (let i = 0; i < tracks.length; i++) {
         if (tracks[i].kind === 'subtitles') {
@@ -810,16 +854,6 @@ export function VideoPlayer({
             setTimeout(() => {
               if (videoRef.current) {
                 tracks[i].mode = 'showing';
-                // Force a repaint by accessing video properties
-                const video = videoRef.current;
-                const currentTime = video.currentTime;
-                // Trigger a small time change to force cue re-render
-                video.currentTime = currentTime + 0.001;
-                setTimeout(() => {
-                  if (video) {
-                    video.currentTime = currentTime;
-                  }
-                }, 10);
               }
             }, 150);
           }
@@ -827,6 +861,14 @@ export function VideoPlayer({
       }
     }
   }, [subtitleSettings, subtitleUrl, showSubtitles]);
+
+  // Pause video when subtitle settings modal opens
+  useEffect(() => {
+    if (subtitleSettingsOpen && videoRef.current && isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [subtitleSettingsOpen, isPlaying]);
 
   // Reset initial play button when videoUrl changes
   useEffect(() => {
@@ -888,7 +930,7 @@ export function VideoPlayer({
       {/* Title overlay - shows/hides with controls */}
       {title && (
         <div 
-          className={`absolute top-0 left-0 right-0 z-30 bg-gradient-to-b from-black/80 to-transparent px-4 py-3 transition-opacity duration-300 ${
+          className={`absolute top-0 left-0 right-0 z-30 px-4 py-3 transition-opacity duration-300 ${
             showControls ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -979,7 +1021,7 @@ export function VideoPlayer({
       {/* Controls overlay */}
       {!videoError && (
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 controls-container z-50 pointer-events-none ${
+        className={`absolute inset-0 transition-opacity duration-300 controls-container z-50 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
         } ${subtitleSettingsOpen || playbackRateDialogOpen ? 'pointer-events-none' : ''}`}
         style={{ 
