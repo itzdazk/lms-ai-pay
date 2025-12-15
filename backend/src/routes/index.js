@@ -29,6 +29,7 @@ import healthRoutes from './health.routes.js'
 import adminDashboardRoutes from './admin-dashboard.routes.js'
 import aiRoutes from './ai.routes.js'
 import lessonNotesRoutes from './lesson-notes.routes.js'
+import chaptersRoutes from './chapters.routes.js'
 
 const router = express.Router()
 
@@ -111,6 +112,7 @@ router.use('/health', healthRoutes)
 router.use('/dashboard/admin', adminDashboardRoutes)
 router.use('/ai', aiRoutes)
 router.use('/notes', lessonNotesRoutes)
+router.use('/', chaptersRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)
