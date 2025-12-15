@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Filter, Grid, List, Search } from 'lucide-react'
 import type { Category } from '../../lib/api/types'
 import { CategoryCard } from './CategoryCard'
+import { Button } from '../ui/button'
 
 interface CategoryListProps {
     categories: Category[]
@@ -22,6 +23,8 @@ export function CategoryList({
     const [filterType, setFilterType] = useState<'all' | 'parent' | 'child'>(
         'all'
     )
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 12
 
     // Filter categories
     const filteredCategories = categories.filter((category) => {
@@ -39,9 +42,24 @@ export function CategoryList({
         return matchesSearch && matchesFilter
     })
 
-    // Separate parent and child categories
-    const parentCategories = filteredCategories.filter((c) => !c.parent)
-    const childCategories = filteredCategories.filter((c) => c.parent)
+    const totalPages = Math.max(
+        1,
+        Math.ceil(filteredCategories.length / itemsPerPage)
+    )
+
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    const paginatedCategories = filteredCategories.slice(startIndex, endIndex)
+
+    // Separate parent and child categories (sau khi phân trang)
+    const parentCategories = paginatedCategories.filter((c) => !c.parent)
+    const childCategories = paginatedCategories.filter((c) => c.parent)
+
+    const handlePageChange = (page: number) => {
+        if (page < 1 || page > totalPages) return
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     return (
         <div className='space-y-6'>
@@ -94,7 +112,10 @@ export function CategoryList({
                             type='text'
                             placeholder='Tìm kiếm danh mục...'
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value)
+                                setCurrentPage(1)
+                            }}
                             className='w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-[#2D2D2D] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400'
                         />
                     </div>
@@ -104,9 +125,10 @@ export function CategoryList({
                         <Filter className='w-5 h-5 text-gray-400 dark:text-gray-500' />
                         <select
                             value={filterType}
-                            onChange={(e) =>
+                            onChange={(e) => {
                                 setFilterType(e.target.value as any)
-                            }
+                                setCurrentPage(1)
+                            }}
                             className='px-4 py-2.5 border border-gray-300 dark:border-[#2D2D2D] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white'
                         >
                             <option value='all'>Tất cả danh mục</option>
