@@ -55,6 +55,24 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+          {/* ========== LESSON PAGE (No Layout - Fullscreen Learning Experience) ========== */}
+          <Route
+            path="/courses/:slug/lessons"
+            element={
+              <ProtectedRoute>
+                <LessonPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/courses/:slug/lessons/:lessonId"
+            element={
+              <ProtectedRoute>
+                <LessonPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ========== PUBLIC ROUTES (With Navbar/Footer) ========== */}
           <Route
             path="/*"
@@ -76,22 +94,6 @@ export default function App() {
                         <RoleRoute allowedRoles={['STUDENT', 'INSTRUCTOR', 'ADMIN']}>
                           <StudentDashboard />
                         </RoleRoute>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/courses/:slug/lessons"
-                    element={
-                      <ProtectedRoute>
-                        <LessonPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/courses/:slug/lessons/:lessonId"
-                    element={
-                      <ProtectedRoute>
-                        <LessonPage />
                       </ProtectedRoute>
                     }
                   />
