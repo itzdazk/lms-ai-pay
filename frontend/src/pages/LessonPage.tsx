@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent } from '../components/ui/tabs';
 import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
 import {
@@ -10,7 +11,6 @@ import {
   FileText,
   MessageCircle,
   BookOpen,
-  CheckCircle,
   Loader2,
   ArrowLeft,
   ArrowRight,
@@ -370,24 +370,6 @@ export function LessonPage() {
     }
   };
 
-  // Handle mark as complete
-  const handleMarkComplete = async () => {
-    if (!selectedLesson || !enrollment) {
-      toast.error('Bạn cần đăng ký khóa học để đánh dấu hoàn thành');
-      return;
-    }
-
-    try {
-      // TODO: Call API to mark lesson as completed
-      // await progressApi.completeLesson(selectedLesson.id);
-      if (!completedLessonIds.includes(selectedLesson.id)) {
-        setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
-      }
-      toast.success('Đã đánh dấu bài học hoàn thành');
-    } catch (error: any) {
-      toast.error('Không thể đánh dấu hoàn thành');
-    }
-  };
 
   // Handle transcript time click
   const handleTranscriptTimeClick = (time: number) => {
@@ -467,9 +449,9 @@ export function LessonPage() {
   const completedLessons = completedLessonIds.length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top Bar */}
-      <div className="bg-[#1A1A1A] border-b border-[#2D2D2D] sticky top-0 z-50">
+      <div className="bg-black border-b border-[#2D2D2D] flex-shrink-0 z-50">
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -497,13 +479,23 @@ export function LessonPage() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </DarkOutlineButton>
-              <div>
-                <h2 className="text-sm font-semibold line-clamp-1 text-white">{course.title}</h2>
-                <p className="text-xs text-gray-400">
-                  {Number(enrollmentProgress).toFixed(0)}% hoàn thành
-                </p>
-              </div>
+              <h2 className="text-sm font-semibold line-clamp-1 text-white">{course.title}</h2>
             </div>
+            {isEnrolled && (
+              <div className="flex-1 flex flex-col items-center mx-4">
+                <Progress value={enrollmentProgress} className="h-1.5 w-full max-w-xs" />
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-xs text-gray-400">
+                    {Number(enrollmentProgress).toFixed(0)}% hoàn thành
+                  </p>
+                  {totalLessons > 0 && (
+                    <p className="text-xs text-gray-500">
+                      • {completedLessons}/{totalLessons} bài học đã hoàn thành
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <DarkOutlineButton
                 size="icon"
@@ -527,12 +519,18 @@ export function LessonPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-4 pb-20">
-        <div className={`grid gap-6 items-start transition-all duration-300 ${showSidebar ? 'lg:grid-cols-4' : 'lg:grid-cols-1'}`}>
+      <div className="container mx-auto flex-1 overflow-hidden">
+        <div className={`grid gap-0 items-start transition-all duration-300 h-full ${showSidebar ? 'lg:grid-cols-4' : 'lg:grid-cols-1'}`}>
           {/* Video Player Section */}
-          <div className={`space-y-4 ${showSidebar ? 'lg:col-span-3' : 'lg:col-span-1'}`}>
+          <div 
+            className={`space-y-0 overflow-y-auto custom-scrollbar ${showSidebar ? 'lg:col-span-3' : 'lg:col-span-1'}`}
+            style={{ 
+              height: '100%',
+              paddingBottom: selectedLesson ? '45px' : '0'
+            }}
+          >
             {/* Video Player */}
-            <Card className="overflow-hidden bg-[#1A1A1A] border-[#2D2D2D]">
+            <Card className="overflow-hidden bg-[#1A1A1A] border-[#2D2D2D] rounded-none">
               <VideoPlayer
                 videoUrl={videoUrl}
                 subtitleUrl={subtitleUrl}
@@ -547,44 +545,30 @@ export function LessonPage() {
 
             {/* Lesson Info and Navigation */}
             {selectedLesson && (
-              <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-white">{selectedLesson.title}</CardTitle>
-                      {selectedLesson.description && (
-                        <p className="text-sm text-gray-400 mt-2">{selectedLesson.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DarkOutlineButton
-                        size="sm"
-                        onClick={handleMarkComplete}
-                        disabled={!isEnrolled || completedLessonIds.includes(selectedLesson.id)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        {completedLessonIds.includes(selectedLesson.id) ? 'Đã hoàn thành' : 'Đánh dấu hoàn thành'}
-                      </DarkOutlineButton>
-                    </div>
-                  </div>
+              <Card className="bg-[#1A1A1A] border-[#2D2D2D] rounded-none ">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-white">{selectedLesson.title}</CardTitle>
+                  {selectedLesson.description && (
+                    <p className="text-sm text-gray-400 mt-2">{selectedLesson.description}</p>
+                  )}
                 </CardHeader>
               </Card>
             )}
 
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <DarkTabsList>
-                <DarkTabsTrigger value="overview" variant="blue">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full !gap-0">
+              <DarkTabsList className="!rounded-none">
+                <DarkTabsTrigger value="overview" variant="blue" className="!rounded-none">
                   Tổng quan
                 </DarkTabsTrigger>
-                <DarkTabsTrigger value="transcript" variant="blue">
+                <DarkTabsTrigger value="transcript" variant="blue" className="!rounded-none">
                   <FileText className="h-4 w-4 mr-2" />
                   Transcript
                 </DarkTabsTrigger>
               </DarkTabsList>
 
-              <TabsContent value="overview" className="mt-6">
-                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+              <TabsContent value="overview" className="" >
+                <Card className="bg-[#1A1A1A] border-[#2D2D2D] rounded-none">
                   <CardContent className="pt-6">
                     <div className="prose max-w-none">
                       <h3 className="text-white">Trong bài học này bạn sẽ học:</h3>
@@ -603,12 +587,13 @@ export function LessonPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="transcript" className="mt-6">
+              <TabsContent value="transcript" className="">
                 {selectedLesson && (
                   <Transcript
                     transcriptJsonUrl={selectedLesson.transcriptJsonUrl}
                     onTimeClick={handleTranscriptTimeClick}
                     currentTime={currentTime}
+                    className="rounded-none"
                   />
                 )}
               </TabsContent>
@@ -617,7 +602,7 @@ export function LessonPage() {
 
           {/* Sidebar - Course Content */}
           {showSidebar && (
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 h-full overflow-y-auto custom-scrollbar">
               <LessonList
                 lessons={lessons}
                 chapters={chapters}
@@ -637,7 +622,7 @@ export function LessonPage() {
 
       {/* Bottom Bar - Navigation */}
       {selectedLesson && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#1A1A1A] border-t border-[#2D2D2D] z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#2D2D2D] z-50">
           <div className="container mx-auto px-4 py-2">
             <div className="flex items-center justify-between">
               {/* Notes Button - Left */}
@@ -716,7 +701,7 @@ export function LessonPage() {
                     title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
                     className="flex items-center gap-2"
                   >
-                    <span className="hidden md:inline text-xs text-white font-medium max-w-[200px] truncate">
+                    <span className="hidden md:inline text-xs text-foreground font-medium max-w-[200px] truncate">
                       Bài {lessonNumber}: {selectedLesson.title}
                     </span>
                     {showSidebar ? (

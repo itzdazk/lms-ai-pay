@@ -911,10 +911,7 @@ export function VideoPlayer({
                 onClick={skipBackward}
                 title="Lùi 5 giây"
               >
-                <div className="flex items-center gap-0.5">
-                  <SkipBack className="h-3 w-3" />
-                  <span className="text-[10px] font-semibold">5</span>
-                </div>
+                <SkipBack className="h-3 w-3" />
               </Button>
               <Button
                 variant="ghost"
@@ -922,10 +919,7 @@ export function VideoPlayer({
                 onClick={skipForward}
                 title="Tiến 5 giây"
               >
-                <div className="flex items-center gap-0.5">
-                  <span className="text-[10px] font-semibold">5</span>
-                  <SkipForward className="h-3 w-3" />
-                </div>
+                <SkipForward className="h-3 w-3" />
               </Button>
               <div className="flex items-center gap-1.5 ml-1">
                 <Button

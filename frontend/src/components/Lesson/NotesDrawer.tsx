@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Notes } from './Notes';
+import { useEffect, useState, useRef } from 'react';
+import { Notes, NotesRef } from './Notes';
 import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
 import { Save, Loader2, PenTool } from 'lucide-react';
@@ -28,6 +28,7 @@ export function NotesDrawer({
   const [notes, setNotes] = useState(initialNotes || '');
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const notesRef = useRef<NotesRef>(null);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
@@ -46,6 +47,17 @@ export function NotesDrawer({
     setNotes(initialNotes || '');
     setHasChanges(false);
   }, [initialNotes, lessonId]);
+
+  // Auto focus textarea when drawer opens
+  useEffect(() => {
+    if (isOpen && notesRef.current) {
+      // Delay to ensure drawer animation completes
+      const timer = setTimeout(() => {
+        notesRef.current?.focus();
+      }, 350); // Slightly longer than drawer animation (300ms)
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   const handleSave = async () => {
     try {
@@ -83,7 +95,7 @@ export function NotesDrawer({
         style={{
           height: showSidebar ? '30vh' : '35vh',
           left: '0',
-          width: showSidebar ? '76%' : '100%',
+          width: showSidebar ? '75%' : '100%',
           pointerEvents: isOpen ? 'auto' : 'none',
         }}
       >
@@ -102,6 +114,7 @@ export function NotesDrawer({
           <div className="flex-1 overflow-hidden px-4">
             <div className="h-full">
               <Notes
+                ref={notesRef}
                 lessonId={lessonId}
                 initialNotes={notes}
                 showActions={false}
