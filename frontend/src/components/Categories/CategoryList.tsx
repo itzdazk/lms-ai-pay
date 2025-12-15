@@ -208,23 +208,6 @@ export function CategoryList({
                     </p>
                 </div>
             )}
-
-            {/* Old */}
-            {/* {filteredCategories.length === 0 ? (
-                <div className='rounded-xl border border-dashed bg-muted/40 p-8 text-center text-muted-foreground'>
-                    Không tìm thấy danh mục phù hợp
-                </div>
-            ) : (
-                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-                    {filteredCategories.map((category) => (
-                        <CategoryCard
-                            key={category.id}
-                            category={category}
-                            onClick={onCategoryClick}
-                        />
-                    ))}
-                </div>
-            )} */}
         </div>
     )
 }

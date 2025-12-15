@@ -2,7 +2,7 @@ import { ArrowRight, BookOpen, Folder, Layers } from 'lucide-react'
 import type { Category, PublicCourse } from '../../lib/api/types'
 import { Card } from '../ui/card'
 import { CategoryCard } from './CategoryCard'
-import { CourseList, CourseSortSelect } from '../Courses'
+import { CourseList } from '../Courses'
 import { Separator } from '../ui/separator'
 import { Badge } from '../ui/badge'
 import { cn } from '../ui/utils'
@@ -30,7 +30,7 @@ export function CategoryDetail({
     currentPage,
     totalPages,
     totalCourses,
-    limit,
+    limit = 12,
     onPageChange,
     onChildClick,
     filtersSlot,
@@ -152,41 +152,6 @@ export function CategoryDetail({
                         'p-4 lg:p-6 border border-gray-200 dark:border-[#2D2D2D] shadow-sm bg-white dark:bg-gradient-to-br dark:from-[#1A1A1A] dark:to-[#151515]'
                     )}
                 >
-                    <div className='bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl p-4 shadow-lg space-y-4'>
-                        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
-                            <p className='text-sm text-gray-300'>
-                                {isLoadingCourses ? (
-                                    <span className='animate-pulse'>
-                                        Đang tải...
-                                    </span>
-                                ) : (
-                                    <>
-                                        Hiển thị{' '}
-                                        <span className='text-white font-semibold'>
-                                            {(currentPage - 1) * limit + 1}
-                                        </span>
-                                        {' - '}
-                                        <span className='text-white font-semibold'>
-                                            {Math.min(
-                                                currentPage * limit,
-                                                totalCourses
-                                            )}
-                                        </span>{' '}
-                                        trong tổng số{' '}
-                                        <span className='text-white font-semibold'>
-                                            {totalCourses}
-                                        </span>{' '}
-                                        khóa học
-                                    </>
-                                )}
-                            </p>
-                            {/* <CourseSortSelect
-                                value={sortBy}
-                                onChange={handleSortChange}
-                            /> */}
-                        </div>
-                    </div>
-
                     <CourseList
                         courses={courses}
                         isLoading={isLoadingCourses}
