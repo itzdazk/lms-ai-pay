@@ -439,7 +439,6 @@ export function VideoPlayer({
       const saved = localStorage.getItem('subtitle-settings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        console.log('[VideoPlayer] Loading subtitle settings from localStorage:', parsed);
         // Migrate old format to new format
         if ('textStroke' in parsed) {
           parsed.textEffect = parsed.textStroke ? 'stroke' : 'none';
@@ -456,40 +455,23 @@ export function VideoPlayer({
           backgroundColor: parsed.backgroundColor || '#000000',
           backgroundOpacity: parsed.backgroundOpacity !== undefined ? parsed.backgroundOpacity : 0,
         };
-        console.log('[VideoPlayer] Migrated settings:', migrated);
         setSubtitleSettings(migrated);
         setSettingsLoaded(true);
       } else {
         // Only set default if nothing is saved
-        console.log('[VideoPlayer] No saved settings, using defaults');
         setSubtitleSettings(DEFAULT_SETTINGS);
-        setSettingsLoaded(true);
-      }
-    } catch (error) {
-      console.error('Error loading subtitle settings:', error);
+      setSettingsLoaded(true);
+    }
+  } catch (error) {
       setSubtitleSettings(DEFAULT_SETTINGS);
       setSettingsLoaded(true);
     }
   }, [settingsLoaded]);
 
-  // Debug: Log when subtitleSettings changes
-  useEffect(() => {
-    if (subtitleSettings) {
-      console.log('[VideoPlayer] subtitleSettings state updated:', subtitleSettings);
-    }
-  }, [subtitleSettings]);
 
   // Re-apply subtitle settings when video is ready and settings are loaded (after page reload)
   useEffect(() => {
-    console.log('[VideoPlayer] Re-apply effect triggered:', {
-      hasVideo: !!videoRef.current,
-      hasSettings: !!subtitleSettings,
-      settingsLoaded,
-      videoReadyState: videoRef.current?.readyState
-    });
-    
     if (!videoRef.current || !subtitleSettings || !settingsLoaded) {
-      console.log('[VideoPlayer] Re-apply check failed - waiting for conditions');
       return;
     }
     
@@ -497,7 +479,6 @@ export function VideoPlayer({
     // Wait for video to have metadata
     const checkAndApply = () => {
       if (video.readyState >= 1) {
-        console.log('[VideoPlayer] Video ready with settings loaded, forcing subtitle re-render', subtitleSettings);
         // Force re-render of subtitle track to apply loaded settings
         // Styles should already be applied by the other useEffect, just need to refresh the track
         setTimeout(() => {
@@ -511,7 +492,6 @@ export function VideoPlayer({
                   setTimeout(() => {
                     if (video) {
                       tracks[i].mode = 'showing';
-                      console.log('[VideoPlayer] Subtitle track re-enabled with new settings');
                     }
                   }, 200);
                 }
@@ -522,7 +502,6 @@ export function VideoPlayer({
       } else {
         // Wait for metadata
         const handleMetadata = () => {
-          console.log('[VideoPlayer] Metadata loaded, will apply settings after styles are ready');
           // Styles will be applied by the other useEffect when video ref is ready
           // Just refresh the track after a delay to ensure styles are applied
           setTimeout(() => {
@@ -534,7 +513,6 @@ export function VideoPlayer({
                   setTimeout(() => {
                     if (video) {
                       tracks[i].mode = 'showing';
-                      console.log('[VideoPlayer] Subtitle track refreshed after metadata load');
                     }
                   }, 200);
                 }
@@ -555,18 +533,14 @@ export function VideoPlayer({
   // Apply subtitle styles
   useEffect(() => {
     if (!subtitleSettings) {
-      console.log('[VideoPlayer] No subtitle settings, skipping style application');
       return;
     }
     if (!videoRef.current) {
-      console.log('[VideoPlayer] No video ref, skipping style application');
       return;
     }
     if (!settingsLoaded) {
-      console.log('[VideoPlayer] Settings not loaded yet, skipping style application');
       return;
     }
-    console.log('[VideoPlayer] Applying subtitle styles:', subtitleSettings);
     
     // Determine subtitle position based on controls visibility and fullscreen mode
     // When controls are visible, push subtitle higher to avoid overlap
@@ -591,14 +565,6 @@ export function VideoPlayer({
     const bgColor = subtitleSettings.backgroundColor || '#000000';
     const bgOpacity = (subtitleSettings.backgroundOpacity !== undefined ? subtitleSettings.backgroundOpacity : 0) / 100;
     
-    console.log('[VideoPlayer] Applying background color from settings:', {
-      rawBgColor: subtitleSettings.backgroundColor,
-      bgColor,
-      backgroundOpacity: subtitleSettings.backgroundOpacity,
-      bgOpacity,
-      settings: subtitleSettings
-    });
-    
     // Parse hex color safely
     let bgR = 0, bgG = 0, bgB = 0;
     try {
@@ -621,18 +587,12 @@ export function VideoPlayer({
         }
       }
     } catch (error) {
-      console.error('Error parsing background color:', error);
+      // Ignore parsing errors
     }
     const bgRgba = `rgba(${bgR}, ${bgG}, ${bgB}, ${bgOpacity})`;
-    console.log('[VideoPlayer] Parsed background color RGBA:', bgRgba, { bgR, bgG, bgB, bgOpacity });
 
     // Text color with opacity
     const textColor = subtitleSettings.color || '#FFFFFF';
-    console.log('[VideoPlayer] Applying text color from settings:', {
-      rawColor: subtitleSettings.color,
-      textColor,
-      settings: subtitleSettings
-    });
     const textOpacity = (subtitleSettings.textOpacity !== undefined ? subtitleSettings.textOpacity : 100) / 100;
     let textR = 255, textG = 255, textB = 255;
     try {
@@ -655,10 +615,9 @@ export function VideoPlayer({
         }
       }
     } catch (error) {
-      console.error('Error parsing text color:', error);
+      // Ignore parsing errors
     }
     const textRgba = `rgba(${textR}, ${textG}, ${textB}, ${textOpacity})`;
-    console.log('[VideoPlayer] Parsed text color RGBA:', textRgba, { textR, textG, textB, textOpacity });
 
     // Text effect
     let textEffectStyle = '';
@@ -705,15 +664,6 @@ export function VideoPlayer({
     // Get video element ID for more specific selector
     const videoId = videoRef.current.id || 'lesson-video-player';
     const videoSelector = `#${videoId}`;
-    
-    console.log('[VideoPlayer] Creating CSS with:', {
-      videoSelector,
-      textRgba,
-      bgRgba,
-      fontSize: subtitleSettings.fontSize,
-      fontFamily: subtitleSettings.fontFamily,
-      textEffect: subtitleSettings.textEffect
-    });
     
     // Apply styles with more specific selectors
     // Use both standard and webkit selectors for better browser compatibility
@@ -781,9 +731,6 @@ export function VideoPlayer({
         max-width: 80% !important;
       }
     `;
-    
-    console.log('[VideoPlayer] CSS applied, first 300 chars:', style.textContent.substring(0, 300));
-    console.log('[VideoPlayer] Background RGBA in CSS:', bgRgba);
     
     // Force a re-render of the subtitle track after CSS is applied
     // Only do this when subtitleSettings actually change, not on every render
@@ -914,12 +861,10 @@ export function VideoPlayer({
   // Save subtitle settings to localStorage
   const handleSubtitleSettingsChange = (settings: SubtitleSettings) => {
     try {
-      console.log('[VideoPlayer] Saving subtitle settings:', settings);
       localStorage.setItem('subtitle-settings', JSON.stringify(settings));
       setSubtitleSettings(settings);
-      console.log('[VideoPlayer] Settings saved and state updated');
     } catch (error) {
-      console.error('Error saving subtitle settings:', error);
+      // Ignore save errors
     }
   };
 
@@ -1205,90 +1150,88 @@ export function VideoPlayer({
             </div>
             <div className="flex items-center gap-1.5">
               {subtitleUrl && (
-                <>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={`text-white hover:bg-white/20 h-7 w-7 ${showSubtitles ? 'bg-white/20' : ''}`}
+                  onClick={() => {
+                    const newValue = !showSubtitles;
+                    setShowSubtitles(newValue);
+                    // Save to localStorage
+                    try {
+                      localStorage.setItem('subtitle-visible', String(newValue));
+                    } catch (error) {
+                      // Ignore save errors
+                    }
+                    if (videoRef.current) {
+                      const tracks = videoRef.current.textTracks;
+                      for (let i = 0; i < tracks.length; i++) {
+                        tracks[i].mode = newValue ? 'showing' : 'hidden';
+                      }
+                    }
+                  }}
+                  title={showSubtitles ? 'Tắt phụ đề' : 'Bật phụ đề'}
+                >
+                  <Subtitles className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
+                    ref={settingsButtonRef}
                     size="icon"
                     variant="ghost"
-                    className={`text-white hover:bg-white/20 h-7 w-7 ${showSubtitles ? 'bg-white/20' : ''}`}
-                    onClick={() => {
-                      const newValue = !showSubtitles;
-                      setShowSubtitles(newValue);
-                      // Save to localStorage
-                      try {
-                        localStorage.setItem('subtitle-visible', String(newValue));
-                      } catch (error) {
-                        console.error('Error saving subtitle visibility:', error);
-                      }
-                      if (videoRef.current) {
-                        const tracks = videoRef.current.textTracks;
-                        for (let i = 0; i < tracks.length; i++) {
-                          tracks[i].mode = newValue ? 'showing' : 'hidden';
-                        }
-                      }
-                    }}
-                    title={showSubtitles ? 'Tắt phụ đề' : 'Bật phụ đề'}
+                    className="text-white hover:bg-white/20 h-7 w-7"
+                    title="Cài đặt"
                   >
-                    <Subtitles className="h-3.5 w-3.5" />
+                    <Settings className="h-3.5 w-3.5" />
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        ref={settingsButtonRef}
-                        size="icon"
-                        variant="ghost"
-                        className="text-white hover:bg-white/20 h-7 w-7"
-                        title="Cài đặt"
-                      >
-                        <Settings className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent 
-                      className="bg-[#1A1A1A] border-[#2D2D2D] text-white min-w-[200px] !z-[9999] py-1"
-                      align="end"
-                      side="top"
-                      container={fullscreenContainer || undefined}
-                    >
-                      <DropdownMenuLabel className="text-white text-sm font-semibold px-3 py-1.5">
-                        Cài đặt
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-[#2D2D2D] my-1" />
-                      <DropdownMenuItem
-                        className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
-                        onClick={() => {
-                          // TODO: Implement quality selection
-                          toast.info('Tính năng chọn chất lượng đang được phát triển');
-                        }}
-                      >
-                        <span>Chất lượng</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-sm">Auto (1080P)</span>
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
-                        onClick={() => setSubtitleSettingsOpen(true)}
-                      >
-                        <span>Phụ đề</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-sm">Tuỳ chỉnh</span>
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
-                        onClick={() => setPlaybackRateDialogOpen(true)}
-                      >
-                        <span>Tốc độ</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-sm">{playbackRate}x</span>
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
-                        </div>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  className="bg-[#1A1A1A] border-[#2D2D2D] text-white min-w-[200px] !z-[9999] py-1"
+                  align="end"
+                  side="top"
+                  container={fullscreenContainer || undefined}
+                >
+                  <DropdownMenuLabel className="text-white text-sm font-semibold px-3 py-1.5">
+                    Cài đặt
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-[#2D2D2D] my-1" />
+                  <DropdownMenuItem
+                    className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
+                    onClick={() => {
+                      // TODO: Implement quality selection
+                      toast.info('Tính năng chọn chất lượng đang được phát triển');
+                    }}
+                  >
+                    <span>Chất lượng</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Auto (1080P)</span>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
+                    onClick={() => setSubtitleSettingsOpen(true)}
+                  >
+                    <span>Phụ đề</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Tuỳ chỉnh</span>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
+                    onClick={() => setPlaybackRateDialogOpen(true)}
+                  >
+                    <span>Tốc độ</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">{playbackRate}x</span>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 size="icon"
                 variant="ghost"
@@ -1326,8 +1269,6 @@ export function VideoPlayer({
         onRateChange={(rate) => handlePlaybackRateChange(rate.toString())}
         container={fullscreenContainer || undefined}
       />
-      {/* Debug: Uncomment to check fullscreen container */}
-      {/* {isFullscreen && console.log('Fullscreen container:', fullscreenContainer, 'Fullscreen element:', document.fullscreenElement)} */}
     </div>
   );
 }

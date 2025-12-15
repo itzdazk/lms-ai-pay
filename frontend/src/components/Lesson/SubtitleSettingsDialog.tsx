@@ -122,13 +122,11 @@ export function SubtitleSettingsDialog({
         <button
           className="w-full flex items-center justify-between py-2 px-0 hover:bg-[#2D2D2D] transition-colors rounded relative z-[105]"
           onClick={(e) => {
-            console.log('[SubtitleSettingsDialog] SettingItem button clicked:', label);
             e.stopPropagation();
             // Don't prevent default - let Radix handle the toggle
             onSelect();
           }}
           onPointerDown={(e) => {
-            console.log('[SubtitleSettingsDialog] SettingItem button pointerDown:', label);
             e.stopPropagation();
           }}
         >
@@ -144,23 +142,14 @@ export function SubtitleSettingsDialog({
         className="bg-[#1A1A1A] border-[#2D2D2D] text-white min-w-[160px] z-[210]"
         container={container || undefined}
         onClick={(e) => {
-          console.log('[SubtitleSettingsDialog] DropdownMenuContent clicked');
           e.stopPropagation();
         }}
         onPointerDown={(e) => {
-          console.log('[SubtitleSettingsDialog] DropdownMenuContent pointerDown');
           e.stopPropagation();
         }}
         onPointerDownOutside={(e) => {
           // Prevent closing when clicking inside the dialog or on dialog backdrop
           const target = e.target as HTMLElement;
-          console.log('[SubtitleSettingsDialog] DropdownMenuContent pointerDownOutside', target, {
-            isDropdown: !!target.closest('[data-slot="dropdown-menu-content"]'),
-            isDialog: !!target.closest('.bg-\\[\\#1A1A1A\\]'),
-            isPortal: !!target.closest('[data-radix-portal]'),
-            isBackdrop: target.classList.contains('bg-black/50'),
-            isTrigger: !!target.closest('[data-slot="dropdown-menu-trigger"]') || target.closest('button')
-          });
           
           // Always prevent closing if clicking inside the dialog, dropdown, or on trigger button
           const dialogElement = target.closest('[role="dialog"]') || 
@@ -171,15 +160,11 @@ export function SubtitleSettingsDialog({
                                 target.closest('[data-slot="dropdown-menu-trigger"]') ||
                                 (target.tagName === 'BUTTON' && target.closest('.bg-\\[\\#1A1A1A\\]'));
           if (dialogElement) {
-            console.log('[SubtitleSettingsDialog] Preventing close - clicked inside dialog, dropdown, or trigger');
             e.preventDefault();
             return;
           }
-          
-          console.log('[SubtitleSettingsDialog] Allowing close - clicked outside');
         }}
         onEscapeKeyDown={(e) => {
-          console.log('[SubtitleSettingsDialog] DropdownMenuContent escape key pressed');
           // Prevent closing dropdown when pressing escape (let dialog handle it)
           e.preventDefault();
         }}
@@ -211,12 +196,10 @@ export function SubtitleSettingsDialog({
             <DropdownMenuItem
               key={color.value}
               onClick={(e) => {
-                console.log('[SubtitleSettingsDialog] DropdownMenuItem clicked:', color.name);
                 e.stopPropagation();
                 setLocalSettings({ ...localSettings, color: color.value });
               }}
               onPointerDown={(e) => {
-                console.log('[SubtitleSettingsDialog] DropdownMenuItem pointerDown:', color.name);
                 e.stopPropagation();
               }}
               className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center gap-1.5 text-xs py-1.5"
@@ -400,29 +383,24 @@ export function SubtitleSettingsDialog({
         onClick={(e) => {
           // Only close if clicking directly on backdrop, not on dropdown menus
           const target = e.target as HTMLElement;
-          console.log('[SubtitleSettingsDialog] Dialog backdrop clicked', target, target.classList);
           
           // Don't close if clicking on dropdown menu or dialog content
           if (target.closest('[data-slot="dropdown-menu-content"]') || 
               target.closest('[data-radix-portal]') ||
               target.closest('.bg-\\[\\#1A1A1A\\]')) {
-            console.log('[SubtitleSettingsDialog] Preventing dialog close - clicked on dropdown or dialog');
             return;
           }
           
           if (target.classList.contains('bg-black') || target.classList.contains('bg-black/50')) {
-            console.log('[SubtitleSettingsDialog] Closing dialog - clicked on backdrop');
             onOpenChange(false);
           }
         }}
         onPointerDown={(e) => {
           // Prevent closing when clicking on dropdown menus
           const target = e.target as HTMLElement;
-          console.log('[SubtitleSettingsDialog] Dialog backdrop pointerDown', target);
           if (target.closest('[data-slot="dropdown-menu-content"]') || 
               target.closest('[data-radix-portal]') ||
               target.closest('.bg-\\[\\#1A1A1A\\]')) {
-            console.log('[SubtitleSettingsDialog] Stopping propagation - clicked on dropdown or dialog');
             e.stopPropagation();
           }
         }}

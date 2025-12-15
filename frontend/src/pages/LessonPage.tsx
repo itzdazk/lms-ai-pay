@@ -170,7 +170,6 @@ export function LessonPage() {
             try {
               initialLesson = await lessonsApi.getLessonBySlug(courseSlug, lessonSlug);
             } catch (error) {
-              console.error('Error loading lesson by slug:', error);
               setLessonNotFound(true);
               setLoading(false);
               return;
@@ -196,7 +195,6 @@ export function LessonPage() {
           setSelectedLesson(initialLesson);
         }
       } catch (error: any) {
-        console.error('Error loading course data:', error);
         // Don't show toast if lesson not found (already handled above)
         if (!lessonNotFound) {
           toast.error('Không thể tải thông tin khóa học');
@@ -241,17 +239,12 @@ export function LessonPage() {
         // Load video URL and lesson details (to get both transcriptUrl and transcriptJsonUrl) in parallel
         const [videoData, lessonDetails] = await Promise.all([
           lessonsApi.getLessonVideo(selectedLesson.id).catch(() => ({ videoUrl: selectedLesson.videoUrl || '' })),
-          lessonsApi.getLessonById(selectedLesson.id).catch((err) => {
-            console.error('Error loading lesson details:', err);
+          lessonsApi.getLessonById(selectedLesson.id).catch(() => {
             return null;
           }),
         ]);
 
         setVideoUrl(videoData.videoUrl || selectedLesson.videoUrl || '');
-        
-        console.log('Lesson details:', lessonDetails);
-        console.log('transcriptUrl:', lessonDetails?.transcriptUrl);
-        console.log('transcriptJsonUrl:', lessonDetails?.transcriptJsonUrl);
         
         // Update selectedLesson with transcriptJsonUrl only if it's different
         if (lessonDetails) {
@@ -320,7 +313,6 @@ export function LessonPage() {
               setSubtitleUrl(undefined);
             }
           } catch (error) {
-            console.error('Error loading transcript for subtitle:', error);
             // Subtitle is optional, don't show error
             setSubtitleUrl(undefined);
           }
@@ -348,9 +340,6 @@ export function LessonPage() {
             setLessonNotes(noteData.note?.content || '');
           } catch (error: any) {
             // If note doesn't exist (404), that's okay - just set empty
-            if (error.response?.status !== 404) {
-              console.error('Error loading lesson notes:', error);
-            }
             setLessonNotes('');
           } finally {
             setNotesLoading(false);
@@ -359,7 +348,6 @@ export function LessonPage() {
           setLessonNotes('');
         }
       } catch (error: any) {
-        console.error('Error loading lesson data:', error);
         toast.error('Không thể tải video bài học');
       } finally {
         setVideoLoading(false);
@@ -751,7 +739,6 @@ export function LessonPage() {
                           toast.success('Đăng xuất thành công!');
                           navigate('/');
                         } catch (error) {
-                          console.error('Logout error:', error);
                           toast.error('Có lỗi xảy ra khi đăng xuất');
                         }
                       }}

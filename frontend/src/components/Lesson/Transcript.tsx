@@ -109,19 +109,15 @@ export function Transcript({
             url = `${baseUrl}${transcriptJsonUrl}`;
           }
           
-          console.log('Fetching transcript JSON from URL:', url);
-          
           const response = await fetch(url, {
             credentials: 'include',
           });
           
           if (!response.ok) {
-            console.error('Transcript JSON fetch failed:', response.status, response.statusText);
             throw new Error(`Failed to load transcript JSON: ${response.status} ${response.statusText}`);
           }
           
           const data = await response.json();
-          console.log('Transcript JSON data received:', data);
           
           if (Array.isArray(data)) {
             items = data.map((item: any) => ({
@@ -133,11 +129,7 @@ export function Transcript({
               time: segment.start || segment.time || 0,
               text: segment.text || segment.content || '',
             }));
-          } else {
-            console.warn('Unexpected transcript JSON format:', data);
           }
-          
-          console.log('Parsed transcript items:', items.length);
         }
 
         setTranscript(items);
@@ -262,9 +254,8 @@ export function Transcript({
     );
   }
 
-  // If error occurred, log it but don't show error (transcript is optional)
+  // If error occurred, don't show error (transcript is optional)
   if (error) {
-    console.error('Transcript error:', error, 'URL:', transcriptJsonUrl);
     return (
       <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} ${className}`}>
         <CardContent className="pt-6">
