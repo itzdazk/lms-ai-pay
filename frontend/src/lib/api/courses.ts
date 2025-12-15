@@ -369,7 +369,7 @@ export const coursesApi = {
         return allTags
     },
 
-    // Create tag
+    // Create tag (admin/instructor)
     async createTag(name: string, description?: string): Promise<Tag> {
         // Generate slug from name (similar to backend seed.js)
         const slug = name
@@ -387,4 +387,20 @@ export const coursesApi = {
         return response.data.data
     },
 
+    // Update tag (admin/instructor)
+    async updateTag(
+        tagId: number,
+        data: { name?: string; slug?: string; description?: string }
+    ): Promise<Tag> {
+        const response = await apiClient.put<ApiResponse<Tag>>(
+            `/tags/${tagId}`,
+            data
+        )
+        return response.data.data
+    },
+
+    // Delete tag (admin/instructor)
+    async deleteTag(tagId: string): Promise<void> {
+        await apiClient.delete(`/tags/${tagId}`)
+    },
 }

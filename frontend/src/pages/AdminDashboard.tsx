@@ -38,6 +38,7 @@ import { dashboardApi } from '../lib/api/dashboard'
 import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
 import { CategoriesPage } from './admin/CategoriesPage'
+import { TagsPage } from './admin/TagsPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -970,20 +971,8 @@ function CategoriesManagement() {
 // Tags Management Component
 function TagsManagement() {
     return (
-        <div className='space-y-6'>
-            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                <CardHeader>
-                    <CardTitle className='text-white'>Quản lý Tags</CardTitle>
-                    <CardDescription className='text-gray-400'>
-                        Quản lý các tags của khóa học
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className='text-gray-400'>
-                        Chức năng quản lý tags sẽ được triển khai sau.
-                    </p>
-                </CardContent>
-            </Card>
+        <div className='h-full'>
+            <TagsPage />
         </div>
     )
 }
