@@ -241,12 +241,45 @@ export interface CourseFilters {
 }
 
 // =====================================================
+// CHAPTER TYPES
+// =====================================================
+export interface Chapter {
+    id: number
+    courseId: number
+    title: string
+    slug: string
+    description?: string
+    chapterOrder: number
+    isPublished: boolean
+    lessonsCount?: number
+    lessons?: Lesson[]
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateChapterRequest {
+    title: string
+    slug?: string
+    description?: string
+    chapterOrder?: number
+    isPublished?: boolean
+}
+
+export interface UpdateChapterRequest extends Partial<CreateChapterRequest> {}
+
+// =====================================================
 // LESSON TYPES
 // =====================================================
 export interface Lesson {
     id: number
     courseId: number
+    chapterId?: number
     course?: {
+        id: number
+        title: string
+        slug: string
+    }
+    chapter?: {
         id: number
         title: string
         slug: string
