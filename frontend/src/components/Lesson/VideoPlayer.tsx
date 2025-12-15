@@ -85,6 +85,8 @@ export function VideoPlayer({
   const subtitleStyleRef = useRef<HTMLStyleElement | null>(null);
   const isDraggingRef = useRef(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const volumeBarRef = useRef<HTMLDivElement>(null);
+  const isDraggingVolumeRef = useRef(false);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
   const [isVideoFocused, setIsVideoFocused] = useState(false);
@@ -237,6 +239,15 @@ export function VideoPlayer({
     }
   }, [isVideoFocused]);
 
+  // Handle volume drag start
+  const handleVolumeDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDraggingVolumeRef.current = true;
+    setShowControls(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    handleVolumeChange(pos);
+  };
+
   // Add global mouse event listeners for dragging
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -247,14 +258,20 @@ export function VideoPlayer({
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
       }
+      if (isDraggingVolumeRef.current && volumeBarRef.current) {
+        const rect = volumeBarRef.current.getBoundingClientRect();
+        const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        handleVolumeChange(pos);
+      }
     };
 
     const handleMouseUp = () => {
       isDraggingRef.current = false;
       setIsDragging(false);
+      isDraggingVolumeRef.current = false;
     };
 
-    if (isDragging) {
+    if (isDragging || isDraggingVolumeRef.current) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -262,7 +279,7 @@ export function VideoPlayer({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, duration]);
+  }, [isDragging, duration, volume]);
 
   // Handle fullscreen
   const toggleFullscreen = () => {
@@ -1092,17 +1109,24 @@ export function VideoPlayer({
                     <Volume2 className="h-3.5 w-3.5" />
                   )}
                 </Button>
-                <div className="w-16 h-0.5 bg-white/30 rounded-full cursor-pointer">
-                  <div
-                    className="h-full bg-white rounded-full"
-                    style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
-                    onClick={(e) => {
-                      const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                <div 
+                  ref={volumeBarRef}
+                  className="w-16 h-1 bg-white/30 rounded-full cursor-pointer relative py-1 flex items-center"
+                  onClick={(e) => {
+                    if (!isDraggingVolumeRef.current) {
+                      const rect = e.currentTarget.getBoundingClientRect();
                       if (rect) {
                         const pos = (e.clientX - rect.left) / rect.width;
                         handleVolumeChange(Math.max(0, Math.min(1, pos)));
                       }
-                    }}
+                    }
+                  }}
+                  onMouseDown={handleVolumeDragStart}
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <div
+                    className="h-0.5 bg-white rounded-full pointer-events-none transition-all"
+                    style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
                   />
                 </div>
               </div>

@@ -125,11 +125,11 @@ export const Notes = forwardRef<NotesRef, NotesProps>(({
 
   return (
     <div className={`h-full w-full ${className}`}>
-      <Textarea
+            <Textarea
         ref={textareaRef}
-        value={notes}
-        onChange={(e) => handleChange(e.target.value)}
-        placeholder="Viết ghi chú của bạn ở đây..."
+              value={notes}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="Viết ghi chú của bạn ở đây..."
         spellCheck={false}
         className={`w-full h-full p-3 bg-transparent resize-none custom-scrollbar border border-blue-500/70 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           isDark ? 'text-white placeholder:text-gray-500' : 'text-gray-900 placeholder:text-gray-500'
@@ -141,16 +141,16 @@ export const Notes = forwardRef<NotesRef, NotesProps>(({
       />
       {showActions && (
         <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-2">
-            <p className="text-xs text-gray-500">
-              Ghi chú sẽ được lưu vào tài khoản của bạn và đồng bộ trên mọi thiết bị
-            </p>
-            {saveStatus === 'saved' && (
-              <span className="text-xs text-green-500 font-medium">
-                ✓ Lưu thành công
-              </span>
-            )}
-          </div>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-500">
+                Ghi chú sẽ được lưu vào tài khoản của bạn và đồng bộ trên mọi thiết bị
+              </p>
+              {saveStatus === 'saved' && (
+                <span className="text-xs text-green-500 font-medium">
+                  ✓ Lưu thành công
+                </span>
+              )}
+            </div>
           <div className="flex items-center gap-2">
             {onCancel && (
               <DarkOutlineButton

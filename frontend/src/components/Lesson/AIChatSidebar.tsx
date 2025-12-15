@@ -121,30 +121,22 @@ export function AIChatSidebar({
   };
 
 
-  const sidebarContent = (
+  return (
     <div
-      className={`fixed top-0 right-0 h-full transform transition-transform duration-300 ease-out ${
+      className={`fixed top-0 right-0 z-[70] h-full transform transition-transform duration-300 ease-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
       style={{
         width: '385px',
-        maxWidth: isVideoFullscreen ? '385px' : '90vw',
+        maxWidth: '90vw',
         pointerEvents: isOpen ? 'auto' : 'none',
-        zIndex: isVideoFullscreen ? 80 : 80,
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        height: '100vh',
       }}
     >
-      <div
-        className={`h-full flex flex-col ${
-          isDark ? 'bg-[#1A1A1A] border-l border-[#2D2D2D]' : 'bg-white border-l border-gray-200'
-        }`}
-        style={{
-          zIndex: isVideoFullscreen ? 2147483647 : 'inherit',
-        }}
-      >
+        <div
+          className={`h-full flex flex-col ${
+            isDark ? 'bg-[#1A1A1A] border-l border-[#2D2D2D]' : 'bg-white border-l border-gray-200'
+          }`}
+        >
           {/* Header */}
           <div
             className={`flex items-center justify-between px-4 py-3 border-b ${
@@ -426,14 +418,8 @@ export function AIChatSidebar({
               </DropdownMenu>
             </div>
           </div>
-      </div>
+        </div>
     </div>
   );
-
-  // When fullscreen with sidebar open, VideoPlayer uses custom fullscreen (CSS-based)
-  // so we don't need portal - sidebar can render normally
-  // Normal rendering
-  if (!isOpen) return null;
-  return sidebarContent;
 }
 

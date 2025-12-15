@@ -20,17 +20,31 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   PenTool,
+  Bell,
 } from 'lucide-react';
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
 import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { NotesSidebar } from '../components/Lesson/NotesSidebar';
+import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
 import { convertTranscriptToVTT, createVTTBlobURL } from '../lib/transcriptUtils';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Badge } from '../components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+import { User, Settings, LogOut, LayoutDashboard } from 'lucide-react';
+import { authApi } from '../lib/api';
 import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
 
 export function LessonPage() {
@@ -50,6 +64,7 @@ export function LessonPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showNotesDrawer, setShowNotesDrawer] = useState(false);
   const [showNotesSidebar, setShowNotesSidebar] = useState(false);
+  const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -458,8 +473,8 @@ export function LessonPage() {
       {/* Top Bar */}
       <div className="bg-black border-b border-[#2D2D2D] flex-shrink-0 z-50">
         <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+          <div className="flex items-center justify-between gap-1 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 min-w-0">
               <DarkOutlineButton
                 size="icon"
                 onClick={() => {
@@ -484,7 +499,7 @@ export function LessonPage() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </DarkOutlineButton>
-              <h2 className="text-xs md:text-sm font-semibold line-clamp-1 text-white">{course.title}</h2>
+              <h2 className="text-xs md:text-sm font-semibold text-white truncate max-w-[250px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px]">{course.title}</h2>
             </div>
             {isEnrolled && (
               <div className="hidden sm:flex flex-1 flex-col items-center mx-2 md:mx-4 min-w-0">
@@ -501,20 +516,30 @@ export function LessonPage() {
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
               {isEnrolled && (
                 <DarkOutlineButton
-                  size="icon"
+                  size="sm"
                   onClick={() => setShowNotesSidebar(true)}
                   title="Ghi chú"
                 >
-                  <BookOpen className="h-4 w-4" />
+                  <BookOpen className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">Ghi chú</span>
                 </DarkOutlineButton>
               )}
+              <DarkOutlineButton
+                size="sm"
+                onClick={() => setShowAIChatSidebar(true)}
+                title="Mở AI Tutor"
+              >
+                <MessageCircle className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">AI Tutor</span>
+              </DarkOutlineButton>
               <DarkOutlineButton
                 size="icon"
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
+                className="hidden sm:flex"
               >
                 {theme === 'dark' ? (
                   <Moon className="h-5 w-5" />
@@ -522,12 +547,193 @@ export function LessonPage() {
                   <Sun className="h-5 w-5" />
                 )}
               </DarkOutlineButton>
-              <DarkOutlineButton size="sm" asChild>
-                <Link to="/ai-chat">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  AI Tutor
-                </Link>
-              </DarkOutlineButton>
+              {/* Notifications */}
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="relative">
+                    <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    className='relative text-white hover:bg-[#1F1F1F]'
+                                >
+                                    <Bell className='h-5 w-5' />
+                                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
+                                        3
+                                    </Badge>
+                                </Button>
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600">
+                        3
+                      </Badge>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className={`w-[480px] max-w-[90vw] shadow-xl ${
+                      isDark
+                        ? 'bg-[#1A1A1A] border-[#2D2D2D]'
+                        : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <DropdownMenuLabel className={`flex items-center justify-between gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <span>Thông báo</span>
+                      <Badge className={isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}>
+                        Mới
+                      </Badge>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
+                    <div className={`max-h-[420px] overflow-y-auto divide-y ${isDark ? 'divide-[#2D2D2D]' : 'divide-gray-200'}`}>
+                      <div className={`p-4 cursor-pointer ${isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-50'}`}>
+                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          Bạn đã hoàn thành bài học "React Hooks"
+                        </p>
+                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          2 giờ trước
+                        </p>
+                      </div>
+                      <div className={`p-4 cursor-pointer ${isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-50'}`}>
+                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          Khóa học "Next.js Pro" vừa được cập nhật
+                        </p>
+                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          Hôm qua
+                        </p>
+                      </div>
+                      <div className={`p-4 cursor-pointer ${isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-50'}`}>
+                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          Bạn có chứng chỉ mới cần tải xuống
+                        </p>
+                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          2 ngày trước
+                        </p>
+                      </div>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {/* User Avatar */}
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="relative h-10 w-10 rounded-full border border-white/30 cursor-pointer hover:border-white transition-colors">
+                      <Avatar className="h-full w-full">
+                        <AvatarImage
+                          src={user.avatarUrl || user.avatar || undefined}
+                          alt={user.fullName || user.email || 'User'}
+                        />
+                        <AvatarFallback className="bg-blue-600 text-white">
+                          {user.fullName
+                            ? user.fullName
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .toUpperCase()
+                                .slice(0, 2)
+                            : user.email?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className={`w-64 shadow-xl ${
+                      isDark
+                        ? 'bg-[#1A1A1A] border-[#2D2D2D]'
+                        : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <DropdownMenuLabel className={`px-3 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-white/20">
+                          <AvatarImage
+                            src={user.avatarUrl || user.avatar || undefined}
+                            alt={user.fullName || user.email || 'User'}
+                          />
+                          <AvatarFallback className={`text-sm ${isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
+                            {user.fullName
+                              ? user.fullName
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2)
+                              : user.email?.[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {user.fullName || user.email}
+                          </p>
+                          <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
+                    <DropdownMenuItem
+                      asChild
+                      className={`transition-colors cursor-pointer ${
+                        isDark
+                          ? 'text-white hover:bg-[#252525]'
+                          : 'text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Link to="/dashboard" className="flex items-center">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      asChild
+                      className={`transition-colors cursor-pointer ${
+                        isDark
+                          ? 'text-white hover:bg-[#252525]'
+                          : 'text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Link to="/profile" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Hồ sơ
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      asChild
+                      className={`transition-colors cursor-pointer ${
+                        isDark
+                          ? 'text-white hover:bg-[#252525]'
+                          : 'text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Link to="/settings" className="flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Cài đặt
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          await authApi.logout();
+                          toast.success('Đăng xuất thành công!');
+                          navigate('/');
+                        } catch (error) {
+                          console.error('Logout error:', error);
+                          toast.error('Có lỗi xảy ra khi đăng xuất');
+                        }
+                      }}
+                      className={`transition-colors cursor-pointer ${
+                        isDark
+                          ? 'text-red-400 hover:bg-[#252525]'
+                          : 'text-red-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </div>
@@ -546,6 +752,7 @@ export function LessonPage() {
             {/* Video Player */}
             <Card className="overflow-hidden bg-card border-none rounded-none shadow-none">
               <VideoPlayer
+                key={selectedLesson?.id}
                 videoUrl={videoUrl}
                 subtitleUrl={subtitleUrl}
                 onTimeUpdate={handleTimeUpdate}
@@ -658,7 +865,7 @@ export function LessonPage() {
                 title="Mở ghi chú"
               >
                 <PenTool className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline" spellCheck={false}>Ghi chú</span>
+                <span className="hidden md:inline" spellCheck={false}>Thêm ghi chú</span>
               </DarkOutlineButton>
               <div className="flex items-center justify-center gap-4 flex-1">
               <DarkOutlineButton
@@ -819,6 +1026,18 @@ export function LessonPage() {
           />
         );
       })()}
+
+      {/* AI Chat Sidebar */}
+      {course && (
+        <AIChatSidebar
+          isOpen={showAIChatSidebar}
+          onClose={() => setShowAIChatSidebar(false)}
+          courseId={course.id}
+          courseTitle={course.title}
+          lessonId={selectedLesson?.id}
+          lessonTitle={selectedLesson?.title}
+        />
+      )}
     </div>
   );
 }

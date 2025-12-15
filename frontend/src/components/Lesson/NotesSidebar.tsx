@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
-import { Loader2, X, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, X, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { lessonNotesApi } from '../../lib/api';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -221,14 +221,13 @@ export function NotesSidebar({
             }`}
             style={{ position: 'relative', zIndex: 1 }}
           >
-            <DarkOutlineButton
-              size="sm"
-              onClick={onClose}
-              className="text-lg font-semibold"
+            <span
+              className={`text-lg font-semibold ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}
             >
-              <ChevronRight className="h-4 w-4 mr-2" />
               Ghi chú của tôi
-            </DarkOutlineButton>
+            </span>
               <div className="flex items-center gap-2" style={{ position: 'relative', zIndex: 10 }}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
