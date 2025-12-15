@@ -20,6 +20,18 @@ class LessonsController {
     })
 
     /**
+     * @route   GET /api/v1/courses/:slug/lessons/:lessonSlug
+     * @desc    Get lesson by slug
+     * @access  Private (enrolled users, course instructor, admin)
+     */
+    getLessonBySlug = asyncHandler(async (req, res) => {
+        const { slug, lessonSlug } = req.params
+        const lesson = await lessonsService.getLessonBySlug(slug, lessonSlug)
+
+        return ApiResponse.success(res, lesson, 'Lesson retrieved successfully')
+    })
+
+    /**
      * @route   GET /api/v1/lessons/:id/video
      * @desc    Get lesson video URL
      * @access  Private (enrolled users, course instructor, admin)

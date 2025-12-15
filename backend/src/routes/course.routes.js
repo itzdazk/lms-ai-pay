@@ -1,12 +1,15 @@
 // src/routes/course.routes.js
 import express from 'express'
 import courseController from '../controllers/course.controller.js'
+import lessonsController from '../controllers/lessons.controller.js'
 import {
     getCoursesValidator,
     getLimitValidator,
     getCourseByIdValidator,
     getCourseBySlugValidator,
 } from '../validators/course.validator.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
+import { isEnrolledOrInstructorOrAdmin } from '../middlewares/role.middleware.js'
 
 const router = express.Router()
 
@@ -95,6 +98,19 @@ router.post(
     '/:id/view',
     getCourseByIdValidator,
     courseController.incrementViewCount
+)
+
+/**
+ * @route   GET /api/v1/courses/:slug/lessons/:lessonSlug
+ * @desc    Get lesson by slug
+ * @access  Private (enrolled users, course instructor, admin)
+ */
+router.get(
+    '/slug/:slug/lessons/:lessonSlug',
+    getCourseBySlugValidator,
+    authenticate,
+    isEnrolledOrInstructorOrAdmin(null, 'slug', 'lessonSlug'),
+    lessonsController.getLessonBySlug
 )
 
 export default router

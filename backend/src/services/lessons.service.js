@@ -79,6 +79,58 @@ class LessonsService {
     }
 
     /**
+     * Get lesson by slug and course slug
+     */
+    async getLessonBySlug(courseSlug, lessonSlug) {
+        // First find course by slug
+        const course = await prisma.course.findUnique({
+            where: { slug: courseSlug },
+            select: { id: true },
+        })
+
+        if (!course) {
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Then find lesson by slug within that course
+        const lesson = await prisma.lesson.findUnique({
+            where: {
+                courseId_slug: {
+                    courseId: course.id,
+                    slug: lessonSlug,
+                },
+            },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        status: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                avatarUrl: true,
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+        if (!lesson) {
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        return lesson
+    }
+
+    /**
      * Get lesson video URL
      */
     async getLessonVideo(lessonId) {
