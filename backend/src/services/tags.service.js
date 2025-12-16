@@ -8,7 +8,7 @@ class TagsService {
      * Get tags list with pagination and search
      */
     async getTags(query) {
-        const { page = 1, limit = 20, search } = query
+        const { page = 1, limit = 20, search, sort = 'createdAt', sortOrder = 'desc' } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
@@ -26,6 +26,16 @@ class TagsService {
             ]
         }
 
+        // Build orderBy
+        const orderBy = {}
+        const validSortFields = ['createdAt', 'name']
+        const validSortOrders = ['asc', 'desc']
+        
+        const sortField = validSortFields.includes(sort) ? sort : 'createdAt'
+        const sortOrderValue = validSortOrders.includes(sortOrder) ? sortOrder : 'desc'
+        
+        orderBy[sortField] = sortOrderValue
+
         // Get tags and total count
         const [tags, total] = await Promise.all([
             prisma.tag.findMany({
@@ -39,7 +49,7 @@ class TagsService {
                     description: true,
                     createdAt: true,
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy,
             }),
             prisma.tag.count({ where }),
         ])
