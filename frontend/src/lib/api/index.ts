@@ -7,6 +7,13 @@ export { instructorCoursesApi } from './instructor-courses'
 export { dashboardApi } from './dashboard'
 export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
+export { enrollmentsApi } from './enrollments'
+export type {
+    EnrollmentWithCourse,
+    EnrollmentCheckResponse,
+    CreateEnrollmentRequest,
+    CreateEnrollmentResponse,
+} from './enrollments'
 export type {
     UpdateProfileRequest,
     ChangePasswordRequest,
