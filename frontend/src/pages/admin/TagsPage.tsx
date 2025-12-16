@@ -453,25 +453,6 @@ export function TagsPage() {
         setSearchInput(value)
     }
 
-    const handleFilterChange = (
-        key: keyof AdminTagFilters,
-        value: any
-    ) => {
-        const mainContainer = document.querySelector('main')
-        if (mainContainer) {
-            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
-        } else {
-            scrollPositionRef.current =
-                window.scrollY || document.documentElement.scrollTop
-        }
-        isPageChangingRef.current = true
-        setFilters({
-            ...filters,
-            [key]: value === 'all' ? undefined : value,
-            page: 1,
-        })
-    }
-
     const handlePageChange = (newPage: number) => {
         const mainContainer = document.querySelector('main')
         if (mainContainer) {
