@@ -245,9 +245,14 @@ function CategoryRow({
                                 </p>
                             )}
                             {category.parent && (
-                                <p className='text-xs text-gray-400 dark:text-gray-500 mt-1'>
-                                    Danh mục cha: {category.parent.name}
-                                </p>
+                                <div className='flex items-center gap-1.5 mt-2'>
+                                    <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>
+                                        Danh mục cha:
+                                    </span>
+                                    <span className='inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'>
+                                        {category.parent.name}
+                                    </span>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -351,7 +356,7 @@ export function CategoriesPage() {
     const { user: currentUser, loading: authLoading } = useAuth()
     const navigate = useNavigate()
     const [categories, setCategories] = useState<Category[]>([])
-    const [parentCategories, setParentCategories] = useState<Category[]>([])
+    const [allCategories, setAllCategories] = useState<Category[]>([])
     const [loading, setLoading] = useState(true)
     const [pagination, setPagination] = useState({
         page: 1,
@@ -363,10 +368,10 @@ export function CategoriesPage() {
         page: 1,
         limit: 10,
         search: '',
-        parentId: undefined,
+        categoryId: undefined,
         isActive: undefined,
-        sort: 'sortOrder',
-        sortOrder: 'asc',
+        sort: 'createdAt',
+        sortOrder: 'desc',
     })
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(
         null
@@ -377,6 +382,7 @@ export function CategoriesPage() {
     const [actionLoading, setActionLoading] = useState(false)
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
     const [searchInput, setSearchInput] = useState<string>(filters.search || '')
+    const [categorySearch, setCategorySearch] = useState<string>('')
     const [formData, setFormData] = useState<CreateCategoryRequest>({
         name: '',
         slug: '',
@@ -406,10 +412,10 @@ export function CategoriesPage() {
         }
     }, [currentUser, authLoading, navigate])
 
-    // Load parent categories for dropdown
+    // Load all categories for dropdown
     useEffect(() => {
         if (currentUser) {
-            loadParentCategories()
+            loadAllCategories()
         }
     }, [currentUser])
 
@@ -445,7 +451,7 @@ export function CategoriesPage() {
         filters.page,
         filters.limit,
         filters.search,
-        filters.parentId,
+        filters.categoryId,
         filters.isActive,
         filters.sort,
         filters.sortOrder,
@@ -491,12 +497,90 @@ export function CategoriesPage() {
         }
     }
 
-    const loadParentCategories = async () => {
+    const loadAllCategories = async () => {
         try {
+            // Load all categories for dropdown filter (without parentId filter to get all)
+            // Backend MAX_LIMIT is 100, so we use 100
             const result = await categoriesApi.getCategories({ limit: 100 })
-            setParentCategories(result.data || [])
+            const categories = result.data || []
+            
+            // Flatten categories including children from nested structure
+            const allCategoriesFlat: Category[] = []
+            const processedIds = new Set<number>()
+            
+            // First, add all categories from main array
+            categories.forEach((category) => {
+                if (!processedIds.has(category.id)) {
+                    allCategoriesFlat.push(category)
+                    processedIds.add(category.id)
+                }
+            })
+            
+            // Then, add children from nested children arrays
+            categories.forEach((category) => {
+                if (category.children && Array.isArray(category.children)) {
+                    category.children.forEach((child: any) => {
+                        // Backend only returns: id, name, slug, isActive for children
+                        // Check if child already exists in main array
+                        const existingChild = allCategoriesFlat.find((cat) => cat.id === child.id)
+                        
+                        if (existingChild) {
+                            // Child already exists in main array, ensure parentId is set correctly
+                            if (!existingChild.parentId || existingChild.parentId !== category.id) {
+                                existingChild.parentId = category.id
+                            }
+                        } else if (!processedIds.has(child.id)) {
+                            // Child doesn't exist, create a minimal category object
+                            // Use defaults for missing required fields
+                            const childCategory: Category = {
+                                id: child.id,
+                                name: child.name,
+                                slug: child.slug,
+                                description: undefined,
+                                imageUrl: undefined,
+                                parentId: category.id,
+                                sortOrder: 0, // Default sortOrder
+                                isActive: child.isActive ?? true,
+                                coursesCount: 0, // Will be calculated if needed
+                                createdAt: new Date().toISOString(), // Default timestamp
+                                updatedAt: new Date().toISOString(), // Default timestamp
+                            }
+                            allCategoriesFlat.push(childCategory)
+                            processedIds.add(child.id)
+                        }
+                    })
+                }
+            })
+            
+            // Build hierarchical structure: parent categories first, then their children
+            const parentCategories = allCategoriesFlat.filter((cat) => !cat.parentId)
+            const childCategories = allCategoriesFlat.filter((cat) => cat.parentId)
+            
+            const hierarchicalCategories: Category[] = []
+            parentCategories.forEach((parent) => {
+                hierarchicalCategories.push(parent)
+                // Add all children of this parent
+                const children = childCategories.filter(
+                    (child) => child.parentId === parent.id
+                )
+                // Sort children by sortOrder or name
+                children.sort((a, b) => {
+                    if (a.sortOrder !== b.sortOrder) {
+                        return (a.sortOrder || 0) - (b.sortOrder || 0)
+                    }
+                    return a.name.localeCompare(b.name)
+                })
+                hierarchicalCategories.push(...children)
+            })
+            
+            // Add any remaining categories that might not have been included (orphaned children)
+            const includedIds = new Set(hierarchicalCategories.map((cat) => cat.id))
+            const remaining = allCategoriesFlat.filter((cat) => !includedIds.has(cat.id))
+            hierarchicalCategories.push(...remaining)
+            
+            setAllCategories(hierarchicalCategories)
         } catch (error: any) {
-            console.error('Error loading parent categories:', error)
+            console.error('Error loading categories:', error)
         }
     }
 
@@ -641,7 +725,7 @@ export function CategoriesPage() {
             setImageFile(null)
             setImageRemoved(false)
             loadCategories()
-            loadParentCategories()
+            loadAllCategories()
         } catch (error: any) {
             console.error('❌ Error creating category:', error)
             showApiError(error)
@@ -729,7 +813,7 @@ export function CategoriesPage() {
             setImageFile(null)
             setImageRemoved(false)
             loadCategories()
-            loadParentCategories()
+            loadAllCategories()
         } catch (error: any) {
             console.error('Error updating category:', error)
             showApiError(error)
@@ -746,7 +830,7 @@ export function CategoriesPage() {
             await adminCategoriesApi.deleteCategory(selectedCategory.id)
             toast.success('Xóa danh mục thành công!')
             await loadCategories()
-            loadParentCategories()
+            loadAllCategories()
             setIsDeleteDialogOpen(false)
             setSelectedCategory(null)
         } catch (error: any) {
@@ -862,23 +946,14 @@ export function CategoriesPage() {
     return (
         <div className='w-full px-4 py-4 bg-background text-foreground min-h-screen'>
             <div className='w-full'>
-                <div className='mb-6 flex items-center justify-between'>
-                    <div>
-                        <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
-                            <FolderTree className='h-8 w-8' />
-                            Quản lý Danh mục
-                        </h1>
-                        <p className='text-muted-foreground'>
-                            Quản lý và theo dõi tất cả danh mục khóa học
-                        </p>
-                    </div>
-                    <Button
-                        onClick={handleCreate}
-                        className='bg-blue-600 hover:bg-blue-700 text-white'
-                    >
-                        <Plus className='h-4 w-4 mr-2' />
-                        Tạo danh mục
-                    </Button>
+                <div className='mb-6'>
+                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
+                        <FolderTree className='h-8 w-8' />
+                        Quản lý Danh mục
+                    </h1>
+                    <p className='text-muted-foreground'>
+                        Quản lý và theo dõi tất cả danh mục khóa học
+                    </p>
                 </div>
 
                 {/* Filters */}
@@ -890,38 +965,139 @@ export function CategoriesPage() {
                         <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                             <div className='space-y-2'>
                                 <Label className='text-gray-400 text-sm'>
-                                    Danh mục cha
+                                    Danh mục
                                 </Label>
                                 <Select
                                     value={
-                                        filters.parentId
-                                            ? String(filters.parentId)
+                                        filters.categoryId
+                                            ? String(filters.categoryId)
                                             : 'all'
                                     }
                                     onValueChange={(value) => {
                                         handleFilterChange(
-                                            'parentId',
+                                            'categoryId',
                                             value === 'all'
                                                 ? undefined
                                                 : parseInt(value)
                                         )
+                                        setCategorySearch('') // Reset search when selecting
                                     }}
                                 >
                                     <DarkOutlineSelectTrigger>
-                                        <SelectValue placeholder='Tất cả' />
+                                        <SelectValue placeholder='Tất cả danh mục' />
                                     </DarkOutlineSelectTrigger>
                                     <DarkOutlineSelectContent>
-                                        <DarkOutlineSelectItem value='all'>
-                                            Tất cả
-                                        </DarkOutlineSelectItem>
-                                        {parentCategories.map((cat) => (
+                                        <div className='p-2 border-b border-[#2D2D2D]'>
+                                            <DarkOutlineInput
+                                                placeholder='Tìm kiếm danh mục...'
+                                                value={categorySearch}
+                                                onChange={(e) => {
+                                                    e.stopPropagation()
+                                                    setCategorySearch(e.target.value)
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onKeyDown={(e) => e.stopPropagation()}
+                                                className='w-full'
+                                            />
+                                        </div>
+                                        <div className='max-h-[200px] overflow-y-auto'>
                                             <DarkOutlineSelectItem
-                                                key={cat.id}
-                                                value={String(cat.id)}
+                                                value='all'
+                                                onSelect={() => setCategorySearch('')}
                                             >
-                                                {cat.name}
+                                                Tất cả danh mục
                                             </DarkOutlineSelectItem>
-                                        ))}
+                                            {(() => {
+                                                const searchLower = categorySearch.toLowerCase()
+                                                
+                                                // Separate parent and child categories
+                                                const parentCategories = allCategories.filter((cat) => !cat.parentId)
+                                                const childCategories = allCategories.filter((cat) => cat.parentId)
+                                                
+                                                // Build display list maintaining hierarchical order
+                                                const displayList: Category[] = []
+                                                
+                                                // Process parent categories first
+                                                parentCategories.forEach((parent) => {
+                                                    const parentMatches = !categorySearch || 
+                                                        parent.name.toLowerCase().includes(searchLower)
+                                                    
+                                                    // Get all children of this parent
+                                                    const children = childCategories.filter(
+                                                        (child) => child.parentId === parent.id
+                                                    )
+                                                    
+                                                    // Check if any child matches search
+                                                    const hasMatchingChild = !categorySearch || 
+                                                        children.some((child) => 
+                                                            child.name.toLowerCase().includes(searchLower)
+                                                        )
+                                                    
+                                                    // Include parent if it matches or has matching children or no search
+                                                    if (parentMatches || hasMatchingChild || !categorySearch) {
+                                                        displayList.push(parent)
+                                                        
+                                                        // Add all children of this parent
+                                                        children.forEach((child) => {
+                                                            const childMatches = !categorySearch ||
+                                                                child.name.toLowerCase().includes(searchLower) ||
+                                                                parentMatches
+                                                            
+                                                            if (childMatches) {
+                                                                displayList.push(child)
+                                                            }
+                                                        })
+                                                    }
+                                                })
+                                                
+                                                return displayList.map((category) => {
+                                                    const isChild = !!category.parentId
+                                                    const parentCategory = allCategories.find(
+                                                        (cat) => cat.id === category.parentId
+                                                    )
+                                                    // If searching and child's parent doesn't match, show parent name
+                                                    const shouldShowParent =
+                                                        categorySearch &&
+                                                        isChild &&
+                                                        parentCategory &&
+                                                        !parentCategory.name
+                                                            .toLowerCase()
+                                                            .includes(searchLower)
+
+                                                    return (
+                                                        <DarkOutlineSelectItem
+                                                            key={category.id}
+                                                            value={String(category.id)}
+                                                            onSelect={() =>
+                                                                setCategorySearch('')
+                                                            }
+                                                        >
+                                                            <div
+                                                                className={`flex items-center ${
+                                                                    isChild ? 'pl-4' : ''
+                                                                }`}
+                                                            >
+                                                                {isChild && (
+                                                                    <span className='text-gray-500 mr-1'>
+                                                                        └
+                                                                    </span>
+                                                                )}
+                                                                <span>
+                                                                    {shouldShowParent
+                                                                        ? `${parentCategory.name} > ${category.name}`
+                                                                        : category.name}
+                                                                </span>
+                                                            </div>
+                                                        </DarkOutlineSelectItem>
+                                                    )
+                                                })
+                                            })()}
+                                            {allCategories.length === 0 && (
+                                                <div className='px-2 py-1.5 text-sm text-gray-400 text-center'>
+                                                    Không có danh mục
+                                                </div>
+                                            )}
+                                        </div>
                                     </DarkOutlineSelectContent>
                                 </Select>
                             </div>
@@ -969,23 +1145,81 @@ export function CategoriesPage() {
                                     Sắp xếp
                                 </Label>
                                 <Select
-                                    value={`${filters.sort || 'sortOrder'}-${
-                                        filters.sortOrder || 'asc'
-                                    }`}
+                                    value={
+                                        filters.sort === 'createdAt' && filters.sortOrder === 'desc'
+                                            ? 'newest'
+                                            : filters.sort === 'createdAt' && filters.sortOrder === 'asc'
+                                              ? 'oldest'
+                                              : filters.sort === 'updatedAt' && filters.sortOrder === 'desc'
+                                                ? 'updated'
+                                                : filters.sort === 'updatedAt' && filters.sortOrder === 'asc'
+                                                  ? 'updated-oldest'
+                                                  : filters.sort === 'sortOrder' && filters.sortOrder === 'asc'
+                                                    ? 'sortOrder-asc'
+                                                    : filters.sort === 'sortOrder' && filters.sortOrder === 'desc'
+                                                      ? 'sortOrder-desc'
+                                                      : 'newest'
+                                    }
                                     onValueChange={(value) => {
-                                        const [sort, sortOrder] =
-                                            value.split('-')
-                                        handleFilterChange('sort', sort)
-                                        handleFilterChange(
-                                            'sortOrder',
-                                            sortOrder
-                                        )
+                                        const mainContainer = document.querySelector('main')
+                                        if (mainContainer) {
+                                            scrollPositionRef.current = (
+                                                mainContainer as HTMLElement
+                                            ).scrollTop
+                                        } else {
+                                            scrollPositionRef.current =
+                                                window.scrollY ||
+                                                document.documentElement.scrollTop
+                                        }
+                                        isPageChangingRef.current = true
+
+                                        let newSort: 'name' | 'createdAt' | 'updatedAt' | 'sortOrder' = 'sortOrder'
+                                        let newSortOrder: 'asc' | 'desc' = 'asc'
+
+                                        if (value === 'newest') {
+                                            newSort = 'createdAt'
+                                            newSortOrder = 'desc'
+                                        } else if (value === 'oldest') {
+                                            newSort = 'createdAt'
+                                            newSortOrder = 'asc'
+                                        } else if (value === 'updated') {
+                                            newSort = 'updatedAt'
+                                            newSortOrder = 'desc'
+                                        } else if (value === 'updated-oldest') {
+                                            newSort = 'updatedAt'
+                                            newSortOrder = 'asc'
+                                        } else if (value === 'sortOrder-asc') {
+                                            newSort = 'sortOrder'
+                                            newSortOrder = 'asc'
+                                        } else if (value === 'sortOrder-desc') {
+                                            newSort = 'sortOrder'
+                                            newSortOrder = 'desc'
+                                        }
+
+                                        setFilters({
+                                            ...filters,
+                                            sort: newSort,
+                                            sortOrder: newSortOrder,
+                                            page: 1,
+                                        })
                                     }}
                                 >
                                     <DarkOutlineSelectTrigger>
                                         <SelectValue placeholder='Sắp xếp' />
                                     </DarkOutlineSelectTrigger>
                                     <DarkOutlineSelectContent>
+                                        <DarkOutlineSelectItem value='newest'>
+                                            Mới nhất
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='oldest'>
+                                            Cũ nhất
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='updated'>
+                                            Cập nhật: Mới nhất
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='updated-oldest'>
+                                            Cập nhật: Cũ nhất
+                                        </DarkOutlineSelectItem>
                                         <DarkOutlineSelectItem value='sortOrder-asc'>
                                             Thứ tự: Tăng dần
                                         </DarkOutlineSelectItem>
@@ -1028,6 +1262,43 @@ export function CategoriesPage() {
                                     </DarkOutlineSelectContent>
                                 </Select>
                             </div>
+
+                            <div className='space-y-2'>
+                                <Label className='text-gray-400 text-sm opacity-0'>
+                                    Xóa bộ lọc
+                                </Label>
+                                <Button
+                                    onClick={() => {
+                                        setSearchInput('')
+                                        const mainContainer =
+                                            document.querySelector('main')
+                                        if (mainContainer) {
+                                            scrollPositionRef.current = (
+                                                mainContainer as HTMLElement
+                                            ).scrollTop
+                                        } else {
+                                            scrollPositionRef.current =
+                                                window.scrollY ||
+                                                document.documentElement.scrollTop
+                                        }
+                                        isPageChangingRef.current = true
+                                        setCategorySearch('')
+                                        setFilters({
+                                            page: 1,
+                                            limit: 10,
+                                            search: '',
+                                            categoryId: undefined,
+                                            isActive: undefined,
+                                            sort: 'createdAt',
+                                            sortOrder: 'desc',
+                                        })
+                                    }}
+                                    variant='blue'
+                                    className='w-full'
+                                >
+                                    Xóa bộ lọc
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -1035,12 +1306,23 @@ export function CategoriesPage() {
                 {/* Categories Table */}
                 <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                     <CardHeader>
-                        <CardTitle className='text-white'>
-                            Danh sách danh mục ({pagination.total})
-                        </CardTitle>
-                        <CardDescription className='text-gray-400'>
-                            Trang {pagination.page} / {pagination.totalPages}
-                        </CardDescription>
+                        <div className='flex items-center justify-between'>
+                            <div>
+                                <CardTitle className='text-white'>
+                                    Danh sách danh mục ({pagination.total})
+                                </CardTitle>
+                                <CardDescription className='text-gray-400'>
+                                    Trang {pagination.page} / {pagination.totalPages}
+                                </CardDescription>
+                            </div>
+                            <Button
+                                onClick={handleCreate}
+                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                            >
+                                <Plus className='h-4 w-4 mr-2' />
+                                Tạo danh mục
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className='overflow-x-auto'>
                         {/* Search Bar */}
@@ -1286,7 +1568,7 @@ export function CategoriesPage() {
                                             <DarkOutlineSelectItem value='null'>
                                                 Không có
                                             </DarkOutlineSelectItem>
-                                            {parentCategories
+                                            {allCategories
                                                 .filter(
                                                     (cat) =>
                                                         !selectedCategory ||

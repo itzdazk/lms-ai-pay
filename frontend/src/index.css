@@ -275,6 +275,53 @@ html {
     scrollbar-color: #3d3d3d #1a1a1a;
 }
 
+/* Scrollbar for SelectContent dropdowns - supports light/dark mode */
+[data-slot="select-content"] *::-webkit-scrollbar,
+[data-slot="select-content"]::-webkit-scrollbar {
+    width: 6px;
+}
+
+[data-slot="select-content"] *::-webkit-scrollbar-track,
+[data-slot="select-content"]::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+[data-slot="select-content"] *::-webkit-scrollbar-thumb,
+[data-slot="select-content"]::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+[data-slot="select-content"] *::-webkit-scrollbar-thumb:hover,
+[data-slot="select-content"]::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar for SelectContent */
+.dark [data-slot="select-content"] *::-webkit-scrollbar-thumb,
+.dark [data-slot="select-content"]::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.dark [data-slot="select-content"] *::-webkit-scrollbar-thumb:hover,
+.dark [data-slot="select-content"]::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox */
+[data-slot="select-content"] *,
+[data-slot="select-content"] {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.dark [data-slot="select-content"] *,
+.dark [data-slot="select-content"] {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
 /* Slick Carousel - Prevent overflow */
 .slick-slide {
     min-width: 0;
