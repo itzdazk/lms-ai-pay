@@ -159,6 +159,8 @@ export const coursesApi = {
         page?: number
         limit?: number
         search?: string
+        sort?: string
+        sortOrder?: string
     }): Promise<{
         tags: Tag[]
         pagination: {
@@ -173,6 +175,8 @@ export const coursesApi = {
         if (params?.page) queryParams.append('page', params.page.toString())
         if (params?.limit) queryParams.append('limit', params.limit.toString())
         if (params?.search) queryParams.append('search', params.search)
+        if (params?.sort) queryParams.append('sort', params.sort)
+        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder)
 
         const response = await apiClient.get<
             ApiResponse<{

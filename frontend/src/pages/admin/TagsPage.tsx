@@ -12,6 +12,12 @@ import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
 import { DarkOutlineInput } from '../../components/ui/dark-outline-input'
 import { Label } from '../../components/ui/label'
+import { Select, SelectValue } from '../../components/ui/select'
+import {
+    DarkOutlineSelectTrigger,
+    DarkOutlineSelectContent,
+    DarkOutlineSelectItem,
+} from '../../components/ui/dark-outline-select-trigger'
 import {
     DarkOutlineTable,
     DarkOutlineTableHeader,
@@ -111,6 +117,8 @@ type AdminTagFilters = {
     page: number
     limit: number
     search: string
+    sort?: string
+    sortOrder?: string
 }
 
 type TagFormState = {
@@ -329,6 +337,8 @@ export function TagsPage() {
         page: 1,
         limit: 10,
         search: '',
+        sort: 'createdAt',
+        sortOrder: 'desc',
     })
     const [searchInput, setSearchInput] = useState<string>(filters.search || '')
     const [selectedTag, setSelectedTag] = useState<Tag | null>(null)
@@ -388,7 +398,7 @@ export function TagsPage() {
             loadTags()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters.page, filters.limit, filters.search, currentUser])
+    }, [filters.page, filters.limit, filters.search, filters.sort, filters.sortOrder, currentUser])
 
     // Restore scroll position
     useEffect(() => {
@@ -422,6 +432,8 @@ export function TagsPage() {
                 page: filters.page,
                 limit: filters.limit,
                 search: filters.search || undefined,
+                sort: filters.sort,
+                sortOrder: filters.sortOrder,
             })
             setTags(result.tags)
             setPagination(result.pagination)
@@ -435,6 +447,25 @@ export function TagsPage() {
 
     const handleSearch = (value: string) => {
         setSearchInput(value)
+    }
+
+    const handleFilterChange = (
+        key: keyof AdminTagFilters,
+        value: any
+    ) => {
+        const mainContainer = document.querySelector('main')
+        if (mainContainer) {
+            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+        } else {
+            scrollPositionRef.current =
+                window.scrollY || document.documentElement.scrollTop
+        }
+        isPageChangingRef.current = true
+        setFilters({
+            ...filters,
+            [key]: value === 'all' ? undefined : value,
+            page: 1,
+        })
     }
 
     const handlePageChange = (newPage: number) => {
@@ -684,7 +715,7 @@ export function TagsPage() {
     return (
         <div className='w-full px-4 py-4 bg-background text-foreground min-h-screen'>
             <div className='w-full'>
-                <div className='mb-6 flex items-center justify-between'>
+                <div className='mb-6'>
                     <div>
                         <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
                             <TagIcon className='h-8 w-8' />
@@ -694,13 +725,6 @@ export function TagsPage() {
                             Quản lý và theo dõi tất cả tags của khóa học
                         </p>
                     </div>
-                    <Button
-                        onClick={handleCreate}
-                        className='bg-blue-600 hover:bg-blue-700 text-white'
-                    >
-                        <Plus className='h-4 w-4 mr-2' />
-                        Tạo tag
-                    </Button>
                 </div>
 
                 {/* Filters (search & per-page) */}
@@ -710,51 +734,103 @@ export function TagsPage() {
                     </CardHeader>
                     <CardContent className='space-y-4'>
                         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                            <div className='space-y-2 md:col-span-2'>
+                            <div className='space-y-2'>
                                 <Label className='text-gray-400 text-sm'>
-                                    Tìm kiếm
+                                    Sắp xếp
                                 </Label>
-                                <div className='relative'>
-                                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
-                                    <DarkOutlineInput
-                                        type='text'
-                                        placeholder='Tìm kiếm theo tên hoặc slug...'
-                                        value={searchInput}
-                                        onChange={(e) =>
-                                            handleSearch(e.target.value)
-                                        }
-                                        className='pl-10 pr-10'
-                                    />
-                                    {searchInput && (
-                                        <button
-                                            type='button'
-                                            onClick={() => handleSearch('')}
-                                            className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
-                                        >
-                                            <X className='h-4 w-4' />
-                                        </button>
-                                    )}
-                                </div>
+                                <Select
+                                    value={`${filters.sort || 'createdAt'}-${
+                                        filters.sortOrder || 'desc'
+                                    }`}
+                                    onValueChange={(value) => {
+                                        const [sort, sortOrder] =
+                                            value.split('-')
+                                        setFilters({
+                                            ...filters,
+                                            sort,
+                                            sortOrder,
+                                            page: 1,
+                                        })
+                                    }}
+                                >
+                                    <DarkOutlineSelectTrigger>
+                                        <SelectValue placeholder='Sắp xếp' />
+                                    </DarkOutlineSelectTrigger>
+                                    <DarkOutlineSelectContent>
+                                        <DarkOutlineSelectItem value='createdAt-desc'>
+                                            Mới nhất
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='createdAt-asc'>
+                                            Cũ nhất
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='name-asc'>
+                                            Tên: A-Z
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='name-desc'>
+                                            Tên: Z-A
+                                        </DarkOutlineSelectItem>
+                                    </DarkOutlineSelectContent>
+                                </Select>
                             </div>
 
                             <div className='space-y-2'>
                                 <Label className='text-gray-400 text-sm'>
                                     Số lượng / trang
                                 </Label>
-                                <select
-                                    value={filters.limit}
-                                    onChange={(e) =>
-                                        handleLimitChange(
-                                            parseInt(e.target.value, 10)
-                                        )
-                                    }
-                                    className='w-full px-3 py-2 rounded-md bg-[#121212] border border-[#2D2D2D] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                <Select
+                                    value={filters.limit?.toString() || '10'}
+                                    onValueChange={(value) => {
+                                        handleLimitChange(parseInt(value, 10))
+                                    }}
                                 >
-                                    <option value={5}>5 / trang</option>
-                                    <option value={10}>10 / trang</option>
-                                    <option value={20}>20 / trang</option>
-                                    <option value={50}>50 / trang</option>
-                                </select>
+                                    <DarkOutlineSelectTrigger>
+                                        <SelectValue placeholder='10 / trang' />
+                                    </DarkOutlineSelectTrigger>
+                                    <DarkOutlineSelectContent>
+                                        <DarkOutlineSelectItem value='5'>
+                                            5 / trang
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='10'>
+                                            10 / trang
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='20'>
+                                            20 / trang
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='50'>
+                                            50 / trang
+                                        </DarkOutlineSelectItem>
+                                    </DarkOutlineSelectContent>
+                                </Select>
+                            </div>
+
+                            <div className='space-y-2'>
+                                <Label className='text-gray-400 text-sm opacity-0'>
+                                    Xóa bộ lọc
+                                </Label>
+                                <Button
+                                    onClick={() => {
+                                        setSearchInput('')
+                                        const mainContainer = document.querySelector('main')
+                                        if (mainContainer) {
+                                            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+                                        } else {
+                                            scrollPositionRef.current =
+                                                window.scrollY || document.documentElement.scrollTop
+                                        }
+                                        isPageChangingRef.current = true
+                                        setFilters({
+                                            page: 1,
+                                            limit: 10,
+                                            search: '',
+                                            sort: 'createdAt',
+                                            sortOrder: 'desc',
+                                        })
+                                    }}
+                                    variant='blue'
+                                    className='w-full'
+                                >
+                                    Xóa bộ lọc
+                                </Button>
                             </div>
                         </div>
                     </CardContent>
@@ -763,14 +839,45 @@ export function TagsPage() {
                 {/* Tags Table */}
                 <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                     <CardHeader>
-                        <CardTitle className='text-white'>
-                            Danh sách tags ({pagination.total})
-                        </CardTitle>
-                        <CardDescription className='text-gray-400'>
-                            Trang {pagination.page} / {pagination.totalPages}
-                        </CardDescription>
+                        <div className='flex items-center justify-between'>
+                            <div>
+                                <CardTitle className='text-white'>
+                                    Danh sách tags ({pagination.total})
+                                </CardTitle>
+                                <CardDescription className='text-gray-400'>
+                                    Trang {pagination.page} / {pagination.totalPages}
+                                </CardDescription>
+                            </div>
+                            <Button
+                                onClick={handleCreate}
+                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                            >
+                                <Plus className='h-4 w-4 mr-2' />
+                                Tạo tag
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className='overflow-x-auto'>
+                        {/* Search Bar */}
+                        <div className='relative mb-4'>
+                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                            <DarkOutlineInput
+                                type='text'
+                                placeholder='Tìm kiếm theo tên hoặc slug...'
+                                value={searchInput}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                className='pl-10 pr-10'
+                            />
+                            {searchInput && (
+                                <button
+                                    type='button'
+                                    onClick={() => handleSearch('')}
+                                    className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
+                                >
+                                    <X className='h-4 w-4' />
+                                </button>
+                            )}
+                        </div>
                         {loading ? (
                             <div className='flex items-center justify-center py-12'>
                                 <Loader2 className='h-8 w-8 animate-spin text-gray-400' />
