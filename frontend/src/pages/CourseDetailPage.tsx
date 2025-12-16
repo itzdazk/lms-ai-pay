@@ -16,10 +16,7 @@ import {
 } from '../components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Progress } from '../components/ui/progress'
-import {
-    Dialog,
-    DialogContent,
-} from '../components/ui/dialog'
+import { Dialog, DialogContent } from '../components/ui/dialog'
 import {
     Star,
     Users,
@@ -35,6 +32,7 @@ import {
     CourseHeroSection,
     CourseSidebar,
 } from '../components/Courses'
+import { EnrollmentButton } from '../components/Enrollments'
 import { coursesApi } from '../lib/api'
 import type { PublicCourse, Lesson, Instructor } from '../lib/api/types'
 import { formatDuration } from '../lib/courseUtils'
@@ -122,7 +120,6 @@ export function CourseDetailPage() {
         )
     }
 
-
     return (
         <div className='bg-background'>
             {/* Hero Section */}
@@ -141,7 +138,9 @@ export function CourseDetailPage() {
                     </div>
                     <div className='grid lg:grid-cols-3 gap-8 relative'>
                         <CourseHeroSection
-                            categoryName={course.category?.name || 'Chưa phân loại'}
+                            categoryName={
+                                course.category?.name || 'Chưa phân loại'
+                            }
                             categoryId={course.categoryId}
                             title={course.title}
                             shortDescription={course.shortDescription}
@@ -169,13 +168,16 @@ export function CourseDetailPage() {
                             }}
                             isEnrolled={isEnrolled}
                             enrollmentProgress={0}
-                            onVideoPreviewClick={() => setShowPreviewVideo(true)}
+                            onVideoPreviewClick={() =>
+                                setShowPreviewVideo(true)
+                            }
                             checkoutUrl={`/checkout/${course.id}`}
                             learnUrl={`/learn/${course.id}`}
+                            useEnrollmentButton={true}
+                            publicCourse={course}
                         />
                         {/* Main Content - Tổng quan, Nội dung, Đánh giá */}
                         <div className='lg:col-span-2'>
-
                             <Tabs defaultValue='overview' className='w-full'>
                                 <TabsList className='w-full justify-start bg-gradient-to-r from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl p-1 shadow-lg'>
                                     <TabsTrigger
@@ -199,21 +201,28 @@ export function CourseDetailPage() {
                                 </TabsList>
 
                                 {/* Overview Tab */}
-                                <TabsContent value='overview' className='space-y-6 mt-8'>
+                                <TabsContent
+                                    value='overview'
+                                    className='space-y-6 mt-8'
+                                >
                                     <Card className='bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg hover:shadow-xl hover:border-blue-500/30 transition-all duration-300'>
                                         <CardHeader className='pb-4'>
                                             <div className='flex items-center gap-3'>
                                                 <div className='h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center'>
                                                     <BookOpen className='h-5 w-5 text-blue-400' />
                                                 </div>
-                                                <CardTitle className='text-white text-xl'>Mô tả khóa học</CardTitle>
+                                                <CardTitle className='text-white text-xl'>
+                                                    Mô tả khóa học
+                                                </CardTitle>
                                             </div>
                                         </CardHeader>
                                         <CardContent className='prose max-w-none prose-invert'>
                                             <div
                                                 className='text-gray-300 leading-relaxed'
                                                 dangerouslySetInnerHTML={{
-                                                    __html: course.description || '',
+                                                    __html:
+                                                        course.description ||
+                                                        '',
                                                 }}
                                             />
                                         </CardContent>
@@ -226,7 +235,9 @@ export function CourseDetailPage() {
                                                     <div className='h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center'>
                                                         <Award className='h-5 w-5 text-green-400' />
                                                     </div>
-                                                    <CardTitle className='text-white text-xl'>Bạn sẽ học được gì?</CardTitle>
+                                                    <CardTitle className='text-white text-xl'>
+                                                        Bạn sẽ học được gì?
+                                                    </CardTitle>
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
@@ -247,14 +258,18 @@ export function CourseDetailPage() {
                                                     <div className='h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center'>
                                                         <Star className='h-5 w-5 text-purple-400' />
                                                     </div>
-                                                    <CardTitle className='text-white text-xl'>Mục tiêu khóa học</CardTitle>
+                                                    <CardTitle className='text-white text-xl'>
+                                                        Mục tiêu khóa học
+                                                    </CardTitle>
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
                                                 <div
                                                     className='text-gray-300 leading-relaxed'
                                                     dangerouslySetInnerHTML={{
-                                                        __html: course.courseObjectives || '',
+                                                        __html:
+                                                            course.courseObjectives ||
+                                                            '',
                                                     }}
                                                 />
                                             </CardContent>
@@ -268,7 +283,9 @@ export function CourseDetailPage() {
                                                     <div className='h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center'>
                                                         <CheckCircle className='h-5 w-5 text-orange-400' />
                                                     </div>
-                                                    <CardTitle className='text-white text-xl'>Yêu cầu</CardTitle>
+                                                    <CardTitle className='text-white text-xl'>
+                                                        Yêu cầu
+                                                    </CardTitle>
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
@@ -289,7 +306,9 @@ export function CourseDetailPage() {
                                                     <div className='h-10 w-10 rounded-lg bg-cyan-500/20 flex items-center justify-center'>
                                                         <Users className='h-5 w-5 text-cyan-400' />
                                                     </div>
-                                                    <CardTitle className='text-white text-xl'>Đối tượng mục tiêu</CardTitle>
+                                                    <CardTitle className='text-white text-xl'>
+                                                        Đối tượng mục tiêu
+                                                    </CardTitle>
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
@@ -305,7 +324,10 @@ export function CourseDetailPage() {
                                 </TabsContent>
 
                                 {/* Curriculum Tab */}
-                                <TabsContent value='curriculum' className='mt-8'>
+                                <TabsContent
+                                    value='curriculum'
+                                    className='mt-8'
+                                >
                                     <Card className='bg-gradient-to-br from-[#1A1A1A] to-[#151515] border border-[#2D2D2D]/50 rounded-xl shadow-lg'>
                                         <CardHeader className='pb-4'>
                                             <div className='flex items-center gap-3'>
@@ -313,9 +335,15 @@ export function CourseDetailPage() {
                                                     <BookOpen className='h-5 w-5 text-green-400' />
                                                 </div>
                                                 <div>
-                                                    <CardTitle className='text-white text-xl'>Nội dung khóa học</CardTitle>
+                                                    <CardTitle className='text-white text-xl'>
+                                                        Nội dung khóa học
+                                                    </CardTitle>
                                                     <CardDescription className='text-gray-400 mt-1'>
-                                                        {lessons.length} bài học • {formatDuration(course.durationHours)}
+                                                        {lessons.length} bài học
+                                                        •{' '}
+                                                        {formatDuration(
+                                                            course.durationHours
+                                                        )}
                                                     </CardDescription>
                                                 </div>
                                             </div>
@@ -324,7 +352,9 @@ export function CourseDetailPage() {
                                             <LessonsList
                                                 lessons={lessons}
                                                 isEnrolled={isEnrolled}
-                                                totalDuration={course.durationHours * 60}
+                                                totalDuration={
+                                                    course.durationHours * 60
+                                                }
                                             />
                                         </CardContent>
                                     </Card>
@@ -338,7 +368,9 @@ export function CourseDetailPage() {
                                                 <div className='h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center'>
                                                     <Star className='h-5 w-5 text-yellow-400' />
                                                 </div>
-                                                <CardTitle className='text-white text-xl'>Đánh giá của học viên</CardTitle>
+                                                <CardTitle className='text-white text-xl'>
+                                                    Đánh giá của học viên
+                                                </CardTitle>
                                             </div>
                                         </CardHeader>
                                         <CardContent>
@@ -346,48 +378,60 @@ export function CourseDetailPage() {
                                             <div className='flex items-center gap-8 mb-8 p-6 bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] border border-[#2D2D2D]/50 rounded-lg'>
                                                 <div className='text-center'>
                                                     <div className='text-5xl mb-2 text-white font-bold'>
-                                                        {Number(course.ratingAvg || 0).toFixed(1)}
+                                                        {Number(
+                                                            course.ratingAvg ||
+                                                                0
+                                                        ).toFixed(1)}
                                                     </div>
                                                     <div className='flex gap-1 mb-2 justify-center'>
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                className='h-5 w-5 fill-yellow-400 text-yellow-400'
-                                                            />
-                                                        ))}
+                                                        {[...Array(5)].map(
+                                                            (_, i) => (
+                                                                <Star
+                                                                    key={i}
+                                                                    className='h-5 w-5 fill-yellow-400 text-yellow-400'
+                                                                />
+                                                            )
+                                                        )}
                                                     </div>
                                                     <p className='text-sm text-gray-400'>
-                                                        {course.ratingCount || 0} đánh giá
+                                                        {course.ratingCount ||
+                                                            0}{' '}
+                                                        đánh giá
                                                     </p>
                                                 </div>
                                                 <div className='flex-1 space-y-2'>
-                                                    {[5, 4, 3, 2, 1].map((star) => (
-                                                        <div
-                                                            key={star}
-                                                            className='flex items-center gap-2'
-                                                        >
-                                                            <span className='text-sm w-12 text-gray-300'>
-                                                                {star} sao
-                                                            </span>
-                                                            <Progress
-                                                                value={
-                                                                    star === 5
-                                                                        ? 80
-                                                                        : star === 4
-                                                                        ? 15
-                                                                        : 5
-                                                                }
-                                                                className='flex-1'
-                                                            />
-                                                            <span className='text-sm text-gray-400 w-12 text-right'>
-                                                                {star === 5
-                                                                    ? '80%'
-                                                                    : star === 4
-                                                                    ? '15%'
-                                                                    : '5%'}
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                                    {[5, 4, 3, 2, 1].map(
+                                                        (star) => (
+                                                            <div
+                                                                key={star}
+                                                                className='flex items-center gap-2'
+                                                            >
+                                                                <span className='text-sm w-12 text-gray-300'>
+                                                                    {star} sao
+                                                                </span>
+                                                                <Progress
+                                                                    value={
+                                                                        star ===
+                                                                        5
+                                                                            ? 80
+                                                                            : star ===
+                                                                              4
+                                                                            ? 15
+                                                                            : 5
+                                                                    }
+                                                                    className='flex-1'
+                                                                />
+                                                                <span className='text-sm text-gray-400 w-12 text-right'>
+                                                                    {star === 5
+                                                                        ? '80%'
+                                                                        : star ===
+                                                                          4
+                                                                        ? '15%'
+                                                                        : '5%'}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    )}
                                                 </div>
                                             </div>
                                             {/* ... mock reviews giữ nguyên ... */}
