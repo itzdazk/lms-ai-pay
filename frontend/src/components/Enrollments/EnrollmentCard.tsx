@@ -22,6 +22,12 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
     const navigate = useNavigate()
     const { course } = enrollment
 
+    // Convert progressPercentage to number (it can be string from backend)
+    const progressPercentage =
+        typeof enrollment.progressPercentage === 'string'
+            ? parseFloat(enrollment.progressPercentage) || 0
+            : enrollment.progressPercentage || 0
+
     const getStatusConfig = () => {
         switch (enrollment.status) {
             case 'ACTIVE':
@@ -101,7 +107,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                         <div className='flex items-center gap-2 text-white'>
                             <TrendingUp className='h-4 w-4' />
                             <span className='text-sm font-medium'>
-                                {enrollment.progressPercentage}% Hoàn thành
+                                {progressPercentage}% Hoàn thành
                             </span>
                         </div>
                     </div>
@@ -110,7 +116,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                 {/* Content Section */}
                 <div className='p-6'>
                     {/* Course Title */}
-                    <h3 className='mb-3 line-clamp-2 group-hover:text-primary transition-colors font-semibold text-lg text-foreground'>
+                    <h3 className='mb-3 line-clamp-2 min-h-[4rem] group-hover:text-primary transition-colors font-semibold text-lg text-foreground'>
                         {course.title}
                     </h3>
 
@@ -128,20 +134,23 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                         <span className='text-sm text-muted-foreground'>
                             {course.instructor.fullName}
                         </span>
-                        {course.ratingAvg > 0 && (
-                            <div className='flex items-center gap-1 ml-auto'>
-                                <Star className='h-4 w-4 fill-foreground text-foreground' />
-                                <span className='text-sm font-medium text-foreground'>
-                                    {course.ratingAvg.toFixed(1)}
-                                </span>
-                            </div>
-                        )}
+                        {course.ratingAvg !== undefined &&
+                            course.ratingAvg > 0 && (
+                                <div className='flex items-center gap-1 ml-auto'>
+                                    <Star className='h-4 w-4 fill-yellow-400 text-yellow-400 group-hover/item:scale-110 transition-transform' />
+                                    <span className='text-sm font-medium text-foreground'>
+                                        {Number(course.ratingAvg || 0).toFixed(
+                                            1
+                                        )}
+                                    </span>
+                                </div>
+                            )}
                     </div>
 
                     {/* Progress Bar */}
                     <div className='mb-4'>
                         <Progress
-                            value={enrollment.progressPercentage}
+                            value={progressPercentage}
                             className='h-2 bg-muted'
                         />
                     </div>

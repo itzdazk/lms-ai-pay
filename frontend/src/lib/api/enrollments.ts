@@ -8,12 +8,14 @@ import type {
 } from './types'
 
 // Extended types for enrollment with course
-export interface EnrollmentWithCourse extends Enrollment {
+// Note: We override the course property from Enrollment type
+export interface EnrollmentWithCourse extends Omit<Enrollment, 'course'> {
     course: {
         id: number
         title: string
         slug: string
         thumbnailUrl?: string
+        shortDescription?: string
         instructor: {
             id: number
             fullName: string
@@ -22,7 +24,7 @@ export interface EnrollmentWithCourse extends Enrollment {
         totalLessons: number
         durationHours: number
         level: string
-        ratingAvg: number
+        ratingAvg?: number // Optional because backend may not return it
     }
 }
 
