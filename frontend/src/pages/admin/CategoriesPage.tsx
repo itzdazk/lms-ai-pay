@@ -135,12 +135,14 @@ function CategoryRow({
     category,
     onEdit,
     onDelete,
+    onChangeStatus,
     isSelected,
     onSelect,
 }: {
     category: Category
     onEdit: (category: Category) => void
     onDelete: (category: Category) => void
+    onChangeStatus: (category: Category) => void
     isSelected: boolean
     onSelect: (categoryId: number | null) => void
 }) {
@@ -352,11 +354,25 @@ function CategoryRow({
                     <div
                         className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
                         onClick={() => {
+                            onChangeStatus(category)
+                            setMenuOpen(false)
+                        }}
+                    >
+                        {category.isActive ? (
+                            <ToggleLeft className='h-4 w-4' />
+                        ) : (
+                            <ToggleRight className='h-4 w-4' />
+                        )}
+                        Đổi trạng thái
+                    </div>
+                    <div
+                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-400 hover:bg-[#1F1F1F] cursor-pointer hover:text-red-300'
+                        onClick={() => {
                             onDelete(category)
                             setMenuOpen(false)
                         }}
                     >
-                        <Trash2 className='h-4 w-4' />
+                        <Trash2 className='h-4 w-4 text-red-400' />
                         Xóa
                     </div>
                 </div>
@@ -398,6 +414,7 @@ export function CategoriesPage() {
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
     const [searchInput, setSearchInput] = useState<string>(filters.search || '')
     const [categorySearch, setCategorySearch] = useState<string>('')
+    const [parentCategorySearch, setParentCategorySearch] = useState<string>('')
     const [formData, setFormData] = useState<CreateCategoryRequest>({
         name: '',
         slug: '',
@@ -405,8 +422,11 @@ export function CategoriesPage() {
         imageUrl: '',
         parentId: null,
         sortOrder: 0,
-        isActive: true,
+        isActive: false,
     })
+    const [isStatusUpdateDialogOpen, setIsStatusUpdateDialogOpen] = useState(false)
+    const [newlyCreatedCategory, setNewlyCreatedCategory] = useState<Category | null>(null)
+    const [isChangeStatusDialogOpen, setIsChangeStatusDialogOpen] = useState(false)
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imageRemoved, setImageRemoved] = useState(false)
     const scrollPositionRef = useRef<number>(0)
@@ -655,7 +675,7 @@ export function CategoriesPage() {
             imageUrl: '',
             parentId: null,
             sortOrder: 0,
-            isActive: true,
+            isActive: false,
         })
         setImageFile(null)
         setImageRemoved(false)
@@ -682,6 +702,11 @@ export function CategoriesPage() {
     const handleDelete = (category: Category) => {
         setSelectedCategory(category)
         setIsDeleteDialogOpen(true)
+    }
+
+    const handleChangeStatus = (category: Category) => {
+        setSelectedCategory(category)
+        setIsChangeStatusDialogOpen(true)
     }
 
     const confirmCreate = async () => {
@@ -748,7 +773,7 @@ export function CategoriesPage() {
                 imageUrl: '',
                 parentId: null,
                 sortOrder: 0,
-                isActive: true,
+                isActive: false,
             })
             setImageFile(null)
             setImageRemoved(false)
@@ -1524,6 +1549,7 @@ export function CategoriesPage() {
                                                 category={category}
                                                 onEdit={handleEdit}
                                                 onDelete={handleDelete}
+                                                onChangeStatus={handleChangeStatus}
                                                 isSelected={
                                                     selectedRowId ===
                                                     category.id
@@ -1666,6 +1692,182 @@ export function CategoriesPage() {
                                         className='w-full min-h-[140px] px-3 py-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
                                     />
                                 </div>
+
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pt-2'>
+                                    <div className='space-y-2'>
+                                        <Label className='text-white flex items-center gap-2'>
+                                            <FolderTree className='h-4 w-4 text-gray-400' />
+                                            Danh mục cha
+                                        </Label>
+                                        <Select
+                                            value={
+                                                formData.parentId
+                                                    ? String(formData.parentId)
+                                                    : 'null'
+                                            }
+                                            onValueChange={(value) => {
+                                                setFormData({
+                                                    ...formData,
+                                                    parentId:
+                                                        value === 'null'
+                                                            ? null
+                                                            : parseInt(value),
+                                                })
+                                                setParentCategorySearch('') // Reset search when selecting
+                                            }}
+                                        >
+                                            <DarkOutlineSelectTrigger>
+                                                <SelectValue placeholder='Không có' />
+                                            </DarkOutlineSelectTrigger>
+                                            <DarkOutlineSelectContent>
+                                                <div className='p-2 border-b border-[#2D2D2D]'>
+                                                    <DarkOutlineInput
+                                                        placeholder='Tìm kiếm danh mục...'
+                                                        value={parentCategorySearch}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation()
+                                                            setParentCategorySearch(e.target.value)
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onKeyDown={(e) => e.stopPropagation()}
+                                                        className='w-full'
+                                                    />
+                                                </div>
+                                                <div className='max-h-[200px] overflow-y-auto'>
+                                                    <DarkOutlineSelectItem
+                                                        value='null'
+                                                        onSelect={() => setParentCategorySearch('')}
+                                                    >
+                                                        Không có
+                                                    </DarkOutlineSelectItem>
+                                                    {(() => {
+                                                        const searchLower = parentCategorySearch.toLowerCase()
+                                                        
+                                                        // Separate parent and child categories
+                                                        const parentCategories = allCategories.filter((cat) => !cat.parentId)
+                                                        const childCategories = allCategories.filter((cat) => cat.parentId)
+                                                        
+                                                        // Build display list maintaining hierarchical order
+                                                        const displayList: Category[] = []
+                                                        
+                                                        // Process parent categories first
+                                                        parentCategories.forEach((parent) => {
+                                                            // Filter out the category being edited (if editing)
+                                                            if (selectedCategory && parent.id === selectedCategory.id) {
+                                                                return
+                                                            }
+                                                            
+                                                            const parentMatches = !parentCategorySearch || 
+                                                                parent.name.toLowerCase().includes(searchLower)
+                                                            
+                                                            // Get all children of this parent
+                                                            const children = childCategories.filter(
+                                                                (child) => child.parentId === parent.id &&
+                                                                    (!selectedCategory || child.id !== selectedCategory.id)
+                                                            )
+                                                            
+                                                            // Check if any child matches search
+                                                            const hasMatchingChild = !parentCategorySearch || 
+                                                                children.some((child) => 
+                                                                    child.name.toLowerCase().includes(searchLower)
+                                                                )
+                                                            
+                                                            // Include parent if it matches or has matching children or no search
+                                                            if (parentMatches || hasMatchingChild || !parentCategorySearch) {
+                                                                displayList.push(parent)
+                                                                
+                                                                // Add all children of this parent
+                                                                children.forEach((child) => {
+                                                                    const childMatches = !parentCategorySearch ||
+                                                                        child.name.toLowerCase().includes(searchLower) ||
+                                                                        parentMatches
+                                                                    
+                                                                    if (childMatches) {
+                                                                        displayList.push(child)
+                                                                    }
+                                                                })
+                                                            }
+                                                        })
+                                                        
+                                                        return displayList.map((category) => {
+                                                            const isChild = !!category.parentId
+                                                            const parentCategory = allCategories.find(
+                                                                (cat) => cat.id === category.parentId
+                                                            )
+                                                            // If searching and child's parent doesn't match, show parent name
+                                                            const shouldShowParent =
+                                                                parentCategorySearch &&
+                                                                isChild &&
+                                                                parentCategory &&
+                                                                !parentCategory.name
+                                                                    .toLowerCase()
+                                                                    .includes(searchLower)
+
+                                                            return (
+                                                                <DarkOutlineSelectItem
+                                                                    key={category.id}
+                                                                    value={String(category.id)}
+                                                                    onSelect={() =>
+                                                                        setParentCategorySearch('')
+                                                                    }
+                                                                >
+                                                                    <div
+                                                                        className={`flex items-center ${
+                                                                            isChild ? 'pl-4' : ''
+                                                                        }`}
+                                                                    >
+                                                                        {isChild && (
+                                                                            <span className='text-gray-500 mr-1'>
+                                                                                └
+                                                                            </span>
+                                                                        )}
+                                                                        <span>
+                                                                            {shouldShowParent
+                                                                                ? `${parentCategory.name} > ${category.name}`
+                                                                                : category.name}
+                                                                        </span>
+                                                                    </div>
+                                                                </DarkOutlineSelectItem>
+                                                            )
+                                                        })
+                                                    })()}
+                                                    {allCategories.length === 0 && (
+                                                        <div className='px-2 py-1.5 text-sm text-gray-400 text-center'>
+                                                            Không có danh mục
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </DarkOutlineSelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className='space-y-2'>
+                                        <Label className='text-white flex items-center gap-2'>
+                                            <Hash className='h-4 w-4 text-gray-400' />
+                                            Thứ tự
+                                        </Label>
+                                        <Input
+                                            type='number'
+                                            min={0}
+                                            value={formData.sortOrder}
+                                            onChange={(e) => {
+                                                const value = parseInt(
+                                                    e.target.value
+                                                )
+
+                                                // Không cho phép số âm
+                                                if (value < 0) return
+
+                                                setFormData({
+                                                    ...formData,
+                                                    sortOrder: value || 0,
+                                                })
+                                            }}
+                                            placeholder='0'
+                                            className='text-base bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Image Section */}
@@ -1769,129 +1971,6 @@ export function CategoriesPage() {
                                 )}
                             </div>
 
-                            {/* Settings Section */}
-                            <div className='space-y-4'>
-                                <div className='flex items-center gap-2 pb-2 border-b border-[#2D2D2D]'>
-                                    <Hash className='h-4 w-4 text-blue-400' />
-                                    <h3 className='text-sm font-semibold text-gray-300 uppercase tracking-wide'>
-                                        Cài đặt
-                                    </h3>
-                                </div>
-
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                    <div className='space-y-2'>
-                                        <Label className='text-white flex items-center gap-2'>
-                                            <FolderTree className='h-4 w-4 text-gray-400' />
-                                            Danh mục cha
-                                        </Label>
-                                        <Select
-                                            value={
-                                                formData.parentId
-                                                    ? String(formData.parentId)
-                                                    : 'null'
-                                            }
-                                            onValueChange={(value) => {
-                                                setFormData({
-                                                    ...formData,
-                                                    parentId:
-                                                        value === 'null'
-                                                            ? null
-                                                            : parseInt(value),
-                                                })
-                                            }}
-                                        >
-                                            <DarkOutlineSelectTrigger>
-                                                <SelectValue placeholder='Không có' />
-                                            </DarkOutlineSelectTrigger>
-                                            <DarkOutlineSelectContent>
-                                                <DarkOutlineSelectItem value='null'>
-                                                    Không có
-                                                </DarkOutlineSelectItem>
-                                                {allCategories
-                                                    .filter(
-                                                        (cat) =>
-                                                            !selectedCategory ||
-                                                            cat.id !==
-                                                                selectedCategory.id
-                                                    )
-                                                    .map((cat) => (
-                                                        <DarkOutlineSelectItem
-                                                            key={cat.id}
-                                                            value={String(cat.id)}
-                                                        >
-                                                            {cat.name}
-                                                        </DarkOutlineSelectItem>
-                                                    ))}
-                                            </DarkOutlineSelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className='space-y-2'>
-                                        <Label className='text-white flex items-center gap-2'>
-                                            <Hash className='h-4 w-4 text-gray-400' />
-                                            Thứ tự
-                                        </Label>
-                                        <Input
-                                            type='number'
-                                            min={0}
-                                            value={formData.sortOrder}
-                                            onChange={(e) => {
-                                                const value = parseInt(
-                                                    e.target.value
-                                                )
-
-                                                // Không cho phép số âm
-                                                if (value < 0) return
-
-                                                setFormData({
-                                                    ...formData,
-                                                    sortOrder: value || 0,
-                                                })
-                                            }}
-                                            placeholder='0'
-                                            className='text-base bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className='space-y-2'>
-                                    <Label className='text-white flex items-center gap-2'>
-                                        {formData.isActive ? (
-                                            <ToggleRight className='h-4 w-4 text-green-400' />
-                                        ) : (
-                                            <ToggleLeft className='h-4 w-4 text-gray-400' />
-                                        )}
-                                        Trạng thái
-                                    </Label>
-                                    <Select
-                                        value={formData.isActive ? 'true' : 'false'}
-                                        onValueChange={(value) => {
-                                            setFormData({
-                                                ...formData,
-                                                isActive: value === 'true',
-                                            })
-                                        }}
-                                    >
-                                        <DarkOutlineSelectTrigger>
-                                            <SelectValue />
-                                        </DarkOutlineSelectTrigger>
-                                        <DarkOutlineSelectContent>
-                                            <DarkOutlineSelectItem value='true'>
-                                                <div className='flex items-center gap-2'>
-                                                    <div className='h-2 w-2 rounded-full bg-green-500' />
-                                                    Hoạt động
-                                                </div>
-                                            </DarkOutlineSelectItem>
-                                            <DarkOutlineSelectItem value='false'>
-                                                <div className='flex items-center gap-2'>
-                                                    <div className='h-2 w-2 rounded-full bg-gray-500' />
-                                                    Không hoạt động
-                                                </div>
-                                            </DarkOutlineSelectItem>
-                                        </DarkOutlineSelectContent>
-                                    </Select>
-                                </div>
-                            </div>
                         </div>
                         <DialogFooter className='pt-4 border-t border-[#2D2D2D] px-6 pb-6 flex-shrink-0 bg-[#1A1A1A]'>
                             <DarkOutlineButton
@@ -1931,6 +2010,241 @@ export function CategoriesPage() {
                                         <Edit className='h-4 w-4 mr-2' />
                                         Cập nhật
                                     </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Status Update Dialog */}
+                <Dialog
+                    open={isStatusUpdateDialogOpen}
+                    onOpenChange={setIsStatusUpdateDialogOpen}
+                >
+                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+                        <DialogHeader>
+                            <DialogTitle>Cập nhật trạng thái danh mục</DialogTitle>
+                            <DialogDescription className='text-gray-400'>
+                                Danh mục{' '}
+                                <strong className='text-white'>
+                                    {newlyCreatedCategory?.name}
+                                </strong>{' '}
+                                đã được tạo thành công. Bạn có muốn kích hoạt danh mục này ngay bây giờ không?
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className='space-y-4 py-4'>
+                            <div className='p-4 bg-blue-600/20 border border-blue-600/50 rounded-lg'>
+                                <p className='text-sm text-blue-300'>
+                                    <strong className='text-blue-400'>
+                                        Lưu ý:
+                                    </strong>{' '}
+                                    Danh mục đang ở trạng thái "Không hoạt động". Chỉ các danh mục "Hoạt động" mới hiển thị trên trang công khai.
+                                </p>
+                            </div>
+                            <div className='space-y-2'>
+                                <Label className='text-white flex items-center gap-2'>
+                                    {newlyCreatedCategory?.isActive ? (
+                                        <ToggleRight className='h-4 w-4 text-green-400' />
+                                    ) : (
+                                        <ToggleLeft className='h-4 w-4 text-gray-400' />
+                                    )}
+                                    Trạng thái
+                                </Label>
+                                <Select
+                                    value={newlyCreatedCategory?.isActive ? 'true' : 'false'}
+                                    onValueChange={(value) => {
+                                        if (newlyCreatedCategory) {
+                                            setNewlyCreatedCategory({
+                                                ...newlyCreatedCategory,
+                                                isActive: value === 'true',
+                                            })
+                                        }
+                                    }}
+                                >
+                                    <DarkOutlineSelectTrigger>
+                                        <SelectValue />
+                                    </DarkOutlineSelectTrigger>
+                                    <DarkOutlineSelectContent>
+                                        <DarkOutlineSelectItem value='true'>
+                                            <div className='flex items-center gap-2'>
+                                                <ToggleRight className='h-4 w-4 text-green-400' />
+                                                Hoạt động
+                                            </div>
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='false'>
+                                            <div className='flex items-center gap-2'>
+                                                <ToggleLeft className='h-4 w-4 text-gray-400' />
+                                                Không hoạt động
+                                            </div>
+                                        </DarkOutlineSelectItem>
+                                    </DarkOutlineSelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DarkOutlineButton
+                                onClick={() => {
+                                    setIsStatusUpdateDialogOpen(false)
+                                    setNewlyCreatedCategory(null)
+                                }}
+                                disabled={actionLoading}
+                            >
+                                Bỏ qua
+                            </DarkOutlineButton>
+                            <Button
+                                onClick={async () => {
+                                    if (!newlyCreatedCategory) return
+                                    
+                                    try {
+                                        setActionLoading(true)
+                                        await adminCategoriesApi.updateCategory(
+                                            newlyCreatedCategory.id,
+                                            {
+                                                isActive: newlyCreatedCategory.isActive,
+                                            }
+                                        )
+                                        toast.success(
+                                            `Danh mục đã được ${newlyCreatedCategory.isActive ? 'kích hoạt' : 'tắt'} thành công!`
+                                        )
+                                        setIsStatusUpdateDialogOpen(false)
+                                        setNewlyCreatedCategory(null)
+                                        loadCategories()
+                                        loadAllCategories()
+                                        loadStats()
+                                    } catch (error: any) {
+                                        console.error('Error updating category status:', error)
+                                        showApiError(error)
+                                    } finally {
+                                        setActionLoading(false)
+                                    }
+                                }}
+                                disabled={actionLoading}
+                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                            >
+                                {actionLoading ? (
+                                    <>
+                                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                        Đang cập nhật...
+                                    </>
+                                ) : (
+                                    'Cập nhật'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Change Status Dialog */}
+                <Dialog
+                    open={isChangeStatusDialogOpen}
+                    onOpenChange={setIsChangeStatusDialogOpen}
+                >
+                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+                        <DialogHeader>
+                            <DialogTitle>Đổi trạng thái danh mục</DialogTitle>
+                            <DialogDescription className='text-gray-400'>
+                                Thay đổi trạng thái của danh mục{' '}
+                                <strong className='text-white'>
+                                    {selectedCategory?.name}
+                                </strong>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className='space-y-4 py-4'>
+                            <div className='p-4 bg-blue-600/20 border border-blue-600/50 rounded-lg'>
+                                <p className='text-sm text-blue-300'>
+                                    <strong className='text-blue-400'>
+                                        Lưu ý:
+                                    </strong>{' '}
+                                    Chỉ các danh mục "Hoạt động" mới hiển thị trên trang công khai.
+                                </p>
+                            </div>
+                            <div className='space-y-2'>
+                                <Label className='text-white flex items-center gap-2'>
+                                    {selectedCategory?.isActive ? (
+                                        <ToggleRight className='h-4 w-4 text-green-400' />
+                                    ) : (
+                                        <ToggleLeft className='h-4 w-4 text-gray-400' />
+                                    )}
+                                    Trạng thái
+                                </Label>
+                                <Select
+                                    value={selectedCategory?.isActive ? 'true' : 'false'}
+                                    onValueChange={(value) => {
+                                        if (selectedCategory) {
+                                            setSelectedCategory({
+                                                ...selectedCategory,
+                                                isActive: value === 'true',
+                                            })
+                                        }
+                                    }}
+                                >
+                                    <DarkOutlineSelectTrigger>
+                                        <SelectValue />
+                                    </DarkOutlineSelectTrigger>
+                                    <DarkOutlineSelectContent>
+                                        <DarkOutlineSelectItem value='true'>
+                                            <div className='flex items-center gap-2'>
+                                                <ToggleRight className='h-4 w-4 text-green-400' />
+                                                Hoạt động
+                                            </div>
+                                        </DarkOutlineSelectItem>
+                                        <DarkOutlineSelectItem value='false'>
+                                            <div className='flex items-center gap-2'>
+                                                <ToggleLeft className='h-4 w-4 text-gray-400' />
+                                                Không hoạt động
+                                            </div>
+                                        </DarkOutlineSelectItem>
+                                    </DarkOutlineSelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DarkOutlineButton
+                                onClick={() => {
+                                    setIsChangeStatusDialogOpen(false)
+                                    setSelectedCategory(null)
+                                }}
+                                disabled={actionLoading}
+                            >
+                                Hủy
+                            </DarkOutlineButton>
+                            <Button
+                                onClick={async () => {
+                                    if (!selectedCategory) return
+                                    
+                                    try {
+                                        setActionLoading(true)
+                                        await adminCategoriesApi.updateCategory(
+                                            selectedCategory.id,
+                                            {
+                                                isActive: selectedCategory.isActive,
+                                            }
+                                        )
+                                        toast.success(
+                                            `Danh mục đã được ${selectedCategory.isActive ? 'kích hoạt' : 'tắt'} thành công!`
+                                        )
+                                        setIsChangeStatusDialogOpen(false)
+                                        setSelectedCategory(null)
+                                        loadCategories()
+                                        loadAllCategories()
+                                        loadStats()
+                                    } catch (error: any) {
+                                        console.error('Error updating category status:', error)
+                                        showApiError(error)
+                                    } finally {
+                                        setActionLoading(false)
+                                    }
+                                }}
+                                disabled={actionLoading}
+                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                            >
+                                {actionLoading ? (
+                                    <>
+                                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                        Đang cập nhật...
+                                    </>
+                                ) : (
+                                    'Cập nhật'
                                 )}
                             </Button>
                         </DialogFooter>
@@ -1988,7 +2302,10 @@ export function CategoriesPage() {
                                         Đang xóa...
                                     </>
                                 ) : (
-                                    'Xóa'
+                                    <>
+                                        <Trash2 className='h-4 w-4 mr-2 text-red-200' />
+                                        Xóa
+                                    </>
                                 )}
                             </Button>
                         </DialogFooter>
