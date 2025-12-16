@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { EnrollmentList, EnrollmentFilters } from '../components/Enrollments'
 import { BookOpen, TrendingUp, Award, Sparkles } from 'lucide-react'
 import { enrollmentsApi } from '../lib/api/enrollments'
@@ -15,7 +15,6 @@ export function MyCoursesPage() {
     })
 
     useEffect(() => {
-        console.log('Filters changed:', filters)
         fetchEnrollments()
     }, [filters])
 
@@ -43,23 +42,35 @@ export function MyCoursesPage() {
         setFilters((prev) => ({ ...prev, sort }))
     }
 
-    console.log('enrollments: ', enrollments)
+    // Calculate stats with useMemo for performance
+    const stats = useMemo(() => {
+        const total = enrollments.length
+        const active = enrollments.filter((e) => e.status === 'ACTIVE').length
+        const completed = enrollments.filter(
+            (e) => e.status === 'COMPLETED'
+        ).length
 
-    // Calculate stats
-    const stats = {
-        total: enrollments.length,
-        active: enrollments.filter((e) => e.status === 'ACTIVE').length,
-        completed: enrollments.filter((e) => e.status === 'COMPLETED').length,
-        avgProgress:
-            enrollments.length > 0
+        // Convert progressPercentage to number and calculate average
+        const avgProgress =
+            total > 0
                 ? Math.round(
-                      enrollments.reduce(
-                          (sum, e) => sum + e.progressPercentage,
-                          0
-                      ) / enrollments.length
+                      enrollments.reduce((sum, e) => {
+                          const progress =
+                              typeof e.progressPercentage === 'string'
+                                  ? parseFloat(e.progressPercentage) || 0
+                                  : e.progressPercentage || 0
+                          return sum + progress
+                      }, 0) / total
                   )
-                : 0,
-    }
+                : 0
+
+        return {
+            total,
+            active,
+            completed,
+            avgProgress,
+        }
+    }, [enrollments])
 
     const hasFilters = filters.search !== '' || filters.status !== undefined
 
