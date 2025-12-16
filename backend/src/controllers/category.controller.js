@@ -98,12 +98,18 @@ class CategoryController {
      * @access  Public
      */
     getCategories = asyncHandler(async (req, res) => {
-        const { page, limit, parentId, isActive, search } = req.query
+        const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = req.query
 
         const filters = {
             page: parseInt(page) || 1,
             limit: parseInt(limit) || 20,
-            parentId: parentId ? parseInt(parentId) : undefined,
+            parentId:
+                parentId === 'null' || parentId === null
+                    ? null
+                    : parentId
+                      ? parseInt(parentId)
+                      : undefined,
+            categoryId: categoryId ? parseInt(categoryId) : undefined,
             isActive:
                 isActive === 'true'
                     ? true
@@ -111,6 +117,8 @@ class CategoryController {
                       ? false
                       : undefined,
             search: search || undefined,
+            sort: sort || 'sortOrder',
+            sortOrder: sortOrder || 'asc',
         }
 
         const result = await categoryService.getCategories(filters)
