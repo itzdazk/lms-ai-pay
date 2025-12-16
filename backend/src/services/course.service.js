@@ -1,5 +1,6 @@
 // src/services/course.service.js
 import { prisma } from '../config/database.config.js'
+import { Prisma } from '@prisma/client'
 import {
     COURSE_STATUS,
     COURSE_LEVEL,
@@ -55,12 +56,17 @@ class CourseService {
             }
         }
 
-        // Search in title, description, short description
+        // Search in title, description, short description, and instructor name
         if (search) {
             where.OR = [
                 { title: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } },
                 { shortDescription: { contains: search, mode: 'insensitive' } },
+                {
+                    instructor: {
+                        fullName: { contains: search, mode: 'insensitive' },
+                    },
+                },
             ]
         }
 
@@ -112,62 +118,230 @@ class CourseService {
                 break
             case 'newest':
             default:
-                orderBy = { publishedAt: 'desc' }
+                // For newest: use COALESCE(publishedAt, createdAt) to prioritize publishedAt
+                // If publishedAt is null, fallback to createdAt
+                // This ensures published courses are sorted by publish date,
+                // while newly created (unpublished) courses are sorted by creation date
+                // We'll use raw query for this specific case to handle COALESCE
+                break
         }
 
         // Execute query
-        const [courses, total] = await Promise.all([
-            prisma.course.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy,
-                select: {
-                    id: true,
-                    title: true,
-                    slug: true,
-                    shortDescription: true,
-                    thumbnailUrl: true,
-                    price: true,
-                    discountPrice: true,
-                    level: true,
-                    durationHours: true,
-                    totalLessons: true,
-                    ratingAvg: true,
-                    ratingCount: true,
-                    enrolledCount: true,
-                    isFeatured: true,
-                    publishedAt: true,
-                    instructor: {
-                        select: {
-                            id: true,
-                            userName: true,
-                            fullName: true,
-                            avatarUrl: true,
-                        },
+        let courses, total
+        if (sort === 'newest' || !sort) {
+            // For newest sort, we need to use a workaround since Prisma doesn't support
+            // COALESCE in orderBy directly. We'll fetch courses and sort them in memory
+            // OR use a simpler approach: sort by publishedAt first, then createdAt
+            // But to properly handle COALESCE, we need to fetch all matching courses first
+            // then sort and paginate. This is not ideal for performance but works correctly.
+            
+            // First, get all matching course IDs with proper sorting using raw query
+            // We'll use Prisma.sql for safe parameterized queries
+            // Handle tagIds filter - course must have ALL selected tags (AND logic)
+            const tagFilter = tagIds && tagIds.length > 0 
+                ? Prisma.sql`AND c.id IN (
+                    SELECT ct.course_id 
+                    FROM course_tags ct 
+                    WHERE ct.tag_id IN (${Prisma.join(tagIds.map(id => parseInt(id, 10)))})
+                    GROUP BY ct.course_id
+                    HAVING COUNT(DISTINCT ct.tag_id) = ${tagIds.length}
+                )`
+                : tagId 
+                ? Prisma.sql`AND EXISTS (
+                    SELECT 1 FROM course_tags ct 
+                    WHERE ct.course_id = c.id 
+                    AND ct.tag_id = ${parseInt(tagId, 10)}
+                )`
+                : Prisma.empty
+
+            const searchFilter = search
+                ? Prisma.sql`AND (
+                    c.title ILIKE ${`%${search}%`} 
+                    OR c.description ILIKE ${`%${search}%`} 
+                    OR c.short_description ILIKE ${`%${search}%`}
+                    OR EXISTS (
+                        SELECT 1 FROM users u 
+                        WHERE u.id = c.instructor_id 
+                        AND u.full_name ILIKE ${`%${search}%`}
+                    )
+                )`
+                : Prisma.empty
+
+            const categoryFilter = categoryId
+                ? Prisma.sql`AND c.category_id = ${parseInt(categoryId, 10)}`
+                : Prisma.empty
+
+            const levelFilter = level
+                ? Prisma.sql`AND c.level = ${level}`
+                : Prisma.empty
+
+            const minPriceFilter = minPrice !== undefined
+                ? Prisma.sql`AND c.price >= ${parseFloat(minPrice)}`
+                : Prisma.empty
+
+            const maxPriceFilter = maxPrice !== undefined
+                ? Prisma.sql`AND c.price <= ${parseFloat(maxPrice)}`
+                : Prisma.empty
+
+            const featuredFilter = isFeatured !== undefined
+                ? Prisma.sql`AND c.is_featured = ${isFeatured === 'true' || isFeatured === true}`
+                : Prisma.empty
+
+            const instructorFilter = instructorId
+                ? Prisma.sql`AND c.instructor_id = ${parseInt(instructorId, 10)}`
+                : Prisma.empty
+
+            // Get course IDs with proper sorting
+            const courseIdsResult = await prisma.$queryRaw`
+                SELECT c.id
+                FROM courses c
+                WHERE c.status = ${COURSE_STATUS.PUBLISHED}
+                    ${searchFilter}
+                    ${categoryFilter}
+                    ${levelFilter}
+                    ${minPriceFilter}
+                    ${maxPriceFilter}
+                    ${featuredFilter}
+                    ${instructorFilter}
+                    ${tagFilter}
+                ORDER BY COALESCE(c.published_at, c.created_at) DESC
+                LIMIT ${limit} OFFSET ${skip}
+            `
+
+            const courseIds = courseIdsResult.map((row) => row.id)
+
+            // Get total count
+            const countResult = await prisma.$queryRaw`
+                SELECT COUNT(*) as count
+                FROM courses c
+                WHERE c.status = ${COURSE_STATUS.PUBLISHED}
+                    ${searchFilter}
+                    ${categoryFilter}
+                    ${levelFilter}
+                    ${minPriceFilter}
+                    ${maxPriceFilter}
+                    ${featuredFilter}
+                    ${instructorFilter}
+                    ${tagFilter}
+            `
+            total = Number(countResult[0].count)
+
+            // Fetch full course data with relations
+            if (courseIds.length > 0) {
+                courses = await prisma.course.findMany({
+                    where: {
+                        id: { in: courseIds },
                     },
-                    category: {
-                        select: {
-                            id: true,
-                            name: true,
-                            slug: true,
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        shortDescription: true,
+                        thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
+                        level: true,
+                        durationHours: true,
+                        totalLessons: true,
+                        ratingAvg: true,
+                        ratingCount: true,
+                        enrolledCount: true,
+                        isFeatured: true,
+                        publishedAt: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                userName: true,
+                                fullName: true,
+                                avatarUrl: true,
+                            },
                         },
-                    },
-                    courseTags: {
-                        select: {
-                            tag: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    slug: true,
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                        courseTags: {
+                            select: {
+                                tag: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        slug: true,
+                                    },
                                 },
                             },
                         },
                     },
-                },
-            }),
-            prisma.course.count({ where }),
-        ])
+                })
+
+                // Sort courses to match the order from raw query
+                const courseMap = new Map(courses.map((c) => [c.id, c]))
+                courses = courseIds
+                    .map((id) => courseMap.get(id))
+                    .filter((c) => c !== undefined)
+            } else {
+                courses = []
+            }
+        } else {
+            // Use normal Prisma query for other sorts
+            const result = await Promise.all([
+                prisma.course.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy,
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        shortDescription: true,
+                        thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
+                        level: true,
+                        durationHours: true,
+                        totalLessons: true,
+                        ratingAvg: true,
+                        ratingCount: true,
+                        enrolledCount: true,
+                        isFeatured: true,
+                        publishedAt: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                userName: true,
+                                fullName: true,
+                                avatarUrl: true,
+                            },
+                        },
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                        courseTags: {
+                            select: {
+                                tag: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        slug: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }),
+                prisma.course.count({ where }),
+            ])
+            courses = result[0]
+            total = result[1]
+        }
 
         // Thêm transform để format tags
         const coursesWithTags = courses.map((course) => ({
@@ -695,6 +869,69 @@ class CourseService {
         )
 
         return updatedCourse
+    }
+
+    /**
+     * Get course counts by level
+     */
+    async getCourseCountsByLevel() {
+        const counts = await prisma.course.groupBy({
+            by: ['level'],
+            where: {
+                status: COURSE_STATUS.PUBLISHED,
+            },
+            _count: {
+                id: true,
+            },
+        })
+
+        // Format response
+        const levelCounts = {
+            BEGINNER: 0,
+            INTERMEDIATE: 0,
+            ADVANCED: 0,
+        }
+
+        counts.forEach((item) => {
+            if (item.level && levelCounts.hasOwnProperty(item.level)) {
+                levelCounts[item.level] = item._count.id
+            }
+        })
+
+        logger.info('Retrieved course counts by level')
+
+        return levelCounts
+    }
+
+    /**
+     * Get course counts by price type (free, paid)
+     */
+    async getCourseCountsByPrice() {
+        const [freeCount, paidCount] = await Promise.all([
+            prisma.course.count({
+                where: {
+                    status: COURSE_STATUS.PUBLISHED,
+                    price: {
+                        lte: 0,
+                    },
+                },
+            }),
+            prisma.course.count({
+                where: {
+                    status: COURSE_STATUS.PUBLISHED,
+                    price: {
+                        gt: 0,
+                    },
+                },
+            }),
+        ])
+
+        logger.info('Retrieved course counts by price')
+
+        return {
+            free: freeCount,
+            paid: paidCount,
+        }
     }
 }
 

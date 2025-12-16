@@ -228,47 +228,45 @@ class CategoryService {
             ]
         }
 
-        // Get categories with children count
-        const [categories, total] = await Promise.all([
-            prisma.category.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-                include: {
-                    parent: {
-                        select: {
-                            id: true,
-                            name: true,
-                            slug: true,
-                        },
+        // Get all categories first (to sort by coursesCount correctly)
+        // Then we'll paginate after sorting
+        const allCategories = await prisma.category.findMany({
+            where,
+            include: {
+                parent: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
                     },
-                    children: {
-                        select: {
-                            id: true,
-                            name: true,
-                            slug: true,
-                            isActive: true,
-                        },
-                        where: { isActive: true },
-                        orderBy: { sortOrder: 'asc' },
+                },
+                children: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        isActive: true,
                     },
-                    _count: {
-                        select: {
-                            courses: {
-                                where: {
-                                    status: COURSE_STATUS.PUBLISHED,
-                                },
+                    where: { isActive: true },
+                    orderBy: { sortOrder: 'asc' },
+                },
+                _count: {
+                    select: {
+                        courses: {
+                            where: {
+                                status: COURSE_STATUS.PUBLISHED,
                             },
                         },
                     },
                 },
-            }),
-            prisma.category.count({ where }),
-        ])
+            },
+        })
+
+        // Get total count
+        const total = allCategories.length
 
         // Format response
-        const formattedCategories = categories.map((category) => ({
+        const formattedCategories = allCategories.map((category) => ({
             id: category.id,
             name: category.name,
             slug: category.slug,
@@ -282,6 +280,12 @@ class CategoryService {
             createdAt: category.createdAt,
             updatedAt: category.updatedAt,
         }))
+
+        // Sort by coursesCount (descending) - categories with more courses appear first
+        formattedCategories.sort((a, b) => b.coursesCount - a.coursesCount)
+
+        // Apply pagination after sorting
+        const categories = formattedCategories.slice(skip, skip + limit)
 
         logger.info(`Retrieved ${categories.length} categories`)
 

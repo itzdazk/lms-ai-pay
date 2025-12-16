@@ -47,6 +47,26 @@ router.get('/featured', getLimitValidator, courseController.getFeaturedCourses)
 router.get('/trending', getLimitValidator, courseController.getTrendingCourses)
 
 /**
+ * @route   GET /api/v1/courses/levels/counts
+ * @desc    Get course counts by level
+ * @access  Public
+ */
+router.get(
+    '/levels/counts',
+    courseController.getCourseCountsByLevel
+)
+
+/**
+ * @route   GET /api/v1/courses/prices/counts
+ * @desc    Get course counts by price type
+ * @access  Public
+ */
+router.get(
+    '/prices/counts',
+    courseController.getCourseCountsByPrice
+)
+
+/**
  * @route   GET /api/v1/courses/slug/:slug
  * @desc    Get course details by slug
  * @access  Public
