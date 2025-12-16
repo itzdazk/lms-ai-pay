@@ -39,7 +39,6 @@ import {
     Hash,
     FileText,
     Sparkles,
-    RotateCcw,
 } from 'lucide-react'
 import { coursesApi } from '../../lib/api/courses'
 import {
@@ -1026,9 +1025,9 @@ export function TagsPage() {
                                 <div className='space-y-2'>
                                     <Label className='text-white flex items-center gap-2'>
                                         <Hash className='h-4 w-4 text-gray-400' />
-                                        <span>Slug</span>
+                                        Slug
                                     </Label>
-                                    <div className='flex gap-2'>
+                                    <div className='flex items-center gap-2'>
                                         <Input
                                             value={formData.slug}
                                             onChange={(e) =>
@@ -1038,25 +1037,31 @@ export function TagsPage() {
                                                 })
                                             }
                                             placeholder='Tự động tạo từ tên nếu để trống'
-                                            className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0 flex-1'
+                                            className='flex-1 text-base bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
                                         />
                                         <Button
                                             type='button'
                                             variant='outline'
+                                            size='sm'
                                             onClick={() => {
+                                                const autoSlug = generateSlug(
+                                                    formData.name
+                                                )
                                                 setFormData({
                                                     ...formData,
-                                                    slug: generateSlug(
-                                                        formData.name
-                                                    ),
+                                                    slug: autoSlug,
                                                 })
                                             }}
-                                            className='bg-[#1F1F1F] border-[#2D2D2D] text-white hover:bg-[#2A2A2A] flex items-center gap-2'
+                                            className='border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F] hover:text-white'
+                                            disabled={!formData.name.trim()}
                                         >
-                                            <RotateCcw className='h-4 w-4' />
+                                            <Sparkles className='h-4 w-4 mr-1' />
                                             Tự động
                                         </Button>
                                     </div>
+                                    <p className='text-xs text-gray-500'>
+                                        Slug sẽ được tự động tạo từ tên tag
+                                    </p>
                                 </div>
 
                                 {/* Divider */}
