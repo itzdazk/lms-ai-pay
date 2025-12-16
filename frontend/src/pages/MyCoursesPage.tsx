@@ -79,21 +79,33 @@ export function MyCoursesPage() {
             title: 'Tổng khóa học',
             value: stats.total,
             icon: BookOpen,
+            gradient: 'from-violet-500 to-purple-600',
+            bgGradient: 'from-violet-500/10 to-purple-600/10',
+            iconColor: 'text-violet-600',
         },
         {
             title: 'Đang học',
             value: stats.active,
             icon: TrendingUp,
+            gradient: 'from-blue-500 to-cyan-600',
+            bgGradient: 'from-blue-500/10 to-cyan-600/10',
+            iconColor: 'text-blue-600',
         },
         {
             title: 'Hoàn thành',
             value: stats.completed,
             icon: Award,
+            gradient: 'from-green-500 to-emerald-600',
+            bgGradient: 'from-green-500/10 to-emerald-600/10',
+            iconColor: 'text-green-600',
         },
         {
             title: 'Tiến độ TB',
             value: `${stats.avgProgress}%`,
             icon: Sparkles,
+            gradient: 'from-orange-500 to-pink-600',
+            bgGradient: 'from-orange-500/10 to-pink-600/10',
+            iconColor: 'text-orange-600',
         },
     ]
 
@@ -116,34 +128,31 @@ export function MyCoursesPage() {
 
                     {/* Stats Cards */}
                     <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
-                        {statCards.map((stat, index) => {
-                            const Icon = stat.icon
-                            return (
-                                <div
-                                    key={stat.title}
-                                    className='animate-fade-in-up'
-                                    style={{
-                                        animationDelay: `${index * 100}ms`,
-                                    }}
-                                >
-                                    <div className='bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer'>
-                                        <div className='flex items-start justify-between mb-4'>
-                                            <div className='p-3 rounded-xl bg-muted group-hover:bg-accent transition-colors duration-300'>
-                                                <Icon className='h-6 w-6 text-foreground' />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className='text-sm text-muted-foreground mb-1'>
-                                                {stat.title}
-                                            </p>
-                                            <p className='text-3xl font-bold text-foreground'>
-                                                {stat.value}
-                                            </p>
+                        {statCards.map((stat) => (
+                            <div key={stat.title}>
+                                <div className='bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border border-white/20 dark:bg-black/50 dark:border-black/20'>
+                                    <div className='flex items-start justify-between mb-4'>
+                                        <div
+                                            className={`p-3 rounded-xl bg-gradient-to-br ${stat.bgGradient} group-hover:scale-110 transition-transform duration-300`}
+                                        >
+                                            <stat.icon
+                                                className={`h-6 w-6 ${stat.iconColor}`}
+                                            />
                                         </div>
                                     </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 mb-1'>
+                                            {stat.title}
+                                        </p>
+                                        <p
+                                            className={`text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
+                                        >
+                                            {stat.value}
+                                        </p>
+                                    </div>
                                 </div>
-                            )
-                        })}
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

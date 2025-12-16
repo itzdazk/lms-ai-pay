@@ -73,11 +73,18 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
         navigate(`/certificate/${enrollment.courseId}`)
     }
 
+    const handleViewDetail = () => {
+        navigate(`/enrollments/${enrollment.id}`)
+    }
+
     return (
         <div className='group relative animate-fade-in-up'>
             <div className='relative bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1'>
                 {/* Thumbnail Section */}
-                <div className='relative h-48 overflow-hidden bg-muted'>
+                <div
+                    className='relative h-48 overflow-hidden bg-muted cursor-pointer'
+                    onClick={handleViewDetail}
+                >
                     {course.thumbnailUrl ? (
                         <img
                             src={course.thumbnailUrl}
@@ -116,7 +123,10 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                 {/* Content Section */}
                 <div className='p-6'>
                     {/* Course Title */}
-                    <h3 className='mb-3 line-clamp-2 min-h-[4rem] group-hover:text-primary transition-colors font-semibold text-lg text-foreground'>
+                    <h3
+                        onClick={handleViewDetail}
+                        className='mb-3 line-clamp-2 min-h-[4rem] group-hover:text-primary transition-colors font-semibold text-lg text-foreground cursor-pointer'
+                    >
                         {course.title}
                     </h3>
 
@@ -156,7 +166,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                     </div>
 
                     {/* Course Stats */}
-                    <div className='grid grid-cols-2 gap-3 mb-4 p-3 bg-muted rounded-xl'>
+                    <div className='grid grid-cols-2 gap-3 mb-4 p-3 dark:bg-muted bg-muted-foreground/5 rounded-xl'>
                         <div className='flex items-center gap-2'>
                             <div className='p-2 bg-background rounded-lg border border-border'>
                                 <BookOpen className='h-4 w-4 text-foreground' />

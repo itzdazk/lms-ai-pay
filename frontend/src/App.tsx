@@ -33,6 +33,7 @@ import { CertificatesPage } from './pages/CertificatesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MyCoursesPage } from './pages/MyCoursesPage'
+import { EnrollmentDetailPage } from './pages/EnrollmentDetailPage'
 
 // Instructor Pages
 import { InstructorDashboard } from './pages/InstructorDashboard'
@@ -119,6 +120,22 @@ export default function App() {
                                                     ]}
                                                 >
                                                     <MyCoursesPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/enrollments/:id'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'STUDENT',
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <EnrollmentDetailPage />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }

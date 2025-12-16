@@ -204,12 +204,21 @@ export function Navbar() {
                             asChild
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
-                            <Link
-                                to='/dashboard'
-                                className='flex items-center'
-                            >
+                            <Link to='/dashboard' className='flex items-center'>
                                 <LayoutDashboard className='mr-2 h-4 w-4 text-green-400' />
                                 Dashboard
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/my-courses'
+                                className='flex items-center'
+                            >
+                                <GraduationCap className='mr-2 h-4 w-4 text-blue-600' />
+                                Khóa học của tôi
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -479,9 +488,7 @@ export function Navbar() {
                             </Link>
                             {/* Mobile Auth Button */}
                             <Link to='/login' className='sm:hidden'>
-                                <DarkOutlineButton
-                                    size='sm'
-                                >
+                                <DarkOutlineButton size='sm'>
                                     Đăng nhập
                                 </DarkOutlineButton>
                             </Link>
@@ -515,7 +522,9 @@ export function Navbar() {
                                     <div className='flex items-center gap-3'>
                                         <Avatar className='h-10 w-10 border border-white/20'>
                                             <AvatarImage
-                                                src={user.avatarUrl || undefined}
+                                                src={
+                                                    user.avatarUrl || undefined
+                                                }
                                                 alt={user.fullName}
                                             />
                                             <AvatarFallback className='bg-blue-600 text-white text-sm'>
