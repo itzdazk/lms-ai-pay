@@ -101,6 +101,7 @@ class EnrollmentService {
                                     avatarUrl: true,
                                 },
                             },
+                            ratingAvg: true,
                         },
                     },
                 },
