@@ -211,14 +211,64 @@ class CategoryService {
      * Get all categories with filters
      */
     async getCategories(filters) {
-        const { page, limit, parentId, isActive, search } = filters
+        const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = filters
 
         const skip = (page - 1) * limit
 
         // Build where clause
         const where = {}
 
-        if (parentId !== undefined) {
+        // Filter by specific category ID (highest priority)
+        if (categoryId !== undefined) {
+            // Check if this category has children
+            const category = await prisma.category.findUnique({
+                where: { id: categoryId },
+                select: { id: true },
+            })
+            
+            if (category) {
+                // Filter to show the category itself and all its children
+                // This allows selecting a parent category to see it and all its children
+                const categoryFilter = {
+                    OR: [
+                        { id: categoryId }, // The category itself
+                        { parentId: categoryId }, // All its children
+                    ],
+                }
+                
+                // If there's also a search filter, combine them with AND
+                if (search) {
+                    where.AND = [
+                        categoryFilter,
+                        {
+                            OR: [
+                                { name: { contains: search, mode: 'insensitive' } },
+                                { description: { contains: search, mode: 'insensitive' } },
+                            ],
+                        },
+                    ]
+                } else {
+                    Object.assign(where, categoryFilter)
+                }
+            } else {
+                // Category not found, just filter by id (will return empty)
+                where.id = categoryId
+                if (search) {
+                    where.AND = [
+                        { id: categoryId },
+                        {
+                            OR: [
+                                { name: { contains: search, mode: 'insensitive' } },
+                                { description: { contains: search, mode: 'insensitive' } },
+                            ],
+                        },
+                    ]
+                    delete where.id
+                }
+            }
+        } else if (parentId !== undefined) {
+            // If parentId is null, filter for root categories (no parent)
+            // If parentId is a number, filter for categories with that parent
             where.parentId = parentId
         }
 
@@ -226,11 +276,25 @@ class CategoryService {
             where.isActive = isActive
         }
 
-        if (search) {
+        // Add search filter if not already handled above
+        if (search && categoryId === undefined) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } },
             ]
+        }
+
+        // Build orderBy clause
+        let orderBy = []
+        if (sort === 'name') {
+            orderBy = [{ name: sortOrder }]
+        } else if (sort === 'createdAt') {
+            orderBy = [{ createdAt: sortOrder }]
+        } else if (sort === 'updatedAt') {
+            orderBy = [{ updatedAt: sortOrder }]
+        } else {
+            // Default: sortOrder field
+            orderBy = [{ sortOrder: sortOrder }, { name: 'asc' }]
         }
 
         // Get categories with children count
@@ -239,7 +303,7 @@ class CategoryService {
                 where,
                 skip,
                 take: limit,
-                orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+                orderBy,
                 include: {
                     parent: {
                         select: {
@@ -618,6 +682,39 @@ class CategoryService {
             return updatedCategory
         } catch (error) {
             logger.error('Error deleting category image:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get category statistics
+     */
+    async getCategoryStats() {
+        try {
+            // Get total count
+            const total = await prisma.category.count()
+
+            // Get active/inactive counts
+            const [active, inactive] = await Promise.all([
+                prisma.category.count({ where: { isActive: true } }),
+                prisma.category.count({ where: { isActive: false } }),
+            ])
+
+            // Get parent/child counts
+            const [parent, child] = await Promise.all([
+                prisma.category.count({ where: { parentId: null } }),
+                prisma.category.count({ where: { parentId: { not: null } } }),
+            ])
+
+            return {
+                total,
+                active,
+                inactive,
+                parent,
+                child,
+            }
+        } catch (error) {
+            logger.error('Error getting category stats:', error)
             throw error
         }
     }

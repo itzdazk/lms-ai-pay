@@ -98,19 +98,34 @@ class CategoryController {
      * @access  Public
      */
     getCategories = asyncHandler(async (req, res) => {
-        const { page, limit, parentId, isActive, search } = req.query
+        const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = req.query
 
+        // For public API, default to only active categories unless explicitly requested
+        // If user is authenticated admin/instructor, they can see all categories
+        const isAuthenticatedAdmin = req.user && (req.user.role === 'ADMIN' || req.user.role === 'INSTRUCTOR')
+        
         const filters = {
             page: parseInt(page) || 1,
             limit: parseInt(limit) || 20,
-            parentId: parentId ? parseInt(parentId) : undefined,
+            parentId:
+                parentId === 'null' || parentId === null
+                    ? null
+                    : parentId
+                      ? parseInt(parentId)
+                      : undefined,
+            categoryId: categoryId ? parseInt(categoryId) : undefined,
             isActive:
                 isActive === 'true'
                     ? true
                     : isActive === 'false'
                       ? false
+                      : // For public API (not authenticated admin/instructor), default to active only
+                        !isAuthenticatedAdmin
+                      ? true
                       : undefined,
             search: search || undefined,
+            sort: sort || 'sortOrder',
+            sortOrder: sortOrder || 'asc',
         }
 
         const result = await categoryService.getCategories(filters)
@@ -255,6 +270,21 @@ class CategoryController {
             res,
             updatedCategory,
             'Category image deleted successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/categories/stats
+     * @desc    Get category statistics
+     * @access  Public
+     */
+    getCategoryStats = asyncHandler(async (req, res) => {
+        const stats = await categoryService.getCategoryStats()
+
+        return ApiResponse.success(
+            res,
+            stats,
+            'Category statistics retrieved successfully'
         )
     })
 }

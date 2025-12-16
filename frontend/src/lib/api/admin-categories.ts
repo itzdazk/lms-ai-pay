@@ -5,6 +5,7 @@ export interface AdminCategoryFilters {
     page?: number
     limit?: number
     parentId?: number
+    categoryId?: number
     isActive?: boolean
     search?: string
     sort?: 'name' | 'createdAt' | 'updatedAt' | 'sortOrder'
@@ -35,57 +36,32 @@ export const adminCategoriesApi = {
 
         if (filters.page) params.append('page', filters.page.toString())
         if (filters.limit) params.append('limit', filters.limit.toString())
-        if (filters.parentId !== undefined)
-            params.append('parentId', filters.parentId.toString())
+        if (filters.parentId !== undefined) {
+            // If parentId is null, send 'null' string to filter root categories
+            // If parentId is a number, send the number
+            params.append(
+                'parentId',
+                filters.parentId === null ? 'null' : filters.parentId.toString()
+            )
+        }
+        if (filters.categoryId !== undefined)
+            params.append('categoryId', filters.categoryId.toString())
         if (filters.isActive !== undefined)
             params.append('isActive', filters.isActive.toString())
         if (filters.search) params.append('search', filters.search)
+        if (filters.sort) params.append('sort', filters.sort)
+        if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
 
         const response = await apiClient.get<ApiResponse<Category[]>>(
             `/categories?${params.toString()}`
         )
 
         // Transform to PaginatedResponse format
-        let categories = response.data.data || []
+        // Backend already handles sorting, so no need for client-side sorting
+        const categories = response.data.data || []
 
-        // Apply client-side sorting if needed
-        if (filters.sort) {
-            const sortOrder = filters.sortOrder || 'asc'
-            categories = [...categories].sort((a, b) => {
-                let aVal: any
-                let bVal: any
-
-                switch (filters.sort) {
-                    case 'name':
-                        aVal = a.name.toLowerCase()
-                        bVal = b.name.toLowerCase()
-                        break
-                    case 'createdAt':
-                        aVal = new Date(a.createdAt).getTime()
-                        bVal = new Date(b.createdAt).getTime()
-                        break
-                    case 'updatedAt':
-                        aVal = new Date(a.updatedAt).getTime()
-                        bVal = new Date(b.updatedAt).getTime()
-                        break
-                    case 'sortOrder':
-                        aVal = a.sortOrder
-                        bVal = b.sortOrder
-                        break
-                    default:
-                        return 0
-                }
-
-                if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
-                if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
-                return 0
-            })
-        }
-
-        // For now, we'll use the total from response if available
-        // Otherwise, we'll use the length of categories array
-        const total =
-            (response.data as any).pagination?.total || categories.length
+        // Get pagination info from response
+        const total = (response.data as any).pagination?.total || categories.length
 
         return {
             data: categories,
