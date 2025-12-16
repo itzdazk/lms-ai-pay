@@ -117,6 +117,7 @@ export interface Category {
     children?: Category[]
     sortOrder: number
     isActive: boolean
+    coursesCount?: number
     createdAt: string
     updatedAt: string
 }

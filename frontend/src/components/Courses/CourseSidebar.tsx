@@ -14,7 +14,6 @@ import {
     Share2,
 } from 'lucide-react'
 import { formatPrice, getCoursePrice } from '../../lib/courseUtils'
-import type { Course } from '../../lib/api/types'
 
 interface CourseSidebarProps {
     course: {

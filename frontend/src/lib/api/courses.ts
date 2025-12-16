@@ -284,6 +284,36 @@ export const coursesApi = {
         return response.data.data
     },
 
+    // Get course counts by level
+    async getCourseCountsByLevel(): Promise<{
+        BEGINNER: number
+        INTERMEDIATE: number
+        ADVANCED: number
+    }> {
+        const response = await apiClient.get<
+            ApiResponse<{
+                BEGINNER: number
+                INTERMEDIATE: number
+                ADVANCED: number
+            }>
+        >('/courses/levels/counts')
+        return response.data.data
+    },
+
+    // Get course counts by price type
+    async getCourseCountsByPrice(): Promise<{
+        free: number
+        paid: number
+    }> {
+        const response = await apiClient.get<
+            ApiResponse<{
+                free: number
+                paid: number
+            }>
+        >('/courses/prices/counts')
+        return response.data.data
+    },
+
     // Get user enrollments
     async getEnrollments(): Promise<Enrollment[]> {
         const response = await apiClient.get<ApiResponse<Enrollment[]>>(

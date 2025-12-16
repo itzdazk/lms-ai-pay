@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
     Card,
     CardContent,
@@ -27,8 +29,47 @@ interface CourseCardProps {
 export function CourseCard({ course, className = '' }: CourseCardProps) {
     console.log('CourseCard.tsx:', course)
 
+    const [showMoreTags, setShowMoreTags] = useState(false)
+    const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 })
+    const badgeRef = useRef<HTMLDivElement>(null)
     const levelBadge = getCourseLevelBadge(course.level)
     const priceInfo = getCoursePrice(course)
+    
+    const visibleTags = course.tags?.slice(0, 3) || []
+    const remainingTags = course.tags?.slice(3) || []
+
+    const handleMouseEnter = () => {
+        if (badgeRef.current) {
+            const rect = badgeRef.current.getBoundingClientRect()
+            setTooltipPosition({
+                top: rect.bottom + 4,
+                left: rect.left,
+            })
+        }
+        setShowMoreTags(true)
+    }
+
+    useEffect(() => {
+        const updatePosition = () => {
+            if (showMoreTags && badgeRef.current) {
+                const rect = badgeRef.current.getBoundingClientRect()
+                setTooltipPosition({
+                    top: rect.bottom + 4,
+                    left: rect.left,
+                })
+            }
+        }
+
+        if (showMoreTags) {
+            window.addEventListener('scroll', updatePosition, true)
+            window.addEventListener('resize', updatePosition)
+        }
+
+        return () => {
+            window.removeEventListener('scroll', updatePosition, true)
+            window.removeEventListener('resize', updatePosition)
+        }
+    }, [showMoreTags])
 
     return (
         <Card
@@ -84,27 +125,69 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                         'Khóa học chất lượng cao'}
                 </CardDescription>
                 {course.tags && course.tags.length > 0 && (
-                    <div className='flex flex-wrap gap-1.5 mt-2'>
-                        {course.tags.slice(0, 3).map((tag, index) => {
+                    <div className='flex flex-wrap gap-1.5 mt-2 relative'>
+                        {visibleTags.map((tag, index) => {
                             const tagName =
                                 typeof tag === 'string' ? tag : tag.name
                             return (
                                 <Badge
                                     key={index}
-                                    variant='outline'
-                                    className='text-xs text-gray-400 border-[#2D2D2D] hover:border-gray-500 hover:text-gray-300 transition-colors'
+                                    className='text-xs bg-gray-600 text-white hover:bg-gray-700 transition-colors'
                                 >
                                     {tagName}
                                 </Badge>
                             )
                         })}
-                        {course.tags.length > 3 && (
-                            <Badge
-                                variant='outline'
-                                className='text-xs text-gray-500 border-[#2D2D2D]'
+                        {remainingTags.length > 0 && (
+                            <div
+                                ref={badgeRef}
+                                className='relative'
+                                onMouseEnter={handleMouseEnter}
+                                onMouseLeave={() => setShowMoreTags(false)}
                             >
-                                +{course.tags.length - 3}
-                            </Badge>
+                                <Badge
+                                    className='text-xs bg-gray-600 text-white hover:bg-gray-700 transition-colors cursor-pointer'
+                                >
+                                    +{remainingTags.length}
+                                </Badge>
+                                {showMoreTags &&
+                                    createPortal(
+                                        <div
+                                            className='fixed z-[9999] bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg p-2 shadow-xl min-w-[150px] max-w-[250px]'
+                                            style={{
+                                                top: `${tooltipPosition.top}px`,
+                                                left: `${tooltipPosition.left}px`,
+                                            }}
+                                            onMouseEnter={() =>
+                                                setShowMoreTags(true)
+                                            }
+                                            onMouseLeave={() =>
+                                                setShowMoreTags(false)
+                                            }
+                                        >
+                                            <div className='flex flex-wrap gap-1.5'>
+                                                {remainingTags.map(
+                                                    (tag, index) => {
+                                                        const tagName =
+                                                            typeof tag ===
+                                                            'string'
+                                                                ? tag
+                                                                : tag.name
+                                                        return (
+                                                            <Badge
+                                                                key={index}
+                                                                className='text-xs bg-gray-600 text-white hover:bg-gray-700'
+                                                            >
+                                                                {tagName}
+                                                            </Badge>
+                                                        )
+                                                    }
+                                                )}
+                                            </div>
+                                        </div>,
+                                        document.body
+                                    )}
+                            </div>
                         )}
                     </div>
                 )}
