@@ -100,6 +100,10 @@ class CategoryController {
     getCategories = asyncHandler(async (req, res) => {
         const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = req.query
 
+        // For public API, default to only active categories unless explicitly requested
+        // If user is authenticated admin/instructor, they can see all categories
+        const isAuthenticatedAdmin = req.user && (req.user.role === 'ADMIN' || req.user.role === 'INSTRUCTOR')
+        
         const filters = {
             page: parseInt(page) || 1,
             limit: parseInt(limit) || 20,
@@ -115,6 +119,9 @@ class CategoryController {
                     ? true
                     : isActive === 'false'
                       ? false
+                      : // For public API (not authenticated admin/instructor), default to active only
+                        !isAuthenticatedAdmin
+                      ? true
                       : undefined,
             search: search || undefined,
             sort: sort || 'sortOrder',

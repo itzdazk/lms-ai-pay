@@ -86,10 +86,10 @@ router.delete(
 /**
  * @route   GET /api/v1/categories
  * @desc    Get all categories with optional filters
- * @access  Public
+ * @access  Public (optional auth for admin/instructor to see all)
  * @query   page, limit, parentId, isActive, search
  */
-router.get('/', getCategoriesValidator, categoryController.getCategories)
+router.get('/', optionalAuthenticate, getCategoriesValidator, categoryController.getCategories)
 
 /**
  * @route   GET /api/v1/categories/stats
