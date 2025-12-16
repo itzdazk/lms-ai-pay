@@ -11,6 +11,7 @@ import {
 import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
 import { DarkOutlineInput } from '../../components/ui/dark-outline-input'
+import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select, SelectValue } from '../../components/ui/select'
 import {
@@ -35,6 +36,10 @@ import {
     Edit,
     Trash2,
     Plus,
+    Hash,
+    FileText,
+    Sparkles,
+    RotateCcw,
 } from 'lucide-react'
 import { coursesApi } from '../../lib/api/courses'
 import {
@@ -952,62 +957,139 @@ export function TagsPage() {
                         }
                     }}
                 >
-                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-md'>
-                        <DialogHeader>
-                            <DialogTitle>
+                    <DialogContent className='flex flex-col p-0 overflow-hidden bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-2xl max-h-[90vh]'>
+                        <DialogHeader className='pb-4 border-b border-[#2D2D2D] px-6 pt-6 flex-shrink-0'>
+                            <DialogTitle className='flex items-center gap-2'>
+                                <TagIcon className='h-5 w-5 text-blue-400' />
                                 {isCreateDialogOpen
                                     ? 'Tạo tag mới'
                                     : 'Chỉnh sửa tag'}
                             </DialogTitle>
-                            <DialogDescription className='text-gray-400'>
+                            <DialogDescription className='text-gray-400 mt-1'>
                                 {isCreateDialogOpen
                                     ? 'Điền thông tin để tạo tag mới'
                                     : `Chỉnh sửa thông tin tag "${selectedTag?.name}"`}
                             </DialogDescription>
                         </DialogHeader>
-                        <div className='space-y-4 py-4'>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>Tên tag *</Label>
-                                <DarkOutlineInput
-                                    value={formData.name}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            name: e.target.value,
-                                        })
-                                    }
-                                    placeholder='Nhập tên tag'
-                                />
-                            </div>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>Slug</Label>
-                                <DarkOutlineInput
-                                    value={formData.slug}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            slug: e.target.value,
-                                        })
-                                    }
-                                    placeholder='Tự động tạo từ tên nếu để trống'
-                                />
-                            </div>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>Mô tả</Label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            description: e.target.value,
-                                        })
-                                    }
-                                    placeholder='Nhập mô tả tag (tối đa 500 ký tự)'
-                                    className='w-full min-h-[80px] px-3 py-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm'
-                                />
+                        <div className='space-y-6 py-6 px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0'>
+                            {/* Basic Information Section */}
+                            <div className='space-y-6'>
+                                {/* Section Header */}
+                                <div className='flex items-center gap-3 pb-4 border-b border-[#2D2D2D]'>
+                                    <div className='p-2 bg-blue-500/10 rounded-lg'>
+                                        <TagIcon className='h-5 w-5 text-blue-400' />
+                                    </div>
+                                    <div>
+                                        <h3 className='text-xl font-bold text-white'>
+                                            Thông tin cơ bản
+                                        </h3>
+                                        <p className='text-sm text-gray-400 mt-0.5'>
+                                            Thông tin chính về tag
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Tag Name */}
+                                <div className='space-y-2'>
+                                    <Label className='text-white flex items-center gap-2'>
+                                        <TagIcon className='h-4 w-4 text-gray-400' />
+                                        <span>Tên tag</span>
+                                        <span className='text-red-500'>*</span>
+                                    </Label>
+                                    <Input
+                                        value={formData.name}
+                                        onChange={(e) => {
+                                            const newName = e.target.value
+                                            setFormData({
+                                                ...formData,
+                                                name: newName,
+                                                // Auto-generate slug if empty
+                                                slug:
+                                                    !formData.slug ||
+                                                    formData.slug ===
+                                                        generateSlug(
+                                                            formData.name
+                                                        )
+                                                        ? generateSlug(newName)
+                                                        : formData.slug,
+                                            })
+                                        }}
+                                        placeholder='Nhập tên tag'
+                                        className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
+                                    />
+                                </div>
+
+                                {/* Divider */}
+                                <div className='border-t border-[#2D2D2D] my-2'></div>
+
+                                {/* Slug */}
+                                <div className='space-y-2'>
+                                    <Label className='text-white flex items-center gap-2'>
+                                        <Hash className='h-4 w-4 text-gray-400' />
+                                        <span>Slug</span>
+                                    </Label>
+                                    <div className='flex gap-2'>
+                                        <Input
+                                            value={formData.slug}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    slug: e.target.value,
+                                                })
+                                            }
+                                            placeholder='Tự động tạo từ tên nếu để trống'
+                                            className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0 flex-1'
+                                        />
+                                        <Button
+                                            type='button'
+                                            variant='outline'
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    slug: generateSlug(
+                                                        formData.name
+                                                    ),
+                                                })
+                                            }}
+                                            className='bg-[#1F1F1F] border-[#2D2D2D] text-white hover:bg-[#2A2A2A] flex items-center gap-2'
+                                        >
+                                            <RotateCcw className='h-4 w-4' />
+                                            Tự động
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Divider */}
+                                <div className='border-t border-[#2D2D2D] my-2'></div>
+
+                                {/* Description */}
+                                <div className='space-y-2'>
+                                    <Label className='text-white flex items-center gap-2'>
+                                        <FileText className='h-4 w-4 text-gray-400' />
+                                        <span>Mô tả</span>
+                                    </Label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                description: e.target.value,
+                                            })
+                                        }
+                                        placeholder='Nhập mô tả tag (tối đa 500 ký tự)'
+                                        className='w-full min-h-[140px] px-3 py-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 resize-none'
+                                        maxLength={500}
+                                    />
+                                    <div className='flex items-center justify-between'>
+                                        <p className='text-xs text-gray-400'>
+                                            {formData.description.length}/500
+                                            ký tự
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className='pt-4 border-t border-[#2D2D2D] px-6 pb-6 flex-shrink-0 bg-[#1A1A1A]'>
                             <DarkOutlineButton
                                 onClick={() => {
                                     setIsCreateDialogOpen(false)
@@ -1025,17 +1107,27 @@ export function TagsPage() {
                                         : confirmUpdate
                                 }
                                 disabled={actionLoading || !formData.name.trim()}
-                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                                className='bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2'
                             >
                                 {actionLoading ? (
                                     <>
-                                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                        <Loader2 className='h-4 w-4 animate-spin' />
                                         Đang xử lý...
                                     </>
-                                ) : isCreateDialogOpen ? (
-                                    'Tạo'
                                 ) : (
-                                    'Cập nhật'
+                                    <>
+                                        {isCreateDialogOpen ? (
+                                            <>
+                                                <Plus className='h-4 w-4' />
+                                                Tạo tag
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className='h-4 w-4' />
+                                                Cập nhật
+                                            </>
+                                        )}
+                                    </>
                                 )}
                             </Button>
                         </DialogFooter>
