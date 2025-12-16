@@ -14,7 +14,8 @@ import {
     Share2,
 } from 'lucide-react'
 import { formatPrice, getCoursePrice } from '../../lib/courseUtils'
-import type { Course } from '../../lib/api/types'
+import { EnrollmentButton } from '../Enrollments'
+import type { Course, PublicCourse } from '../../lib/api/types'
 
 interface CourseSidebarProps {
     course: {
@@ -31,6 +32,8 @@ interface CourseSidebarProps {
     isPreview?: boolean
     checkoutUrl?: string
     learnUrl?: string
+    useEnrollmentButton?: boolean
+    publicCourse?: PublicCourse
 }
 
 export function CourseSidebar({
@@ -41,6 +44,8 @@ export function CourseSidebar({
     isPreview = false,
     checkoutUrl,
     learnUrl,
+    useEnrollmentButton = false,
+    publicCourse,
 }: CourseSidebarProps) {
     const priceInfo = getCoursePrice(course)
 
@@ -105,10 +110,13 @@ export function CourseSidebar({
                                         </div>
                                         <div className='flex items-center gap-2'>
                                             <div className='text-sm text-gray-400 line-through'>
-                                                {formatPrice(priceInfo.originalPrice)}
+                                                {formatPrice(
+                                                    priceInfo.originalPrice
+                                                )}
                                             </div>
                                             <Badge className='bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs shadow-md'>
-                                                Giảm {priceInfo.discountPercentage}%
+                                                Giảm{' '}
+                                                {priceInfo.discountPercentage}%
                                             </Badge>
                                         </div>
                                     </div>
@@ -130,6 +138,11 @@ export function CourseSidebar({
                         >
                             Đăng ký học
                         </Button>
+                    ) : useEnrollmentButton && publicCourse ? (
+                        <EnrollmentButton
+                            course={publicCourse}
+                            className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200'
+                        />
                     ) : isEnrolled ? (
                         <div className='space-y-3'>
                             <div className='flex justify-between text-sm text-white'>
@@ -205,4 +218,3 @@ export function CourseSidebar({
         </div>
     )
 }
-
