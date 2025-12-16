@@ -21,6 +21,14 @@ export interface CategoryCoursesFilters {
     sort?: 'newest' | 'popular' | 'rating' | 'price_asc' | 'price_desc'
 }
 
+export interface CategoryStats {
+    total: number
+    active: number
+    inactive: number
+    parent: number
+    child: number
+}
+
 export const categoriesApi = {
     /**
      * Get all categories with optional filters
@@ -45,6 +53,17 @@ export const categoriesApi = {
         >(`/categories?${queryParams.toString()}`)
 
         return response.data
+    },
+
+    /**
+     * Get category statistics
+     * @returns Category statistics
+     */
+    async getCategoryStats(): Promise<CategoryStats> {
+        const response = await apiClient.get<ApiResponse<CategoryStats>>(
+            '/categories/stats'
+        )
+        return response.data.data
     },
 
     /**
