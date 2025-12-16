@@ -265,6 +265,21 @@ class CategoryController {
             'Category image deleted successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/categories/stats
+     * @desc    Get category statistics
+     * @access  Public
+     */
+    getCategoryStats = asyncHandler(async (req, res) => {
+        const stats = await categoryService.getCategoryStats()
+
+        return ApiResponse.success(
+            res,
+            stats,
+            'Category statistics retrieved successfully'
+        )
+    })
 }
 
 export default new CategoryController()

@@ -685,6 +685,39 @@ class CategoryService {
             throw error
         }
     }
+
+    /**
+     * Get category statistics
+     */
+    async getCategoryStats() {
+        try {
+            // Get total count
+            const total = await prisma.category.count()
+
+            // Get active/inactive counts
+            const [active, inactive] = await Promise.all([
+                prisma.category.count({ where: { isActive: true } }),
+                prisma.category.count({ where: { isActive: false } }),
+            ])
+
+            // Get parent/child counts
+            const [parent, child] = await Promise.all([
+                prisma.category.count({ where: { parentId: null } }),
+                prisma.category.count({ where: { parentId: { not: null } } }),
+            ])
+
+            return {
+                total,
+                active,
+                inactive,
+                parent,
+                child,
+            }
+        } catch (error) {
+            logger.error('Error getting category stats:', error)
+            throw error
+        }
+    }
 }
 
 export default new CategoryService()

@@ -92,6 +92,13 @@ router.delete(
 router.get('/', getCategoriesValidator, categoryController.getCategories)
 
 /**
+ * @route   GET /api/v1/categories/stats
+ * @desc    Get category statistics
+ * @access  Public
+ */
+router.get('/stats', categoryController.getCategoryStats)
+
+/**
  * @route   GET /api/v1/categories/:id
  * @desc    Get category by ID
  * @access  Public
