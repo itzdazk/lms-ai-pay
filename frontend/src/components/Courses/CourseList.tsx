@@ -53,8 +53,6 @@ export function CourseList({
         )
     }
 
-    console.log('CourseList.tsx', courses)
-
     // Empty state
     if (courses.length === 0) {
         return (
@@ -88,114 +86,124 @@ export function CourseList({
                     {/* Pagination */}
                     {totalPages > 1 && (
                         <div className='flex items-center justify-center gap-2'>
-                    <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() =>
-                            onPageChange(Math.max(1, currentPage - 1))
-                        }
-                        disabled={currentPage === 1}
-                        className='border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'
-                    >
-                        <ChevronLeft className='h-4 w-4 mr-1' />
-                        Trước
-                    </Button>
+                            <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() =>
+                                    onPageChange(Math.max(1, currentPage - 1))
+                                }
+                                disabled={currentPage === 1}
+                                className='border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'
+                            >
+                                <ChevronLeft className='h-4 w-4 mr-1' />
+                                Trước
+                            </Button>
 
-                    <div className='flex items-center gap-1'>
-                        {/* Always show first page */}
-                        <Button
-                            variant={currentPage === 1 ? 'default' : 'outline'}
-                            size='sm'
-                            onClick={() => onPageChange(1)}
-                            className={
-                                currentPage === 1
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
-                                    : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
-                            }
-                        >
-                            1
-                        </Button>
-
-                        {/* Show ellipsis if there's a gap between page 1 and current page range */}
-                        {currentPage > 3 && (
-                            <span className='px-2 text-gray-400'>...</span>
-                        )}
-
-                        {/* Show pages around current page */}
-                        {Array.from(
-                            { length: totalPages },
-                            (_, i) => i + 1
-                        )
-                            .filter((page) => {
-                                // Show pages that are:
-                                // - Not page 1 (already shown)
-                                // - Not last page (will be shown later)
-                                // - Within range of current page ± 1
-                                return (
-                                    page !== 1 &&
-                                    page !== totalPages &&
-                                    page >= currentPage - 1 &&
-                                    page <= currentPage + 1
-                                )
-                            })
-                            .map((page) => (
+                            <div className='flex items-center gap-1'>
+                                {/* Always show first page */}
                                 <Button
-                                    key={page}
                                     variant={
-                                        currentPage === page
+                                        currentPage === 1
                                             ? 'default'
                                             : 'outline'
                                     }
                                     size='sm'
-                                    onClick={() => onPageChange(page)}
+                                    onClick={() => onPageChange(1)}
                                     className={
-                                        currentPage === page
+                                        currentPage === 1
                                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
                                             : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
                                     }
                                 >
-                                    {page}
+                                    1
                                 </Button>
-                            ))}
 
-                        {/* Show ellipsis if there's a gap between current page range and last page */}
-                        {currentPage < totalPages - 2 && (
-                            <span className='px-2 text-gray-400'>...</span>
-                        )}
+                                {/* Show ellipsis if there's a gap between page 1 and current page range */}
+                                {currentPage > 3 && (
+                                    <span className='px-2 text-gray-400'>
+                                        ...
+                                    </span>
+                                )}
 
-                        {/* Always show last page (if more than 1 page) */}
-                        {totalPages > 1 && (
+                                {/* Show pages around current page */}
+                                {Array.from(
+                                    { length: totalPages },
+                                    (_, i) => i + 1
+                                )
+                                    .filter((page) => {
+                                        // Show pages that are:
+                                        // - Not page 1 (already shown)
+                                        // - Not last page (will be shown later)
+                                        // - Within range of current page ± 1
+                                        return (
+                                            page !== 1 &&
+                                            page !== totalPages &&
+                                            page >= currentPage - 1 &&
+                                            page <= currentPage + 1
+                                        )
+                                    })
+                                    .map((page) => (
+                                        <Button
+                                            key={page}
+                                            variant={
+                                                currentPage === page
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
+                                            size='sm'
+                                            onClick={() => onPageChange(page)}
+                                            className={
+                                                currentPage === page
+                                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
+                                                    : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
+                                            }
+                                        >
+                                            {page}
+                                        </Button>
+                                    ))}
+
+                                {/* Show ellipsis if there's a gap between current page range and last page */}
+                                {currentPage < totalPages - 2 && (
+                                    <span className='px-2 text-gray-400'>
+                                        ...
+                                    </span>
+                                )}
+
+                                {/* Always show last page (if more than 1 page) */}
+                                {totalPages > 1 && (
+                                    <Button
+                                        variant={
+                                            currentPage === totalPages
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                        size='sm'
+                                        onClick={() => onPageChange(totalPages)}
+                                        className={
+                                            currentPage === totalPages
+                                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
+                                                : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
+                                        }
+                                    >
+                                        {totalPages}
+                                    </Button>
+                                )}
+                            </div>
+
                             <Button
-                                variant={
-                                    currentPage === totalPages
-                                        ? 'default'
-                                        : 'outline'
-                                }
+                                variant='outline'
                                 size='sm'
-                                onClick={() => onPageChange(totalPages)}
-                                className={
-                                    currentPage === totalPages
-                                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 border-blue-500 shadow-lg cursor-pointer transition-all duration-200'
-                                        : 'border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] cursor-pointer transition-all duration-200'
+                                onClick={() =>
+                                    onPageChange(
+                                        Math.min(totalPages, currentPage + 1)
+                                    )
                                 }
+                                disabled={currentPage === totalPages}
+                                className='border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'
                             >
-                                {totalPages}
+                                Sau
+                                <ChevronRight className='h-4 w-4 ml-1' />
                             </Button>
-                        )}
-                    </div>
-
-                    <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() =>
-                            onPageChange(Math.min(totalPages, currentPage + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                        className='border-[#2D2D2D] text-white bg-[#1F1F1F] hover:bg-[#2D2D2D] hover:border-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200'
-                    >
-                        Sau
-                        <ChevronRight className='h-4 w-4 ml-1' />
-                    </Button>
                         </div>
                     )}
 
@@ -209,7 +217,10 @@ export function CourseList({
                                 </span>
                                 {' - '}
                                 <span className='text-white font-semibold'>
-                                    {Math.min(currentPage * limit, totalCourses)}
+                                    {Math.min(
+                                        currentPage * limit,
+                                        totalCourses
+                                    )}
                                 </span>{' '}
                                 trong tổng số{' '}
                                 <span className='text-white font-semibold'>

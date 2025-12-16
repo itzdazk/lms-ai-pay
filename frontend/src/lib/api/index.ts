@@ -7,6 +7,7 @@ export { instructorCoursesApi } from './instructor-courses'
 export { dashboardApi } from './dashboard'
 export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
+export { categoriesApi, getCategoryPath } from './categories'
 export type {
     UpdateProfileRequest,
     ChangePasswordRequest,
@@ -20,3 +21,4 @@ export type {
     AdminCourseFilters,
     PlatformAnalytics,
 } from './admin-courses'
+export type { CategoryFilters, CategoryCoursesFilters } from './categories'

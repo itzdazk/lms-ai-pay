@@ -6,6 +6,7 @@ import {
     optionalAuthenticate,
 } from '../middlewares/authenticate.middleware.js'
 import { isAdmin, isInstructor } from '../middlewares/role.middleware.js'
+import { uploadCategoryImage } from '../config/multer.config.js'
 import {
     createCategoryValidator,
     updateCategoryValidator,
@@ -29,6 +30,31 @@ router.post(
     isInstructor,
     createCategoryValidator,
     categoryController.createCategory
+)
+
+/**
+ * @route   POST /api/v1/categories/:id/upload-image
+ * @desc    Upload category image
+ * @access  Private (Admin/Instructor)
+ */
+router.post(
+    '/:id/upload-image',
+    authenticate,
+    isInstructor,
+    uploadCategoryImage,
+    categoryController.uploadImage
+)
+
+/**
+ * @route   DELETE /api/v1/categories/:id/image
+ * @desc    Delete category image
+ * @access  Private (Admin/Instructor)
+ */
+router.delete(
+    '/:id/image',
+    authenticate,
+    isInstructor,
+    categoryController.deleteImage
 )
 
 /**
@@ -60,10 +86,17 @@ router.delete(
 /**
  * @route   GET /api/v1/categories
  * @desc    Get all categories with optional filters
- * @access  Public
+ * @access  Public (optional auth for admin/instructor to see all)
  * @query   page, limit, parentId, isActive, search
  */
-router.get('/', getCategoriesValidator, categoryController.getCategories)
+router.get('/', optionalAuthenticate, getCategoriesValidator, categoryController.getCategories)
+
+/**
+ * @route   GET /api/v1/categories/stats
+ * @desc    Get category statistics
+ * @access  Public
+ */
+router.get('/stats', categoryController.getCategoryStats)
 
 /**
  * @route   GET /api/v1/categories/:id

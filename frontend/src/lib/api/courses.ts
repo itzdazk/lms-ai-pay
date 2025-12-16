@@ -159,6 +159,8 @@ export const coursesApi = {
         page?: number
         limit?: number
         search?: string
+        sort?: string
+        sortOrder?: string
     }): Promise<{
         tags: Tag[]
         pagination: {
@@ -173,6 +175,8 @@ export const coursesApi = {
         if (params?.page) queryParams.append('page', params.page.toString())
         if (params?.limit) queryParams.append('limit', params.limit.toString())
         if (params?.search) queryParams.append('search', params.search)
+        if (params?.sort) queryParams.append('sort', params.sort)
+        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder)
 
         const response = await apiClient.get<
             ApiResponse<{
@@ -399,7 +403,7 @@ export const coursesApi = {
         return allTags
     },
 
-    // Create tag
+    // Create tag (admin/instructor)
     async createTag(name: string, description?: string): Promise<Tag> {
         // Generate slug from name (similar to backend seed.js)
         const slug = name
@@ -417,4 +421,20 @@ export const coursesApi = {
         return response.data.data
     },
 
+    // Update tag (admin/instructor)
+    async updateTag(
+        tagId: number,
+        data: { name?: string; slug?: string; description?: string }
+    ): Promise<Tag> {
+        const response = await apiClient.put<ApiResponse<Tag>>(
+            `/tags/${tagId}`,
+            data
+        )
+        return response.data.data
+    },
+
+    // Delete tag (admin/instructor)
+    async deleteTag(tagId: string): Promise<void> {
+        await apiClient.delete(`/tags/${tagId}`)
+    },
 }

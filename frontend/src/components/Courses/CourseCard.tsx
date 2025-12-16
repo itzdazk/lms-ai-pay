@@ -27,8 +27,6 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, className = '' }: CourseCardProps) {
-    console.log('CourseCard.tsx:', course)
-
     const [showMoreTags, setShowMoreTags] = useState(false)
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 })
     const badgeRef = useRef<HTMLDivElement>(null)

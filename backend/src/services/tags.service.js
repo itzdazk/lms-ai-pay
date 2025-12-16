@@ -9,7 +9,7 @@ class TagsService {
      * Get tags list with pagination and search
      */
     async getTags(query) {
-        const { page = 1, limit = 20, search } = query
+        const { page = 1, limit = 20, search, sort = 'createdAt', sortOrder = 'desc' } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
@@ -26,11 +26,31 @@ class TagsService {
             ]
         }
 
+        // Build orderBy
+        const orderBy = {}
+        const validSortFields = ['createdAt', 'name']
+        const validSortOrders = ['asc', 'desc']
+        
+        const sortField = validSortFields.includes(sort) ? sort : 'createdAt'
+        const sortOrderValue = validSortOrders.includes(sortOrder) ? sortOrder : 'desc'
+        
         // Use raw query to get tags with published courses count efficiently
         // This is much faster than querying each tag separately
         const searchCondition = search
             ? Prisma.sql`AND (t.name ILIKE ${`%${search}%`} OR t.slug ILIKE ${`%${search}%`} OR t.description ILIKE ${`%${search}%`})`
             : Prisma.empty
+
+        // Build ORDER BY clause for raw query
+        let orderByClause = Prisma.sql`t.created_at DESC`
+        if (sortField === 'name') {
+            orderByClause = sortOrderValue === 'asc' 
+                ? Prisma.sql`t.name ASC` 
+                : Prisma.sql`t.name DESC`
+        } else {
+            orderByClause = sortOrderValue === 'asc' 
+                ? Prisma.sql`t.created_at ASC` 
+                : Prisma.sql`t.created_at DESC`
+        }
 
         const tagsWithCountsRaw = await prisma.$queryRaw`
             SELECT 
@@ -46,7 +66,7 @@ class TagsService {
             WHERE 1=1 ${searchCondition}
             GROUP BY t.id, t.name, t.slug, t.description, t.created_at
             HAVING COUNT(DISTINCT ct.course_id) > 0
-            ORDER BY t.created_at DESC
+            ORDER BY ${orderByClause}
         `
 
         // Format tags to match expected structure
