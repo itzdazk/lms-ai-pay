@@ -11,6 +11,7 @@ import {
 import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
 import { DarkOutlineInput } from '../../components/ui/dark-outline-input'
+import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select, SelectValue } from '../../components/ui/select'
 import {
@@ -39,6 +40,14 @@ import {
     Archive,
     FileText,
     Star,
+    Tag,
+    Image as ImageIcon,
+    Hash,
+    ToggleLeft,
+    ToggleRight,
+    Sparkles,
+    Upload,
+    FileImage,
 } from 'lucide-react'
 import {
     adminCategoriesApi,
@@ -518,9 +527,9 @@ export function CategoriesPage() {
 
     const loadAllCategories = async () => {
         try {
-            // Load all categories for dropdown filter (without parentId filter to get all)
+            // Load all categories for dropdown filter (using admin API to get all, including inactive)
             // Backend MAX_LIMIT is 100, so we use 100
-            const result = await categoriesApi.getCategories({ limit: 100 })
+            const result = await adminCategoriesApi.getAllCategories({ limit: 100 })
             const categories = result.data || []
             
             // Flatten categories including children from nested structure
@@ -1547,212 +1556,344 @@ export function CategoriesPage() {
                         }
                     }}
                 >
-                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-2xl max-h-[90vh] overflow-y-auto'>
-                        <DialogHeader>
-                            <DialogTitle>
-                                {isCreateDialogOpen
-                                    ? 'Tạo danh mục mới'
-                                    : 'Chỉnh sửa danh mục'}
-                            </DialogTitle>
-                            <DialogDescription className='text-gray-400'>
-                                {isCreateDialogOpen
-                                    ? 'Điền thông tin để tạo danh mục mới'
-                                    : `Chỉnh sửa thông tin danh mục "${selectedCategory?.name}"`}
-                            </DialogDescription>
+                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden'>
+                        <DialogHeader className='pb-4 border-b border-[#2D2D2D] px-6 pt-6 flex-shrink-0'>
+                            <div className='flex items-center gap-3'>
+                                <div className='p-2 bg-blue-600/20 rounded-lg'>
+                                    <FolderTree className='h-5 w-5 text-blue-400' />
+                                </div>
+                                <div className='flex-1'>
+                                    <DialogTitle className='text-xl'>
+                                        {isCreateDialogOpen
+                                            ? 'Tạo danh mục mới'
+                                            : 'Chỉnh sửa danh mục'}
+                                    </DialogTitle>
+                                    <DialogDescription className='text-gray-400 mt-1'>
+                                        {isCreateDialogOpen
+                                            ? 'Điền thông tin để tạo danh mục mới'
+                                            : `Chỉnh sửa thông tin danh mục "${selectedCategory?.name}"`}
+                                    </DialogDescription>
+                                </div>
+                            </div>
                         </DialogHeader>
-                        <div className='space-y-4 py-4'>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>
-                                    Tên danh mục *
-                                </Label>
-                                <DarkOutlineInput
-                                    value={formData.name}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            name: e.target.value,
-                                        })
-                                    }
-                                    placeholder='Nhập tên danh mục'
-                                />
-                            </div>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>Slug</Label>
-                                <DarkOutlineInput
-                                    value={formData.slug}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            slug: e.target.value,
-                                        })
-                                    }
-                                    placeholder='Tự động tạo từ tên nếu để trống'
-                                />
-                            </div>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>Mô tả</Label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            description: e.target.value,
-                                        })
-                                    }
-                                    placeholder='Nhập mô tả danh mục'
-                                    className='w-full min-h-[100px] px-3 py-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                                />
-                            </div>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>
-                                    Ảnh danh mục
-                                </Label>
-                                <div className='flex items-center gap-3'>
-                                    <DarkOutlineInput
-                                        type='file'
-                                        accept='image/*'
+                        <div className='space-y-6 py-6 px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0'>
+                            {/* Basic Information Section */}
+                            <div className='space-y-4'>
+                                <div className='flex items-center gap-2 pb-2 border-b border-[#2D2D2D]'>
+                                    <FileText className='h-4 w-4 text-blue-400' />
+                                    <h3 className='text-sm font-semibold text-gray-300 uppercase tracking-wide'>
+                                        Thông tin cơ bản
+                                    </h3>
+                                </div>
+                                
+                                <div className='space-y-2'>
+                                    <Label className='text-white flex items-center gap-2'>
+                                        <Tag className='h-4 w-4 text-gray-400' />
+                                        Tên danh mục <span className='text-red-500'>*</span>
+                                    </Label>
+                                    <Input
+                                        value={formData.name}
                                         onChange={(e) => {
-                                            const file = e.target.files?.[0]
-                                            setImageFile(file || null)
-                                            setImageRemoved(false)
-                                        }}
-                                    />
-                                    <Button
-                                        type='button'
-                                        variant='secondary'
-                                        onClick={() => {
-                                            setImageFile(null)
+                                            const newName = e.target.value
                                             setFormData({
                                                 ...formData,
-                                                imageUrl: '',
+                                                name: newName,
+                                                // Auto-generate slug if slug is empty or was auto-generated
+                                                slug: formData.slug === generateSlug(formData.name) || !formData.slug
+                                                    ? generateSlug(newName)
+                                                    : formData.slug,
                                             })
-                                            setImageRemoved(true)
                                         }}
-                                    >
-                                        Xóa ảnh
-                                    </Button>
+                                        placeholder='Nhập tên danh mục'
+                                        className='text-base bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
+                                    />
                                 </div>
-                                <p className='text-xs text-gray-400'>
-                                    Chọn ảnh từ máy tính (tối ưu &lt; 2MB). Nếu
-                                    không chọn, danh mục sẽ dùng ảnh có sẵn hoặc
-                                    để trống.
-                                </p>
-                                {(imageFile || formData.imageUrl) && (
-                                    <div className='mt-2'>
-                                        <p className='text-xs text-gray-400 mb-1'>
-                                            Ảnh xem trước:
-                                        </p>
-                                        <div className='h-24 w-40 rounded overflow-hidden border border-[#2D2D2D] bg-[#0f0f0f] flex items-center justify-center'>
-                                            <img
-                                                src={
-                                                    imageFile
-                                                        ? URL.createObjectURL(
-                                                              imageFile
-                                                          )
-                                                        : formData.imageUrl
-                                                }
-                                                alt='Preview'
-                                                className='h-full w-full object-cover'
-                                            />
+
+                                <div className='space-y-2'>
+                                    <Label className='text-white flex items-center gap-2'>
+                                        <Hash className='h-4 w-4 text-gray-400' />
+                                        Slug
+                                    </Label>
+                                    <div className='flex items-center gap-2'>
+                                        <Input
+                                            value={formData.slug}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    slug: e.target.value,
+                                                })
+                                            }
+                                            placeholder='Tự động tạo từ tên nếu để trống'
+                                            className='flex-1 text-base bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
+                                        />
+                                        <Button
+                                            type='button'
+                                            variant='outline'
+                                            size='sm'
+                                            onClick={() => {
+                                                const autoSlug = generateSlug(formData.name)
+                                                setFormData({
+                                                    ...formData,
+                                                    slug: autoSlug,
+                                                })
+                                            }}
+                                            className='border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F] hover:text-white'
+                                            disabled={!formData.name.trim()}
+                                        >
+                                            <Sparkles className='h-4 w-4 mr-1' />
+                                            Tự động
+                                        </Button>
+                                    </div>
+                                    <p className='text-xs text-gray-500'>
+                                        Slug sẽ được tự động tạo từ tên danh mục
+                                    </p>
+                                </div>
+
+                                <div className='space-y-2'>
+                                    <Label className='text-white flex items-center gap-2'>
+                                        <FileText className='h-4 w-4 text-gray-400' />
+                                        Mô tả
+                                    </Label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                description: e.target.value,
+                                            })
+                                        }
+                                        placeholder='Nhập mô tả danh mục (tùy chọn)'
+                                        className='w-full min-h-[140px] px-3 py-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Image Section */}
+                            <div className='space-y-4'>
+                                <div className='flex items-center gap-2 pb-2 border-b border-[#2D2D2D]'>
+                                    <ImageIcon className='h-4 w-4 text-blue-400' />
+                                    <h3 className='text-sm font-semibold text-gray-300 uppercase tracking-wide'>
+                                        Ảnh danh mục
+                                    </h3>
+                                </div>
+
+                                {(imageFile || formData.imageUrl) ? (
+                                    <div className='space-y-3'>
+                                        <div className='relative group'>
+                                            <div className='h-48 w-full rounded-lg overflow-hidden border-2 border-[#2D2D2D] bg-[#0f0f0f] flex items-center justify-center'>
+                                                <img
+                                                    src={
+                                                        imageFile
+                                                            ? URL.createObjectURL(imageFile)
+                                                            : formData.imageUrl
+                                                    }
+                                                    alt='Preview'
+                                                    className='h-full w-full object-cover'
+                                                />
+                                            </div>
+                                            <Button
+                                                type='button'
+                                                variant='destructive'
+                                                size='sm'
+                                                onClick={() => {
+                                                    setImageFile(null)
+                                                    setFormData({
+                                                        ...formData,
+                                                        imageUrl: '',
+                                                    })
+                                                    setImageRemoved(true)
+                                                }}
+                                                className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity'
+                                            >
+                                                <X className='h-4 w-4' />
+                                            </Button>
+                                        </div>
+                                        <div className='flex items-center gap-2'>
+                                            <label className='flex-1 cursor-pointer'>
+                                                <input
+                                                    type='file'
+                                                    accept='image/*'
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0]
+                                                        setImageFile(file || null)
+                                                        setImageRemoved(false)
+                                                    }}
+                                                    className='hidden'
+                                                />
+                                                <div className='w-full'>
+                                                    <Button
+                                                        type='button'
+                                                        variant='outline'
+                                                        className='w-full border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F] hover:text-white'
+                                                        onClick={(e) => {
+                                                            e.preventDefault()
+                                                            const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement
+                                                            input?.click()
+                                                        }}
+                                                    >
+                                                        <Upload className='h-4 w-4 mr-2' />
+                                                        Thay đổi ảnh
+                                                    </Button>
+                                                </div>
+                                            </label>
                                         </div>
                                     </div>
+                                ) : (
+                                    <label className='block'>
+                                        <input
+                                            type='file'
+                                            accept='image/*'
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0]
+                                                setImageFile(file || null)
+                                                setImageRemoved(false)
+                                            }}
+                                            className='hidden'
+                                        />
+                                        <div className='border-2 border-dashed border-[#2D2D2D] rounded-lg p-8 text-center hover:border-blue-500/50 transition-colors cursor-pointer bg-[#1F1F1F]/50'>
+                                            <div className='flex flex-col items-center gap-3'>
+                                                <div className='p-3 bg-blue-600/20 rounded-full'>
+                                                    <FileImage className='h-6 w-6 text-blue-400' />
+                                                </div>
+                                                <div>
+                                                    <p className='text-sm font-medium text-gray-300'>
+                                                        Nhấp để tải ảnh lên
+                                                    </p>
+                                                    <p className='text-xs text-gray-500 mt-1'>
+                                                        PNG, JPG hoặc GIF (tối ưu &lt; 2MB)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
                                 )}
                             </div>
-                            <div className='grid grid-cols-2 gap-4'>
+
+                            {/* Settings Section */}
+                            <div className='space-y-4'>
+                                <div className='flex items-center gap-2 pb-2 border-b border-[#2D2D2D]'>
+                                    <Hash className='h-4 w-4 text-blue-400' />
+                                    <h3 className='text-sm font-semibold text-gray-300 uppercase tracking-wide'>
+                                        Cài đặt
+                                    </h3>
+                                </div>
+
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                    <div className='space-y-2'>
+                                        <Label className='text-white flex items-center gap-2'>
+                                            <FolderTree className='h-4 w-4 text-gray-400' />
+                                            Danh mục cha
+                                        </Label>
+                                        <Select
+                                            value={
+                                                formData.parentId
+                                                    ? String(formData.parentId)
+                                                    : 'null'
+                                            }
+                                            onValueChange={(value) => {
+                                                setFormData({
+                                                    ...formData,
+                                                    parentId:
+                                                        value === 'null'
+                                                            ? null
+                                                            : parseInt(value),
+                                                })
+                                            }}
+                                        >
+                                            <DarkOutlineSelectTrigger>
+                                                <SelectValue placeholder='Không có' />
+                                            </DarkOutlineSelectTrigger>
+                                            <DarkOutlineSelectContent>
+                                                <DarkOutlineSelectItem value='null'>
+                                                    Không có
+                                                </DarkOutlineSelectItem>
+                                                {allCategories
+                                                    .filter(
+                                                        (cat) =>
+                                                            !selectedCategory ||
+                                                            cat.id !==
+                                                                selectedCategory.id
+                                                    )
+                                                    .map((cat) => (
+                                                        <DarkOutlineSelectItem
+                                                            key={cat.id}
+                                                            value={String(cat.id)}
+                                                        >
+                                                            {cat.name}
+                                                        </DarkOutlineSelectItem>
+                                                    ))}
+                                            </DarkOutlineSelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className='space-y-2'>
+                                        <Label className='text-white flex items-center gap-2'>
+                                            <Hash className='h-4 w-4 text-gray-400' />
+                                            Thứ tự
+                                        </Label>
+                                        <Input
+                                            type='number'
+                                            min={0}
+                                            value={formData.sortOrder}
+                                            onChange={(e) => {
+                                                const value = parseInt(
+                                                    e.target.value
+                                                )
+
+                                                // Không cho phép số âm
+                                                if (value < 0) return
+
+                                                setFormData({
+                                                    ...formData,
+                                                    sortOrder: value || 0,
+                                                })
+                                            }}
+                                            placeholder='0'
+                                            className='text-base bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0'
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className='space-y-2'>
-                                    <Label className='text-white'>
-                                        Danh mục cha
+                                    <Label className='text-white flex items-center gap-2'>
+                                        {formData.isActive ? (
+                                            <ToggleRight className='h-4 w-4 text-green-400' />
+                                        ) : (
+                                            <ToggleLeft className='h-4 w-4 text-gray-400' />
+                                        )}
+                                        Trạng thái
                                     </Label>
                                     <Select
-                                        value={
-                                            formData.parentId
-                                                ? String(formData.parentId)
-                                                : 'null'
-                                        }
+                                        value={formData.isActive ? 'true' : 'false'}
                                         onValueChange={(value) => {
                                             setFormData({
                                                 ...formData,
-                                                parentId:
-                                                    value === 'null'
-                                                        ? null
-                                                        : parseInt(value),
+                                                isActive: value === 'true',
                                             })
                                         }}
                                     >
                                         <DarkOutlineSelectTrigger>
-                                            <SelectValue placeholder='Không có' />
+                                            <SelectValue />
                                         </DarkOutlineSelectTrigger>
                                         <DarkOutlineSelectContent>
-                                            <DarkOutlineSelectItem value='null'>
-                                                Không có
+                                            <DarkOutlineSelectItem value='true'>
+                                                <div className='flex items-center gap-2'>
+                                                    <div className='h-2 w-2 rounded-full bg-green-500' />
+                                                    Hoạt động
+                                                </div>
                                             </DarkOutlineSelectItem>
-                                            {allCategories
-                                                .filter(
-                                                    (cat) =>
-                                                        !selectedCategory ||
-                                                        cat.id !==
-                                                            selectedCategory.id
-                                                )
-                                                .map((cat) => (
-                                                    <DarkOutlineSelectItem
-                                                        key={cat.id}
-                                                        value={String(cat.id)}
-                                                    >
-                                                        {cat.name}
-                                                    </DarkOutlineSelectItem>
-                                                ))}
+                                            <DarkOutlineSelectItem value='false'>
+                                                <div className='flex items-center gap-2'>
+                                                    <div className='h-2 w-2 rounded-full bg-gray-500' />
+                                                    Không hoạt động
+                                                </div>
+                                            </DarkOutlineSelectItem>
                                         </DarkOutlineSelectContent>
                                     </Select>
                                 </div>
-                                <div className='space-y-2'>
-                                    <Label className='text-white'>Thứ tự</Label>
-                                    <DarkOutlineInput
-                                        type='number'
-                                        min={0}
-                                        value={formData.sortOrder}
-                                        onChange={(e) => {
-                                            const value = parseInt(
-                                                e.target.value
-                                            )
-
-                                            // Không cho phép số âm
-                                            if (value < 0) return
-
-                                            setFormData({
-                                                ...formData,
-                                                sortOrder: value || 0,
-                                            })
-                                        }}
-                                        placeholder='0'
-                                    />
-                                </div>
-                            </div>
-                            <div className='space-y-2'>
-                                <Label className='text-white'>Trạng thái</Label>
-                                <Select
-                                    value={formData.isActive ? 'true' : 'false'}
-                                    onValueChange={(value) => {
-                                        setFormData({
-                                            ...formData,
-                                            isActive: value === 'true',
-                                        })
-                                    }}
-                                >
-                                    <DarkOutlineSelectTrigger>
-                                        <SelectValue />
-                                    </DarkOutlineSelectTrigger>
-                                    <DarkOutlineSelectContent>
-                                        <DarkOutlineSelectItem value='true'>
-                                            Hoạt động
-                                        </DarkOutlineSelectItem>
-                                        <DarkOutlineSelectItem value='false'>
-                                            Không hoạt động
-                                        </DarkOutlineSelectItem>
-                                    </DarkOutlineSelectContent>
-                                </Select>
                             </div>
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className='pt-4 border-t border-[#2D2D2D] px-6 pb-6 flex-shrink-0 bg-[#1A1A1A]'>
                             <DarkOutlineButton
                                 onClick={() => {
                                     setIsCreateDialogOpen(false)
@@ -1760,6 +1901,7 @@ export function CategoriesPage() {
                                     setSelectedCategory(null)
                                 }}
                                 disabled={actionLoading}
+                                className='min-w-[100px]'
                             >
                                 Hủy
                             </DarkOutlineButton>
@@ -1772,7 +1914,7 @@ export function CategoriesPage() {
                                 disabled={
                                     actionLoading || !formData.name.trim()
                                 }
-                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                                className='bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]'
                             >
                                 {actionLoading ? (
                                     <>
@@ -1780,9 +1922,15 @@ export function CategoriesPage() {
                                         Đang xử lý...
                                     </>
                                 ) : isCreateDialogOpen ? (
-                                    'Tạo'
+                                    <>
+                                        <Plus className='h-4 w-4 mr-2' />
+                                        Tạo danh mục
+                                    </>
                                 ) : (
-                                    'Cập nhật'
+                                    <>
+                                        <Edit className='h-4 w-4 mr-2' />
+                                        Cập nhật
+                                    </>
                                 )}
                             </Button>
                         </DialogFooter>
