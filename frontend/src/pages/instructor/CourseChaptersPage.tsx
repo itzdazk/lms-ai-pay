@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
 import { Badge } from '../../components/ui/badge'
-import { Loader2, Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Video, FileText, AlertCircle, RotateCcw, CheckCircle2, Clock } from 'lucide-react'
+import { Loader2, Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Video, FileText, AlertCircle, RotateCcw, CheckCircle2, Clock, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../../contexts/AuthContext'
 import { useCourseForm } from '../../contexts/CourseFormContext'
@@ -46,6 +46,7 @@ export function CourseChaptersPage() {
     // Local state for drag and drop changes
     const [localChapters, setLocalChapters] = useState<Chapter[]>([])
     const { hasChanges: hasUnsavedChanges, setHasChanges: setHasUnsavedChanges } = useCourseForm()
+    const localChaptersRef = useRef<Chapter[]>([])
 
 
     // Dialogs
@@ -84,6 +85,73 @@ export function CourseChaptersPage() {
         }
     }, [courseId])
 
+    // Update ref whenever localChapters changes
+    useEffect(() => {
+        localChaptersRef.current = localChapters
+    }, [localChapters])
+
+    // Poll transcript status when there are processing transcripts
+    useEffect(() => {
+        if (!courseId || loading) return
+
+        // Poll every 5 seconds to check transcript status
+        const pollInterval = setInterval(async () => {
+            try {
+                // Check if there are any lessons with processing transcript status
+                const currentChapters = localChaptersRef.current
+                const hasProcessingTranscripts = currentChapters.some(
+                    chapter => chapter.lessons?.some(
+                        lesson => lesson.transcriptStatus === 'processing'
+                    )
+                )
+
+                // Stop polling if no processing transcripts
+                if (!hasProcessingTranscripts) {
+                    return
+                }
+
+                const chaptersData = await chaptersApi.getChaptersByCourse(courseId, true)
+                
+                // Update only transcript status without affecting local drag-and-drop changes
+                setLocalChapters(prevChapters => {
+                    return prevChapters.map(prevChapter => {
+                        const newChapter = chaptersData.find(ch => ch.id === prevChapter.id)
+                        if (!newChapter) return prevChapter
+
+                        // Update lessons with new transcript status while preserving order changes
+                        const updatedLessons = prevChapter.lessons?.map(prevLesson => {
+                            const newLesson = newChapter.lessons?.find(l => l.id === prevLesson.id)
+                            if (!newLesson) return prevLesson
+
+                            // Only update transcript-related fields, keep local order changes
+                            return {
+                                ...prevLesson,
+                                transcriptUrl: newLesson.transcriptUrl,
+                                transcriptJsonUrl: newLesson.transcriptJsonUrl,
+                                transcriptStatus: newLesson.transcriptStatus,
+                            }
+                        })
+
+                        return {
+                            ...prevChapter,
+                            lessons: updatedLessons,
+                        }
+                    })
+                })
+
+                // Also update chapters state for reference
+                setChapters(chaptersData)
+            } catch (error: any) {
+                console.error('Error polling transcript status:', error)
+                // Don't show error toast for polling failures
+            }
+        }, 5000) // Poll every 5 seconds
+
+        return () => {
+            clearInterval(pollInterval)
+        }
+    }, [courseId, loading])
+
     const loadData = async () => {
         if (!courseId) return
 
@@ -97,6 +165,7 @@ export function CourseChaptersPage() {
             setCourse(courseData)
             setChapters(chaptersData)
             setLocalChapters(chaptersData)
+            localChaptersRef.current = chaptersData
             setHasUnsavedChanges(false)
             // Expand all chapters by default
             setExpandedChapters(new Set(chaptersData.map((ch) => ch.id)))
@@ -282,6 +351,43 @@ export function CourseChaptersPage() {
             await loadData()
         } catch (error: any) {
             console.error('Error publishing lesson:', error)
+            // Error toast is already shown by API client interceptor
+        }
+    }
+
+    const handlePublishChapter = async (chapter: Chapter, isPublished: boolean) => {
+        try {
+            await chaptersApi.updateChapter(chapter.id, { isPublished })
+            toast.success(isPublished ? 'Đã xuất bản chương' : 'Đã ẩn chương')
+            await loadData()
+        } catch (error: any) {
+            console.error('Error publishing chapter:', error)
+            // Error toast is already shown by API client interceptor
+        }
+    }
+
+    const handleRequestTranscript = async (lesson: Lesson) => {
+        if (!courseId || !lesson.videoUrl) {
+            toast.error('Bài học phải có video để tạo transcript')
+            return
+        }
+
+        if (lesson.transcriptStatus === 'processing') {
+            toast.info('Transcript đang được tạo, vui lòng đợi...')
+            return
+        }
+
+        if (lesson.transcriptStatus === 'completed' || (lesson.transcriptUrl && !lesson.transcriptStatus)) {
+            toast.info('Transcript đã có sẵn')
+            return
+        }
+
+        try {
+            await instructorLessonsApi.requestTranscript(courseId, lesson.id)
+            toast.success('Đã yêu cầu tạo transcript. Quá trình xử lý sẽ bắt đầu trong giây lát.')
+            await loadData()
+        } catch (error: any) {
+            console.error('Error requesting transcript:', error)
             // Error toast is already shown by API client interceptor
         }
     }
@@ -531,6 +637,33 @@ export function CourseChaptersPage() {
                         </CardTitle>
                         <p className="text-gray-400">{course.title}</p>
                     </div>
+
+                    {/* Course Statistics and Create Button */}
+                    <div className="flex items-center justify-between mt-4">
+                        {/* Left side - Statistics */}
+                        <div className="flex items-center gap-4">
+                            <Badge variant="outline" className="text-blue-400 border-blue-400/50 px-3 py-1">
+                                {localChapters.length} chương
+                            </Badge>
+                            <Badge variant="outline" className="text-green-400 border-green-400/50 px-3 py-1">
+                                {localChapters.filter(ch => ch.isPublished).length} hiện
+                            </Badge>
+                            <Badge variant="outline" className="text-gray-400 border-gray-400/50 px-3 py-1">
+                                {localChapters.filter(ch => !ch.isPublished).length} ẩn
+                            </Badge>
+                        </div>
+
+                        {/* Right side - Create Chapter Button */}
+                        <Button
+                            onClick={handleCreateChapter}
+                            size="default"
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                            title="Tạo chương mới"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Tạo Chương
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -556,7 +689,7 @@ export function CourseChaptersPage() {
                                     onDrop={(e) => handleChapterDrop(e, chapter.id)}
                                 >
                                     <div className="flex items-center gap-3 p-4 hover:bg-[#252525] transition-colors">
-                                        <span title="Kéo để sắp xếp chapter">
+                                        <span title="Kéo để sắp xếp chương">
                                             <GripVertical className="h-5 w-5 text-gray-500 cursor-move" />
                                         </span>
                                         <button
@@ -570,32 +703,63 @@ export function CourseChaptersPage() {
                                             )}
                                             <span className="text-blue-500 font-semibold text-sm mr-2">#{chapter.chapterOrder}</span>
                                             <span className="text-white font-medium">{chapter.title}</span>
-                                            <Badge variant="outline" className="text-gray-400">
-                                                {chapter.lessonsCount || chapter.lessons?.length || 0} bài học
-                                            </Badge>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-blue-400 border-blue-400/50">
+                                                    {chapter.lessonsCount || chapter.lessons?.length || 0} tổng
+                                                </Badge>
+                                                <Badge variant="outline" className="text-green-400 border-green-400/50">
+                                                    {(chapter.lessons?.filter(l => l.isPublished).length || 0)} hiện
+                                                </Badge>
+                                                <Badge variant="outline" className="text-gray-400">
+                                                    {(chapter.lessons?.filter(l => !l.isPublished).length || 0)} ẩn
+                                                </Badge>
+                                            </div>
                                         </button>
                                         <div className="flex items-center gap-1">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
+                                                onClick={() => handlePublishChapter(chapter, !chapter.isPublished)}
+                                                className={`ml-2 h-6 px-2 text-xs ${
+                                                    chapter.isPublished
+                                                        ? 'text-green-400 hover:text-green-500 hover:bg-green-500/10'
+                                                        : 'text-gray-500 hover:text-gray-400 hover:bg-gray-500/10'
+                                                }`}
+                                                title={chapter.isPublished ? 'Click để ẩn chương' : 'Click để xuất bản chương'}
+                                            >
+                                                {chapter.isPublished ? (
+                                                    <>
+                                                        <Eye className="h-3 w-3 mr-1" />
+                                                        Xuất bản
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <EyeOff className="h-3 w-3 mr-1" />
+                                                        Ẩn
+                                                    </>
+                                                )}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="default"
                                                 onClick={() => handleEditChapter(chapter)}
                                                 className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                                                title="Chỉnh sửa chapter"
+                                                title="Chỉnh sửa chương"
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
-                                                size="sm"
+                                                size="default"
                                                 onClick={() => handleDeleteChapter(chapter)}
                                                 className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                                title="Xóa chapter"
+                                                title="Xóa chương"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
-                                                size="sm"
+                                                size="default"
                                                 onClick={() => handleCreateLesson(chapter.id)}
                                                 className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
                                                 title="Tạo bài học mới"
@@ -663,16 +827,50 @@ export function CourseChaptersPage() {
                                                                 ) : null}
                                                             </div>
                                                             {/* Transcript status */}
-                                                            <div className="flex items-center gap-1 text-xs whitespace-nowrap min-w-[4rem] sm:min-w-[5rem] justify-end">
-                                                                {lesson.transcriptUrl ? (
+                                                            <div className="flex items-center gap-2 text-xs whitespace-nowrap min-w-[4rem] sm:min-w-[5rem] justify-end">
+                                                                {lesson.transcriptStatus === 'completed' || (lesson.transcriptUrl && !lesson.transcriptStatus) ? (
                                                                     <div className="flex items-center gap-1 text-green-400" title="Đã có transcript">
                                                                         <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
                                                                         <span className="hidden sm:inline">Transcript</span>
                                                                     </div>
+                                                                ) : lesson.transcriptStatus === 'processing' ? (
+                                                                    <div className="flex items-center gap-1 text-yellow-400" title="Đang tạo transcript">
+                                                                        <Loader2 className="h-3 w-3 flex-shrink-0 animate-spin" />
+                                                                        <span className="hidden sm:inline">Đang tải...</span>
+                                                                    </div>
+                                                                ) : lesson.transcriptStatus === 'failed' ? (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <div className="flex items-center gap-1 text-red-400" title="Tạo transcript thất bại">
+                                                                            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                                                            <span className="hidden sm:inline">Lỗi</span>
+                                                                        </div>
+                                                                        {lesson.videoUrl && (
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                onClick={() => handleRequestTranscript(lesson)}
+                                                                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                                                                title="Yêu cầu tạo lại transcript"
+                                                                            >
+                                                                                <Sparkles className="h-3 w-3" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
                                                                 ) : lesson.videoUrl ? (
-                                                                    <div className="flex items-center gap-1 text-gray-500" title="Chưa có transcript">
-                                                                        <FileText className="h-3 w-3 flex-shrink-0" />
-                                                                        <span className="hidden sm:inline">Chưa có</span>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <div className="flex items-center gap-1 text-gray-500" title="Chưa có transcript">
+                                                                            <FileText className="h-3 w-3 flex-shrink-0" />
+                                                                            <span className="hidden sm:inline">Chưa có</span>
+                                                                        </div>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={() => handleRequestTranscript(lesson)}
+                                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                                                            title="Yêu cầu tạo transcript"
+                                                                        >
+                                                                            <Sparkles className="h-3 w-3" />
+                                                                        </Button>
                                                                     </div>
                                                                 ) : null}
                                                             </div>
@@ -793,12 +991,12 @@ export function CourseChaptersPage() {
                 <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] max-w-2xl">
                     <DialogHeader>
                         <DialogTitle className="text-white">
-                            {editingChapter ? 'Chỉnh sửa Chapter' : 'Tạo Chapter mới'}
+                            {editingChapter ? 'Chỉnh sửa Chương' : 'Tạo Chương mới'}
                         </DialogTitle>
                         <DialogDescription className="text-gray-400">
                             {editingChapter
-                                ? 'Cập nhật thông tin chapter'
-                                : 'Nhập thông tin để tạo chapter mới'}
+                                ? 'Cập nhật thông tin chương'
+                                : 'Nhập thông tin để tạo chương mới'}
                         </DialogDescription>
                     </DialogHeader>
                     <ChapterForm
@@ -816,8 +1014,8 @@ export function CourseChaptersPage() {
 
             {/* Lesson Dialog */}
             <Dialog open={showLessonDialog} onOpenChange={setShowLessonDialog}>
-                <DialogContent 
-                    className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-4xl w-[95vw]"
+                <DialogContent
+                    className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-5xl w-[98vw]"
                 >
                     <DialogHeader className="px-8 pt-6 pb-4 flex-shrink-0">
                         <DialogTitle className="text-white">
@@ -852,9 +1050,9 @@ export function CourseChaptersPage() {
             <Dialog open={showDeleteChapterDialog} onOpenChange={setShowDeleteChapterDialog}>
                 <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D]">
                     <DialogHeader>
-                        <DialogTitle className="text-white">Xóa Chapter</DialogTitle>
+                        <DialogTitle className="text-white">Xóa Chương</DialogTitle>
                         <DialogDescription className="text-gray-400">
-                            Bạn có chắc chắn muốn xóa chapter "{deletingChapter?.title}"? Tất cả bài học trong chapter này cũng sẽ bị xóa.
+                            Bạn có chắc chắn muốn xóa chương "{deletingChapter?.title}"? Tất cả bài học trong chương này cũng sẽ bị xóa.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
