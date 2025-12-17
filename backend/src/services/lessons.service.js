@@ -8,6 +8,7 @@ import fs from 'fs'
 import transcriptionService from './transcription.service.js'
 import { videosDir, transcriptsDir } from '../config/multer.config.js'
 import slugify from '../utils/slugify.util.js'
+import { getVideoDuration } from '../utils/video.util.js'
 
 class LessonsService {
     _deleteTranscriptFiles(filename) {
@@ -233,6 +234,8 @@ class LessonsService {
 
     /**
      * Create new lesson
+     * Note: videoDuration is NOT accepted from request body.
+     * It is automatically calculated when video is uploaded via uploadVideo() method.
      */
     async createLesson(courseId, data, userId) {
         const {
@@ -244,6 +247,7 @@ class LessonsService {
             isPreview,
             isPublished,
             chapterId,
+            // videoDuration is intentionally excluded - it's set automatically when video is uploaded
         } = data
 
         // Check if course exists and user is instructor
@@ -389,6 +393,8 @@ class LessonsService {
 
     /**
      * Update lesson
+     * Note: videoDuration is NOT accepted from request body.
+     * It is automatically calculated when video is uploaded via uploadVideo() method.
      */
     async updateLesson(courseId, lessonId, data) {
         const {
@@ -399,6 +405,7 @@ class LessonsService {
             lessonOrder,
             isPreview,
             isPublished,
+            // videoDuration is intentionally excluded - it's set automatically when video is uploaded
         } = data
 
         // Check if lesson exists
@@ -680,12 +687,27 @@ class LessonsService {
         // Save new video URL
         const videoUrl = `/uploads/videos/${file.filename}`
 
+        // Get video duration
+        let videoDuration = null
+        try {
+            videoDuration = await getVideoDuration(file.path)
+            if (videoDuration) {
+                logger.info(`Video duration extracted: ${videoDuration} seconds for lesson ${lessonId}`)
+            } else {
+                logger.warn(`Could not extract video duration for lesson ${lessonId}`)
+            }
+        } catch (error) {
+            logger.error(`Error extracting video duration: ${error.message}`, { error: error.stack })
+            // Continue without duration - don't fail the upload
+        }
+
         const shouldTranscribe = config.WHISPER_ENABLED !== false
 
         const updatedLesson = await prisma.lesson.update({
             where: { id: lessonId },
             data: {
                 videoUrl,
+                videoDuration,
                 transcriptUrl: null,
                 transcriptJsonUrl: null,
                 transcriptStatus: shouldTranscribe

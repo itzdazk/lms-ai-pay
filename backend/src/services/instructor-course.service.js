@@ -14,6 +14,7 @@ import path from 'path'
 import fs from 'fs'
 import sharp from 'sharp'
 import { thumbnailsDir, videoPreviewsDir } from '../config/multer.config.js'
+import { getVideoDuration } from '../utils/video.util.js'
 
 class InstructorCourseService {
     /**
@@ -1005,9 +1006,23 @@ class InstructorCourseService {
 
         const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
 
+        // Get video duration
+        let videoPreviewDuration = null
+        try {
+            videoPreviewDuration = await getVideoDuration(file.path)
+            if (videoPreviewDuration) {
+                logger.info(`Video preview duration extracted: ${videoPreviewDuration} seconds for course ${courseId}`)
+            } else {
+                logger.warn(`Could not extract video preview duration for course ${courseId}`)
+            }
+        } catch (error) {
+            logger.error(`Error extracting video preview duration: ${error.message}`, { error: error.stack })
+            // Continue without duration - don't fail the upload
+        }
+
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
-            data: { videoPreviewUrl, videoPreviewDuration: null },
+            data: { videoPreviewUrl, videoPreviewDuration },
             select: {
                 id: true,
                 title: true,

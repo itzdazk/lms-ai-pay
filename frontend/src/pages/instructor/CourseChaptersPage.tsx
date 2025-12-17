@@ -540,20 +540,15 @@ export function CourseChaptersPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {chapters.length === 0 ? (
-                            <div className="text-center py-12">
+                        {/* Display empty state if no chapters */}
+                        {chapters.length === 0 && (
+                            <div className="text-center py-8">
                                 <p className="text-gray-400 mb-4">Chưa có chapter nào</p>
-                                <Button
-                                    onClick={handleCreateChapter}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                    title="Tạo chapter đầu tiên"
-                                >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Tạo Chapter đầu tiên
-                                </Button>
                             </div>
-                        ) : (
-                            localChapters.map((chapter) => (
+                        )}
+
+                        {/* Display chapters */}
+                        {localChapters.map((chapter) => (
                                 <div
                                     key={chapter.id}
                                     className={`bg-[#1F1F1F] border rounded-lg overflow-hidden transition-colors ${
@@ -726,9 +721,21 @@ export function CourseChaptersPage() {
                                     )}
                                 </div>
                             ))
-                        )}
 
-                        {/* Save/Cancel Buttons */}
+                        {/* Create Chapter Button - Always visible */}
+                        <div className="flex justify-center pt-4 pb-2">
+                            <Button
+                                onClick={handleCreateChapter}
+                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                                title="Tạo chapter mới"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Tạo Chapter
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Save/Cancel Buttons */}
                         {hasUnsavedChanges && (
                             <div className="sticky bottom-0 bg-[#1A1A1A]/95 backdrop-blur-sm border-t border-[#2D2D2D] mt-6 -mb-6 -mx-6 px-6 py-4">
                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
