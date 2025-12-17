@@ -8,6 +8,7 @@ export { dashboardApi } from './dashboard'
 export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
 export { enrollmentsApi } from './enrollments'
+export { ordersApi } from './orders'
 export type {
     EnrollmentWithCourse,
     EnrollmentCheckResponse,

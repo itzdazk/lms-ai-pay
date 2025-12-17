@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { CheckCircle, Loader2, ShoppingCart, BookOpen } from 'lucide-react'
 import { enrollmentsApi } from '../../lib/api/enrollments'
 import type { PublicCourse } from '../../lib/api/types'
+import { getCoursePrice } from '../../lib/courseUtils'
 
 interface EnrollmentButtonProps {
     course: PublicCourse
@@ -43,6 +44,20 @@ export function EnrollmentButton({
     }
 
     const handleEnroll = async () => {
+        const priceInfo = getCoursePrice({
+            price: course.price,
+            discountPrice: course.discountPrice,
+            originalPrice: course.originalPrice ?? course.price,
+        })
+
+        // Phase 1: nếu khóa học có phí, chuyển sang trang checkout để test flow "Mua ngay -> checkout"
+        if (!priceInfo.isFree) {
+            toast.info('Đang chuyển hướng tới trang thanh toán...')
+            navigate(`/checkout/${course.id}`)
+            return
+        }
+
+        // Free course: dùng API enroll như cũ
         try {
             setIsEnrolling(true)
 
@@ -50,24 +65,11 @@ export function EnrollmentButton({
                 courseId: course.id,
             })
 
-            // Free course: response.data is the enrollment object directly
-            // Paid course: response.data is the order object (may have redirectUrl)
-
-            // Check if it's a paid course (has redirectUrl in order)
-            if (response.data.redirectUrl) {
-                // Paid course - redirect to payment
-                toast.info('Đang chuyển hướng đến trang thanh toán...')
-                window.location.href = response.data.redirectUrl
-                return
-            }
-
-            // Check if it's an enrollment object (has id, courseId, userId)
             if (
                 response.data.id &&
                 response.data.courseId &&
                 response.data.userId
             ) {
-                // Free course - enrolled successfully
                 toast.success('Đăng ký khóa học thành công!')
                 setIsEnrolled(true)
 
@@ -75,12 +77,10 @@ export function EnrollmentButton({
                     onEnrollSuccess(response.data)
                 }
 
-                // Navigate to course learning page
                 setTimeout(() => {
                     navigate(`/learn/${course.id}`)
                 }, 1000)
             } else {
-                // Unexpected response structure
                 console.error('Unexpected response structure:', response.data)
                 toast.error('Phản hồi từ server không đúng định dạng.')
             }
@@ -121,10 +121,14 @@ export function EnrollmentButton({
         )
     }
 
-    const isFreeCourse = (course: PublicCourse) =>
-        Number(course.discountPrice ?? course.price) === 0
+    const priceInfo = getCoursePrice({
+        price: course.price,
+        discountPrice: course.discountPrice,
+        originalPrice: course.originalPrice ?? course.price,
+    })
+    const isFreeCourse = priceInfo.isFree
 
-    if (isFreeCourse(course)) {
+    if (isFreeCourse) {
         return (
             <Button
                 onClick={handleEnroll}
@@ -162,11 +166,7 @@ export function EnrollmentButton({
             ) : (
                 <>
                     <ShoppingCart className='mr-2 h-4 w-4' />
-                    Mua ngay -{' '}
-                    {new Intl.NumberFormat('vi-VN', {
-                        style: 'currency',
-                        currency: 'VND',
-                    }).format(course.price)}
+                    Mua ngay - {priceInfo.displayPrice}
                 </>
             )}
         </Button>
