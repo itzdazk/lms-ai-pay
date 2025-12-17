@@ -559,7 +559,7 @@ export function LessonForm({
                                     <Label className="text-white flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-gray-400" />
                                         <span>Transcript (Phụ đề)</span>
-                                        {lesson?.transcriptJsonUrl && (
+                                        {lesson?.transcriptUrl && (
                                             <>
                                                 <span className="text-xs text-green-400 font-medium">• Đã có</span>
                                                 <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -575,7 +575,7 @@ export function LessonForm({
                                 </div>
 
                                 {/* Transcript status */}
-                                {lesson?.transcriptJsonUrl ? (
+                                {lesson?.transcriptUrl ? (
                                     <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                                         <div className="flex items-start gap-2">
                                             <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />

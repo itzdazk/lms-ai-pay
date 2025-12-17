@@ -664,7 +664,7 @@ export function CourseChaptersPage() {
                                                             </div>
                                                             {/* Transcript status */}
                                                             <div className="flex items-center gap-1 text-xs whitespace-nowrap min-w-[4rem] sm:min-w-[5rem] justify-end">
-                                                                {lesson.transcriptJsonUrl ? (
+                                                                {lesson.transcriptUrl ? (
                                                                     <div className="flex items-center gap-1 text-green-400" title="Đã có transcript">
                                                                         <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
                                                                         <span className="hidden sm:inline">Transcript</span>
