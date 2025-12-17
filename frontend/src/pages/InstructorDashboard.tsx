@@ -104,10 +104,17 @@ export function InstructorDashboard() {
   useEffect(() => {
     if (shouldRestoreScrollRef.current && !loading && courses.length > 0) {
       const restoreScroll = () => {
-        const scrollContainer = document.querySelector('main') || window;
-        if (scrollContainer === window) {
+        // Try multiple scroll containers
+        const scrollContainer = 
+          document.querySelector('main') || 
+          document.documentElement || 
+          document.body || 
+          window;
+        
+        if (scrollContainer === window || scrollContainer === document.documentElement || scrollContainer === document.body) {
           window.scrollTo({
             top: scrollPositionRef.current,
+            left: 0,
             behavior: 'auto',
           });
         } else {
@@ -115,15 +122,27 @@ export function InstructorDashboard() {
         }
       };
       
-      // Try multiple times to ensure it works
-      restoreScroll();
-      setTimeout(restoreScroll, 50);
-      setTimeout(restoreScroll, 150);
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
         restoreScroll();
-        shouldRestoreScrollRef.current = false;
-        sessionStorage.removeItem('instructorDashboardScroll');
-      }, 300);
+        
+        // Try multiple times with increasing delays to ensure it works
+        setTimeout(() => {
+          requestAnimationFrame(restoreScroll);
+        }, 100);
+        
+        setTimeout(() => {
+          requestAnimationFrame(restoreScroll);
+        }, 300);
+        
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            restoreScroll();
+            shouldRestoreScrollRef.current = false;
+            sessionStorage.removeItem('instructorDashboardScroll');
+          });
+        }, 500);
+      });
     }
   }, [loading, courses.length]);
 

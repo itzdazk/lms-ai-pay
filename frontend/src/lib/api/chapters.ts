@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { ApiResponse, Chapter } from './types'
+import type { ApiResponse, Chapter, CreateChapterRequest, UpdateChapterRequest } from './types'
 
 export const chaptersApi = {
     /**
@@ -36,6 +36,56 @@ export const chaptersApi = {
             `/chapters/${chapterId}${params.toString() ? `?${params.toString()}` : ''}`
         )
         return response.data.data
+    },
+
+    /**
+     * Create a new chapter (Instructor only)
+     */
+    async createChapter(
+        courseId: number,
+        data: CreateChapterRequest
+    ): Promise<Chapter> {
+        const response = await apiClient.post<ApiResponse<Chapter>>(
+            `/instructor/courses/${courseId}/chapters`,
+            data
+        )
+        return response.data.data
+    },
+
+    /**
+     * Update a chapter (Instructor only)
+     */
+    async updateChapter(
+        chapterId: number,
+        data: UpdateChapterRequest
+    ): Promise<Chapter> {
+        const response = await apiClient.put<ApiResponse<Chapter>>(
+            `/instructor/chapters/${chapterId}`,
+            data
+        )
+        return response.data.data
+    },
+
+    /**
+     * Delete a chapter (Instructor only)
+     */
+    async deleteChapter(chapterId: number): Promise<void> {
+        await apiClient.delete<ApiResponse<void>>(
+            `/instructor/chapters/${chapterId}`
+        )
+    },
+
+    /**
+     * Reorder chapters (Instructor only)
+     */
+    async reorderChapters(
+        courseId: number,
+        chapterIds: number[]
+    ): Promise<void> {
+        await apiClient.put<ApiResponse<void>>(
+            `/instructor/courses/${courseId}/chapters/reorder`,
+            { chapterIds }
+        )
     },
 }
 

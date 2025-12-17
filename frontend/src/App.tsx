@@ -35,8 +35,10 @@ import { SettingsPage } from './pages/SettingsPage';
 
 // Instructor Pages
 import { InstructorDashboard } from './pages/InstructorDashboard';
+import { CourseLayout } from './pages/instructor/CourseLayout';
 import { CourseCreatePage } from './pages/instructor/CourseCreatePage';
 import { CourseEditPage } from './pages/instructor/CourseEditPage';
+import { CourseChaptersPage } from './pages/instructor/CourseChaptersPage';
 
 // Admin Pages
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -183,26 +185,30 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
+                  {/* Course Management Routes with Shared Layout */}
                   <Route
-                    path="/instructor/courses/create"
+                    path="/instructor/courses"
                     element={
                       <ProtectedRoute>
                         <RoleRoute allowedRoles={['INSTRUCTOR', 'ADMIN']}>
-                          <CourseCreatePage />
+                          <CourseLayout />
                         </RoleRoute>
                       </ProtectedRoute>
                     }
-                  />
-                  <Route
-                    path="/instructor/courses/:id/edit"
-                    element={
-                      <ProtectedRoute>
-                        <RoleRoute allowedRoles={['INSTRUCTOR', 'ADMIN']}>
-                          <CourseEditPage />
-                        </RoleRoute>
-                      </ProtectedRoute>
-                    }
-                  />
+                  >
+                    <Route
+                      path="create"
+                      element={<CourseCreatePage />}
+                    />
+                    <Route
+                      path=":id/edit"
+                      element={<CourseEditPage />}
+                    />
+                    <Route
+                      path=":id/chapters"
+                      element={<CourseChaptersPage />}
+                    />
+                  </Route>
               </Routes>
               </PublicLayout>
             }

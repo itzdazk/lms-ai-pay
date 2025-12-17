@@ -302,6 +302,7 @@ export interface Lesson {
 
 export interface CreateLessonRequest {
     courseId: number
+    chapterId: number
     title: string
     slug?: string
     description?: string

@@ -596,10 +596,14 @@ export function CoursesPage() {
 
   const handleEditCourse = (course: Course) => {
     // Save scroll position before navigating
-    const scrollContainer = document.querySelector('main') || window;
-    const scrollPosition = scrollContainer === window 
-      ? window.scrollY 
-      : (scrollContainer as HTMLElement).scrollTop;
+    // Try multiple ways to get scroll position
+    const scrollPosition = 
+      window.scrollY || 
+      window.pageYOffset || 
+      document.documentElement.scrollTop || 
+      document.body.scrollTop || 
+      0;
+    
     sessionStorage.setItem('instructorDashboardScroll', scrollPosition.toString());
     
     // Navigate to edit page
@@ -984,10 +988,14 @@ export function CoursesPage() {
               size="lg"
               onClick={() => {
                 // Save scroll position before navigating
-                const scrollContainer = document.querySelector('main') || window;
-                const scrollPosition = scrollContainer === window 
-                  ? window.scrollY 
-                  : (scrollContainer as HTMLElement).scrollTop;
+                // Try multiple ways to get scroll position
+                const scrollPosition = 
+                  window.scrollY || 
+                  window.pageYOffset || 
+                  document.documentElement.scrollTop || 
+                  document.body.scrollTop || 
+                  0;
+                
                 sessionStorage.setItem('instructorDashboardScroll', scrollPosition.toString());
                 navigate('/instructor/courses/create');
               }}

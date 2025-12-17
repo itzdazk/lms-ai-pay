@@ -108,8 +108,12 @@ export function CourseCreatePage() {
         }
       }
       
-      toast.success('Tạo khóa học thành công!');
-      navigate('/instructor/dashboard');
+      toast.success('Tạo khóa học thành công! Đang chuyển sang tạo chương và bài học...');
+
+      // Navigate directly to chapters page after a short delay
+      setTimeout(() => {
+        navigate(`/instructor/courses/${newCourse.id}/chapters`);
+      }, 1500);
     } catch (error: any) {
       console.error('Error creating course:', error);
       
@@ -163,8 +167,7 @@ export function CourseCreatePage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+    <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-white text-2xl">Tạo khóa học mới</CardTitle>
@@ -174,7 +177,7 @@ export function CourseCreatePage() {
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Quay lại
+              Dashboard
             </DarkOutlineButton>
           </div>
         </CardHeader>
@@ -187,9 +190,9 @@ export function CourseCreatePage() {
             loading={submitting}
             onTagCreated={reloadTags}
           />
+
         </CardContent>
       </Card>
-    </div>
   );
 }
 
