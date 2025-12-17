@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, Lock, PlayCircle, Clock, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle, Lock, PlayCircle, Clock, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
 import {
   Accordion,
@@ -32,21 +31,18 @@ export function LessonList({
   chapters = [],
   selectedLessonId,
   onLessonSelect,
-  enrollmentProgress = 0,
+  // enrollmentProgress intentionally unused (progress bar removed here)
   completedLessonIds = [],
   isEnrolled = false,
-  courseTitle,
-  completedLessons = 0,
-  totalLessons = 0,
-  courseId,
-  courseSlug,
+  // unused props retained for compatibility (can be removed if not needed elsewhere)
+  courseTitle: _courseTitle,
+  completedLessons: _completedLessons = 0,
+  totalLessons: _totalLessons = 0,
+  courseId: _courseId,
+  courseSlug: _courseSlug,
 }: LessonListProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  // Ensure enrollmentProgress is a number
-  const progress = typeof enrollmentProgress === 'number' 
-    ? enrollmentProgress 
-    : parseFloat(String(enrollmentProgress)) || 0;
   // Format duration from seconds to readable format
   const formatDuration = (seconds?: number): string => {
     if (!seconds) return '0 phút';
@@ -58,16 +54,24 @@ export function LessonList({
     return `${minutes} phút`;
   };
 
-  // Flatten all lessons from chapters for navigation logic
+  // Only count/display published/visible chapters & lessons
+  const visibleChapters = chapters.filter(
+    (chapter) =>
+      chapter.isPublished !== false &&
+      (chapter.lessons?.some((lesson) => lesson.isPublished !== false) ?? false)
+  );
+  const visibleLessonsFlat = lessons.filter((lesson) => lesson.isPublished !== false);
+
+  // Flatten only visible lessons from visible chapters (fallback to visibleLessonsFlat)
   const allLessons: Lesson[] = [];
-  if (chapters.length > 0) {
-    chapters.forEach((chapter) => {
+  if (visibleChapters.length > 0) {
+    visibleChapters.forEach((chapter) => {
       if (chapter.lessons) {
-        allLessons.push(...chapter.lessons);
+        allLessons.push(...chapter.lessons.filter((lesson) => lesson.isPublished !== false));
       }
     });
   } else {
-    allLessons.push(...lessons);
+    allLessons.push(...visibleLessonsFlat);
   }
 
   // Check if lesson is locked
@@ -93,99 +97,22 @@ export function LessonList({
   };
 
   // Group lessons by sections (if needed in future)
-  const sortedLessons = [...lessons].sort((a, b) => a.lessonOrder - b.lessonOrder);
-  
+  const sortedLessons = [...visibleLessonsFlat].sort((a, b) => a.lessonOrder - b.lessonOrder);
+
   // Calculate total lessons count
-  const totalLessonsCount = chapters.length > 0
-    ? chapters.reduce((acc, chapter) => acc + (chapter.lessonsCount || chapter.lessons?.length || 0), 0)
-    : lessons.length;
-
-  // Helper functions to save/load expanded chapters state
-  const getExpandedChaptersKey = useCallback((): string | null => {
-    if (courseId) {
-      return `lesson_page_course_${courseId}_expanded_chapters`;
-    }
-    if (courseSlug) {
-      return `lesson_page_course_${courseSlug}_expanded_chapters`;
-    }
-    return null;
-  }, [courseId, courseSlug]);
-
-  const loadExpandedChaptersFromStorage = useCallback((): string[] => {
-    const key = getExpandedChaptersKey();
-    if (!key) return [];
-    
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const chapterValues = JSON.parse(saved) as string[];
-        return chapterValues;
-      }
-    } catch (error) {
-      console.error('Error loading expanded chapters from storage:', error);
-    }
-    return [];
-  }, [getExpandedChaptersKey]);
-
-  const saveExpandedChaptersToStorage = useCallback((expandedChapters: string[]) => {
-    const key = getExpandedChaptersKey();
-    if (!key) return;
-    
-    try {
-      localStorage.setItem(key, JSON.stringify(expandedChapters));
-    } catch (error) {
-      console.error('Error saving expanded chapters to storage:', error);
-    }
-  }, [getExpandedChaptersKey]);
+  const totalLessonsCount = visibleChapters.length > 0
+    ? visibleChapters.reduce(
+        (acc, chapter) =>
+          acc + (chapter.lessons?.filter((lesson) => lesson.isPublished !== false).length || 0),
+        0
+      )
+    : visibleLessonsFlat.length;
 
   // Find chapter containing selected lesson and set default open chapters
   const [openChapters, setOpenChapters] = useState<string[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load saved state when chapters or courseId/courseSlug changes
-  useEffect(() => {
-    if (chapters.length > 0 && !isInitialized) {
-      const saved = loadExpandedChaptersFromStorage();
-      // Only include chapter values that actually exist
-      const validSaved = saved.filter(savedValue => {
-        const chapterId = savedValue.replace('chapter-', '');
-        return chapters.some(ch => ch.id.toString() === chapterId);
-      });
-      
-      // Always set openChapters (empty array if nothing valid)
-      setOpenChapters(validSaved);
-      setIsInitialized(true);
-    }
-  }, [chapters, isInitialized, loadExpandedChaptersFromStorage]);
-
-  // Auto-open chapter containing selected lesson (only if not already loaded from storage)
-  useEffect(() => {
-    if (chapters.length > 0 && selectedLessonId && isInitialized) {
-      // Find chapter containing the selected lesson
-      const chapterWithSelectedLesson = chapters.find((chapter) =>
-        chapter.lessons?.some((lesson) => lesson.id === selectedLessonId)
-      );
-
-      if (chapterWithSelectedLesson) {
-        const chapterValue = `chapter-${chapterWithSelectedLesson.id}`;
-        // Set the chapter as open if not already in the array
-        setOpenChapters((prev) => {
-          if (!prev.includes(chapterValue)) {
-            return [...prev, chapterValue];
-          }
-          return prev;
-        });
-      }
-    }
-  }, [selectedLessonId, chapters, isInitialized]);
-
-  // Save to localStorage whenever openChapters changes (but not during initialization)
-  useEffect(() => {
-    if (isInitialized && openChapters.length >= 0) {
-      saveExpandedChaptersToStorage(openChapters);
-    }
-  }, [openChapters, isInitialized, saveExpandedChaptersToStorage]);
-
+  
+   
   return (
     <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} h-full flex flex-col rounded-none pb-8`}>
       <CardHeader className="flex-shrink-0 rounded-none">
@@ -195,22 +122,21 @@ export function LessonList({
             variant="outline"
             className={`${isDark ? 'border-[#2D2D2D] text-gray-300' : 'border-gray-300 text-gray-700'}`}
           >
-            {chapters.length > 0 ? `${chapters.length} chương • ${totalLessonsCount} bài` : `${totalLessonsCount} bài`}
+            {visibleChapters.length > 0 ? `${visibleChapters.length} chương • ${totalLessonsCount} bài` : `${totalLessonsCount} bài`}
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 px-0 overflow-y-auto custom-scrollbar min-h-0">
         <div>
-          {chapters.length > 0 ? (
+          {visibleChapters.length > 0 ? (
             <Accordion 
               type="multiple" 
               className=""
               value={openChapters}
               onValueChange={setOpenChapters}
             >
-              {chapters.map((chapter) => {
-                const chapterLessons = chapter.lessons || [];
-                if (chapterLessons.length === 0) return null;
+              {visibleChapters.map((chapter) => {
+                const chapterLessons = (chapter.lessons || []).filter((lesson) => lesson.isPublished !== false);
                 const isCurrentChapter = selectedLessonId
                   ? chapterLessons.some((lesson) => lesson.id === selectedLessonId)
                   : false;

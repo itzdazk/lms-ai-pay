@@ -42,6 +42,21 @@ export function CourseChaptersPage() {
     const [draggedChapterId, setDraggedChapterId] = useState<number | null>(null)
     const [draggedLessonId, setDraggedLessonId] = useState<number | null>(null)
     const [draggedLessonChapterId, setDraggedLessonChapterId] = useState<number | null>(null)
+    const [dragOverChapterId, setDragOverChapterId] = useState<number | null>(null)
+    const [dragOverLessonId, setDragOverLessonId] = useState<number | null>(null)
+    const [dragOverLessonChapterId, setDragOverLessonChapterId] = useState<number | null>(null)
+    const [lessonScrollHint, setLessonScrollHint] = useState<{ chapterId: number | null; top: boolean; bottom: boolean }>({ chapterId: null, top: false, bottom: false })
+    const lessonContainerRefs = useRef<Record<number, HTMLDivElement | null>>({})
+
+    const clearDragStates = () => {
+        setDraggedChapterId(null)
+        setDragOverChapterId(null)
+        setDraggedLessonId(null)
+        setDraggedLessonChapterId(null)
+        setDragOverLessonId(null)
+        setDragOverLessonChapterId(null)
+        setLessonScrollHint({ chapterId: null, top: false, bottom: false })
+    }
 
     // Local state for drag and drop changes
     const [localChapters, setLocalChapters] = useState<Chapter[]>([])
@@ -442,12 +457,20 @@ export function CourseChaptersPage() {
     // Drag and drop handlers
     const handleChapterDragStart = (e: React.DragEvent, chapterId: number) => {
         setDraggedChapterId(chapterId)
+        setDragOverChapterId(null)
         e.dataTransfer.effectAllowed = 'move'
     }
 
-    const handleChapterDragOver = (e: React.DragEvent) => {
+    const handleChapterDragOver = (e: React.DragEvent, targetChapterId: number) => {
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
+        if (dragOverChapterId !== targetChapterId) {
+            setDragOverChapterId(targetChapterId)
+        }
+    }
+
+    const handleChapterDragLeave = () => {
+        setDragOverChapterId(null)
     }
 
     const handleChapterDrop = (e: React.DragEvent, targetChapterId: number) => {
@@ -473,17 +496,79 @@ export function CourseChaptersPage() {
         setLocalChapters(updatedChapters)
         setHasUnsavedChanges(true)
         setDraggedChapterId(null)
+        setDragOverChapterId(null)
     }
+    const handleChapterDragEnd = () => {
+        clearDragStates()
+    }
+
+    // Allow scrolling the page with mouse wheel while dragging a chapter
+    useEffect(() => {
+        if (!draggedChapterId) return
+
+        const handler = (we: WheelEvent) => {
+            window.scrollBy({ top: we.deltaY, behavior: 'auto' })
+            we.preventDefault()
+        }
+
+        window.addEventListener('wheel', handler, { passive: false, capture: true })
+        document.addEventListener('wheel', handler, { passive: false, capture: true })
+
+        return () => {
+            window.removeEventListener('wheel', handler, true)
+            document.removeEventListener('wheel', handler, true)
+        }
+    }, [draggedChapterId])
 
     const handleLessonDragStart = (e: React.DragEvent, lessonId: number, chapterId: number) => {
         setDraggedLessonId(lessonId)
         setDraggedLessonChapterId(chapterId)
+        setDragOverLessonId(null)
+        setDragOverLessonChapterId(null)
         e.dataTransfer.effectAllowed = 'move'
     }
 
-    const handleLessonDragOver = (e: React.DragEvent) => {
+    const maybeAutoScrollChapter = (targetChapterId: number, clientY: number) => {
+        const container = lessonContainerRefs.current[targetChapterId]
+        if (!container) return
+
+        const rect = container.getBoundingClientRect()
+        const threshold = 60
+        const scrollSpeed = 18
+
+        const distTop = clientY - rect.top
+        const distBottom = rect.bottom - clientY
+
+        if (distTop < threshold) {
+            container.scrollTop = Math.max(0, container.scrollTop - scrollSpeed)
+        } else if (distBottom < threshold) {
+            container.scrollTop = Math.min(container.scrollHeight, container.scrollTop + scrollSpeed)
+        }
+
+        setLessonScrollHint({
+            chapterId: targetChapterId,
+            top: distTop < threshold,
+            bottom: distBottom < threshold,
+        })
+    }
+
+    const handleLessonDragOver = (e: React.DragEvent, targetLessonId: number, targetChapterId: number) => {
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
+        maybeAutoScrollChapter(targetChapterId, e.clientY)
+        if (dragOverLessonId !== targetLessonId || dragOverLessonChapterId !== targetChapterId) {
+            setDragOverLessonId(targetLessonId)
+            setDragOverLessonChapterId(targetChapterId)
+        }
+    }
+
+    const handleLessonDragLeave = () => {
+        setDragOverLessonId(null)
+        setDragOverLessonChapterId(null)
+    }
+
+    const handleLessonDragEnd = () => {
+        clearDragStates()
     }
 
     // Save drag and drop changes to backend
@@ -644,6 +729,8 @@ export function CourseChaptersPage() {
 
             setLocalChapters(updatedChapters)
             setHasUnsavedChanges(true)
+            setDragOverLessonId(null)
+            setDragOverLessonChapterId(null)
         } else {
             // Moving lesson between chapters - not implemented yet
             toast.info('Chức năng di chuyển bài học giữa các chapter chưa được hỗ trợ')
@@ -651,6 +738,8 @@ export function CourseChaptersPage() {
 
         setDraggedLessonId(null)
         setDraggedLessonChapterId(null)
+        setDragOverLessonId(null)
+        setDragOverLessonChapterId(null)
     }
 
     if (loading) {
@@ -680,6 +769,16 @@ export function CourseChaptersPage() {
         return courseAcc + chapterSeconds
     }, 0)
 
+    const totalLessons = localChapters.reduce(
+        (acc, ch) => acc + (ch.lessons?.length || 0),
+        0
+    )
+    const totalLessonsPublished = localChapters.reduce(
+        (acc, ch) => acc + (ch.lessons?.filter((l) => l.isPublished).length || 0),
+        0
+    )
+    const totalLessonsHidden = totalLessons - totalLessonsPublished
+
     return (
         <>
         <Card className="bg-[#1A1A1A] border-[#2D2D2D] py-4">
@@ -689,23 +788,46 @@ export function CourseChaptersPage() {
                             Quản lý chương và bài học
                         </CardTitle>
                         <p className="text-gray-400">{course.title}</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Tổng thời lượng khóa học: <span className="text-blue-400 font-medium">{formatDuration(totalCourseDurationSeconds)}</span>
-                        </p>
                     </div>
 
                     {/* Course Statistics and Create Button */}
                     <div className="flex items-center justify-between mt-4">
                         {/* Left side - Statistics */}
-                        <div className="flex items-center gap-4">
-                            <Badge variant="outline" className="text-blue-400 border-blue-400/50 px-3 py-1">
-                                {localChapters.length} chương
-                            </Badge>
-                            <Badge variant="outline" className="text-green-400 border-green-400/50 px-3 py-1">
-                                {localChapters.filter(ch => ch.isPublished).length} hiện
-                            </Badge>
-                            <Badge variant="outline" className="text-gray-400 border-gray-400/50 px-3 py-1">
-                                {localChapters.filter(ch => !ch.isPublished).length} ẩn
+                        <div className="flex items-center gap-3 flex-wrap">
+                            {/* Chương */}
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-blue-400 border-blue-400/50 px-3 py-1">
+                                    {localChapters.length} chương
+                                </Badge>
+                                <Badge variant="outline" className="text-green-400 border-green-400/50 px-3 py-1">
+                                    {localChapters.filter(ch => ch.isPublished).length} hiện
+                                </Badge>
+                                <Badge variant="outline" className="text-gray-400 border-gray-400/50 px-3 py-1">
+                                    {localChapters.filter(ch => !ch.isPublished).length} ẩn
+                                </Badge>
+                            </div>
+
+                            <span className="text-gray-500">|</span>
+
+                            {/* Bài */}
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-blue-300 border-blue-300/50 px-3 py-1">
+                                    {totalLessons} bài
+                                </Badge>
+                                <Badge variant="outline" className="text-green-400 border-green-400/50 px-3 py-1">
+                                    {totalLessonsPublished} hiện
+                                </Badge>
+                                <Badge variant="outline" className="text-gray-400 border-gray-400/50 px-3 py-1">
+                                    {totalLessonsHidden} ẩn
+                                </Badge>
+                            </div>
+
+                            <span className="text-gray-500">|</span>
+
+                            {/* Thời lượng */}
+                            <Badge variant="outline" className="text-blue-300 border-blue-300/50 px-3 py-1 flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(totalCourseDurationSeconds)}
                             </Badge>
                         </div>
 
@@ -722,7 +844,10 @@ export function CourseChaptersPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4 divide-y divide-[#2D2D2D]/60">
+                    <div
+                        className="space-y-4 divide-y divide-[#2D2D2D]/60"
+                        onPointerUp={clearDragStates}
+                    >
                         {/* Display empty state if no chapters */}
                         {chapters.length === 0 && (
                             <div className="text-center py-8">
@@ -737,15 +862,21 @@ export function CourseChaptersPage() {
                             return (
                                 <div
                                     key={chapter.id}
-                                    className={`bg-[#121212] border rounded-lg overflow-hidden transition-colors shadow-sm mb-4 ${
-                                        hasChapterOrderChanged(chapter.id)
+                                    className={`bg-[#121212] border rounded-lg overflow-hidden transition-all duration-150 shadow-sm mb-4 ${
+                                        draggedChapterId === chapter.id
+                                            ? 'border-blue-500 bg-blue-500/10 shadow-lg scale-[1.01]'
+                                            : dragOverChapterId === chapter.id
+                                            ? 'border-blue-500 border-dashed bg-blue-500/5'
+                                            : hasChapterOrderChanged(chapter.id)
                                             ? 'border-green-500 bg-green-500/5'
                                             : 'border-[#2D2D2D] hover:border-blue-500/40'
                                     }`}
                                     draggable
                                     onDragStart={(e) => handleChapterDragStart(e, chapter.id)}
-                                    onDragOver={handleChapterDragOver}
+                                    onDragOver={(e) => handleChapterDragOver(e, chapter.id)}
+                                    onDragLeave={handleChapterDragLeave}
                                     onDrop={(e) => handleChapterDrop(e, chapter.id)}
+                                    onDragEnd={handleChapterDragEnd}
                                 >
                                     <div className="flex items-center gap-3 p-4 bg-[#333333] hover:bg-[#333333] transition-colors">
                                         <span title="Kéo để sắp xếp chương">
@@ -772,13 +903,14 @@ export function CourseChaptersPage() {
                                                 <Badge variant="outline" className="text-gray-400">
                                                     {(chapter.lessons?.filter(l => !l.isPublished).length || 0)} ẩn
                                                 </Badge>
-                                                <Badge variant="outline" className="text-xs text-blue-300 border-blue-300/50 flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {formatDuration(chapterDurationSeconds)}
-                                                </Badge>
+                                                
                                             </div>
                                         </button>
                                         <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="text-xs text-blue-300 border-blue-300/50 flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" />
+                                                    {formatDuration(chapterDurationSeconds)}
+                                                </Badge>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -832,8 +964,28 @@ export function CourseChaptersPage() {
                                         </div>
                                     </div>
 
-                                    {expandedChapters.has(chapter.id) && chapter.lessons && (
-                                        <div className="border-t border-[#2D2D2D] p-4 space-y-2">
+                                        {expandedChapters.has(chapter.id) && chapter.lessons && (
+                                            <div
+                                                className="relative border-t border-[#2D2D2D] p-4 space-y-2 max-h-[520px] overflow-y-auto custom-scrollbar"
+                                                ref={(el) => {
+                                                    lessonContainerRefs.current[chapter.id] = el
+                                                }}
+                                                onPointerUp={clearDragStates}
+                                            >
+                                                {(draggedLessonChapterId === chapter.id || draggedLessonId) && lessonScrollHint.chapterId === chapter.id && (
+                                                    <>
+                                                        {lessonScrollHint.top && (
+                                                            <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-blue-500/15 to-transparent flex items-start justify-center z-10">
+                                                                <span className="text-[11px] text-blue-300 mt-1">Kéo gần mép để cuộn lên</span>
+                                                            </div>
+                                                        )}
+                                                        {lessonScrollHint.bottom && (
+                                                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-blue-500/15 to-transparent flex items-end justify-center z-10">
+                                                                <span className="text-[11px] text-blue-300 mb-1">Kéo gần mép để cuộn xuống</span>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
                                             {chapter.lessons.length === 0 ? (
                                                 <div className="text-center py-4">
                                                     <p className="text-gray-500 text-sm">Chưa có bài học nào</p>
@@ -844,17 +996,21 @@ export function CourseChaptersPage() {
                                                     return chapter.lessons.map((lesson) => (
                                                         <div
                                                             key={lesson.id}
-                                                            className={`flex items-center gap-3 p-3 bg-[#1A1A1A] border rounded-lg transition-colors ${
+                                                            className={`flex items-center gap-3 p-3 bg-[#1A1A1A] border rounded-lg transition-all duration-150 ${
                                                                 draggedLessonId === lesson.id
                                                                     ? 'border-blue-500 bg-blue-500/10 shadow-lg'
+                                                                    : (dragOverLessonId === lesson.id && dragOverLessonChapterId === chapter.id)
+                                                                    ? 'border-blue-500 border-dashed bg-blue-500/5'
                                                                     : swappedLessonIds.has(lesson.id)
                                                                     ? 'border-green-500 bg-green-500/10'
                                                                     : 'border-[#2D2D2D] hover:bg-[#252525]'
                                                             }`}
                                                             draggable
                                                             onDragStart={(e) => handleLessonDragStart(e, lesson.id, chapter.id)}
-                                                            onDragOver={handleLessonDragOver}
+                                                            onDragOver={(e) => handleLessonDragOver(e, lesson.id, chapter.id)}
+                                                            onDragLeave={handleLessonDragLeave}
                                                             onDrop={(e) => handleLessonDrop(e, lesson.id, chapter.id)}
+                                                            onDragEnd={handleLessonDragEnd}
                                                         >
                                                         <span title="Kéo để sắp xếp bài học">
                                                             <GripVertical className="h-4 w-4 text-gray-500 cursor-move" />
@@ -1006,7 +1162,7 @@ export function CourseChaptersPage() {
                         </div>
 
                         {/* Save/Cancel Buttons - Always visible */}
-                        <div className="sticky bottom-0 bg-[#1A1A1A]/95 backdrop-blur-sm border-t border-[#2D2D2D] mt-6 -mb-6 -mx-6 px-6 py-4">
+                        <div className="sticky bottom-0 bg-[#1A1A1A]/95 backdrop-blur-sm border-t border-[#2D2D2D] mt-6 -mb-6 -mx-6 px-6 py-2">
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4">
                                 {/* Change indicator - Left aligned (only when has changes) */}
                                 {hasUnsavedChanges && (
