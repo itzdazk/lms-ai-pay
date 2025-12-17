@@ -90,6 +90,13 @@ export function CourseChaptersPage() {
         localChaptersRef.current = localChapters
     }, [localChapters])
 
+    // Save expanded chapters state to localStorage whenever it changes
+    useEffect(() => {
+        if (courseId && !loading && expandedChapters.size >= 0) {
+            saveExpandedChaptersToStorage(courseId, expandedChapters)
+        }
+    }, [expandedChapters, courseId, loading])
+
     // Poll transcript status when there are processing transcripts
     useEffect(() => {
         if (!courseId || loading) return
@@ -167,14 +174,54 @@ export function CourseChaptersPage() {
             setLocalChapters(chaptersData)
             localChaptersRef.current = chaptersData
             setHasUnsavedChanges(false)
-            // Expand all chapters by default
-            setExpandedChapters(new Set(chaptersData.map((ch) => ch.id)))
+            
+            // Load expanded chapters from localStorage, or expand all by default if not saved
+            const savedExpanded = loadExpandedChaptersFromStorage(courseId)
+            if (savedExpanded.size > 0) {
+                // Only include chapter IDs that actually exist
+                const validExpanded = new Set(
+                    Array.from(savedExpanded).filter(id => 
+                        chaptersData.some(ch => ch.id === id)
+                    )
+                )
+                setExpandedChapters(validExpanded)
+            } else {
+                // Expand all chapters by default if no saved state
+                setExpandedChapters(new Set(chaptersData.map((ch) => ch.id)))
+            }
         } catch (error: any) {
             console.error('Error loading data:', error)
             toast.error('Không thể tải dữ liệu')
             navigate('/instructor/dashboard')
         } finally {
             setLoading(false)
+        }
+    }
+
+    // Helper functions to save/load expanded chapters state
+    const getExpandedChaptersKey = (courseId: number) => `course_${courseId}_expanded_chapters`
+
+    const loadExpandedChaptersFromStorage = (courseId: number): Set<number> => {
+        try {
+            const key = getExpandedChaptersKey(courseId)
+            const saved = localStorage.getItem(key)
+            if (saved) {
+                const chapterIds = JSON.parse(saved) as number[]
+                return new Set(chapterIds)
+            }
+        } catch (error) {
+            console.error('Error loading expanded chapters from storage:', error)
+        }
+        return new Set<number>()
+    }
+
+    const saveExpandedChaptersToStorage = (courseId: number, expandedChapters: Set<number>) => {
+        try {
+            const key = getExpandedChaptersKey(courseId)
+            const chapterIds = Array.from(expandedChapters)
+            localStorage.setItem(key, JSON.stringify(chapterIds))
+        } catch (error) {
+            console.error('Error saving expanded chapters to storage:', error)
         }
     }
 

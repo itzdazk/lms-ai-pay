@@ -179,6 +179,10 @@ export function LessonForm({
 
         if (!file.type.startsWith('video/')) {
             toast.error('Vui lòng chọn file video')
+            // Reset input value to allow re-selection of the same file
+            if (videoInputRef.current) {
+                videoInputRef.current.value = ''
+            }
             return
         }
 
@@ -186,6 +190,10 @@ export function LessonForm({
         const maxSize = 500 * 1024 * 1024 // 500MB
         if (file.size > maxSize) {
             toast.error('Kích thước file video không được vượt quá 500MB')
+            // Reset input value to allow re-selection of the same file
+            if (videoInputRef.current) {
+                videoInputRef.current.value = ''
+            }
             return
         }
 
@@ -193,6 +201,11 @@ export function LessonForm({
         setVideoPreview(URL.createObjectURL(file))
         setVideoRemoved(false)
         toast.success(`Đã chọn video: ${file.name} (${formatFileSize(file.size)})`)
+
+        // Reset input value to allow re-selection of the same file
+        if (videoInputRef.current) {
+            videoInputRef.current.value = ''
+        }
     }
 
 
@@ -208,7 +221,7 @@ export function LessonForm({
         }
     }
 
-    const handleVideoChangeClick = () => {
+    const triggerVideoInput = () => {
         // Use setTimeout to ensure ref is available after render
         setTimeout(() => {
             if (videoInputRef.current) {
@@ -230,6 +243,28 @@ export function LessonForm({
         }, 0)
     }
 
+    const handleVideoChangeClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Only trigger if clicking directly on the drag & drop container
+        // Check if the click target is the container itself or a direct child
+        const target = e.target as HTMLElement
+        const currentTarget = e.currentTarget as HTMLElement
+        
+        // If clicking on a button or input, don't trigger
+        if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button') || target.closest('input')) {
+            return
+        }
+        
+        // Only trigger if clicking within the drag & drop area
+        if (!currentTarget.contains(target)) {
+            return
+        }
+        
+        // Prevent event from bubbling to parent elements (form, etc.)
+        e.stopPropagation()
+        e.preventDefault()
+        triggerVideoInput()
+    }
+
     const handleVideoDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault()
         setIsDraggingVideo(false)
@@ -244,6 +279,11 @@ export function LessonForm({
             setVideoPreview(URL.createObjectURL(file))
             setVideoRemoved(false)
             toast.success(`Đã chọn video: ${file.name} (${formatFileSize(file.size)})`)
+
+            // Reset input value to allow re-selection of the same file
+            if (videoInputRef.current) {
+                videoInputRef.current.value = ''
+            }
         } else {
             toast.error('Vui lòng chọn file video')
         }
@@ -290,10 +330,17 @@ export function LessonForm({
     }
 
     const handleSubmitClick = () => {
-        // Always show confirmation dialog before submitting
-        if (showUpdateWarningDialog) return
-        setPendingSubmit(() => performSubmit)
-        setShowUpdateWarningDialog(true)
+        // Only show confirmation dialog when editing (lesson exists)
+        // For new lessons, submit directly without dialog
+        if (lesson) {
+            // Editing mode: show confirmation dialog
+            if (showUpdateWarningDialog) return
+            setPendingSubmit(() => performSubmit)
+            setShowUpdateWarningDialog(true)
+        } else {
+            // Create mode: submit directly
+            performSubmit()
+        }
     }
 
 
@@ -511,7 +558,7 @@ export function LessonForm({
                                         variant="outline"
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            handleVideoChangeClick()
+                                            triggerVideoInput()
                                         }}
                                         className="!bg-white/90 hover:!bg-white !text-gray-900 !border-0 pointer-events-auto cursor-pointer"
                                         size="sm"
@@ -586,7 +633,10 @@ export function LessonForm({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={handleVideoChangeClick}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        triggerVideoInput()
+                                    }}
                                     className="flex-1 !bg-white/95 hover:!bg-white !text-gray-900 !border-0 backdrop-blur-sm cursor-pointer"
                                     size="sm"
                                 >
@@ -625,15 +675,15 @@ export function LessonForm({
                                 onChange={handleVideoSelect}
                                 className="hidden"
                             />
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
-                                <div className={`p-4 rounded-full transition-colors ${
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 pointer-events-none">
+                                <div className={`p-4 rounded-full transition-colors pointer-events-none ${
                                     isDraggingVideo ? 'bg-blue-500/20' : 'bg-gray-700/50 group-hover:bg-gray-600/50'
                                 }`}>
                                     <Video className={`h-8 w-8 transition-colors ${
                                         isDraggingVideo ? 'text-blue-400' : 'text-gray-400 group-hover:text-gray-300'
                                     }`} />
                                 </div>
-                                <div className="text-center">
+                                <div className="text-center pointer-events-none">
                                     <p className="text-sm font-medium text-white mb-1">
                                         {isDraggingVideo ? 'Thả video vào đây' : 'Kéo thả video hoặc click để chọn'}
                                     </p>
