@@ -11,6 +11,22 @@ import slugify from '../utils/slugify.util.js'
 import { getVideoDuration } from '../utils/video.util.js'
 
 class LessonsService {
+    async _recalcCourseDuration(courseId) {
+        const lessons = await prisma.lesson.findMany({
+            where: { courseId },
+            select: { videoDuration: true },
+        })
+        const totalSeconds = lessons.reduce(
+            (acc, lesson) => acc + (lesson.videoDuration || 0),
+            0
+        )
+        const totalMinutes = Math.round(totalSeconds / 60)
+
+        await prisma.course.update({
+            where: { id: courseId },
+            data: { durationHours: totalMinutes },
+        })
+    }
     _deleteTranscriptFiles(filename) {
         if (!filename) return
 
@@ -388,6 +404,9 @@ class LessonsService {
 
         logger.info(`Lesson created: ${lesson.title} (ID: ${lesson.id})`)
 
+        // Recalculate course duration based on all lesson video durations
+        await this._recalcCourseDuration(courseId)
+
         return lesson
     }
 
@@ -632,6 +651,9 @@ class LessonsService {
 
         logger.info(`Lesson deleted: ${lesson.title} (ID: ${lesson.id})`)
 
+        // Recalculate course duration after deletion
+        await this._recalcCourseDuration(courseId)
+
         return true
     }
 
@@ -757,6 +779,9 @@ class LessonsService {
         }
 
         logger.info(`Video uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`)
+
+        // Recalculate course duration based on lesson video durations
+        await this._recalcCourseDuration(courseId)
 
         return updatedLesson
     }

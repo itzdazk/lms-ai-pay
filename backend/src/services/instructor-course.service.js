@@ -259,7 +259,6 @@ class InstructorCourseService {
             discountPrice,
             categoryId,
             level,
-            durationHours,
             language,
             requirements,
             whatYouLearn,
@@ -312,7 +311,7 @@ class InstructorCourseService {
                 instructorId,
                 categoryId: parseInt(categoryId),
                 level: level || COURSE_LEVEL.BEGINNER,
-                durationHours: durationHours ? parseInt(durationHours) : 0,
+                durationHours: 0, // Will be recalculated from lessons durations
                 language: language || 'vi',
                 requirements,
                 whatYouLearn,
@@ -502,8 +501,6 @@ class InstructorCourseService {
         if (categoryId !== undefined)
             updateData.categoryId = parseInt(categoryId)
         if (level !== undefined) updateData.level = level
-        if (durationHours !== undefined)
-            updateData.durationHours = parseInt(durationHours)
         if (totalLessons !== undefined)
             updateData.totalLessons = parseInt(totalLessons)
         if (language !== undefined) updateData.language = language
