@@ -703,6 +703,15 @@ class LessonsService {
 
         const shouldTranscribe = config.WHISPER_ENABLED !== false
 
+        // Cancel any existing transcription job BEFORE updating database
+        // This ensures the old job is stopped before we start a new one
+        const wasCancelled = transcriptionService.cancelTranscriptionJob(lessonId)
+        if (wasCancelled) {
+            logger.info(`Cancelled existing transcription job for lesson ${lessonId} before uploading new video`)
+            // Give a small delay to ensure the process is killed
+            await new Promise(resolve => setTimeout(resolve, 500))
+        }
+
         const updatedLesson = await prisma.lesson.update({
             where: { id: lessonId },
             data: {
@@ -717,7 +726,7 @@ class LessonsService {
         })
 
         if (shouldTranscribe) {
-            transcriptionService.cancelTranscriptionJob(lessonId)
+            // Start new transcription job after ensuring old one is cancelled
             setImmediate(() => {
                 transcriptionService
                     .transcribeLessonVideo({
@@ -795,6 +804,103 @@ class LessonsService {
 
         logger.info(
             `Transcript uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`
+        )
+
+        return updatedLesson
+    }
+
+    /**
+     * Request transcript creation for a lesson that has video but no transcript
+     */
+    async requestTranscript(courseId, lessonId, userId) {
+        // Check if lesson exists
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: {
+                id: true,
+                courseId: true,
+                title: true,
+                videoUrl: true,
+                transcriptStatus: true,
+            },
+        })
+
+        if (!lesson) {
+            throw new Error('Lesson not found')
+        }
+
+        if (lesson.courseId !== courseId) {
+            throw new Error('Lesson does not belong to this course')
+        }
+
+        // Check if lesson has video
+        if (!lesson.videoUrl) {
+            throw new Error('Lesson does not have a video. Please upload a video first.')
+        }
+
+        // Check if transcript is already processing or completed
+        if (lesson.transcriptStatus === TRANSCRIPT_STATUS.PROCESSING) {
+            throw new Error('Transcript is already being processed')
+        }
+
+        if (lesson.transcriptStatus === TRANSCRIPT_STATUS.COMPLETED) {
+            throw new Error('Transcript already exists for this lesson')
+        }
+
+        // Check if Whisper is enabled
+        if (config.WHISPER_ENABLED === false) {
+            throw new Error('Whisper transcription is disabled')
+        }
+
+        // Get video file path
+        const videoFilename = path.basename(lesson.videoUrl)
+        const videoPath = path.join(videosDir, videoFilename)
+
+        if (!fs.existsSync(videoPath)) {
+            throw new Error('Video file not found')
+        }
+
+        // Update transcript status to PROCESSING
+        const updatedLesson = await prisma.lesson.update({
+            where: { id: lessonId },
+            data: {
+                transcriptStatus: TRANSCRIPT_STATUS.PROCESSING,
+                transcriptUrl: null,
+                transcriptJsonUrl: null,
+            },
+        })
+
+        // Start transcription process
+        transcriptionService.cancelTranscriptionJob(lessonId) // Cancel any existing job
+        setImmediate(() => {
+            transcriptionService
+                .transcribeLessonVideo({
+                    videoPath,
+                    lessonId,
+                    userId,
+                    source: 'manual-request',
+                })
+                .catch((error) => {
+                    logger.error(
+                        `Whisper transcription failed for lesson ${lessonId}: ${error.message}`
+                    )
+                    prisma.lesson
+                        .update({
+                            where: { id: lessonId },
+                            data: {
+                                transcriptStatus: TRANSCRIPT_STATUS.FAILED,
+                            },
+                        })
+                        .catch((statusError) =>
+                            logger.error(
+                                `Failed to update transcript status for lesson ${lessonId}: ${statusError.message}`
+                            )
+                        )
+                })
+        })
+
+        logger.info(
+            `Transcript creation requested for lesson: ${lesson.title} (ID: ${lesson.id})`
         )
 
         return updatedLesson

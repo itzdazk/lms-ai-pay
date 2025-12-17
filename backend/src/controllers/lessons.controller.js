@@ -206,6 +206,27 @@ class LessonsController {
     })
 
     /**
+     * @route   POST /api/v1/instructor/courses/:courseId/lessons/:id/transcript/request
+     * @desc    Request transcript creation for a lesson
+     * @access  Private (Instructor/Admin)
+     */
+    requestTranscript = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+
+        const lesson = await lessonsService.requestTranscript(
+            parseInt(courseId),
+            parseInt(id),
+            req.user.id
+        )
+
+        return ApiResponse.success(
+            res,
+            lesson,
+            'Transcript creation requested successfully. Processing will start shortly.'
+        )
+    })
+
+    /**
      * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/order
      * @desc    Reorder lesson
      * @access  Private (Instructor/Admin)

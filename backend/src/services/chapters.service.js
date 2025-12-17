@@ -37,9 +37,6 @@ class ChaptersService {
                               orderBy: {
                                   lessonOrder: 'asc',
                               },
-                              orderBy: {
-                                  lessonOrder: 'asc',
-                              },
                               select: {
                                   id: true,
                                   courseId: true,
@@ -54,6 +51,7 @@ class ChaptersService {
                                   isPublished: true,
                                   transcriptUrl: true,
                                   transcriptJsonUrl: true,
+                                  transcriptStatus: true,
                               },
                           },
                       }

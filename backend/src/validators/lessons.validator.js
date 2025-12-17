@@ -225,6 +225,18 @@ const reorderLessonsValidator = [
     validate,
 ]
 
+const requestTranscriptValidator = [
+    param('courseId')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Lesson ID must be a positive integer'),
+
+    validate,
+]
+
 export {
     getLessonByIdValidator,
     getLessonVideoValidator,
@@ -237,6 +249,7 @@ export {
     reorderLessonValidator,
     reorderLessonsValidator,
     publishLessonValidator,
+    requestTranscriptValidator,
 }
 
 
