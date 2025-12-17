@@ -85,6 +85,9 @@ export function ChapterForm({
                         }
                         placeholder="Nhập tiêu đề chapter"
                         className="bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500"
+                        spellCheck={false}
+                        autoCorrect="off"
+                        autoCapitalize="off"
                         required
                     />
                 </div>
@@ -102,6 +105,9 @@ export function ChapterForm({
                         placeholder="Nhập mô tả chapter (tùy chọn)"
                         className="bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 min-h-[100px]"
                         rows={4}
+                        spellCheck={false}
+                        autoCorrect="off"
+                        autoCapitalize="off"
                     />
                 </div>
 
