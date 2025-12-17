@@ -203,6 +203,28 @@ const publishLessonValidator = [
     validate,
 ]
 
+const reorderLessonsValidator = [
+    param('courseId')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+
+    param('chapterId')
+        .isInt({ min: 1 })
+        .withMessage('Chapter ID must be a positive integer'),
+
+    body('lessonIds')
+        .isArray()
+        .withMessage('Lesson IDs must be an array')
+        .notEmpty()
+        .withMessage('Lesson IDs array cannot be empty'),
+
+    body('lessonIds.*')
+        .isInt({ min: 1 })
+        .withMessage('Each lesson ID must be a positive integer'),
+
+    validate,
+]
+
 export {
     getLessonByIdValidator,
     getLessonVideoValidator,
@@ -213,6 +235,7 @@ export {
     uploadVideoValidator,
     uploadTranscriptValidator,
     reorderLessonValidator,
+    reorderLessonsValidator,
     publishLessonValidator,
 }
 

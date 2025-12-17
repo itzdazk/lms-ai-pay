@@ -859,6 +859,61 @@ class LessonsService {
     }
 
     /**
+     * Reorder multiple lessons in a chapter
+     */
+    async reorderLessons(courseId, chapterId, lessonIds) {
+        // Verify chapter belongs to course
+        const chapter = await prisma.chapter.findUnique({
+            where: { id: chapterId },
+            select: {
+                id: true,
+                courseId: true,
+            },
+        })
+
+        if (!chapter) {
+            throw new Error('Chapter not found')
+        }
+
+        if (chapter.courseId !== courseId) {
+            throw new Error('Chapter does not belong to this course')
+        }
+
+        // Verify all lessons belong to this chapter
+        const lessons = await prisma.lesson.findMany({
+            where: {
+                id: { in: lessonIds },
+                chapterId: chapterId,
+            },
+            select: {
+                id: true,
+                lessonOrder: true,
+            },
+        })
+
+        if (lessons.length !== lessonIds.length) {
+            throw new Error('Some lessons do not belong to this chapter or do not exist')
+        }
+
+        // Update lesson orders in transaction
+        await prisma.$transaction(async (tx) => {
+            for (let i = 0; i < lessonIds.length; i++) {
+                const lessonId = lessonIds[i]
+                const newOrder = i + 1
+
+                await tx.lesson.update({
+                    where: { id: lessonId },
+                    data: { lessonOrder: newOrder },
+                })
+            }
+        })
+
+        logger.info(
+            `Lessons reordered in chapter ${chapterId}: ${lessonIds.join(', ')}`
+        )
+    }
+
+    /**
      * Publish/Unpublish lesson
      */
     async publishLesson(courseId, lessonId, isPublished) {

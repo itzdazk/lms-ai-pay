@@ -224,6 +224,24 @@ class LessonsController {
     })
 
     /**
+     * @route   PUT /api/v1/instructor/courses/:courseId/chapters/:chapterId/lessons/reorder
+     * @desc    Reorder multiple lessons in a chapter
+     * @access  Private (Instructor/Admin)
+     */
+    reorderLessons = asyncHandler(async (req, res) => {
+        const { courseId, chapterId } = req.params
+        const { lessonIds } = req.body
+
+        await lessonsService.reorderLessons(
+            parseInt(courseId),
+            parseInt(chapterId),
+            lessonIds.map((id) => parseInt(id))
+        )
+
+        return ApiResponse.success(res, null, 'Lessons reordered successfully')
+    })
+
+    /**
      * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/publish
      * @desc    Publish/Unpublish lesson
      * @access  Private (Instructor/Admin)

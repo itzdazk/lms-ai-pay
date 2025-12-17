@@ -10,7 +10,7 @@ import instructorQuizzesRoutes from './instructor-quizzes.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 import lessonsRoutes from './lessons.routes.js'
-import instructorRoutes from './instructor.routes.js'
+import instructorLessonsRoutes from './instructor-lessons.routes.js'
 import instructorCourseRoutes from './instructor-course.routes.js'
 import adminCourseRoutes from './admin-course.routes.js'
 import enrollmentRoutes from './enrollment.routes.js'
@@ -94,7 +94,7 @@ router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/lessons', lessonsRoutes)
 router.use('/instructor/courses', instructorCourseRoutes) // Must be before /instructor to avoid conflict
-router.use('/instructor', instructorRoutes)
+router.use('/instructor', instructorLessonsRoutes)
 router.use('/admin/courses', adminCourseRoutes)
 router.use('/enrollments', enrollmentRoutes)
 router.use('/progress', progressRoutes)

@@ -34,8 +34,8 @@ class ChaptersService {
                 include: includeLessons
                     ? {
                           lessons: {
-                              where: {
-                                  isPublished: true,
+                              orderBy: {
+                                  lessonOrder: 'asc',
                               },
                               orderBy: {
                                   lessonOrder: 'asc',
@@ -68,7 +68,6 @@ class ChaptersService {
                         lessonsCount = await prisma.lesson.count({
                             where: {
                                 chapterId: chapter.id,
-                                isPublished: true,
                             },
                         })
                     }
