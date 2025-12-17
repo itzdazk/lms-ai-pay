@@ -52,6 +52,8 @@ class ChaptersService {
                                   lessonOrder: true,
                                   isPreview: true,
                                   isPublished: true,
+                                  transcriptUrl: true,
+                                  transcriptJsonUrl: true,
                               },
                           },
                       }
