@@ -4,7 +4,8 @@ import { DarkOutlineButton } from '../ui/buttons'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
-import { Loader2, X } from 'lucide-react'
+import { Checkbox } from '../ui/checkbox'
+import { Loader2, X, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Chapter, CreateChapterRequest, UpdateChapterRequest } from '../../lib/api/types'
 import {
@@ -35,6 +36,7 @@ export function ChapterForm({
         title: '',
         description: '',
         chapterOrder: 0,
+        isPublished: true,
     })
 
     useEffect(() => {
@@ -43,6 +45,15 @@ export function ChapterForm({
                 title: chapter.title || '',
                 description: chapter.description || '',
                 chapterOrder: chapter.chapterOrder || 0,
+                isPublished: chapter.isPublished ?? true,
+            })
+        } else {
+            // Reset for create mode
+            setFormData({
+                title: '',
+                description: '',
+                chapterOrder: 0,
+                isPublished: true,
             })
         }
     }, [chapter])
@@ -60,6 +71,7 @@ export function ChapterForm({
                 title: formData.title.trim(),
                 description: formData.description.trim() || undefined,
                 chapterOrder: formData.chapterOrder || undefined,
+                isPublished: formData.isPublished,
             }
 
             await onSubmit(submitData)
@@ -131,6 +143,34 @@ export function ChapterForm({
                     />
                     <p className="text-sm text-gray-400 mt-1">
                         Thứ tự sẽ được tự động điều chỉnh khi sắp xếp lại
+                    </p>
+                </div>
+
+                {/* Publish Toggle */}
+                <div className="pt-4 border-t border-[#2D2D2D]">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="isPublished"
+                            checked={formData.isPublished}
+                            onCheckedChange={(checked) =>
+                                setFormData({ ...formData, isPublished: checked as boolean })
+                            }
+                            className="border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                        />
+                        <Label htmlFor="isPublished" className="text-white flex items-center gap-2 cursor-pointer">
+                            {formData.isPublished ? (
+                                <Eye className="h-4 w-4 text-green-400" />
+                            ) : (
+                                <EyeOff className="h-4 w-4 text-gray-400" />
+                            )}
+                            <span>Xuất bản chương</span>
+                        </Label>
+                    </div>
+                    <p className="text-sm text-gray-400 mt-2">
+                        {formData.isPublished
+                            ? "Chương sẽ hiển thị cho học viên trong khóa học"
+                            : "Chương sẽ bị ẩn và chỉ bạn mới thấy được"
+                        }
                     </p>
                 </div>
             </div>

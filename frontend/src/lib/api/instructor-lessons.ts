@@ -101,6 +101,19 @@ export const instructorLessonsApi = {
     },
 
     /**
+     * Request transcript creation for a lesson (Instructor only)
+     */
+    async requestTranscript(
+        courseId: number,
+        lessonId: number
+    ): Promise<Lesson> {
+        const response = await apiClient.post<ApiResponse<Lesson>>(
+            `/instructor/courses/${courseId}/lessons/${lessonId}/transcript/request`
+        )
+        return response.data.data
+    },
+
+    /**
      * Reorder lesson (Instructor only)
      */
     async reorderLesson(
