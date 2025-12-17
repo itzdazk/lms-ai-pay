@@ -145,7 +145,7 @@ function CourseLayoutContent() {
     <div className="py-2 px-6 max-w-6xl mx-auto space-y-6">
       {/* Dashboard Button - Sticky */}
       <div className="sticky top-16 z-40 mb-2">
-        <div className="bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg p-3">
+        <div className="bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg p-2">
           {/* Top row */}
           <div className="flex items-center justify-between gap-4">
             <button

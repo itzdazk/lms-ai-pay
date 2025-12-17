@@ -43,20 +43,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { User, Settings, LogOut, LayoutDashboard } from 'lucide-react';
-import { authApi } from '../lib/api';
+import { User, Settings, LogOut, LayoutDashboard, GraduationCap, Shield } from 'lucide-react';
 import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
 
 export function LessonPage() {
   const params = useParams<{ slug: string; lessonSlug?: string }>();
   const courseSlug = params.slug;
   const lessonSlug = params.lessonSlug;
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
   
   const [course, setCourse] = useState<Course | null>(null);
+  const [courseId, setCourseId] = useState<number | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
@@ -126,10 +126,11 @@ export function LessonPage() {
         
         // Load course by slug first (public pages use slug)
         const courseData = await coursesApi.getCourseBySlug(courseSlug);
-        const courseId = courseData.id;
+        const loadedCourseId = courseData.id;
+        setCourseId(loadedCourseId);
         
         // Load chapters with lessons
-        const chaptersData = await chaptersApi.getChaptersByCourse(courseId, true);
+        const chaptersData = await chaptersApi.getChaptersByCourse(loadedCourseId, true);
 
         // Filter out unpublished chapters and lessons for non-instructor users
         const isInstructorOrAdmin = user && (user.role === 'INSTRUCTOR' || user.role === 'ADMIN');
@@ -147,7 +148,7 @@ export function LessonPage() {
         setChapters(filteredChapters);
         
         // Then load lessons using courseId (fallback)
-        const lessonsData = await lessonsApi.getCourseLessons(courseId);
+        const lessonsData = await lessonsApi.getCourseLessons(loadedCourseId);
 
         setCourse(courseData);
         setLessons(lessonsData.lessons || []);
@@ -156,7 +157,7 @@ export function LessonPage() {
         try {
           const enrollments = await coursesApi.getEnrollments();
           const userEnrollment = enrollments.find(
-            (e) => e.courseId === courseId && e.userId === Number(user?.id)
+            (e) => e.courseId === loadedCourseId && e.userId === Number(user?.id)
           );
           setEnrollment(userEnrollment || null);
         } catch (error) {
@@ -448,6 +449,113 @@ export function LessonPage() {
     }
   };
 
+  // Helper function to render menu items based on role
+  const renderRoleSpecificMenuItems = () => {
+    if (!user) return null;
+
+    switch (user.role) {
+      case 'INSTRUCTOR':
+        return (
+          <>
+            <DropdownMenuLabel className='text-white px-2 py-1.5'>
+              <div className='flex items-center'>
+                <LayoutDashboard className='mr-2 h-4 w-4 text-blue-400' />
+                <span className='font-medium'>Dashboard</span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              asChild
+              className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+            >
+              <Link
+                to='/instructor/dashboard'
+                className='flex items-center pl-6'
+              >
+                <GraduationCap className='mr-2 h-4 w-4 text-blue-400' />
+                Giảng viên
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              asChild
+              className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+            >
+              <Link
+                to='/dashboard'
+                className='flex items-center pl-6'
+              >
+                <User className='mr-2 h-4 w-4 text-green-400' />
+                Học viên
+              </Link>
+            </DropdownMenuItem>
+          </>
+        );
+      case 'ADMIN':
+        return (
+          <>
+            <DropdownMenuLabel className='text-white px-2 py-1.5'>
+              <div className='flex items-center'>
+                <LayoutDashboard className='mr-2 h-4 w-4 text-purple-400' />
+                <span className='font-medium'>Dashboard</span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              asChild
+              className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+            >
+              <Link
+                to='/admin/dashboard'
+                className='flex items-center pl-6'
+              >
+                <Shield className='mr-2 h-4 w-4 text-purple-400' />
+                Quản trị viên
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              asChild
+              className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+            >
+              <Link
+                to='/instructor/dashboard'
+                className='flex items-center pl-6'
+              >
+                <GraduationCap className='mr-2 h-4 w-4 text-blue-400' />
+                Giảng viên
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              asChild
+              className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+            >
+              <Link
+                to='/dashboard'
+                className='flex items-center pl-6'
+              >
+                <User className='mr-2 h-4 w-4 text-green-400' />
+                Học viên
+              </Link>
+            </DropdownMenuItem>
+          </>
+        );
+      default:
+        return (
+          <>
+            <DropdownMenuItem
+              asChild
+              className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+            >
+              <Link
+                to='/dashboard'
+                className='flex items-center'
+              >
+                <LayoutDashboard className='mr-2 h-4 w-4 text-green-400' />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+          </>
+        );
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -586,59 +694,50 @@ export function LessonPage() {
               {user && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <div className="relative">
                     <Button
-                                    variant='ghost'
-                                    size='icon'
-                                    className='relative text-white hover:bg-[#1F1F1F]'
-                                >
-                                    <Bell className='h-5 w-5' />
-                                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
-                                        3
-                                    </Badge>
-                                </Button>
-                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600">
+                      variant='ghost'
+                      size='icon'
+                      className='relative text-white hover:bg-[#1F1F1F]'
+                    >
+                      <Bell className='h-5 w-5' />
+                      <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
                         3
                       </Badge>
-                    </div>
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    align="end"
-                    className={`w-[480px] max-w-[90vw] shadow-xl ${
-                      isDark
-                        ? 'bg-[#1A1A1A] border-[#2D2D2D]'
-                        : 'bg-white border-gray-200'
-                    }`}
+                    align='end'
+                    className='w-[480px] max-w-[90vw] bg-[#1A1A1A] border-[#2D2D2D] shadow-xl'
                   >
-                    <DropdownMenuLabel className={`flex items-center justify-between gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <DropdownMenuLabel className='text-white flex items-center justify-between gap-2'>
                       <span>Thông báo</span>
-                      <Badge className={isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}>
+                      <Badge className='bg-blue-600 text-white'>
                         Mới
                       </Badge>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
-                    <div className={`max-h-[420px] overflow-y-auto divide-y ${isDark ? 'divide-[#2D2D2D]' : 'divide-gray-200'}`}>
-                      <div className={`p-4 cursor-pointer ${isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-50'}`}>
-                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <DropdownMenuSeparator className='bg-[#2D2D2D]' />
+                    <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D]'>
+                      <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
+                        <p className='text-sm text-white font-semibold'>
                           Bạn đã hoàn thành bài học "React Hooks"
                         </p>
-                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        <p className='text-xs text-gray-500 mt-1'>
                           2 giờ trước
                         </p>
                       </div>
-                      <div className={`p-4 cursor-pointer ${isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-50'}`}>
-                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
+                        <p className='text-sm text-white font-semibold'>
                           Khóa học "Next.js Pro" vừa được cập nhật
                         </p>
-                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        <p className='text-xs text-gray-500 mt-1'>
                           Hôm qua
                         </p>
                       </div>
-                      <div className={`p-4 cursor-pointer ${isDark ? 'hover:bg-[#1F1F1F]' : 'hover:bg-gray-50'}`}>
-                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
+                        <p className='text-sm text-white font-semibold'>
                           Bạn có chứng chỉ mới cần tải xuống
                         </p>
-                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        <p className='text-xs text-gray-500 mt-1'>
                           2 ngày trước
                         </p>
                       </div>
@@ -650,13 +749,13 @@ export function LessonPage() {
               {user && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <div className="relative h-10 w-10 rounded-full border border-white/30 cursor-pointer hover:border-white transition-colors">
-                      <Avatar className="h-full w-full">
+                    <div className='relative h-10 w-10 rounded-full border border-white/30 cursor-pointer hover:border-white transition-colors'>
+                      <Avatar className='h-full w-full'>
                         <AvatarImage
-                          src={user.avatarUrl || user.avatar || undefined}
+                          src={user.avatarUrl || undefined}
                           alt={user.fullName || user.email || 'User'}
                         />
-                        <AvatarFallback className="bg-blue-600 text-white">
+                        <AvatarFallback className='bg-blue-600 text-white'>
                           {user.fullName
                             ? user.fullName
                                 .split(' ')
@@ -670,21 +769,17 @@ export function LessonPage() {
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    align="end"
-                    className={`w-64 shadow-xl ${
-                      isDark
-                        ? 'bg-[#1A1A1A] border-[#2D2D2D]'
-                        : 'bg-white border-gray-200'
-                    }`}
+                    align='end'
+                    className='w-64 bg-[#1A1A1A] border-[#2D2D2D] shadow-xl'
                   >
-                    <DropdownMenuLabel className={`px-3 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-white/20">
+                    <DropdownMenuLabel className='text-white px-3 py-3'>
+                      <div className='flex items-center gap-3'>
+                        <Avatar className='h-10 w-10 border border-white/20'>
                           <AvatarImage
-                            src={user.avatarUrl || user.avatar || undefined}
+                            src={user.avatarUrl || undefined}
                             alt={user.fullName || user.email || 'User'}
                           />
-                          <AvatarFallback className={`text-sm ${isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
+                          <AvatarFallback className='bg-blue-600 text-white text-sm'>
                             {user.fullName
                               ? user.fullName
                                   .split(' ')
@@ -695,74 +790,77 @@ export function LessonPage() {
                               : user.email?.[0]?.toUpperCase() || 'U'}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <div className='flex-1 min-w-0'>
+                          <p className='text-white font-medium truncate'>
                             {user.fullName || user.email}
                           </p>
-                          <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <p className='text-xs text-gray-400 truncate'>
                             {user.email}
-                </p>
-              </div>
-            </div>
+                          </p>
+                          <div className='mt-1.5'>
+                            <Badge
+                              className={`text-xs px-1.5 py-0.5 border ${
+                                user.role === 'ADMIN'
+                                  ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
+                                  : user.role === 'INSTRUCTOR'
+                                  ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                                  : 'bg-green-600/20 text-green-400 border-green-500/30'
+                              }`}
+                            >
+                              {user.role === 'ADMIN'
+                                ? 'Quản trị viên'
+                                : user.role === 'INSTRUCTOR'
+                                ? 'Giảng viên'
+                                : 'Học viên'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
+                    <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
+
+                    {/* Role-specific menu items */}
+                    {renderRoleSpecificMenuItems()}
+
+                    {/* Common menu items */}
                     <DropdownMenuItem
                       asChild
-                      className={`transition-colors cursor-pointer ${
-                        isDark
-                          ? 'text-white hover:bg-[#252525]'
-                          : 'text-gray-900 hover:bg-gray-100'
-                      }`}
+                      className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                     >
-                      <Link to="/dashboard" className="flex items-center">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      asChild
-                      className={`transition-colors cursor-pointer ${
-                        isDark
-                          ? 'text-white hover:bg-[#252525]'
-                          : 'text-gray-900 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Link to="/profile" className="flex items-center">
-                        <User className="mr-2 h-4 w-4" />
+                      <Link
+                        to='/profile'
+                        className='flex items-center'
+                      >
+                        <User className='mr-2 h-4 w-4 text-gray-300' />
                         Hồ sơ
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       asChild
-                      className={`transition-colors cursor-pointer ${
-                        isDark
-                          ? 'text-white hover:bg-[#252525]'
-                          : 'text-gray-900 hover:bg-gray-100'
-                      }`}
+                      className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                     >
-                      <Link to="/settings" className="flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
+                      <Link
+                        to='/settings'
+                        className='flex items-center'
+                      >
+                        <Settings className='mr-2 h-4 w-4 text-gray-300' />
                         Cài đặt
-                </Link>
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className={isDark ? 'bg-[#2D2D2D]' : 'bg-gray-200'} />
+                    <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
                     <DropdownMenuItem
+                      className='text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer focus:bg-red-500/10 focus:text-red-300'
                       onClick={async () => {
                         try {
-                          await authApi.logout();
+                          await logout();
                           toast.success('Đăng xuất thành công!');
                           navigate('/');
                         } catch (error) {
                           toast.error('Có lỗi xảy ra khi đăng xuất');
                         }
                       }}
-                      className={`transition-colors cursor-pointer ${
-                        isDark
-                          ? 'text-red-400 hover:bg-[#252525]'
-                          : 'text-red-600 hover:bg-gray-100'
-                      }`}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className='mr-2 h-4 w-4' />
                       Đăng xuất
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -881,6 +979,8 @@ export function LessonPage() {
               courseTitle={course.title}
                 completedLessons={completedLessons}
                 totalLessons={totalLessons}
+              courseId={courseId || undefined}
+              courseSlug={courseSlug}
               />
             </div>
               )}

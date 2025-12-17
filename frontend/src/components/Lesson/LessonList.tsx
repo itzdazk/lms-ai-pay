@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, Lock, PlayCircle, Clock, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Progress } from '../ui/progress';
@@ -23,6 +23,8 @@ interface LessonListProps {
   courseTitle?: string;
   completedLessons?: number;
   totalLessons?: number;
+  courseId?: number;
+  courseSlug?: string;
 }
 
 export function LessonList({
@@ -36,6 +38,8 @@ export function LessonList({
   courseTitle,
   completedLessons = 0,
   totalLessons = 0,
+  courseId,
+  courseSlug,
 }: LessonListProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -96,11 +100,67 @@ export function LessonList({
     ? chapters.reduce((acc, chapter) => acc + (chapter.lessonsCount || chapter.lessons?.length || 0), 0)
     : lessons.length;
 
+  // Helper functions to save/load expanded chapters state
+  const getExpandedChaptersKey = useCallback((): string | null => {
+    if (courseId) {
+      return `lesson_page_course_${courseId}_expanded_chapters`;
+    }
+    if (courseSlug) {
+      return `lesson_page_course_${courseSlug}_expanded_chapters`;
+    }
+    return null;
+  }, [courseId, courseSlug]);
+
+  const loadExpandedChaptersFromStorage = useCallback((): string[] => {
+    const key = getExpandedChaptersKey();
+    if (!key) return [];
+    
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const chapterValues = JSON.parse(saved) as string[];
+        return chapterValues;
+      }
+    } catch (error) {
+      console.error('Error loading expanded chapters from storage:', error);
+    }
+    return [];
+  }, [getExpandedChaptersKey]);
+
+  const saveExpandedChaptersToStorage = useCallback((expandedChapters: string[]) => {
+    const key = getExpandedChaptersKey();
+    if (!key) return;
+    
+    try {
+      localStorage.setItem(key, JSON.stringify(expandedChapters));
+    } catch (error) {
+      console.error('Error saving expanded chapters to storage:', error);
+    }
+  }, [getExpandedChaptersKey]);
+
   // Find chapter containing selected lesson and set default open chapters
   const [openChapters, setOpenChapters] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Load saved state when chapters or courseId/courseSlug changes
   useEffect(() => {
-    if (chapters.length > 0 && selectedLessonId) {
+    if (chapters.length > 0 && !isInitialized) {
+      const saved = loadExpandedChaptersFromStorage();
+      // Only include chapter values that actually exist
+      const validSaved = saved.filter(savedValue => {
+        const chapterId = savedValue.replace('chapter-', '');
+        return chapters.some(ch => ch.id.toString() === chapterId);
+      });
+      
+      // Always set openChapters (empty array if nothing valid)
+      setOpenChapters(validSaved);
+      setIsInitialized(true);
+    }
+  }, [chapters, isInitialized, loadExpandedChaptersFromStorage]);
+
+  // Auto-open chapter containing selected lesson (only if not already loaded from storage)
+  useEffect(() => {
+    if (chapters.length > 0 && selectedLessonId && isInitialized) {
       // Find chapter containing the selected lesson
       const chapterWithSelectedLesson = chapters.find((chapter) =>
         chapter.lessons?.some((lesson) => lesson.id === selectedLessonId)
@@ -117,10 +177,17 @@ export function LessonList({
         });
       }
     }
-  }, [selectedLessonId, chapters]);
+  }, [selectedLessonId, chapters, isInitialized]);
+
+  // Save to localStorage whenever openChapters changes (but not during initialization)
+  useEffect(() => {
+    if (isInitialized && openChapters.length >= 0) {
+      saveExpandedChaptersToStorage(openChapters);
+    }
+  }, [openChapters, isInitialized, saveExpandedChaptersToStorage]);
 
   return (
-    <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} h-full flex flex-col rounded-none`}>
+    <Card className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'} h-full flex flex-col rounded-none pb-8`}>
       <CardHeader className="flex-shrink-0 rounded-none">
         <CardTitle className={`flex items-center justify-between ${isDark ? 'text-white' : 'text-gray-900'}`}>
           <span>Nội dung khóa học</span>
@@ -132,18 +199,21 @@ export function LessonList({
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+      <CardContent className="flex-1 px-0 overflow-y-auto custom-scrollbar min-h-0">
         <div>
           {chapters.length > 0 ? (
             <Accordion 
               type="multiple" 
-              className="space-y-2"
+              className=""
               value={openChapters}
               onValueChange={setOpenChapters}
             >
               {chapters.map((chapter) => {
                 const chapterLessons = chapter.lessons || [];
                 if (chapterLessons.length === 0) return null;
+                const isCurrentChapter = selectedLessonId
+                  ? chapterLessons.some((lesson) => lesson.id === selectedLessonId)
+                  : false;
 
                 // Find the index of each lesson in the flattened array
                 const getLessonGlobalIndex = (lesson: Lesson): number => {
@@ -154,8 +224,12 @@ export function LessonList({
                 <AccordionItem
                   key={chapter.id}
                   value={`chapter-${chapter.id}`}
-                  className={`border rounded-none ${
-                    isDark ? 'border-[#2D2D2D] bg-[#151515]' : 'border-gray-200 bg-white'
+                  className={`border rounded-none p-3 transition-colors ${
+                    isCurrentChapter
+                      ? `border-blue-600 ${isDark ? 'bg-[#151515]' : 'bg-white'}`
+                      : isDark
+                        ? 'border-[#2D2D2D] bg-[#151515]'
+                        : 'border-gray-200 bg-white'
                   }`}
                 >
                   <AccordionTrigger

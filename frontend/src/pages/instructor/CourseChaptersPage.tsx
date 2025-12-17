@@ -186,8 +186,8 @@ export function CourseChaptersPage() {
                 )
                 setExpandedChapters(validExpanded)
             } else {
-                // Expand all chapters by default if no saved state
-                setExpandedChapters(new Set(chaptersData.map((ch) => ch.id)))
+                // Default: collapse all chapters for a cleaner initial view
+                setExpandedChapters(new Set())
             }
         } catch (error: any) {
             console.error('Error loading data:', error)
@@ -674,6 +674,12 @@ export function CourseChaptersPage() {
         )
     }
 
+    // Calculate total course duration (sum of all lesson durations)
+    const totalCourseDurationSeconds = localChapters.reduce((courseAcc, ch) => {
+        const chapterSeconds = ch.lessons?.reduce((acc, l) => acc + (l.videoDuration || 0), 0) || 0
+        return courseAcc + chapterSeconds
+    }, 0)
+
     return (
         <>
         <Card className="bg-[#1A1A1A] border-[#2D2D2D] py-4">
@@ -683,6 +689,9 @@ export function CourseChaptersPage() {
                             Quản lý chương và bài học
                         </CardTitle>
                         <p className="text-gray-400">{course.title}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Tổng thời lượng khóa học: <span className="text-blue-400 font-medium">{formatDuration(totalCourseDurationSeconds)}</span>
+                        </p>
                     </div>
 
                     {/* Course Statistics and Create Button */}
@@ -713,7 +722,7 @@ export function CourseChaptersPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-4 divide-y divide-[#2D2D2D]/60">
                         {/* Display empty state if no chapters */}
                         {chapters.length === 0 && (
                             <div className="text-center py-8">
@@ -722,20 +731,23 @@ export function CourseChaptersPage() {
                         )}
 
                         {/* Display chapters */}
-                        {localChapters.map((chapter) => (
+                        {localChapters.map((chapter) => {
+                            const chapterDurationSeconds =
+                                chapter.lessons?.reduce((acc, l) => acc + (l.videoDuration || 0), 0) || 0
+                            return (
                                 <div
                                     key={chapter.id}
-                                    className={`bg-[#1F1F1F] border rounded-lg overflow-hidden transition-colors ${
+                                    className={`bg-[#121212] border rounded-lg overflow-hidden transition-colors shadow-sm mb-4 ${
                                         hasChapterOrderChanged(chapter.id)
                                             ? 'border-green-500 bg-green-500/5'
-                                            : 'border-[#2D2D2D]'
+                                            : 'border-[#2D2D2D] hover:border-blue-500/40'
                                     }`}
                                     draggable
                                     onDragStart={(e) => handleChapterDragStart(e, chapter.id)}
                                     onDragOver={handleChapterDragOver}
                                     onDrop={(e) => handleChapterDrop(e, chapter.id)}
                                 >
-                                    <div className="flex items-center gap-3 p-4 hover:bg-[#252525] transition-colors">
+                                    <div className="flex items-center gap-3 p-4 bg-[#333333] hover:bg-[#333333] transition-colors">
                                         <span title="Kéo để sắp xếp chương">
                                             <GripVertical className="h-5 w-5 text-gray-500 cursor-move" />
                                         </span>
@@ -752,13 +764,17 @@ export function CourseChaptersPage() {
                                             <span className="text-white font-medium">{chapter.title}</span>
                                             <div className="flex items-center gap-2">
                                                 <Badge variant="outline" className="text-blue-400 border-blue-400/50">
-                                                    {chapter.lessonsCount || chapter.lessons?.length || 0} tổng
+                                                    {chapter.lessonsCount || chapter.lessons?.length || 0} bài
                                                 </Badge>
                                                 <Badge variant="outline" className="text-green-400 border-green-400/50">
                                                     {(chapter.lessons?.filter(l => l.isPublished).length || 0)} hiện
                                                 </Badge>
                                                 <Badge variant="outline" className="text-gray-400">
                                                     {(chapter.lessons?.filter(l => !l.isPublished).length || 0)} ẩn
+                                                </Badge>
+                                                <Badge variant="outline" className="text-xs text-blue-300 border-blue-300/50 flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" />
+                                                    {formatDuration(chapterDurationSeconds)}
                                                 </Badge>
                                             </div>
                                         </button>
@@ -858,7 +874,7 @@ export function CourseChaptersPage() {
                                                             )}
                                                             {!lesson.isPublished && (
                                                                 <Badge variant="outline" className="text-xs text-gray-500 border-gray-500 flex-shrink-0">
-                                                                    Draft
+                                                                    Đang ẩn
                                                                 </Badge>
                                                             )}
                                                         </div>
@@ -975,9 +991,9 @@ export function CourseChaptersPage() {
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                            )})
 
-                        {/* Create Chapter Button - Always visible */}
+                        /* Create Chapter Button - Always visible */}
                         <div className="flex justify-center pt-4 pb-2">
                             <Button
                                 onClick={handleCreateChapter}
@@ -1098,8 +1114,8 @@ export function CourseChaptersPage() {
                 <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D]">
                     <DialogHeader>
                         <DialogTitle className="text-white">Xóa Chương</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            Bạn có chắc chắn muốn xóa chương "{deletingChapter?.title}"? Tất cả bài học trong chương này cũng sẽ bị xóa.
+                        <DialogDescription className="text-gray-400"> 
+                            Bạn có chắc chắn muốn xóa chương <strong className="text-white">"{deletingChapter?.title}"? </strong> Tất cả bài học trong chương này cũng sẽ bị xóa.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -1136,7 +1152,7 @@ export function CourseChaptersPage() {
                     <DialogHeader>
                         <DialogTitle className="text-white">Xóa Bài học</DialogTitle>
                         <DialogDescription className="text-gray-400">
-                            Bạn có chắc chắn muốn xóa bài học "{deletingLesson?.lesson.title}"?
+                            Bạn có chắc chắn muốn xóa bài học <strong className="text-white">"{deletingLesson?.lesson.title}"</strong>?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
