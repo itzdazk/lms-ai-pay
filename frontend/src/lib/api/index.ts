@@ -9,6 +9,7 @@ export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
 export { enrollmentsApi } from './enrollments'
 export { ordersApi } from './orders'
+export { paymentsApi } from './payments'
 export type {
     EnrollmentWithCourse,
     EnrollmentCheckResponse,

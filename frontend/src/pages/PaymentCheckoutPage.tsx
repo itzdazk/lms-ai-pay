@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import {
@@ -22,11 +22,11 @@ import { coursesApi } from '../lib/api'
 import type { PublicCourse } from '../lib/api/types'
 import { getCoursePrice } from '../lib/courseUtils'
 import { OrderSummary } from '../components/Payment/OrderSummary'
+import { useCreateOrder } from '../hooks/useOrders'
+import { paymentsApi } from '../lib/api/payments'
 
 export function PaymentCheckoutPage() {
     const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
-
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [isLoading, setIsLoading] = useState<boolean>(true)
     const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>(
@@ -34,6 +34,14 @@ export function PaymentCheckoutPage() {
     )
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
+    const [billing, setBilling] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+    })
+
+    const { createOrder } = useCreateOrder()
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -137,15 +145,39 @@ export function PaymentCheckoutPage() {
             return
         }
 
-        setIsProcessing(true)
+        const paymentGateway = paymentMethod === 'vnpay' ? 'VNPay' : 'MoMo'
 
-        // Phase 1: chuẩn bị UI/logic. Việc tạo order + redirect sẽ được thực hiện ở Phase 2-3.
-        setTimeout(() => {
-            toast.success(
-                'Thông tin thanh toán đã sẵn sàng. Phase 2 sẽ kết nối order.'
+        setIsProcessing(true)
+        try {
+            const order = await createOrder({
+                courseId: course.id,
+                paymentGateway,
+                billingAddress: {
+                    fullName:
+                        `${billing.firstName} ${billing.lastName}`.trim() ||
+                        undefined,
+                    email: billing.email || undefined,
+                    phone: billing.phone || undefined,
+                },
+            })
+
+            const paymentUrl =
+                paymentMethod === 'vnpay'
+                    ? await paymentsApi.createVNPayUrl(order.id)
+                    : await paymentsApi.createMoMoUrl(order.id)
+            console.log('paymentUrl', paymentUrl)
+
+            toast.success('Đang chuyển hướng đến cổng thanh toán...')
+            window.location.href = paymentUrl
+        } catch (error: any) {
+            console.error('handlePayment error', error)
+            toast.error(
+                error?.response?.data?.message ||
+                    'Không thể tạo đơn hàng/thanh toán. Vui lòng thử lại.'
             )
+        } finally {
             setIsProcessing(false)
-        }, 600)
+        }
     }
 
     return (
@@ -153,7 +185,7 @@ export function PaymentCheckoutPage() {
             <div className='container mx-auto px-4'>
                 <Button
                     variant='outline'
-                    className='mb-6 border-2 border-[#2D2D2D] !text-white bg-black hover:bg-[#1F1F1F] rounded-lg'
+                    className='mb-6 border-2 border-[#2D2D2D] text-white bg-black hover:bg-[#1F1F1F] rounded-lg'
                     size='lg'
                     asChild
                 >
@@ -281,6 +313,14 @@ export function PaymentCheckoutPage() {
                                                 id='firstName'
                                                 placeholder='Nguyễn'
                                                 className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                                value={billing.firstName}
+                                                onChange={(e) =>
+                                                    setBilling((prev) => ({
+                                                        ...prev,
+                                                        firstName:
+                                                            e.target.value,
+                                                    }))
+                                                }
                                             />
                                         </div>
                                         <div className='space-y-2'>
@@ -294,6 +334,14 @@ export function PaymentCheckoutPage() {
                                                 id='lastName'
                                                 placeholder='Văn A'
                                                 className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                                value={billing.lastName}
+                                                onChange={(e) =>
+                                                    setBilling((prev) => ({
+                                                        ...prev,
+                                                        lastName:
+                                                            e.target.value,
+                                                    }))
+                                                }
                                             />
                                         </div>
                                     </div>
@@ -309,6 +357,13 @@ export function PaymentCheckoutPage() {
                                             type='email'
                                             placeholder='email@example.com'
                                             className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                            value={billing.email}
+                                            onChange={(e) =>
+                                                setBilling((prev) => ({
+                                                    ...prev,
+                                                    email: e.target.value,
+                                                }))
+                                            }
                                         />
                                     </div>
                                     <div className='space-y-2'>
@@ -323,6 +378,13 @@ export function PaymentCheckoutPage() {
                                             type='tel'
                                             placeholder='0901234567'
                                             className='bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
+                                            value={billing.phone}
+                                            onChange={(e) =>
+                                                setBilling((prev) => ({
+                                                    ...prev,
+                                                    phone: e.target.value,
+                                                }))
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -332,7 +394,7 @@ export function PaymentCheckoutPage() {
                         <Card className='bg-blue-600/20 dark:bg-blue-600/20 border-blue-600/50 dark:border-blue-600/50'>
                             <CardContent className='pt-6'>
                                 <div className='flex items-start gap-3'>
-                                    <ShieldCheck className='h-6 w-6 dark:text-blue-500 text-blue-800 flex-shrink-0 mt-1' />
+                                    <ShieldCheck className='h-6 w-6 dark:text-blue-500 text-blue-800 shrink-0 mt-1' />
                                     <div>
                                         <p className='font-semibold dark:text-blue-500 text-blue-800 mb-1'>
                                             Thanh toán an toàn
@@ -360,7 +422,7 @@ export function PaymentCheckoutPage() {
                                         onCheckedChange={(checked) =>
                                             setAgreeTerms(checked as boolean)
                                         }
-                                        className='mt-1'
+                                        className='mt-1 border-2 border-[#5e5757]'
                                     />
                                     <label
                                         htmlFor='terms'
@@ -413,7 +475,7 @@ export function PaymentCheckoutPage() {
 
                                 <div className='bg-green-600/20 p-4 rounded-lg border border-green-600/50'>
                                     <div className='flex items-start gap-2'>
-                                        <CheckCircle className='h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
+                                        <CheckCircle className='h-5 w-5 text-green-500 shrink-0 mt-0.5' />
                                         <div>
                                             <p className='font-semibold text-green-400 text-sm mb-1'>
                                                 Đảm bảo hoàn tiền 30 ngày
