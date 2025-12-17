@@ -308,7 +308,7 @@ export interface CreateLessonRequest {
     description?: string
     content?: string
     videoUrl?: string
-    videoDuration?: number
+    // videoDuration is automatically calculated by backend when video is uploaded
     lessonOrder: number
     isPreview?: boolean
     isPublished?: boolean
