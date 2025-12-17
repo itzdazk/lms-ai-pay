@@ -2391,7 +2391,7 @@ export function CourseForm({
 
       {/* Sticky Bottom Action Bar - Sticks to bottom of viewport when scrolling, sticks to form bottom when at end */}
       <div className="sticky bottom-0 left-0 right-0 z-50 bg-[#1A1A1A] border-t-2 border-[#2D2D2D] shadow-2xl mt-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-2">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4">
             {/* Left side - Change indicator (only when has changes) */}
             {course && hasChanges() && (

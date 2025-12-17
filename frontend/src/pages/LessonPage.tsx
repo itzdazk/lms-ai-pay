@@ -131,21 +131,9 @@ export function LessonPage() {
         
         // Load chapters with lessons
         const chaptersData = await chaptersApi.getChaptersByCourse(loadedCourseId, true);
+        setChapters(chaptersData || []);
 
-        // Filter out unpublished chapters and lessons for non-instructor users
-        const isInstructorOrAdmin = user && (user.role === 'INSTRUCTOR' || user.role === 'ADMIN');
-        let filteredChapters = chaptersData || [];
 
-        if (!isInstructorOrAdmin) {
-            filteredChapters = filteredChapters
-                .filter(chapter => chapter.isPublished)
-                .map(chapter => ({
-                    ...chapter,
-                    lessons: chapter.lessons?.filter(lesson => lesson.isPublished) || []
-                }));
-        }
-
-        setChapters(filteredChapters);
         
         // Then load lessons using courseId (fallback)
         const lessonsData = await lessonsApi.getCourseLessons(loadedCourseId);

@@ -51,7 +51,7 @@ function formatPrice(price: number): string {
 function formatDuration(minutes: number): string {
   if (!minutes) return '0 phút';
   const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  const mins = Math.round(minutes % 60);
   if (hours > 0) {
     return mins > 0 ? `${hours}h ${mins}p` : `${hours}h`;
   }
@@ -84,7 +84,8 @@ function CourseRow({
   
   const coursePrice = course.discountPrice || course.price || 0;
   const revenue = coursePrice * (course.enrolledCount || 0);
-  const durationMinutes = Math.round((course.durationHours || 0) * 60);
+  // Backend durationHours is stored in minutes (naming legacy). Do not multiply.
+  const durationMinutes = Math.round(course.durationHours || 0);
   const lessonsCount = course.totalLessons || 0;
 
   const handleToggle = (isCurrentlySelected: boolean, e: React.MouseEvent<HTMLTableRowElement>) => {
@@ -325,7 +326,7 @@ function CourseRow({
           }}
         >
           <Link 
-            to={`/courses/${course.id}`}
+            to={`/courses/${course.slug}`}
             className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer"
             onClick={() => setMenuOpen(false)}
           >
