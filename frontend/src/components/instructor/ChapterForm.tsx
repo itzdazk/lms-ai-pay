@@ -129,17 +129,22 @@ export function ChapterForm({
                     </Label>
                     <Input
                         id="chapterOrder"
-                        type="number"
-                        value={formData.chapterOrder}
-                        onChange={(e) =>
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={formData.chapterOrder === 0 ? '' : formData.chapterOrder}
+                        onChange={(e) => {
+                            const next = e.target.value.replace(/[^0-9]/g, '')
                             setFormData({
                                 ...formData,
-                                chapterOrder: parseInt(e.target.value) || 0,
+                                chapterOrder: next === '' ? 0 : parseInt(next, 10),
                             })
-                        }
+                        }}
                         placeholder="Thứ tự hiển thị"
                         className="bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500"
-                        min={0}
+                        spellCheck={false}
+                        autoCorrect="off"
+                        autoCapitalize="off"
                     />
                     <p className="text-sm text-gray-400 mt-1">
                         Thứ tự sẽ được tự động điều chỉnh khi sắp xếp lại
