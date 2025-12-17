@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
 import { Badge } from '../../components/ui/badge'
-import { Loader2, ArrowLeft, Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Video, FileText } from 'lucide-react'
+import { Loader2, Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Video, FileText, AlertCircle, RotateCcw, CheckCircle2, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../../contexts/AuthContext'
+import { useCourseForm } from '../../contexts/CourseFormContext'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { ChapterForm } from '../../components/instructor/ChapterForm'
 import { LessonForm } from '../../components/instructor/LessonForm'
@@ -14,6 +15,19 @@ import { chaptersApi } from '../../lib/api/chapters'
 import { instructorLessonsApi } from '../../lib/api/instructor-lessons'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import type { Chapter, Lesson, Course, CreateChapterRequest, UpdateChapterRequest, CreateLessonRequest, UpdateLessonRequest } from '../../lib/api/types'
+
+// Helper function to format video duration (seconds to MM:SS or HH:MM:SS)
+const formatDuration = (seconds?: number): string => {
+    if (!seconds || seconds === 0) return '--:--'
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = Math.floor(seconds % 60)
+    
+    if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
+}
 
 export function CourseChaptersPage() {
     const { user: currentUser, loading: authLoading } = useAuth()
@@ -31,7 +45,7 @@ export function CourseChaptersPage() {
 
     // Local state for drag and drop changes
     const [localChapters, setLocalChapters] = useState<Chapter[]>([])
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+    const { hasChanges: hasUnsavedChanges, setHasChanges: setHasUnsavedChanges } = useCourseForm()
 
 
     // Dialogs
@@ -500,7 +514,7 @@ export function CourseChaptersPage() {
                 <div className="text-center">
                     <p className="text-gray-400 mb-4">Khóa học không tồn tại</p>
                     <DarkOutlineButton onClick={() => navigate('/instructor/dashboard')}>
-                        Quay lại
+                        Dashboard
                     </DarkOutlineButton>
                 </div>
             </div>
@@ -509,33 +523,13 @@ export function CourseChaptersPage() {
 
     return (
         <>
-        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+        <Card className="bg-[#1A1A1A] border-[#2D2D2D] py-4">
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-white text-2xl mb-2">
-                                Quản lý chương và bài học
-                            </CardTitle>
-                            <p className="text-gray-400">{course.title}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <DarkOutlineButton
-                                onClick={() => navigate('/instructor/dashboard')}
-                                size="sm"
-                                className="flex items-center gap-2"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Quay lại
-                            </DarkOutlineButton>
-                            <Button
-                                onClick={handleCreateChapter}
-                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                                title="Tạo chapter mới"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Tạo Chapter
-                            </Button>
-                        </div>
+                    <div>
+                        <CardTitle className="text-white text-2xl mb-2">
+                            Quản lý chương và bài học
+                        </CardTitle>
+                        <p className="text-gray-400">{course.title}</p>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -580,7 +574,7 @@ export function CourseChaptersPage() {
                                                 {chapter.lessonsCount || chapter.lessons?.length || 0} bài học
                                             </Badge>
                                         </button>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -615,17 +609,7 @@ export function CourseChaptersPage() {
                                         <div className="border-t border-[#2D2D2D] p-4 space-y-2">
                                             {chapter.lessons.length === 0 ? (
                                                 <div className="text-center py-4">
-                                                    <p className="text-gray-500 text-sm mb-2">Chưa có bài học nào</p>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleCreateLesson(chapter.id)}
-                                                        className="border-[#2D2D2D] text-gray-400 hover:text-white"
-                                                        title="Tạo bài học mới"
-                                                    >
-                                                        <Plus className="h-4 w-4 mr-2" />
-                                                        Tạo bài học
-                                                    </Button>
+                                                    <p className="text-gray-500 text-sm">Chưa có bài học nào</p>
                                                 </div>
                                             ) : (
                                                 (() => {
@@ -648,24 +632,50 @@ export function CourseChaptersPage() {
                                                         <span title="Kéo để sắp xếp bài học">
                                                             <GripVertical className="h-4 w-4 text-gray-500 cursor-move" />
                                                         </span>
-                                                        <div className="flex items-center gap-2 flex-1">
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
                                                             {lesson.videoUrl ? (
-                                                                <Video className="h-4 w-4 text-blue-500" />
+                                                                <Video className="h-4 w-4 text-blue-500 flex-shrink-0" />
                                                             ) : (
-                                                                <FileText className="h-4 w-4 text-gray-500" />
+                                                                <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
                                                             )}
-                                                            <span className="text-blue-500 font-semibold text-sm mr-2">#{lesson.lessonOrder}</span>
-                                                            <span className="text-white text-sm">{lesson.title}</span>
+                                                            <span className="text-blue-500 font-semibold text-sm mr-2 flex-shrink-0">#{lesson.lessonOrder}</span>
+                                                            <span className="text-white text-sm truncate">{lesson.title}</span>
                                                             {lesson.isPreview && (
-                                                                <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500">
+                                                                <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500 flex-shrink-0">
                                                                     Preview
                                                                 </Badge>
                                                             )}
                                                             {!lesson.isPublished && (
-                                                                <Badge variant="outline" className="text-xs text-gray-500 border-gray-500">
+                                                                <Badge variant="outline" className="text-xs text-gray-500 border-gray-500 flex-shrink-0">
                                                                     Draft
                                                                 </Badge>
                                                             )}
+                                                        </div>
+                                                        {/* Video info - Right side */}
+                                                        <div className="flex items-center gap-4 flex-shrink-0 mr-2">
+                                                            {/* Video duration */}
+                                                            <div className="flex items-center gap-1 text-gray-400 text-xs whitespace-nowrap min-w-[3rem] justify-end">
+                                                                {lesson.videoDuration && lesson.videoDuration > 0 ? (
+                                                                    <>
+                                                                        <Clock className="h-3 w-3 flex-shrink-0" />
+                                                                        <span>{formatDuration(lesson.videoDuration)}</span>
+                                                                    </>
+                                                                ) : null}
+                                                            </div>
+                                                            {/* Transcript status */}
+                                                            <div className="flex items-center gap-1 text-xs whitespace-nowrap min-w-[4rem] sm:min-w-[5rem] justify-end">
+                                                                {lesson.transcriptJsonUrl ? (
+                                                                    <div className="flex items-center gap-1 text-green-400" title="Đã có transcript">
+                                                                        <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+                                                                        <span className="hidden sm:inline">Transcript</span>
+                                                                    </div>
+                                                                ) : lesson.videoUrl ? (
+                                                                    <div className="flex items-center gap-1 text-gray-500" title="Chưa có transcript">
+                                                                        <FileText className="h-3 w-3 flex-shrink-0" />
+                                                                        <span className="hidden sm:inline">Chưa có</span>
+                                                                    </div>
+                                                                ) : null}
+                                                            </div>
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             <Button
@@ -714,13 +724,13 @@ export function CourseChaptersPage() {
                                                     title="Tạo bài học mới"
                                                 >
                                                     <Plus className="h-4 w-4 mr-2" />
-                                                    Thêm bài học
+                                                    Tạo Bài học
                                                 </Button>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-                            ))
+                            ))}
 
                         {/* Create Chapter Button - Always visible */}
                         <div className="flex justify-center pt-4 pb-2">
@@ -730,53 +740,50 @@ export function CourseChaptersPage() {
                                 title="Tạo chapter mới"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
-                                Tạo Chapter
+                                Tạo Chương
                             </Button>
                         </div>
-                    </div>
 
-                    {/* Save/Cancel Buttons */}
-                        {hasUnsavedChanges && (
-                            <div className="sticky bottom-0 bg-[#1A1A1A]/95 backdrop-blur-sm border-t border-[#2D2D2D] mt-6 -mb-6 -mx-6 px-6 py-4">
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
-                                    {/* Left side - Change Indicator */}
-                                    <div className="flex items-center justify-center sm:justify-start">
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                            <Loader2 className="h-4 w-4 text-green-400 animate-pulse" />
-                                            <span className="text-sm text-green-400 font-medium">Có thay đổi chưa lưu</span>
-                                        </div>
+                        {/* Save/Cancel Buttons - Always visible */}
+                        <div className="sticky bottom-0 bg-[#1A1A1A]/95 backdrop-blur-sm border-t border-[#2D2D2D] mt-6 -mb-6 -mx-6 px-6 py-4">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4">
+                                {/* Change indicator - Left aligned (only when has changes) */}
+                                {hasUnsavedChanges && (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg mr-auto">
+                                        <AlertCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        <span className="text-sm text-green-500 font-medium whitespace-nowrap">Có thay đổi chưa lưu</span>
                                     </div>
-
-                                    {/* Right side - Action Buttons */}
-                                    <div className="flex items-center justify-end gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                                        <DarkOutlineButton
-                                            onClick={handleResetChanges}
-                                            disabled={submitting}
-                                            className="flex-shrink-0"
-                                        >
-                                            Hủy bỏ
-                                        </DarkOutlineButton>
-                                        <Button
-                                            onClick={handleSaveChanges}
-                                            disabled={submitting}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
-                                        >
-                                            {submitting ? (
-                                                <>
-                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                    Đang lưu...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    
-                                                    Lưu thay đổi
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
+                                )}
+                                
+                                {/* Action Buttons - Right aligned */}
+                                <div className="flex items-center justify-end gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                                    <DarkOutlineButton
+                                        onClick={handleResetChanges}
+                                        disabled={submitting || !hasUnsavedChanges}
+                                        className="flex items-center gap-2 flex-shrink-0"
+                                    >
+                                        <RotateCcw className="h-4 w-4" />
+                                        Hủy bỏ
+                                    </DarkOutlineButton>
+                                    <Button
+                                        onClick={handleSaveChanges}
+                                        disabled={submitting || !hasUnsavedChanges}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {submitting ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Đang lưu...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Lưu thay đổi
+                                            </>
+                                        )}
+                                    </Button>
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -809,8 +816,10 @@ export function CourseChaptersPage() {
 
             {/* Lesson Dialog */}
             <Dialog open={showLessonDialog} onOpenChange={setShowLessonDialog}>
-                <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-                    <DialogHeader>
+                <DialogContent 
+                    className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-4xl w-[95vw]"
+                >
+                    <DialogHeader className="px-8 pt-6 pb-4 flex-shrink-0">
                         <DialogTitle className="text-white">
                             {editingLesson ? 'Chỉnh sửa Bài học' : 'Tạo Bài học mới'}
                         </DialogTitle>
@@ -820,20 +829,22 @@ export function CourseChaptersPage() {
                                 : 'Nhập thông tin để tạo bài học mới'}
                         </DialogDescription>
                     </DialogHeader>
-                    {selectedChapterId && (
-                        <LessonForm
-                            lesson={editingLesson}
-                            courseId={courseId}
-                            chapterId={selectedChapterId ?? undefined}
-                            onSubmit={handleLessonSubmit}
-                            onCancel={() => {
-                                setShowLessonDialog(false)
-                                setEditingLesson(null)
-                                setSelectedChapterId(null)
-                            }}
-                            loading={submitting}
-                        />
-                    )}
+                    <div className="flex-1 overflow-y-auto px-8 custom-scrollbar">
+                        {selectedChapterId && (
+                            <LessonForm
+                                lesson={editingLesson}
+                                courseId={courseId}
+                                chapterId={selectedChapterId ?? undefined}
+                                onSubmit={handleLessonSubmit}
+                                onCancel={() => {
+                                    setShowLessonDialog(false)
+                                    setEditingLesson(null)
+                                    setSelectedChapterId(null)
+                                }}
+                                loading={submitting}
+                            />
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
 
