@@ -3,14 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
-import { Badge } from '../../components/ui/badge'
-import { Loader2, Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Video, FileText, AlertCircle, RotateCcw, CheckCircle2, Clock, Sparkles } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../../contexts/AuthContext'
 import { useCourseForm } from '../../contexts/CourseFormContext'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { ChapterForm } from '../../components/instructor/ChapterForm'
-import { LessonForm } from '../../components/instructor/LessonForm'
+import { ChapterDialog } from '../../components/instructor/ChapterDialog'
+import { LessonDialog } from '../../components/instructor/LessonDialog'
+import { DeleteChapterDialog } from '../../components/instructor/DeleteChapterDialog'
+import { DeleteLessonDialog } from '../../components/instructor/DeleteLessonDialog'
+import { CourseStatistics } from '../../components/instructor/CourseStatistics'
+import { ChapterItem } from '../../components/instructor/ChapterItem'
+import { SaveChangesBar } from '../../components/instructor/SaveChangesBar'
 import { chaptersApi } from '../../lib/api/chapters'
 import { instructorLessonsApi } from '../../lib/api/instructor-lessons'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
@@ -62,7 +65,6 @@ export function CourseChaptersPage() {
     const [localChapters, setLocalChapters] = useState<Chapter[]>([])
     const { hasChanges: hasUnsavedChanges, setHasChanges: setHasUnsavedChanges } = useCourseForm()
     const localChaptersRef = useRef<Chapter[]>([])
-
 
     // Dialogs
     const [showChapterDialog, setShowChapterDialog] = useState(false)
@@ -213,6 +215,32 @@ export function CourseChaptersPage() {
         }
     }
 
+    // Helper function to update local chapters state
+    const updateLocalChapters = (updater: (chapters: Chapter[]) => Chapter[]) => {
+        setLocalChapters(prev => {
+            const updated = updater(prev)
+            localChaptersRef.current = updated
+            return updated
+        })
+    }
+
+    // Helper function to refresh a single chapter from API
+    const refreshChapter = async (chapterId: number) => {
+        try {
+            const updatedChapter = await chaptersApi.getChapterById(chapterId, true) // Include lessons
+            updateLocalChapters(chapters => 
+                chapters.map(ch => ch.id === chapterId ? updatedChapter : ch)
+            )
+            setChapters(prev => 
+                prev.map(ch => ch.id === chapterId ? updatedChapter : ch)
+            )
+            return updatedChapter
+        } catch (error) {
+            console.error('Error refreshing chapter:', error)
+            throw error
+        }
+    }
+
     // Helper functions to save/load expanded chapters state
     const getExpandedChaptersKey = (courseId: number) => `course_${courseId}_expanded_chapters`
 
@@ -275,16 +303,25 @@ export function CourseChaptersPage() {
 
         try {
             setSubmitting(true)
+            
             if (editingChapter) {
+                // Update existing chapter
                 await chaptersApi.updateChapter(editingChapter.id, data as UpdateChapterRequest)
+                // Refresh the chapter to get latest data including lessons
+                await refreshChapter(editingChapter.id)
                 toast.success('Cập nhật chapter thành công!')
             } else {
-                await chaptersApi.createChapter(courseId, data as CreateChapterRequest)
+                // Create new chapter
+                const newChapter = await chaptersApi.createChapter(courseId, data as CreateChapterRequest)
+                // Get full chapter data with lessons
+                const fullChapter = await chaptersApi.getChapterById(newChapter.id, true)
+                // Add to local chapters at the end
+                updateLocalChapters(chapters => [...chapters, fullChapter])
+                setChapters(prev => [...prev, fullChapter])
                 toast.success('Tạo chapter thành công!')
             }
             setShowChapterDialog(false)
             setEditingChapter(null)
-            await loadData()
         } catch (error: any) {
             console.error('Error submitting chapter:', error)
             // Error toast is already shown by API client interceptor
@@ -298,11 +335,24 @@ export function CourseChaptersPage() {
 
         try {
             setSubmitting(true)
-            await chaptersApi.deleteChapter(deletingChapter.id)
+            const chapterIdToDelete = deletingChapter.id
+            
+            await chaptersApi.deleteChapter(chapterIdToDelete)
+            
+            // Remove from local state
+            updateLocalChapters(chapters => chapters.filter(ch => ch.id !== chapterIdToDelete))
+            setChapters(prev => prev.filter(ch => ch.id !== chapterIdToDelete))
+            
+            // Remove from expanded chapters if it was expanded
+            setExpandedChapters(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(chapterIdToDelete)
+                return newSet
+            })
+            
             toast.success('Xóa chapter thành công!')
             setShowDeleteChapterDialog(false)
             setDeletingChapter(null)
-            await loadData()
         } catch (error: any) {
             console.error('Error deleting chapter:', error)
             // Error toast is already shown by API client interceptor
@@ -354,6 +404,8 @@ export function CourseChaptersPage() {
                     await instructorLessonsApi.uploadTranscript(courseId, editingLesson.id, transcriptFile)
                 }
 
+                // Refresh the chapter to get updated lesson data
+                await refreshChapter(selectedChapterId)
                 toast.success('Cập nhật bài học thành công!')
             } else {
                 // Create lesson
@@ -371,13 +423,20 @@ export function CourseChaptersPage() {
                     await instructorLessonsApi.uploadTranscript(courseId, newLesson.id, transcriptFile)
                 }
 
+                // Refresh the chapter to get the new lesson with all data
+                await refreshChapter(selectedChapterId)
+                // Ensure chapter is expanded to show new lesson
+                setExpandedChapters(prev => {
+                    const newSet = new Set(prev)
+                    newSet.add(selectedChapterId)
+                    return newSet
+                })
                 toast.success('Tạo bài học thành công!')
             }
 
             setShowLessonDialog(false)
             setEditingLesson(null)
             setSelectedChapterId(null)
-            await loadData()
         } catch (error: any) {
             console.error('Error submitting lesson:', error)
             // Error toast is already shown by API client interceptor
@@ -391,11 +450,35 @@ export function CourseChaptersPage() {
 
         try {
             setSubmitting(true)
-            await instructorLessonsApi.deleteLesson(courseId, deletingLesson.lesson.id)
+            const { lesson, chapterId } = deletingLesson
+            
+            await instructorLessonsApi.deleteLesson(courseId, lesson.id)
+            
+            // Remove lesson from local state
+            updateLocalChapters(chapters =>
+                chapters.map(ch =>
+                    ch.id === chapterId
+                        ? {
+                              ...ch,
+                              lessons: ch.lessons?.filter(l => l.id !== lesson.id) || [],
+                          }
+                        : ch
+                )
+            )
+            setChapters(prev =>
+                prev.map(ch =>
+                    ch.id === chapterId
+                        ? {
+                              ...ch,
+                              lessons: ch.lessons?.filter(l => l.id !== lesson.id) || [],
+                          }
+                        : ch
+                )
+            )
+            
             toast.success('Xóa bài học thành công!')
             setShowDeleteLessonDialog(false)
             setDeletingLesson(null)
-            await loadData()
         } catch (error: any) {
             console.error('Error deleting lesson:', error)
             // Error toast is already shown by API client interceptor
@@ -408,9 +491,35 @@ export function CourseChaptersPage() {
         if (!courseId) return
 
         try {
-            await instructorLessonsApi.publishLesson(courseId, lesson.id, isPublished)
+            const updatedLesson = await instructorLessonsApi.publishLesson(courseId, lesson.id, isPublished)
+            
+            // Find chapter containing this lesson and update it
+            updateLocalChapters(chapters =>
+                chapters.map(ch =>
+                    ch.lessons?.some(l => l.id === lesson.id)
+                        ? {
+                              ...ch,
+                              lessons: ch.lessons?.map(l =>
+                                  l.id === lesson.id ? updatedLesson : l
+                              ),
+                          }
+                        : ch
+                )
+            )
+            setChapters(prev =>
+                prev.map(ch =>
+                    ch.lessons?.some(l => l.id === lesson.id)
+                        ? {
+                              ...ch,
+                              lessons: ch.lessons?.map(l =>
+                                  l.id === lesson.id ? updatedLesson : l
+                              ),
+                          }
+                        : ch
+                )
+            )
+            
             toast.success(isPublished ? 'Đã xuất bản bài học' : 'Đã ẩn bài học')
-            await loadData()
         } catch (error: any) {
             console.error('Error publishing lesson:', error)
             // Error toast is already shown by API client interceptor
@@ -419,9 +528,21 @@ export function CourseChaptersPage() {
 
     const handlePublishChapter = async (chapter: Chapter, isPublished: boolean) => {
         try {
-            await chaptersApi.updateChapter(chapter.id, { isPublished })
+            const updatedChapter = await chaptersApi.updateChapter(chapter.id, { isPublished })
+            
+            // Update local state
+            updateLocalChapters(chapters =>
+                chapters.map(ch =>
+                    ch.id === chapter.id ? { ...ch, isPublished: updatedChapter.isPublished } : ch
+                )
+            )
+            setChapters(prev =>
+                prev.map(ch =>
+                    ch.id === chapter.id ? { ...ch, isPublished: updatedChapter.isPublished } : ch
+                )
+            )
+            
             toast.success(isPublished ? 'Đã xuất bản chương' : 'Đã ẩn chương')
-            await loadData()
         } catch (error: any) {
             console.error('Error publishing chapter:', error)
             // Error toast is already shown by API client interceptor
@@ -445,9 +566,49 @@ export function CourseChaptersPage() {
         }
 
         try {
-            await instructorLessonsApi.requestTranscript(courseId, lesson.id)
+            const updatedLesson = await instructorLessonsApi.requestTranscript(courseId, lesson.id)
+            
+            // Find chapter containing this lesson and update transcript status
+            updateLocalChapters(chapters =>
+                chapters.map(ch =>
+                    ch.lessons?.some(l => l.id === lesson.id)
+                        ? {
+                              ...ch,
+                              lessons: ch.lessons?.map(l =>
+                                  l.id === lesson.id
+                                      ? {
+                                            ...l,
+                                            transcriptStatus: updatedLesson.transcriptStatus,
+                                            transcriptUrl: updatedLesson.transcriptUrl,
+                                            transcriptJsonUrl: updatedLesson.transcriptJsonUrl,
+                                        }
+                                      : l
+                              ),
+                          }
+                        : ch
+                )
+            )
+            setChapters(prev =>
+                prev.map(ch =>
+                    ch.lessons?.some(l => l.id === lesson.id)
+                        ? {
+                              ...ch,
+                              lessons: ch.lessons?.map(l =>
+                                  l.id === lesson.id
+                                      ? {
+                                            ...l,
+                                            transcriptStatus: updatedLesson.transcriptStatus,
+                                            transcriptUrl: updatedLesson.transcriptUrl,
+                                            transcriptJsonUrl: updatedLesson.transcriptJsonUrl,
+                                        }
+                                      : l
+                              ),
+                          }
+                        : ch
+                )
+            )
+            
             toast.success('Đã yêu cầu tạo transcript. Quá trình xử lý sẽ bắt đầu trong giây lát.')
-            await loadData()
         } catch (error: any) {
             console.error('Error requesting transcript:', error)
             // Error toast is already shown by API client interceptor
@@ -498,6 +659,7 @@ export function CourseChaptersPage() {
         setDraggedChapterId(null)
         setDragOverChapterId(null)
     }
+
     const handleChapterDragEnd = () => {
         clearDragStates()
     }
@@ -763,22 +925,6 @@ export function CourseChaptersPage() {
         )
     }
 
-    // Calculate total course duration (sum of all lesson durations)
-    const totalCourseDurationSeconds = localChapters.reduce((courseAcc, ch) => {
-        const chapterSeconds = ch.lessons?.reduce((acc, l) => acc + (l.videoDuration || 0), 0) || 0
-        return courseAcc + chapterSeconds
-    }, 0)
-
-    const totalLessons = localChapters.reduce(
-        (acc, ch) => acc + (ch.lessons?.length || 0),
-        0
-    )
-    const totalLessonsPublished = localChapters.reduce(
-        (acc, ch) => acc + (ch.lessons?.filter((l) => l.isPublished).length || 0),
-        0
-    )
-    const totalLessonsHidden = totalLessons - totalLessonsPublished
-
     return (
         <>
         <Card className="bg-[#1A1A1A] border-[#2D2D2D] py-4">
@@ -790,58 +936,11 @@ export function CourseChaptersPage() {
                         <p className="text-gray-400">{course.title}</p>
                     </div>
 
-                    {/* Course Statistics and Create Button */}
-                    <div className="flex items-center justify-between mt-4">
-                        {/* Left side - Statistics */}
-                        <div className="flex items-center gap-3 flex-wrap">
-                            {/* Chương */}
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-blue-400 border-blue-400/50 px-3 py-1">
-                                    {localChapters.length} chương
-                                </Badge>
-                                <Badge variant="outline" className="text-green-400 border-green-400/50 px-3 py-1">
-                                    {localChapters.filter(ch => ch.isPublished).length} hiện
-                                </Badge>
-                                <Badge variant="outline" className="text-gray-400 border-gray-400/50 px-3 py-1">
-                                    {localChapters.filter(ch => !ch.isPublished).length} ẩn
-                                </Badge>
-                            </div>
-
-                            <span className="text-gray-500">|</span>
-
-                            {/* Bài */}
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-blue-300 border-blue-300/50 px-3 py-1">
-                                    {totalLessons} bài
-                                </Badge>
-                                <Badge variant="outline" className="text-green-400 border-green-400/50 px-3 py-1">
-                                    {totalLessonsPublished} hiện
-                                </Badge>
-                                <Badge variant="outline" className="text-gray-400 border-gray-400/50 px-3 py-1">
-                                    {totalLessonsHidden} ẩn
-                                </Badge>
-                            </div>
-
-                            <span className="text-gray-500">|</span>
-
-                            {/* Thời lượng */}
-                            <Badge variant="outline" className="text-blue-300 border-blue-300/50 px-3 py-1 flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {formatDuration(totalCourseDurationSeconds)}
-                            </Badge>
-                        </div>
-
-                        {/* Right side - Create Chapter Button */}
-                        <Button
-                            onClick={handleCreateChapter}
-                            size="default"
-                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                            title="Tạo chương mới"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Tạo Chương
-                        </Button>
-                    </div>
+                    <CourseStatistics
+                        chapters={localChapters}
+                        onCreateChapter={handleCreateChapter}
+                        formatDuration={formatDuration}
+                    />
                 </CardHeader>
                 <CardContent>
                     <div
@@ -857,299 +956,50 @@ export function CourseChaptersPage() {
 
                         {/* Display chapters */}
                         {localChapters.map((chapter) => {
-                            const chapterDurationSeconds =
-                                chapter.lessons?.reduce((acc, l) => acc + (l.videoDuration || 0), 0) || 0
+                            const swappedLessonIds = getSwappedLessonIds(chapter.id)
                             return (
-                                <div
+                                <ChapterItem
                                     key={chapter.id}
-                                    className={`bg-[#121212] border rounded-lg overflow-hidden transition-all duration-150 shadow-sm mb-4 ${
-                                        draggedChapterId === chapter.id
-                                            ? 'border-blue-500 bg-blue-500/10 shadow-lg scale-[1.01]'
-                                            : dragOverChapterId === chapter.id
-                                            ? 'border-blue-500 border-dashed bg-blue-500/5'
-                                            : hasChapterOrderChanged(chapter.id)
-                                            ? 'border-green-500 bg-green-500/5'
-                                            : 'border-[#2D2D2D] hover:border-blue-500/40'
-                                    }`}
-                                    draggable
+                                    chapter={chapter}
+                                    isExpanded={expandedChapters.has(chapter.id)}
+                                    isDragged={draggedChapterId === chapter.id}
+                                    isDragOver={dragOverChapterId === chapter.id}
+                                    hasOrderChanged={hasChapterOrderChanged(chapter.id)}
+                                    draggedLessonId={draggedLessonId}
+                                    draggedLessonChapterId={draggedLessonChapterId}
+                                    dragOverLessonId={dragOverLessonId}
+                                    dragOverLessonChapterId={dragOverLessonChapterId}
+                                    lessonScrollHint={lessonScrollHint}
+                                    swappedLessonIds={swappedLessonIds}
+                                    formatDuration={formatDuration}
+                                    containerRef={(el) => {
+                                        lessonContainerRefs.current[chapter.id] = el
+                                    }}
+                                    onToggle={() => toggleChapter(chapter.id)}
                                     onDragStart={(e) => handleChapterDragStart(e, chapter.id)}
                                     onDragOver={(e) => handleChapterDragOver(e, chapter.id)}
                                     onDragLeave={handleChapterDragLeave}
                                     onDrop={(e) => handleChapterDrop(e, chapter.id)}
                                     onDragEnd={handleChapterDragEnd}
-                                >
-                                    <div className="flex items-center gap-3 p-4 bg-[#333333] hover:bg-[#333333] transition-colors">
-                                        <span title="Kéo để sắp xếp chương">
-                                            <GripVertical className="h-5 w-5 text-gray-500 cursor-move" />
-                                        </span>
-                                        <button
-                                            onClick={() => toggleChapter(chapter.id)}
-                                            className="flex items-center gap-2 flex-1 text-left"
-                                        >
-                                            {expandedChapters.has(chapter.id) ? (
-                                                <ChevronDown className="h-4 w-4 text-gray-400" />
-                                            ) : (
-                                                <ChevronRight className="h-4 w-4 text-gray-400" />
-                                            )}
-                                            <span className="text-blue-500 font-semibold text-sm mr-2">#{chapter.chapterOrder}</span>
-                                            <span className="text-white font-medium">{chapter.title}</span>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="text-blue-400 border-blue-400/50">
-                                                    {chapter.lessonsCount || chapter.lessons?.length || 0} bài
-                                                </Badge>
-                                                <Badge variant="outline" className="text-green-400 border-green-400/50">
-                                                    {(chapter.lessons?.filter(l => l.isPublished).length || 0)} hiện
-                                                </Badge>
-                                                <Badge variant="outline" className="text-gray-400">
-                                                    {(chapter.lessons?.filter(l => !l.isPublished).length || 0)} ẩn
-                                                </Badge>
-                                                
-                                            </div>
-                                        </button>
-                                        <div className="flex items-center gap-1">
-                                        <Badge variant="outline" className="text-xs text-blue-300 border-blue-300/50 flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {formatDuration(chapterDurationSeconds)}
-                                                </Badge>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handlePublishChapter(chapter, !chapter.isPublished)}
-                                                className={`ml-2 h-6 px-2 text-xs ${
-                                                    chapter.isPublished
-                                                        ? 'text-green-400 hover:text-green-500 hover:bg-green-500/10'
-                                                        : 'text-gray-500 hover:text-gray-400 hover:bg-gray-500/10'
-                                                }`}
-                                                title={chapter.isPublished ? 'Click để ẩn chương' : 'Click để xuất bản chương'}
-                                            >
-                                                {chapter.isPublished ? (
-                                                    <>
-                                                        <Eye className="h-3 w-3 mr-1" />
-                                                        Xuất bản
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <EyeOff className="h-3 w-3 mr-1" />
-                                                        Ẩn
-                                                    </>
-                                                )}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="default"
-                                                onClick={() => handleEditChapter(chapter)}
-                                                className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                                                title="Chỉnh sửa chương"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="default"
-                                                onClick={() => handleDeleteChapter(chapter)}
-                                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                                title="Xóa chương"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="default"
-                                                onClick={() => handleCreateLesson(chapter.id)}
-                                                className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
-                                                title="Tạo bài học mới"
-                                            >
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
+                                    onPublish={(isPublished) => handlePublishChapter(chapter, isPublished)}
+                                    onEdit={() => handleEditChapter(chapter)}
+                                    onDelete={() => handleDeleteChapter(chapter)}
+                                    onCreateLesson={() => handleCreateLesson(chapter.id)}
+                                    onLessonDragStart={handleLessonDragStart}
+                                    onLessonDragOver={handleLessonDragOver}
+                                    onLessonDragLeave={handleLessonDragLeave}
+                                    onLessonDrop={handleLessonDrop}
+                                    onLessonDragEnd={handleLessonDragEnd}
+                                    onPublishLesson={handlePublishLesson}
+                                    onEditLesson={handleEditLesson}
+                                    onDeleteLesson={handleDeleteLesson}
+                                    onRequestTranscript={handleRequestTranscript}
+                                    onClearDragStates={clearDragStates}
+                                />
+                            )
+                        })}
 
-                                        {expandedChapters.has(chapter.id) && chapter.lessons && (
-                                            <div
-                                                className="relative border-t border-[#2D2D2D] p-4 space-y-2 max-h-[520px] overflow-y-auto custom-scrollbar"
-                                                ref={(el) => {
-                                                    lessonContainerRefs.current[chapter.id] = el
-                                                }}
-                                                onPointerUp={clearDragStates}
-                                            >
-                                                {(draggedLessonChapterId === chapter.id || draggedLessonId) && lessonScrollHint.chapterId === chapter.id && (
-                                                    <>
-                                                        {lessonScrollHint.top && (
-                                                            <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-blue-500/15 to-transparent flex items-start justify-center z-10">
-                                                                <span className="text-[11px] text-blue-300 mt-1">Kéo gần mép để cuộn lên</span>
-                                                            </div>
-                                                        )}
-                                                        {lessonScrollHint.bottom && (
-                                                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-blue-500/15 to-transparent flex items-end justify-center z-10">
-                                                                <span className="text-[11px] text-blue-300 mb-1">Kéo gần mép để cuộn xuống</span>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                            {chapter.lessons.length === 0 ? (
-                                                <div className="text-center py-4">
-                                                    <p className="text-gray-500 text-sm">Chưa có bài học nào</p>
-                                                </div>
-                                            ) : (
-                                                (() => {
-                                                    const swappedLessonIds = getSwappedLessonIds(chapter.id)
-                                                    return chapter.lessons.map((lesson) => (
-                                                        <div
-                                                            key={lesson.id}
-                                                            className={`flex items-center gap-3 p-3 bg-[#1A1A1A] border rounded-lg transition-all duration-150 ${
-                                                                draggedLessonId === lesson.id
-                                                                    ? 'border-blue-500 bg-blue-500/10 shadow-lg'
-                                                                    : (dragOverLessonId === lesson.id && dragOverLessonChapterId === chapter.id)
-                                                                    ? 'border-blue-500 border-dashed bg-blue-500/5'
-                                                                    : swappedLessonIds.has(lesson.id)
-                                                                    ? 'border-green-500 bg-green-500/10'
-                                                                    : 'border-[#2D2D2D] hover:bg-[#252525]'
-                                                            }`}
-                                                            draggable
-                                                            onDragStart={(e) => handleLessonDragStart(e, lesson.id, chapter.id)}
-                                                            onDragOver={(e) => handleLessonDragOver(e, lesson.id, chapter.id)}
-                                                            onDragLeave={handleLessonDragLeave}
-                                                            onDrop={(e) => handleLessonDrop(e, lesson.id, chapter.id)}
-                                                            onDragEnd={handleLessonDragEnd}
-                                                        >
-                                                        <span title="Kéo để sắp xếp bài học">
-                                                            <GripVertical className="h-4 w-4 text-gray-500 cursor-move" />
-                                                        </span>
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                            {lesson.videoUrl ? (
-                                                                <Video className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                                            ) : (
-                                                                <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                                                            )}
-                                                            <span className="text-blue-500 font-semibold text-sm mr-2 flex-shrink-0">#{lesson.lessonOrder}</span>
-                                                            <span className="text-white text-sm truncate">{lesson.title}</span>
-                                                            {lesson.isPreview && (
-                                                                <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500 flex-shrink-0">
-                                                                    Preview
-                                                                </Badge>
-                                                            )}
-                                                            {!lesson.isPublished && (
-                                                                <Badge variant="outline" className="text-xs text-gray-500 border-gray-500 flex-shrink-0">
-                                                                    Đang ẩn
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                        {/* Video info - Right side */}
-                                                        <div className="flex items-center gap-4 flex-shrink-0 mr-2">
-                                                            {/* Video duration */}
-                                                            <div className="flex items-center gap-1 text-gray-400 text-xs whitespace-nowrap min-w-[3rem] justify-end">
-                                                                {lesson.videoDuration && lesson.videoDuration > 0 ? (
-                                                                    <>
-                                                                        <Clock className="h-3 w-3 flex-shrink-0" />
-                                                                        <span>{formatDuration(lesson.videoDuration)}</span>
-                                                                    </>
-                                                                ) : null}
-                                                            </div>
-                                                            {/* Transcript status */}
-                                                            <div className="flex items-center gap-2 text-xs whitespace-nowrap min-w-[4rem] sm:min-w-[5rem] justify-end">
-                                                                {lesson.transcriptStatus === 'completed' || (lesson.transcriptUrl && !lesson.transcriptStatus) ? (
-                                                                    <div className="flex items-center gap-1 text-green-400" title="Đã có transcript">
-                                                                        <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
-                                                                        <span className="hidden sm:inline">Transcript</span>
-                                                                    </div>
-                                                                ) : lesson.transcriptStatus === 'processing' ? (
-                                                                    <div className="flex items-center gap-1 text-yellow-400" title="Đang tạo transcript">
-                                                                        <Loader2 className="h-3 w-3 flex-shrink-0 animate-spin" />
-                                                                        <span className="hidden sm:inline">Đang tải...</span>
-                                                                    </div>
-                                                                ) : lesson.transcriptStatus === 'failed' ? (
-                                                                    <div className="flex items-center gap-1">
-                                                                        <div className="flex items-center gap-1 text-red-400" title="Tạo transcript thất bại">
-                                                                            <AlertCircle className="h-3 w-3 flex-shrink-0" />
-                                                                            <span className="hidden sm:inline">Lỗi</span>
-                                                                        </div>
-                                                                        {lesson.videoUrl && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="sm"
-                                                                                onClick={() => handleRequestTranscript(lesson)}
-                                                                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                                                                                title="Yêu cầu tạo lại transcript"
-                                                                            >
-                                                                                <Sparkles className="h-3 w-3" />
-                                                                            </Button>
-                                                                        )}
-                                                                    </div>
-                                                                ) : lesson.videoUrl ? (
-                                                                    <div className="flex items-center gap-1">
-                                                                        <div className="flex items-center gap-1 text-gray-500" title="Chưa có transcript">
-                                                                            <FileText className="h-3 w-3 flex-shrink-0" />
-                                                                            <span className="hidden sm:inline">Chưa có</span>
-                                                                        </div>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            onClick={() => handleRequestTranscript(lesson)}
-                                                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                                                                            title="Yêu cầu tạo transcript"
-                                                                        >
-                                                                            <Sparkles className="h-3 w-3" />
-                                                                        </Button>
-                                                                    </div>
-                                                                ) : null}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handlePublishLesson(lesson, !lesson.isPublished)}
-                                                                className={lesson.isPublished ? "text-green-500 hover:text-green-600 hover:bg-green-500/10" : "text-gray-500 hover:text-gray-400 hover:bg-gray-500/10"}
-                                                                title={lesson.isPublished ? "Ẩn bài học" : "Xuất bản bài học"}
-                                                            >
-                                                                {lesson.isPublished ? (
-                                                                    <Eye className="h-4 w-4" />
-                                                                ) : (
-                                                                    <EyeOff className="h-4 w-4" />
-                                                                )}
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleEditLesson(lesson, chapter.id)}
-                                                                className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                                                                title="Chỉnh sửa bài học"
-                                                            >
-                                                                <Edit className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteLesson(lesson, chapter.id)}
-                                                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                                                title="Xóa bài học"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                    ))
-                                                })()
-                                            )}
-
-                                            {/* Add lesson button at the end */}
-                                            <div className="flex justify-center pt-2 pb-1">
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => handleCreateLesson(chapter.id)}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                                                    title="Tạo bài học mới"
-                                                >
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Tạo Bài học
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )})
-
-                        /* Create Chapter Button - Always visible */}
+                        {/* Create Chapter Button - Always visible */}
                         <div className="flex justify-center pt-4 pb-2">
                             <Button
                                 onClick={handleCreateChapter}
@@ -1162,183 +1012,71 @@ export function CourseChaptersPage() {
                         </div>
 
                         {/* Save/Cancel Buttons - Always visible */}
-                        <div className="sticky bottom-0 bg-[#1A1A1A]/95 backdrop-blur-sm border-t border-[#2D2D2D] mt-6 -mb-6 -mx-6 px-6 py-2">
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4">
-                                {/* Change indicator - Left aligned (only when has changes) */}
-                                {hasUnsavedChanges && (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg mr-auto">
-                                        <AlertCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                        <span className="text-sm text-green-500 font-medium whitespace-nowrap">Có thay đổi chưa lưu</span>
-                                    </div>
-                                )}
-                                
-                                {/* Action Buttons - Right aligned */}
-                                <div className="flex items-center justify-end gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                                    <DarkOutlineButton
-                                        onClick={handleResetChanges}
-                                        disabled={submitting || !hasUnsavedChanges}
-                                        className="flex items-center gap-2 flex-shrink-0"
-                                    >
-                                        <RotateCcw className="h-4 w-4" />
-                                        Hủy bỏ
-                                    </DarkOutlineButton>
-                                    <Button
-                                        onClick={handleSaveChanges}
-                                        disabled={submitting || !hasUnsavedChanges}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {submitting ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                Đang lưu...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Lưu thay đổi
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
+                        <SaveChangesBar
+                            hasUnsavedChanges={hasUnsavedChanges}
+                            submitting={submitting}
+                            onSave={handleSaveChanges}
+                            onReset={handleResetChanges}
+                        />
                     </div>
                 </CardContent>
             </Card>
 
             {/* Chapter Dialog */}
-            <Dialog open={showChapterDialog} onOpenChange={setShowChapterDialog}>
-                <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-white">
-                            {editingChapter ? 'Chỉnh sửa Chương' : 'Tạo Chương mới'}
-                        </DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            {editingChapter
-                                ? 'Cập nhật thông tin chương'
-                                : 'Nhập thông tin để tạo chương mới'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ChapterForm
-                        chapter={editingChapter}
-                        courseId={courseId}
-                        onSubmit={handleChapterSubmit}
-                        onCancel={() => {
-                            setShowChapterDialog(false)
-                            setEditingChapter(null)
-                        }}
-                        loading={submitting}
-                    />
-                </DialogContent>
-            </Dialog>
+            <ChapterDialog
+                open={showChapterDialog}
+                onOpenChange={setShowChapterDialog}
+                editingChapter={editingChapter}
+                courseId={courseId}
+                onSubmit={handleChapterSubmit}
+                onCancel={() => {
+                    setShowChapterDialog(false)
+                    setEditingChapter(null)
+                }}
+                loading={submitting}
+            />
 
             {/* Lesson Dialog */}
-            <Dialog open={showLessonDialog} onOpenChange={setShowLessonDialog}>
-                <DialogContent
-                    className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-5xl w-[98vw]"
-                >
-                    <DialogHeader className="px-8 pt-6 pb-4 flex-shrink-0">
-                        <DialogTitle className="text-white">
-                            {editingLesson ? 'Chỉnh sửa Bài học' : 'Tạo Bài học mới'}
-                        </DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            {editingLesson
-                                ? 'Cập nhật thông tin bài học'
-                                : 'Nhập thông tin để tạo bài học mới'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex-1 overflow-y-auto px-8 custom-scrollbar">
-                        {selectedChapterId && (
-                            <LessonForm
-                                lesson={editingLesson}
-                                courseId={courseId}
-                                chapterId={selectedChapterId ?? undefined}
-                                onSubmit={handleLessonSubmit}
-                                onCancel={() => {
-                                    setShowLessonDialog(false)
-                                    setEditingLesson(null)
-                                    setSelectedChapterId(null)
-                                }}
-                                loading={submitting}
-                            />
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <LessonDialog
+                open={showLessonDialog}
+                onOpenChange={setShowLessonDialog}
+                editingLesson={editingLesson}
+                courseId={courseId}
+                chapterId={selectedChapterId}
+                onSubmit={handleLessonSubmit}
+                onCancel={() => {
+                    setShowLessonDialog(false)
+                    setEditingLesson(null)
+                    setSelectedChapterId(null)
+                }}
+                loading={submitting}
+            />
 
             {/* Delete Chapter Dialog */}
-            <Dialog open={showDeleteChapterDialog} onOpenChange={setShowDeleteChapterDialog}>
-                <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <DialogHeader>
-                        <DialogTitle className="text-white">Xóa Chương</DialogTitle>
-                        <DialogDescription className="text-gray-400"> 
-                            Bạn có chắc chắn muốn xóa chương <strong className="text-white">"{deletingChapter?.title}"? </strong> Tất cả bài học trong chương này cũng sẽ bị xóa.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DarkOutlineButton
-                            onClick={() => {
-                                setShowDeleteChapterDialog(false)
-                                setDeletingChapter(null)
-                            }}
-                            disabled={submitting}
-                        >
-                            Hủy
-                        </DarkOutlineButton>
-                        <Button
-                            onClick={handleChapterDelete}
-                            disabled={submitting}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Đang xóa...
-                                </>
-                            ) : (
-                                'Xóa'
-                            )}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <DeleteChapterDialog
+                open={showDeleteChapterDialog}
+                onOpenChange={setShowDeleteChapterDialog}
+                deletingChapter={deletingChapter}
+                onSubmit={handleChapterDelete}
+                onCancel={() => {
+                    setShowDeleteChapterDialog(false)
+                    setDeletingChapter(null)
+                }}
+                submitting={submitting}
+            />
 
             {/* Delete Lesson Dialog */}
-            <Dialog open={showDeleteLessonDialog} onOpenChange={setShowDeleteLessonDialog}>
-                <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <DialogHeader>
-                        <DialogTitle className="text-white">Xóa Bài học</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            Bạn có chắc chắn muốn xóa bài học <strong className="text-white">"{deletingLesson?.lesson.title}"</strong>?
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DarkOutlineButton
-                            onClick={() => {
-                                setShowDeleteLessonDialog(false)
-                                setDeletingLesson(null)
-                            }}
-                            disabled={submitting}
-                        >
-                            Hủy
-                        </DarkOutlineButton>
-                        <Button
-                            onClick={handleLessonDelete}
-                            disabled={submitting}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Đang xóa...
-                                </>
-                            ) : (
-                                'Xóa'
-                            )}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <DeleteLessonDialog
+                open={showDeleteLessonDialog}
+                onOpenChange={setShowDeleteLessonDialog}
+                deletingLesson={deletingLesson?.lesson || null}
+                onSubmit={handleLessonDelete}
+                onCancel={() => {
+                    setShowDeleteLessonDialog(false)
+                    setDeletingLesson(null)
+                }}
+                submitting={submitting}
+            />
         </>
     )
 }
-
