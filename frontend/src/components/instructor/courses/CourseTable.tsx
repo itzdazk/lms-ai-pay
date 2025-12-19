@@ -22,6 +22,7 @@ interface CourseTableProps {
   onSearchChange: (value: string) => void;
   onSearchExecute: () => void;
   onClearSearch: () => void;
+  onSearchKeyPress?: (e: React.KeyboardEvent) => void;
   onCreateCourse: () => void;
   onEditCourse: (course: Course) => void;
   onDeleteCourse: (course: Course) => void;
@@ -40,6 +41,7 @@ export function CourseTable({
   onSearchChange,
   onSearchExecute,
   onClearSearch,
+  onSearchKeyPress,
   onCreateCourse,
   onEditCourse,
   onDeleteCourse,
@@ -155,13 +157,14 @@ export function CourseTable({
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <DarkOutlineInput
-              type="text"
-              placeholder="Tìm kiếm theo tên khóa học..."
-              value={searchInput}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)}
-              className="pl-10 pr-10"
-            />
+          <DarkOutlineInput
+            type="text"
+            placeholder="Tìm kiếm theo tên khóa học..."
+            value={searchInput}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)}
+            onKeyPress={onSearchKeyPress}
+            className="pl-10 pr-10"
+          />
             {searchInput && (
               <button
                 type="button"

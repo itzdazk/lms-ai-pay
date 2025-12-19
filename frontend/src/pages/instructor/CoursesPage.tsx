@@ -320,6 +320,12 @@ export function CoursesPage() {
     setFilters((prevFilters) => ({ ...prevFilters, search: '', page: 1 }));
   };
 
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearchExecute();
+    }
+  };
+
   const handleFilterChange = (key: string, value: any) => {
     const mainContainer = document.querySelector('main');
     if (mainContainer) {
@@ -397,6 +403,7 @@ export function CoursesPage() {
         onSearchChange={handleSearchInputChange}
         onSearchExecute={handleSearchExecute}
         onClearSearch={handleClearSearch}
+        onSearchKeyPress={handleSearchKeyPress}
         onCreateCourse={() => {
                 // Save scroll position before navigating
                 const scrollPosition = 
