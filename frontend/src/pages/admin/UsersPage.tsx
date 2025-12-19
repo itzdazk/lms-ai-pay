@@ -809,7 +809,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                   <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                     <RoleSelectValue />
                   </RoleSelectTrigger>
-                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
                     {/* Note: ADMIN role cannot be assigned via role change - only STUDENT and INSTRUCTOR are allowed */}
                     <RoleSelectItem value="INSTRUCTOR">Giảng viên</RoleSelectItem>
                     <RoleSelectItem value="STUDENT">Học viên</RoleSelectItem>
@@ -861,7 +861,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                   <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                     <RoleSelectValue />
                   </RoleSelectTrigger>
-                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
                     <RoleSelectItem value="ACTIVE">Hoạt động</RoleSelectItem>
                     <RoleSelectItem value="INACTIVE">Không hoạt động</RoleSelectItem>
                     <RoleSelectItem value="BANNED">Đã khóa</RoleSelectItem>
