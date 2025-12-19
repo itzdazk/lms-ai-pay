@@ -343,6 +343,7 @@ class CategoryService {
             slug: category.slug,
             description: category.description,
             imageUrl: category.imageUrl,
+            parentId: category.parentId,  // Thêm parentId field
             sortOrder: category.sortOrder,
             isActive: category.isActive,
             parent: category.parent,

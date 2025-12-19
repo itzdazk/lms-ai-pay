@@ -527,14 +527,12 @@ export function CategoriesPage() {
                 name: formData.name?.trim(),
                 slug: computedSlug,
                 description: formData.description?.trim() || undefined,
-                imageUrl: imageFile
-                    ? undefined
-                    : formData.imageUrl?.trim() || undefined,
+                // imageUrl will be handled separately via upload API after update
                 sortOrder:
                     formData.sortOrder !== undefined && formData.sortOrder >= 0
-                        ? formData.sortOrder
+                        ? Number(formData.sortOrder)
                         : 0,
-                isActive: formData.isActive !== false,
+                isActive: Boolean(formData.isActive),
             }
 
             const validationErrors = validateCategoryPayload({
