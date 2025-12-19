@@ -1,5 +1,6 @@
 import apiClient from './client'
 import type { ApiResponse, PaginatedResponse } from './types'
+import type { User } from './types'
 
 // Types based on ADMIN_COURSE_API_RULES.md
 export interface AdminCourse {
@@ -199,6 +200,17 @@ export const adminCoursesApi = {
     async getPlatformAnalytics(): Promise<PlatformAnalytics> {
         const response = await apiClient.get<ApiResponse<PlatformAnalytics>>(
             '/admin/courses/analytics'
+        )
+
+        return response.data.data
+    },
+
+    /**
+     * Get all instructors for course filtering (admin only)
+     */
+    async getInstructorsForCourses(limit = 1000): Promise<User[]> {
+        const response = await apiClient.get<ApiResponse<User[]>>(
+            `/admin/courses/instructors?limit=${limit}`
         )
 
         return response.data.data

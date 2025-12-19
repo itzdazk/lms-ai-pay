@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
 import { adminCoursesApi, type AdminCourse, type AdminCourseFilters, type PlatformAnalytics } from '../../lib/api/admin-courses';
 import { coursesApi } from '../../lib/api/courses';
-import { usersApi } from '../../lib/api/users';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Category } from '../../lib/api/types';
@@ -255,24 +254,12 @@ export function CoursesPage() {
 
   const loadInstructors = async () => {
     try {
-      // Get all instructors for filtering in dropdown (limit increased to 1000)
-      const instructorsData = await usersApi.getUsers({
-        role: 'INSTRUCTOR',
-        limit: 1000,
-      });
-      setInstructors(instructorsData.data);
+      // Get all instructors for filtering using dedicated admin API
+      const instructors = await adminCoursesApi.getInstructorsForCourses(1000);
+      setInstructors(instructors);
     } catch (error: any) {
       console.error('Error loading instructors:', error);
-      // Fallback: get all users and filter instructors
-      try {
-        const allUsersData = await usersApi.getUsers({
-          limit: 1000,
-        });
-        setInstructors(allUsersData.data.filter(user => user.role === 'INSTRUCTOR'));
-      } catch (fallbackError) {
-        console.error('Fallback error loading instructors:', fallbackError);
-        setInstructors([]);
-      }
+      setInstructors([]);
     }
   };
 
