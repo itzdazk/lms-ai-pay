@@ -18,7 +18,6 @@ export function CoursesPage() {
   const [instructors, setInstructors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<PlatformAnalytics | null>(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -49,12 +48,6 @@ export function CoursesPage() {
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
   const [categorySearch, setCategorySearch] = useState<string>('');
   const [instructorSearch, setInstructorSearch] = useState<string>('');
-  const [tempMinPrice, setTempMinPrice] = useState<number | undefined>(undefined);
-  const [tempMaxPrice, setTempMaxPrice] = useState<number | undefined>(undefined);
-  const [tempMinEnrollments, setTempMinEnrollments] = useState<number | undefined>(undefined);
-  const [tempMaxEnrollments, setTempMaxEnrollments] = useState<number | undefined>(undefined);
-  const priceDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const enrollmentsDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filterDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
@@ -86,115 +79,49 @@ export function CoursesPage() {
 
   const loadAnalytics = async () => {
     try {
-      setLoadingAnalytics(true);
       const data = await adminCoursesApi.getPlatformAnalytics();
       setAnalytics(data);
     } catch (error: any) {
       console.error('Error loading analytics:', error);
     } finally {
-      setLoadingAnalytics(false);
     }
   };
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      const mainContainer = document.querySelector('main');
-      if (mainContainer) {
-        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-      } else {
-        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-      }
-      isPageChangingRef.current = true;
-      setFilters((prevFilters) => ({ ...prevFilters, search: searchInput, page: 1 }));
+      setFilters((prevFilters) => ({
+        ...prevFilters,
+        search: searchInput,
+        page: 1,
+      }));
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Debounce price filter changes
-  useEffect(() => {
-    if (priceDebounceTimerRef.current) {
-      clearTimeout(priceDebounceTimerRef.current);
-    }
-
-    if (tempMinPrice !== undefined || tempMaxPrice !== undefined) {
-      priceDebounceTimerRef.current = setTimeout(() => {
-        const mainContainer = document.querySelector('main');
-        if (mainContainer) {
-          scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-        } else {
-          scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-        }
-        isPageChangingRef.current = true;
-        setFilters(prevFilters => ({
-          ...prevFilters,
-          minPrice: tempMinPrice,
-          maxPrice: tempMaxPrice,
-          page: 1,
-        }));
-        setTempMinPrice(undefined);
-        setTempMaxPrice(undefined);
-      }, 1000); // 500ms debounce
-    }
-
-    return () => {
-      if (priceDebounceTimerRef.current) {
-        clearTimeout(priceDebounceTimerRef.current);
-      }
-    };
-  }, [tempMinPrice, tempMaxPrice]);
-
-  // Debounce enrollment filter changes
-  useEffect(() => {
-    if (enrollmentsDebounceTimerRef.current) {
-      clearTimeout(enrollmentsDebounceTimerRef.current);
-    }
-
-    if (tempMinEnrollments !== undefined || tempMaxEnrollments !== undefined) {
-      enrollmentsDebounceTimerRef.current = setTimeout(() => {
-        const mainContainer = document.querySelector('main');
-        if (mainContainer) {
-          scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-        } else {
-          scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-        }
-        isPageChangingRef.current = true;
-        setFilters(prevFilters => ({
-          ...prevFilters,
-          minEnrollments: tempMinEnrollments,
-          maxEnrollments: tempMaxEnrollments,
-          page: 1,
-        }));
-        setTempMinEnrollments(undefined);
-        setTempMaxEnrollments(undefined);
-      }, 1000); // 500ms debounce
-    }
-
-    return () => {
-      if (enrollmentsDebounceTimerRef.current) {
-        clearTimeout(enrollmentsDebounceTimerRef.current);
-      }
-    };
-  }, [tempMinEnrollments, tempMaxEnrollments]);
-
-  // Separate effect for initial load and pagination
+  // Load courses when filters change
   useEffect(() => {
     if (currentUser) {
       loadCourses();
     }
-  }, [filters.page, filters.limit, currentUser]);
-
-  // Separate effect for filter changes (debounced)
-  useEffect(() => {
-    if (currentUser && filters.search !== undefined) {
-      // Trigger load when search changes
-      const timer = setTimeout(() => {
-        loadCourses();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [filters.search, currentUser]);
+  }, [
+    filters.page,
+    filters.limit,
+    filters.search,
+    filters.status,
+    filters.categoryId,
+    filters.level,
+    filters.instructorId,
+    filters.isFeatured,
+    filters.sort,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.minEnrollments,
+    filters.maxEnrollments,
+    filters.minRating,
+    currentUser,
+  ]);
 
   useEffect(() => {
     if (currentUser && (filters.status !== undefined || filters.categoryId !== undefined || filters.level !== undefined ||
@@ -291,24 +218,23 @@ export function CoursesPage() {
     setSearchInput(value);
   };
 
-  const handleFilterChange = (key: keyof AdminCourseFilters, value: any) => {
-    // Update filters immediately for instant UI feedback, but only reset page if not pagination-related
-    const shouldResetPage = key !== 'page' && key !== 'limit';
-    const newFilters = { ...filters, [key]: value === 'all' ? undefined : value };
-
-    if (shouldResetPage) {
-      newFilters.page = 1; // Reset to page 1 only for filter changes, not pagination
-    }
-
+  const handleFilterChange = (
+    key: keyof AdminCourseFilters,
+    value: any
+  ) => {
     const mainContainer = document.querySelector('main');
     if (mainContainer) {
       scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
     } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      scrollPositionRef.current =
+        window.scrollY || document.documentElement.scrollTop;
     }
-    isPageChangingRef.current = shouldResetPage;
-    setFilters(newFilters);
-    // API call will be triggered by useEffect with proper debouncing
+    isPageChangingRef.current = true;
+    setFilters({
+      ...filters,
+      [key]: value === 'all' ? undefined : value,
+      page: 1,
+    });
   };
 
   const handlePriceTypeChange = (value: 'all' | 'free' | 'paid') => {
@@ -533,20 +459,12 @@ export function CoursesPage() {
             priceType={priceType}
             categorySearch={categorySearch}
             instructorSearch={instructorSearch}
-            tempMinPrice={tempMinPrice}
-            tempMaxPrice={tempMaxPrice}
-            tempMinEnrollments={tempMinEnrollments}
-            tempMaxEnrollments={tempMaxEnrollments}
             categories={categories}
             instructors={instructors}
             onFilterChange={handleFilterChange}
             onPriceTypeChange={handlePriceTypeChange}
             onCategorySearchChange={setCategorySearch}
             onInstructorSearchChange={setInstructorSearch}
-            onTempMinPriceChange={setTempMinPrice}
-            onTempMaxPriceChange={setTempMaxPrice}
-            onTempMinEnrollmentsChange={setTempMinEnrollments}
-            onTempMaxEnrollmentsChange={setTempMaxEnrollments}
             onClearFilters={() => {
                   setSearchInput('');
                   const mainContainer = document.querySelector('main');

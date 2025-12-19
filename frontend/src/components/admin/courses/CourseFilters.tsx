@@ -15,20 +15,12 @@ interface CourseFiltersProps {
   priceType: 'all' | 'free' | 'paid';
   categorySearch: string;
   instructorSearch: string;
-  tempMinPrice: number | undefined;
-  tempMaxPrice: number | undefined;
-  tempMinEnrollments: number | undefined;
-  tempMaxEnrollments: number | undefined;
   categories: Category[];
   instructors: User[];
   onFilterChange: (key: keyof AdminCourseFilters, value: any) => void;
   onPriceTypeChange: (value: 'all' | 'free' | 'paid') => void;
   onCategorySearchChange: (value: string) => void;
   onInstructorSearchChange: (value: string) => void;
-  onTempMinPriceChange: (value: number | undefined) => void;
-  onTempMaxPriceChange: (value: number | undefined) => void;
-  onTempMinEnrollmentsChange: (value: number | undefined) => void;
-  onTempMaxEnrollmentsChange: (value: number | undefined) => void;
   onClearFilters: () => void;
 }
 
@@ -37,20 +29,12 @@ export function CourseFilters({
   priceType,
   categorySearch,
   instructorSearch,
-  tempMinPrice,
-  tempMaxPrice,
-  tempMinEnrollments,
-  tempMaxEnrollments,
   categories,
   instructors,
   onFilterChange,
   onPriceTypeChange,
   onCategorySearchChange,
   onInstructorSearchChange,
-  onTempMinPriceChange,
-  onTempMaxPriceChange,
-  onTempMinEnrollmentsChange,
-  onTempMaxEnrollmentsChange,
   onClearFilters,
 }: CourseFiltersProps) {
   return (
