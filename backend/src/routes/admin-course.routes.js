@@ -23,6 +23,14 @@ router.use(isAdmin)
 router.get('/analytics', adminCourseController.getPlatformAnalytics)
 
 /**
+ * @route   GET /api/v1/admin/courses/instructors
+ * @desc    Get all instructors for course filtering (admin only)
+ * @access  Private (Admin)
+ * @query   limit (max 1000 for filtering)
+ */
+router.get('/instructors', adminCourseController.getInstructorsForCourses)
+
+/**
  * @route   GET /api/v1/admin/courses
  * @desc    Get all courses with admin filters
  * @access  Private (Admin)

@@ -6,6 +6,7 @@ import {
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
     USER_ROLES,
+    USER_STATUS,
     HTTP_STATUS,
 } from '../config/constants.js'
 import logger from '../config/logger.config.js'
@@ -656,6 +657,43 @@ class AdminCourseService {
                 enrollments: enrollmentTrend,
                 revenue: revenueTrend,
             },
+        }
+    }
+
+    /**
+     * Get all instructors for course filtering (admin)
+     * @param {number} limit - Maximum number of instructors to return (default: 1000)
+     * @returns {Promise<Array>} Array of instructor objects
+     */
+    async getInstructorsForCourses(limit = 1000) {
+        try {
+            console.log('getInstructorsForCourses called with limit:', limit);
+
+            const instructors = await prisma.user.findMany({
+                where: {
+                    role: USER_ROLES.INSTRUCTOR
+                },
+                select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                    userName: true,
+                    phone: true,
+                    avatarUrl: true,
+                    status: true,
+                    createdAt: true,
+                },
+                orderBy: {
+                    fullName: 'asc'
+                },
+                take: Math.min(limit, 1000)
+            });
+
+            console.log('Found instructors:', instructors.length);
+            return instructors;
+        } catch (error) {
+            console.error('Error in getInstructorsForCourses:', error);
+            throw error;
         }
     }
 }

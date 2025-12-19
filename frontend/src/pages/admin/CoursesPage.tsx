@@ -54,6 +54,7 @@ export function CoursesPage() {
   const [tempMaxEnrollments, setTempMaxEnrollments] = useState<number | undefined>(undefined);
   const priceDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const enrollmentsDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
 
@@ -176,11 +177,37 @@ export function CoursesPage() {
     };
   }, [tempMinEnrollments, tempMaxEnrollments]);
 
+  // Separate effect for initial load and pagination
   useEffect(() => {
     if (currentUser) {
       loadCourses();
     }
-  }, [filters.page, filters.limit, filters.search, filters.status, filters.categoryId, filters.level, filters.instructorId, filters.isFeatured, filters.sort, filters.minPrice, filters.maxPrice, filters.minEnrollments, filters.maxEnrollments, filters.minRating, currentUser]);
+  }, [filters.page, filters.limit, currentUser]);
+
+  // Separate effect for filter changes (debounced)
+  useEffect(() => {
+    if (currentUser && filters.search !== undefined) {
+      // Trigger load when search changes
+      const timer = setTimeout(() => {
+        loadCourses();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [filters.search, currentUser]);
+
+  useEffect(() => {
+    if (currentUser && (filters.status !== undefined || filters.categoryId !== undefined || filters.level !== undefined ||
+                        filters.instructorId !== undefined || filters.isFeatured !== undefined || filters.sort !== 'newest' ||
+                        filters.minPrice !== undefined || filters.maxPrice !== undefined ||
+                        filters.minEnrollments !== undefined || filters.maxEnrollments !== undefined || filters.minRating !== undefined)) {
+      // Trigger load when other filters change
+      const timer = setTimeout(() => {
+        loadCourses();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [filters.status, filters.categoryId, filters.level, filters.instructorId, filters.isFeatured, filters.sort,
+      filters.minPrice, filters.maxPrice, filters.minEnrollments, filters.maxEnrollments, filters.minRating, currentUser]);
 
   // Restore scroll position
   useEffect(() => {
@@ -227,11 +254,7 @@ export function CoursesPage() {
         }
       });
 
-      console.log('Sending filters:', cleanFilters); // Debug log
-
-      // Temporarily send minimal filters to test
-      const testFilters = { page: cleanFilters.page || 1, limit: cleanFilters.limit || 10 };
-      const result = await adminCoursesApi.getAllCourses(testFilters);
+      const result = await adminCoursesApi.getAllCourses(cleanFilters);
       setCourses(result.data);
       setPagination(result.pagination);
     } catch (error: any) {
@@ -268,36 +291,53 @@ export function CoursesPage() {
   };
 
   const handleFilterChange = (key: keyof AdminCourseFilters, value: any) => {
+    // Update filters immediately for instant UI feedback, but only reset page if not pagination-related
+    const shouldResetPage = key !== 'page' && key !== 'limit';
+    const newFilters = { ...filters, [key]: value === 'all' ? undefined : value };
+
+    if (shouldResetPage) {
+      newFilters.page = 1; // Reset to page 1 only for filter changes, not pagination
+    }
+
     const mainContainer = document.querySelector('main');
     if (mainContainer) {
       scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
     } else {
       scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
     }
-    isPageChangingRef.current = true;
-    setFilters({ ...filters, [key]: value === 'all' ? undefined : value, page: 1 });
+    isPageChangingRef.current = shouldResetPage;
+    setFilters(newFilters);
+    // API call will be triggered by useEffect with proper debouncing
   };
 
   const handlePriceTypeChange = (value: 'all' | 'free' | 'paid') => {
     setPriceType(value);
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+
+    // Debounce price type changes
+    if (filterDebounceTimerRef.current) {
+      clearTimeout(filterDebounceTimerRef.current);
     }
-    isPageChangingRef.current = true;
-    
-    if (value === 'free') {
-      // Miễn phí: maxPrice = 0
-      setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
-    } else if (value === 'paid') {
-      // Có phí: minPrice > 0
-      setFilters({ ...filters, minPrice: 1, maxPrice: undefined, page: 1 });
-    } else {
-      // Tất cả: clear price filters
-      setFilters({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 });
-    }
+
+    filterDebounceTimerRef.current = setTimeout(() => {
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+      } else {
+        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      }
+      isPageChangingRef.current = true;
+
+      if (value === 'free') {
+        // Miễn phí: maxPrice = 0
+        setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
+      } else if (value === 'paid') {
+        // Có phí: minPrice > 0
+        setFilters({ ...filters, minPrice: 1, maxPrice: undefined, page: 1 });
+      } else {
+        // Tất cả: clear price filters
+        setFilters({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 });
+      }
+    }, 300);
   };
 
   const handlePageChange = (newPage: number) => {
