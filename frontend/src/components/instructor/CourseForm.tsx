@@ -133,6 +133,26 @@ export function CourseForm({
   const [isDraggingPreview, setIsDraggingPreview] = useState(false);
   const [videoPreviewRemoved, setVideoPreviewRemoved] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
+
+  // Flatten categories with hierarchical structure for display
+  const flattenCategories = (categories: Category[], level = 0): Category[] => {
+    const result: Category[] = [];
+
+    categories.forEach(category => {
+      // Add the category itself
+      result.push({
+        ...category,
+        name: '  '.repeat(level) + category.name // Add indentation
+      });
+
+      // Add children if they exist
+      if (category.children && category.children.length > 0) {
+        result.push(...flattenCategories(category.children, level + 1));
+      }
+    });
+
+    return result;
+  };
   const [tagSearch, setTagSearch] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [initialFormData, setInitialFormData] = useState<CourseFormData | null>(null);
@@ -1355,7 +1375,10 @@ export function CourseForm({
                       type="text"
                       placeholder="Tìm kiếm danh mục..."
                       value={categorySearch}
-                      onChange={(e) => setCategorySearch(e.target.value)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setCategorySearch(e.target.value);
+                      }}
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                       className="w-full pl-8 pr-2 py-1.5 text-sm bg-white dark:bg-[#1F1F1F] border border-gray-300 dark:border-[#2D2D2D] rounded text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1363,22 +1386,27 @@ export function CourseForm({
                   </div>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {categories
+                  {flattenCategories(
+                    categories.filter(category => !category.parentId) // Only root categories
+                  )
                     .filter((category) =>
-                      category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                      category.name.trim().toLowerCase().includes(categorySearch.toLowerCase())
                     )
                     .slice(0, 100) // Limit to 100 items for performance
                     .map((category) => (
                       <DarkOutlineSelectItem
                         key={category.id}
                         value={String(category.id)}
+                        onSelect={() => setCategorySearch('')}
                       >
                         {category.name}
                       </DarkOutlineSelectItem>
                     ))}
-                  {categories.filter((category) =>
-                    category.name.toLowerCase().includes(categorySearch.toLowerCase())
-                  ).length === 0 && (
+                  {flattenCategories(
+                    categories.filter(category => !category.parentId)
+                  ).filter((category) =>
+                    category.name.trim().toLowerCase().includes(categorySearch.toLowerCase())
+                  ).length === 0 && categorySearch && (
                     <div className="px-2 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       Không tìm thấy danh mục
                     </div>

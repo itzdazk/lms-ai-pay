@@ -24,6 +24,25 @@ interface CourseFiltersProps {
   onClearFilters: () => void;
 }
 
+function flattenCategories(categories: Category[], level = 0): Category[] {
+  const result: Category[] = [];
+
+  categories.forEach(category => {
+    // Add the category itself
+    result.push({
+      ...category,
+      name: '  '.repeat(level) + category.name // Add indentation
+    });
+
+    // Add children if they exist
+    if (category.children && category.children.length > 0) {
+      result.push(...flattenCategories(category.children, level + 1));
+    }
+  });
+
+  return result;
+}
+
 export function CourseFilters({
   filters,
   priceType,
@@ -181,9 +200,11 @@ export function CourseFilters({
                   <DarkOutlineSelectItem value="all" onSelect={() => onCategorySearchChange('')}>
                     Tất cả danh mục
                   </DarkOutlineSelectItem>
-                  {categories
+                  {flattenCategories(
+                    categories.filter(category => !category.parentId) // Only root categories
+                  )
                     .filter((category) =>
-                      category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                      category.name.trim().toLowerCase().includes(categorySearch.toLowerCase())
                     )
                     .map((category) => {
                       const categoryIdStr = String(category.id);
@@ -197,8 +218,10 @@ export function CourseFilters({
                         </DarkOutlineSelectItem>
                       );
                     })}
-                  {categories.filter((category) =>
-                    category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                  {flattenCategories(
+                    categories.filter(category => !category.parentId)
+                  ).filter((category) =>
+                    category.name.trim().toLowerCase().includes(categorySearch.toLowerCase())
                   ).length === 0 && categorySearch && (
                     <div className="px-2 py-1.5 text-sm text-gray-400 text-center">
                       Không tìm thấy danh mục

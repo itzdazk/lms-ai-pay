@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DarkOutlineTableRow, DarkOutlineTableCell } from '@/components/ui/dark-outline-table';
 import { BookOpen, Users, Star, MoreVertical, Eye, Star as StarIcon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { formatDuration } from '@/components/instructor/courses/courseFormatters';
 import type { AdminCourse } from '@/lib/api/admin-courses';
 
 function formatPrice(price: number): string {
@@ -15,15 +16,6 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-function formatDuration(hours: number): string {
-  if (hours < 1) {
-    return `${Math.round(hours * 60)} phút`;
-  }
-  if (hours % 1 === 0) {
-    return `${hours} giờ`;
-  }
-  return `${Math.floor(hours)} giờ ${Math.round((hours % 1) * 60)} phút`;
-}
 
 interface CourseRowProps {
   course: AdminCourse;

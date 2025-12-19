@@ -123,9 +123,6 @@ export function TagRow({ tag, isSelected, onRowSelect, onEdit, onDelete }: TagRo
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[100px]'>
-                    <Badge className='bg-green-600'>Hoạt động</Badge>
-                </DarkOutlineTableCell>
-                <DarkOutlineTableCell className='w-[100px]'>
                     <span className='text-gray-900 dark:text-gray-300'>
                         {coursesCount}
                     </span>

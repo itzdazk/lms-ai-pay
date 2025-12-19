@@ -131,7 +131,6 @@ export function TagsTable({
                                     <DarkOutlineTableHead>Tên Tag</DarkOutlineTableHead>
                                     <DarkOutlineTableHead>Slug</DarkOutlineTableHead>
                                     <DarkOutlineTableHead>Mô tả</DarkOutlineTableHead>
-                                    <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
                                     <DarkOutlineTableHead>Số khóa học</DarkOutlineTableHead>
                                     <DarkOutlineTableHead>Ngày tạo</DarkOutlineTableHead>
                                     <DarkOutlineTableHead className='text-right'>Thao tác</DarkOutlineTableHead>
