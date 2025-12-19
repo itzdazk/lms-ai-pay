@@ -728,7 +728,7 @@ export function LessonPage() {
                       </Badge>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className='bg-[#2D2D2D]' />
-                    <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D]'>
+                    <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D] custom-scrollbar'>
                       <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
                         <p className='text-sm text-white font-semibold'>
                           Bạn đã hoàn thành bài học "React Hooks"

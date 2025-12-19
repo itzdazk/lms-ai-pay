@@ -83,7 +83,7 @@ export function CourseDialogs({
 
       {/* Analytics Dialog */}
       <Dialog open={isAnalyticsDialogOpen} onOpenChange={setIsAnalyticsDialogOpen}>
-        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-6xl max-h-[90vh] overflow-y-auto custom-scrollbar">
           <DialogHeader>
             <DialogTitle className="text-white">Phân tích khóa học</DialogTitle>
             <DialogDescription className="text-gray-400">

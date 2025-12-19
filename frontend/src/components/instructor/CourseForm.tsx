@@ -1362,7 +1362,7 @@ export function CourseForm({
                     />
                   </div>
                 </div>
-                <div className="max-h-[300px] overflow-y-auto">
+                <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                   {categories
                     .filter((category) =>
                       category.name.toLowerCase().includes(categorySearch.toLowerCase())
@@ -2136,7 +2136,7 @@ export function CourseForm({
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-[#2D2D2D] rounded-lg">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar p-2 border border-[#2D2D2D] rounded-lg">
                   {Array.isArray(tags) && tags.length > 0 ? (
                     filteredTags.length > 0 ? (
                       filteredTags.map((tag) => (

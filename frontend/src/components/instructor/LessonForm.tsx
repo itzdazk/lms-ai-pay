@@ -411,7 +411,7 @@ export function LessonForm({
             }} 
             className="flex flex-col h-full"
         >
-            <div className="flex-1 overflow-y-auto pb-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
                 {/* Two-column layout for Basic Info and Media */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     {/* Left Column: Basic Info */}

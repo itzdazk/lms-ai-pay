@@ -74,7 +74,7 @@ export function CourseFilters({
                     className="w-full"
                   />
                 </div>
-                <div className="max-h-[200px] overflow-y-auto">
+                <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                   <DarkOutlineSelectItem value="all" onSelect={() => onCategorySearchChange('')}>
                     Tất cả danh mục
                   </DarkOutlineSelectItem>
