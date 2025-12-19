@@ -3,7 +3,7 @@
 // Filters sidebar component
 // ============================================
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Checkbox } from '../ui/checkbox'
 import { Label } from '../ui/label'
@@ -22,6 +22,7 @@ import {
     ChevronUp,
 } from 'lucide-react'
 import type { Category, Tag } from '../../lib/api/types'
+import { coursesApi } from '../../lib/api'
 
 export interface CourseFiltersState {
     categoryId?: number
@@ -55,6 +56,50 @@ export function CourseFilters({
 }: CourseFiltersProps) {
     const [categorySearch, setCategorySearch] = useState('')
     const [tagSearch, setTagSearch] = useState('')
+    const [levelCounts, setLevelCounts] = useState<{
+        BEGINNER: number
+        INTERMEDIATE: number
+        ADVANCED: number
+    }>({
+        BEGINNER: 0,
+        INTERMEDIATE: 0,
+        ADVANCED: 0,
+    })
+    const [priceCounts, setPriceCounts] = useState<{
+        free: number
+        paid: number
+    }>({
+        free: 0,
+        paid: 0,
+    })
+
+    // Fetch level counts
+    useEffect(() => {
+        const fetchLevelCounts = async () => {
+            try {
+                const counts = await coursesApi.getCourseCountsByLevel()
+                setLevelCounts(counts)
+            } catch (error) {
+                console.error('Error fetching level counts:', error)
+            }
+        }
+
+        fetchLevelCounts()
+    }, [])
+
+    // Fetch price counts
+    useEffect(() => {
+        const fetchPriceCounts = async () => {
+            try {
+                const counts = await coursesApi.getCourseCountsByPrice()
+                setPriceCounts(counts)
+            } catch (error) {
+                console.error('Error fetching price counts:', error)
+            }
+        }
+
+        fetchPriceCounts()
+    }, [])
 
     // Filter categories based on search
     const filteredCategories = categories.filter((category) =>
@@ -215,11 +260,23 @@ export function CourseFilters({
             >
                 {/* Category Filter */}
                 <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] border border-[#2D2D2D]/50 rounded-xl p-4 space-y-3 shadow-lg hover:border-orange-500/50 transition-all duration-200'>
-                    <div className='flex items-center gap-2'>
-                        <FolderOpen className='h-4 w-4 text-orange-400' />
-                        <Label className='text-white font-semibold text-sm'>
-                            Danh mục
-                        </Label>
+                    <div className='flex items-center justify-between gap-2'>
+                        <div className='flex items-center gap-2'>
+                            <FolderOpen className='h-4 w-4 text-orange-400' />
+                            <Label className='text-white font-semibold text-sm'>
+                                Danh mục
+                            </Label>
+                        </div>
+                        {filters.categoryId && (
+                            <button
+                                type='button'
+                                onClick={() => handleCategoryChange(undefined)}
+                                className='text-gray-400 hover:text-orange-400 transition-colors p-1 rounded hover:bg-orange-500/10'
+                                title='Xóa lọc danh mục'
+                            >
+                                <X className='h-4 w-4' />
+                            </button>
+                        )}
                     </div>
                         <div className='relative'>
                             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400 z-10' />
@@ -261,7 +318,7 @@ export function CourseFilters({
                             filteredCategories.map((category) => (
                                 <div
                                     key={category.id}
-                                    className='flex items-center space-x-2 group'
+                                    className='flex items-start space-x-2 group'
                                 >
                                     <Checkbox
                                         id={`cat-${category.id}`}
@@ -269,13 +326,21 @@ export function CourseFilters({
                                         onCheckedChange={() =>
                                             handleCategoryChange(category.id)
                                         }
-                                        className='border-[#2D2D2D] data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 group-hover:border-orange-500/50 transition-colors'
+                                        className='border-[#2D2D2D] data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 group-hover:border-orange-500/50 transition-colors mt-0.5'
                                     />
                                     <label
                                         htmlFor={`cat-${category.id}`}
-                                        className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors'
+                                        className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                     >
-                                        {category.name}
+                                        <div className='flex items-center justify-between gap-2'>
+                                            <span>{category.name}</span>
+                                            {category.coursesCount !== undefined &&
+                                                category.coursesCount > 0 && (
+                                                    <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                        ({category.coursesCount})
+                                                    </span>
+                                                )}
+                                        </div>
                                     </label>
                                 </div>
                             ))
@@ -291,11 +356,23 @@ export function CourseFilters({
                 <div className='grid grid-cols-2 gap-4'>
                     {/* Level Filter */}
                     <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] border border-[#2D2D2D]/50 rounded-xl p-4 space-y-3 shadow-lg hover:border-blue-500/50 transition-all duration-200'>
-                        <div className='flex items-center gap-2'>
-                            <GraduationCap className='h-4 w-4 text-blue-400' />
-                            <Label className='text-white font-semibold text-sm'>
-                                Trình độ
-                            </Label>
+                        <div className='flex items-center justify-between gap-2'>
+                            <div className='flex items-center gap-2'>
+                                <GraduationCap className='h-4 w-4 text-blue-400' />
+                                <Label className='text-white font-semibold text-sm'>
+                                    Trình độ
+                                </Label>
+                            </div>
+                            {filters.level && (
+                                <button
+                                    type='button'
+                                    onClick={() => handleLevelChange(undefined)}
+                                    className='text-gray-400 hover:text-blue-400 transition-colors p-1 rounded hover:bg-blue-500/10'
+                                    title='Xóa lọc trình độ'
+                                >
+                                    <X className='h-4 w-4' />
+                                </button>
+                            )}
                         </div>
                         <div className='space-y-2'>
                             <div className='flex items-center space-x-2 group'>
@@ -314,52 +391,73 @@ export function CourseFilters({
                                     Tất cả
                                 </label>
                             </div>
-                            <div className='flex items-center space-x-2 group'>
+                            <div className='flex items-start space-x-2 group'>
                                 <Checkbox
                                     id='level-beginner'
                                     checked={filters.level === 'BEGINNER'}
                                     onCheckedChange={() =>
                                         handleLevelChange('BEGINNER')
                                     }
-                                    className='border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 group-hover:border-green-500/50 transition-colors'
+                                    className='border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 group-hover:border-green-500/50 transition-colors mt-0.5'
                                 />
                                 <label
                                     htmlFor='level-beginner'
-                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors'
+                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                 >
-                                    Cơ bản
+                                    <div className='flex items-center justify-between gap-2'>
+                                        <span>Cơ bản</span>
+                                        {levelCounts.BEGINNER > 0 && (
+                                            <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                ({levelCounts.BEGINNER})
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                             </div>
-                            <div className='flex items-center space-x-2 group'>
+                            <div className='flex items-start space-x-2 group'>
                                 <Checkbox
                                     id='level-intermediate'
                                     checked={filters.level === 'INTERMEDIATE'}
                                     onCheckedChange={() =>
                                         handleLevelChange('INTERMEDIATE')
                                     }
-                                    className='border-[#2D2D2D] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 group-hover:border-blue-500/50 transition-colors'
+                                    className='border-[#2D2D2D] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 group-hover:border-blue-500/50 transition-colors mt-0.5'
                                 />
                                 <label
                                     htmlFor='level-intermediate'
-                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors'
+                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                 >
-                                    Trung cấp
+                                    <div className='flex items-center justify-between gap-2'>
+                                        <span>Trung cấp</span>
+                                        {levelCounts.INTERMEDIATE > 0 && (
+                                            <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                ({levelCounts.INTERMEDIATE})
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                             </div>
-                            <div className='flex items-center space-x-2 group'>
+                            <div className='flex items-start space-x-2 group'>
                                 <Checkbox
                                     id='level-advanced'
                                     checked={filters.level === 'ADVANCED'}
                                     onCheckedChange={() =>
                                         handleLevelChange('ADVANCED')
                                     }
-                                    className='border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 group-hover:border-purple-500/50 transition-colors'
+                                    className='border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 group-hover:border-purple-500/50 transition-colors mt-0.5'
                                 />
                                 <label
                                     htmlFor='level-advanced'
-                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors'
+                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                 >
-                                    Nâng cao
+                                    <div className='flex items-center justify-between gap-2'>
+                                        <span>Nâng cao</span>
+                                        {levelCounts.ADVANCED > 0 && (
+                                            <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                ({levelCounts.ADVANCED})
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                             </div>
                         </div>
@@ -367,11 +465,23 @@ export function CourseFilters({
 
                     {/* Price Filter */}
                     <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] border border-[#2D2D2D]/50 rounded-xl p-4 space-y-3 shadow-lg hover:border-green-500/50 transition-all duration-200'>
-                        <div className='flex items-center gap-2'>
-                            <DollarSign className='h-4 w-4 text-green-400' />
-                            <Label className='text-white font-semibold text-sm'>
-                                Giá
-                            </Label>
+                        <div className='flex items-center justify-between gap-2'>
+                            <div className='flex items-center gap-2'>
+                                <DollarSign className='h-4 w-4 text-green-400' />
+                                <Label className='text-white font-semibold text-sm'>
+                                    Giá
+                                </Label>
+                            </div>
+                            {filters.priceType && filters.priceType !== 'all' && (
+                                <button
+                                    type='button'
+                                    onClick={() => handlePriceTypeChange('all')}
+                                    className='text-gray-400 hover:text-green-400 transition-colors p-1 rounded hover:bg-green-500/10'
+                                    title='Xóa lọc giá'
+                                >
+                                    <X className='h-4 w-4' />
+                                </button>
+                            )}
                         </div>
                         <div className='space-y-2'>
                             <div className='flex items-center space-x-2 group'>
@@ -393,36 +503,50 @@ export function CourseFilters({
                                     Tất cả
                                 </label>
                             </div>
-                            <div className='flex items-center space-x-2 group'>
+                            <div className='flex items-start space-x-2 group'>
                                 <Checkbox
                                     id='price-free'
                                     checked={filters.priceType === 'free'}
                                     onCheckedChange={() =>
                                         handlePriceTypeChange('free')
                                     }
-                                    className='border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 group-hover:border-green-500/50 transition-colors'
+                                    className='border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 group-hover:border-green-500/50 transition-colors mt-0.5'
                                 />
                                 <label
                                     htmlFor='price-free'
-                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors'
+                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                 >
-                                    Miễn phí
+                                    <div className='flex items-center justify-between gap-2'>
+                                        <span>Miễn phí</span>
+                                        {priceCounts.free > 0 && (
+                                            <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                ({priceCounts.free})
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                             </div>
-                            <div className='flex items-center space-x-2 group'>
+                            <div className='flex items-start space-x-2 group'>
                                 <Checkbox
                                     id='price-paid'
                                     checked={filters.priceType === 'paid'}
                                     onCheckedChange={() =>
                                         handlePriceTypeChange('paid')
                                     }
-                                    className='border-[#2D2D2D] data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 group-hover:border-orange-500/50 transition-colors'
+                                    className='border-[#2D2D2D] data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 group-hover:border-orange-500/50 transition-colors mt-0.5'
                                 />
                                 <label
                                     htmlFor='price-paid'
-                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors'
+                                    className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                 >
-                                    Có phí
+                                    <div className='flex items-center justify-between gap-2'>
+                                        <span>Có phí</span>
+                                        {priceCounts.paid > 0 && (
+                                            <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                ({priceCounts.paid})
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                             </div>
                         </div>
@@ -432,11 +556,23 @@ export function CourseFilters({
                 {/* Tags */}
                 {tags.length > 0 && (
                     <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] border border-[#2D2D2D]/50 rounded-xl p-4 space-y-3 shadow-lg hover:border-purple-500/50 transition-all duration-200'>
-                        <div className='flex items-center gap-2'>
-                            <TagIcon className='h-4 w-4 text-purple-400' />
-                            <Label className='text-white font-semibold text-sm'>
-                                Tags phổ biến
-                            </Label>
+                        <div className='flex items-center justify-between gap-2'>
+                            <div className='flex items-center gap-2'>
+                                <TagIcon className='h-4 w-4 text-purple-400' />
+                                <Label className='text-white font-semibold text-sm'>
+                                    Tags phổ biến
+                                </Label>
+                            </div>
+                            {filters.tagIds && filters.tagIds.length > 0 && (
+                                <button
+                                    type='button'
+                                    onClick={handleClearAllTags}
+                                    className='text-gray-400 hover:text-purple-400 transition-colors p-1 rounded hover:bg-purple-500/10'
+                                    title='Xóa lọc tags'
+                                >
+                                    <X className='h-4 w-4' />
+                                </button>
+                            )}
                         </div>
                         <div className='relative'>
                             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400 z-10' />
@@ -487,7 +623,7 @@ export function CourseFilters({
                                 return (
                                     <div
                                         key={tag.id}
-                                        className='flex items-center space-x-2 group'
+                                        className='flex items-start space-x-2 group'
                                     >
                                         <Checkbox
                                             id={`tag-${tag.id}`}
@@ -498,19 +634,21 @@ export function CourseFilters({
                                                     checked as boolean
                                                 )
                                             }
-                                            className='border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 group-hover:border-purple-500/50 transition-colors'
+                                            className='border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 group-hover:border-purple-500/50 transition-colors mt-0.5'
                                         />
                                         <label
                                             htmlFor={`tag-${tag.id}`}
-                                            className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex items-center gap-1.5'
+                                            className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
                                         >
-                                            <span>{tag.name}</span>
-                                            {tag._count &&
-                                                tag._count.courses > 0 && (
-                                                    <span className='text-xs opacity-70'>
-                                                        ({tag._count.courses})
-                                                    </span>
-                                                )}
+                                            <div className='flex items-center justify-between gap-2'>
+                                                <span>{tag.name}</span>
+                                                {tag._count &&
+                                                    tag._count.courses > 0 && (
+                                                        <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                            ({tag._count.courses})
+                                                        </span>
+                                                    )}
+                                            </div>
                                         </label>
                                     </div>
                                 )

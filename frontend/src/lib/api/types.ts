@@ -113,10 +113,11 @@ export interface Category {
     description?: string
     imageUrl?: string
     parentId?: number
-    parent?: Category
+    parent?: Category | null
     children?: Category[]
     sortOrder: number
     isActive: boolean
+    coursesCount?: number // Số lượng courses trong category
     createdAt: string
     updatedAt: string
 }

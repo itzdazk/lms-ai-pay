@@ -203,6 +203,36 @@ class CourseController {
             'View count updated successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/courses/levels/counts
+     * @desc    Get course counts by level
+     * @access  Public
+     */
+    getCourseCountsByLevel = asyncHandler(async (req, res) => {
+        const counts = await courseService.getCourseCountsByLevel()
+
+        return ApiResponse.success(
+            res,
+            counts,
+            'Course counts by level retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/courses/prices/counts
+     * @desc    Get course counts by price type
+     * @access  Public
+     */
+    getCourseCountsByPrice = asyncHandler(async (req, res) => {
+        const counts = await courseService.getCourseCountsByPrice()
+
+        return ApiResponse.success(
+            res,
+            counts,
+            'Course counts by price retrieved successfully'
+        )
+    })
 }
 
 export default new CourseController()

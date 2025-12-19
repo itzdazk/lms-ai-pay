@@ -10,6 +10,7 @@ export { usersApi } from './users'
 export { adminCoursesApi } from './admin-courses'
 export { lessonsApi } from './lessons'
 export { lessonNotesApi } from './lesson-notes'
+export { categoriesApi, getCategoryPath } from './categories'
 export type {
     LessonNote,
     LessonNoteResponse,
@@ -29,3 +30,4 @@ export type {
     AdminCourseFilters,
     PlatformAnalytics,
 } from './admin-courses'
+export type { CategoryFilters, CategoryCoursesFilters } from './categories'

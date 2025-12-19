@@ -36,6 +36,7 @@ const videosDir = path.join(uploadsDir, 'videos')
 const transcriptsDir = path.join(uploadsDir, 'transcripts')
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails') // MỚI
 const videoPreviewsDir = path.join(uploadsDir, 'video-previews') // MỚI
+const categoriesDir = path.join(uploadsDir, 'categories')
 
 // === TỰ ĐỘNG TẠO THƯ MỤC ===
 ;[
@@ -45,6 +46,7 @@ const videoPreviewsDir = path.join(uploadsDir, 'video-previews') // MỚI
     transcriptsDir,
     thumbnailsDir,
     videoPreviewsDir,
+    categoriesDir
 ].forEach((dir) => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
@@ -223,6 +225,40 @@ const uploadVideoPreview = multer({
 }).single('videoPreview')
 
 // ========================
+// 6. CATEGORY IMAGE UPLOAD (MỚI)
+// ========================
+const categoryImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, categoriesDir),
+    filename: (req, file, cb) => {
+        const categoryId = req.params.id || 'temp'
+        const timestamp = Date.now()
+        const ext = path.extname(file.originalname)
+        const name = sanitizeFilename(path.basename(file.originalname, ext))
+        const filename = `${timestamp}-category-${categoryId}-${name}${ext}`
+        cb(null, filename)
+    },
+})
+
+const categoryImageFileFilter = (req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        cb(null, true)
+    } else {
+        cb(
+            new Error(
+                `Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+            ),
+            false
+        )
+    }
+}
+
+const uploadCategoryImage = multer({
+    storage: categoryImageStorage,
+    fileFilter: categoryImageFileFilter,
+    limits: { fileSize: MAX_IMAGE_SIZE },
+}).single('image')
+
+// ========================
 // EXPORT
 // ========================
 export {
@@ -231,10 +267,12 @@ export {
     uploadTranscript,
     uploadThumbnail,
     uploadVideoPreview,
+    uploadCategoryImage, 
     uploadsDir,
     avatarsDir,
     videosDir,
     transcriptsDir,
     thumbnailsDir,
     videoPreviewsDir,
+    categoriesDir
 }

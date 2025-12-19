@@ -1,5 +1,6 @@
 // src/services/tags.service.js
 import { prisma } from '../config/database.config.js'
+import { Prisma } from '@prisma/client'
 import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
@@ -8,16 +9,15 @@ class TagsService {
      * Get tags list with pagination and search
      */
     async getTags(query) {
-        const { page = 1, limit = 20, search } = query
+        const { page = 1, limit = 20, search, sort = 'createdAt', sortOrder = 'desc' } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
         const limitNum = parseInt(limit, 10) || 20
         const skip = (pageNum - 1) * limitNum
 
-        // Build where clause
+        // Build where clause for search
         const where = {}
-
         if (search) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },
@@ -26,49 +26,69 @@ class TagsService {
             ]
         }
 
-        // Get tags and total count
-        const [tags, total] = await Promise.all([
-            prisma.tag.findMany({
-                where,
-                skip,
-                take: limitNum,
-                select: {
-                    id: true,
-                    name: true,
-                    slug: true,
-                    description: true,
-                    createdAt: true,
-                },
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.tag.count({ where }),
-        ])
+        // Build orderBy
+        const orderBy = {}
+        const validSortFields = ['createdAt', 'name']
+        const validSortOrders = ['asc', 'desc']
+        
+        const sortField = validSortFields.includes(sort) ? sort : 'createdAt'
+        const sortOrderValue = validSortOrders.includes(sortOrder) ? sortOrder : 'desc'
+        
+        // Use raw query to get tags with published courses count efficiently
+        // This is much faster than querying each tag separately
+        const searchCondition = search
+            ? Prisma.sql`AND (t.name ILIKE ${`%${search}%`} OR t.slug ILIKE ${`%${search}%`} OR t.description ILIKE ${`%${search}%`})`
+            : Prisma.empty
 
-        // Get published courses count for each tag
-        const tagsWithCounts = await Promise.all(
-            tags.map(async (tag) => {
-                const publishedCoursesCount = await prisma.course.count({
-                    where: {
-                        status: COURSE_STATUS.PUBLISHED,
-                        courseTags: {
-                            some: {
-                                tagId: tag.id,
-                            },
-                        },
-                    },
-                })
+        // Build ORDER BY clause for raw query
+        let orderByClause = Prisma.sql`t.created_at DESC`
+        if (sortField === 'name') {
+            orderByClause = sortOrderValue === 'asc' 
+                ? Prisma.sql`t.name ASC` 
+                : Prisma.sql`t.name DESC`
+        } else {
+            orderByClause = sortOrderValue === 'asc' 
+                ? Prisma.sql`t.created_at ASC` 
+                : Prisma.sql`t.created_at DESC`
+        }
 
-                return {
-                    ...tag,
-                    _count: {
-                        courses: publishedCoursesCount,
-                    },
-                }
-            })
-        )
+        const tagsWithCountsRaw = await prisma.$queryRaw`
+            SELECT 
+                t.id,
+                t.name,
+                t.slug,
+                t.description,
+                t.created_at as "createdAt",
+                COUNT(DISTINCT ct.course_id) as course_count
+            FROM tags t
+            INNER JOIN course_tags ct ON ct.tag_id = t.id
+            INNER JOIN courses c ON c.id = ct.course_id AND c.status = ${COURSE_STATUS.PUBLISHED}
+            WHERE 1=1 ${searchCondition}
+            GROUP BY t.id, t.name, t.slug, t.description, t.created_at
+            HAVING COUNT(DISTINCT ct.course_id) > 0
+            ORDER BY ${orderByClause}
+        `
+
+        // Format tags to match expected structure
+        const tagsWithPublishedCourses = tagsWithCountsRaw.map((row) => ({
+            id: Number(row.id),
+            name: row.name,
+            slug: row.slug,
+            description: row.description,
+            createdAt: row.createdAt,
+            _count: {
+                courses: Number(row.course_count),
+            },
+        }))
+
+        // Get total count of tags with published courses
+        const total = tagsWithPublishedCourses.length
+
+        // Apply pagination after sorting
+        const tags = tagsWithPublishedCourses.slice(skip, skip + limitNum)
 
         return {
-            tags: tagsWithCounts,
+            tags: tags,
             pagination: {
                 page: pageNum,
                 limit: limitNum,

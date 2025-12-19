@@ -1,24 +1,26 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ScrollToTop } from './components/ScrollToTop';
-import { ProtectedRoute } from './components/routes/ProtectedRoute';
-import { RoleRoute } from './components/routes/RoleRoute';
-import { PublicLayout } from './components/layouts/PublicLayout';
-import { AdminLayout } from './components/layouts/AdminLayout';
-import { Toaster } from './components/ui/sonner';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { ScrollToTop } from './components/ScrollToTop'
+import { ProtectedRoute } from './components/routes/ProtectedRoute'
+import { RoleRoute } from './components/routes/RoleRoute'
+import { PublicLayout } from './components/layouts/PublicLayout'
+import { AdminLayout } from './components/layouts/AdminLayout'
+import { Toaster } from './components/ui/sonner'
 
 // Auth Pages
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { EmailVerificationPage } from './pages/EmailVerificationPage';
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { EmailVerificationPage } from './pages/EmailVerificationPage'
 
 // Public Pages
-import { LandingPage } from './pages/LandingPage';
-import { CoursesPage } from './pages/CoursesPage';
-import { CourseDetailPage } from './pages/CourseDetailPage';
-import { CoursePreviewPage } from './pages/CoursePreviewPage';
-import { AboutPage } from './pages/AboutPage';
+import { LandingPage } from './pages/LandingPage'
+import { CoursesPage } from './pages/CoursesPage'
+import { CourseDetailPage } from './pages/CourseDetailPage'
+import { CoursePreviewPage } from './pages/CoursePreviewPage'
+import { AboutPage } from './pages/AboutPage'
+import { CategoriesPage } from './pages/CategoriesPage'
+import { CategoriesDetailPage } from './pages/CategoriesDetailPage'
 
 // Student Pages
 import { StudentDashboard } from './pages/StudentDashboard';
@@ -41,21 +43,27 @@ import { CourseEditPage } from './pages/instructor/CourseEditPage';
 import { CourseChaptersPage } from './pages/instructor/CourseChaptersPage';
 
 // Admin Pages
-import { AdminDashboard } from './pages/AdminDashboard';
-import { UsersPage } from './pages/admin/UsersPage';
-import { CoursesPage as AdminCoursesPage } from './pages/admin/CoursesPage';
+import { AdminDashboard } from './pages/AdminDashboard'
+import { UsersPage } from './pages/admin/UsersPage'
+import { CoursesPage as AdminCoursesPage } from './pages/admin/CoursesPage'
 
 export default function App() {
-  return (
-    <Router>
-      <ScrollToTop />
-      <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <Routes>
-          {/* ========== AUTH ROUTES (No Layout) ========== */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+    return (
+        <Router>
+            <ScrollToTop />
+            <div className='flex flex-col min-h-screen bg-background text-foreground'>
+                <Routes>
+                    {/* ========== AUTH ROUTES (No Layout) ========== */}
+                    <Route path='/login' element={<LoginPage />} />
+                    <Route path='/register' element={<RegisterPage />} />
+                    <Route
+                        path='/forgot-password'
+                        element={<ForgotPasswordPage />}
+                    />
+                    <Route
+                        path='/reset-password'
+                        element={<ResetPasswordPage />}
+                    />
 
           {/* ========== LESSON PAGE (No Layout - Fullscreen Learning Experience) ========== */}
           <Route
@@ -86,6 +94,8 @@ export default function App() {
                   <Route path="/courses" element={<CoursesPage />} />
                   <Route path="/courses/preview" element={<CoursePreviewPage />} />
                   <Route path="/courses/:slug" element={<CourseDetailPage />} />
+                  <Route path="/categories" element={<CategoriesPage />} />
+                  <Route path="/categories/:id" element={<CategoriesDetailPage />} />
                   <Route path="/about" element={<AboutPage />} />
 
                   {/* ========== STUDENT ROUTES (Protected) ========== */}
@@ -214,26 +224,38 @@ export default function App() {
             }
           />
 
-          {/* ========== ADMIN ROUTES (Protected, No Navbar/Footer) ========== */}
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute>
-                <RoleRoute allowedRoles={['ADMIN']} redirectTo="/dashboard">
-                  <AdminLayout>
-                  <Routes>
-                      <Route path="/dashboard" element={<AdminDashboard />} />
-                      <Route path="/users" element={<UsersPage />} />
-                      <Route path="/courses" element={<AdminCoursesPage />} />
-                  </Routes>
-                  </AdminLayout>
-                </RoleRoute>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-        <Toaster />
-      </div>
-    </Router>
-  );
+                    {/* ========== ADMIN ROUTES (Protected, No Navbar/Footer) ========== */}
+                    <Route
+                        path='/admin/*'
+                        element={
+                            <ProtectedRoute>
+                                <RoleRoute
+                                    allowedRoles={['ADMIN']}
+                                    redirectTo='/dashboard'
+                                >
+                                    <AdminLayout>
+                                        <Routes>
+                                            <Route
+                                                path='/dashboard'
+                                                element={<AdminDashboard />}
+                                            />
+                                            <Route
+                                                path='/users'
+                                                element={<UsersPage />}
+                                            />
+                                            <Route
+                                                path='/courses'
+                                                element={<AdminCoursesPage />}
+                                            />
+                                        </Routes>
+                                    </AdminLayout>
+                                </RoleRoute>
+                            </ProtectedRoute>
+                        }
+                    />
+                </Routes>
+                <Toaster />
+            </div>
+        </Router>
+    )
 }

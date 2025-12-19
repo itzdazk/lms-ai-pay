@@ -83,8 +83,8 @@ export function CoursesPage() {
         const fetchTags = async () => {
             try {
                 setIsTagsLoading(true)
-                // Lấy top 20 tags phổ biến nhất
-                const data = await coursesApi.getCourseTags({ limit: 20 })
+                // Lấy tất cả tags (tối đa 100 theo MAX_LIMIT của backend)
+                const data = await coursesApi.getCourseTags({ limit: 100 })
                 // Sort theo số lượng courses (descending)
                 const sortedTags = data.tags.sort((a, b) => {
                     const countA = a._count?.courses || 0
