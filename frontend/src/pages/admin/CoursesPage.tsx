@@ -77,9 +77,9 @@ export function CoursesPage() {
   // Load categories, instructors, and analytics
   useEffect(() => {
     if (currentUser) {
+      loadAnalytics();
       loadCategories();
       loadInstructors();
-      loadAnalytics();
     }
   }, [currentUser]);
 
@@ -255,30 +255,24 @@ export function CoursesPage() {
 
   const loadInstructors = async () => {
     try {
-      // Try to get instructors, if fails, get all users and filter on frontend
-      let instructorsData;
-      try {
-        instructorsData = await usersApi.getUsers({
-          role: 'INSTRUCTOR',
-          limit: 1000, // Get all instructors for filtering
-        });
-      } catch (error) {
-        // Fallback: get all users and filter instructors
-        const allUsersData = await usersApi.getUsers({
-          limit: 1000,
-        });
-        instructorsData = {
-          data: allUsersData.data.filter(user => user.role === 'INSTRUCTOR'),
-          pagination: {
-            ...allUsersData.pagination,
-            total: allUsersData.data.filter(user => user.role === 'INSTRUCTOR').length
-          }
-        };
-      }
+      // Get all instructors for filtering in dropdown (limit increased to 1000)
+      const instructorsData = await usersApi.getUsers({
+        role: 'INSTRUCTOR',
+        limit: 1000,
+      });
       setInstructors(instructorsData.data);
     } catch (error: any) {
       console.error('Error loading instructors:', error);
-      setInstructors([]); // Set empty array on error
+      // Fallback: get all users and filter instructors
+      try {
+        const allUsersData = await usersApi.getUsers({
+          limit: 1000,
+        });
+        setInstructors(allUsersData.data.filter(user => user.role === 'INSTRUCTOR'));
+      } catch (fallbackError) {
+        console.error('Fallback error loading instructors:', fallbackError);
+        setInstructors([]);
+      }
     }
   };
 
