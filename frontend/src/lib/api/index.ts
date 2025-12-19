@@ -11,6 +11,7 @@ export { adminCoursesApi } from './admin-courses'
 export { lessonsApi } from './lessons'
 export { lessonNotesApi } from './lesson-notes'
 export { categoriesApi, getCategoryPath } from './categories'
+export { progressApi } from './progress'
 export type {
     LessonNote,
     LessonNoteResponse,
