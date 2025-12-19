@@ -23,9 +23,11 @@ import {
 } from '../../components/ui/dialog';
 import {
   Select as RoleSelect,
+  SelectContent as RoleSelectContent,
+  SelectItem as RoleSelectItem,
+  SelectTrigger as RoleSelectTrigger,
   SelectValue as RoleSelectValue,
 } from '../../components/ui/select';
-import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../../components/ui/dark-outline-select-trigger';
 import { Users, Search, Filter, Loader2, UserCheck, UserX, Shield, X, BookOpen } from 'lucide-react';
 import { usersApi } from '../../lib/api';
 import { dashboardApi } from '../../lib/api/dashboard';
@@ -449,15 +451,15 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                       handleFilterChange('role', value === 'all' ? undefined : value)
                     }
                   >
-                    <DarkOutlineSelectTrigger>
+                    <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                       <SelectValue placeholder="Tất cả vai trò" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="all">Tất cả vai trò</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="ADMIN">Quản trị viên</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="INSTRUCTOR">Giảng viên</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="STUDENT">Học viên</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
+                    </RoleSelectTrigger>
+                    <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+                      <RoleSelectItem value="all" className="hover:bg-gray-700 focus:bg-gray-700">Tất cả vai trò</RoleSelectItem>
+                      <RoleSelectItem value="ADMIN" className="hover:bg-gray-700 focus:bg-gray-700">Quản trị viên</RoleSelectItem>
+                      <RoleSelectItem value="INSTRUCTOR" className="hover:bg-gray-700 focus:bg-gray-700">Giảng viên</RoleSelectItem>
+                      <RoleSelectItem value="STUDENT" className="hover:bg-gray-700 focus:bg-gray-700">Học viên</RoleSelectItem>
+                    </RoleSelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -470,15 +472,15 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                       handleFilterChange('status', value === 'all' ? undefined : value)
                     }
                   >
-                    <DarkOutlineSelectTrigger>
+                    <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                       <SelectValue placeholder="Tất cả trạng thái" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="all">Tất cả trạng thái</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="ACTIVE">Hoạt động</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="INACTIVE">Không hoạt động</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="BANNED">Đã khóa</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
+                    </RoleSelectTrigger>
+                    <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+                      <RoleSelectItem value="all" className="hover:bg-gray-700 focus:bg-gray-700">Tất cả trạng thái</RoleSelectItem>
+                      <RoleSelectItem value="ACTIVE" className="hover:bg-gray-700 focus:bg-gray-700">Hoạt động</RoleSelectItem>
+                      <RoleSelectItem value="INACTIVE" className="hover:bg-gray-700 focus:bg-gray-700">Không hoạt động</RoleSelectItem>
+                      <RoleSelectItem value="BANNED" className="hover:bg-gray-700 focus:bg-gray-700">Đã khóa</RoleSelectItem>
+                    </RoleSelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -500,19 +502,19 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                       setFilters({ ...filters, sortBy: sortBy as any, sortOrder: sortOrder as any, page: 1 });
                     }}
                   >
-                    <DarkOutlineSelectTrigger>
+                    <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                       <SelectValue placeholder="Mới nhất" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="createdAt-desc">Mới nhất</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="createdAt-asc">Cũ nhất</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="updatedAt-desc">Cập nhật: mới nhất</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="updatedAt-asc">Cập nhật: cũ nhất</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="fullName-asc">Tên A-Z</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="fullName-desc">Tên Z-A</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="email-asc">Email A-Z</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="email-desc">Email Z-A</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
+                    </RoleSelectTrigger>
+                    <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+                      <RoleSelectItem value="createdAt-desc" className="hover:bg-gray-700 focus:bg-gray-700">Mới nhất</RoleSelectItem>
+                      <RoleSelectItem value="createdAt-asc" className="hover:bg-gray-700 focus:bg-gray-700">Cũ nhất</RoleSelectItem>
+                      <RoleSelectItem value="updatedAt-desc" className="hover:bg-gray-700 focus:bg-gray-700">Cập nhật: mới nhất</RoleSelectItem>
+                      <RoleSelectItem value="updatedAt-asc" className="hover:bg-gray-700 focus:bg-gray-700">Cập nhật: cũ nhất</RoleSelectItem>
+                      <RoleSelectItem value="fullName-asc" className="hover:bg-gray-700 focus:bg-gray-700">Tên A-Z</RoleSelectItem>
+                      <RoleSelectItem value="fullName-desc" className="hover:bg-gray-700 focus:bg-gray-700">Tên Z-A</RoleSelectItem>
+                      <RoleSelectItem value="email-asc" className="hover:bg-gray-700 focus:bg-gray-700">Email A-Z</RoleSelectItem>
+                      <RoleSelectItem value="email-desc" className="hover:bg-gray-700 focus:bg-gray-700">Email Z-A</RoleSelectItem>
+                    </RoleSelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -525,16 +527,16 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                       handleFilterChange('limit', parseInt(value))
                     }
                   >
-                    <DarkOutlineSelectTrigger>
+                    <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                       <SelectValue placeholder="10 / trang" />
-                    </DarkOutlineSelectTrigger>
-                    <DarkOutlineSelectContent>
-                      <DarkOutlineSelectItem value="5">5 / trang</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="10">10 / trang</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="20">20 / trang</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="50">50 / trang</DarkOutlineSelectItem>
-                      <DarkOutlineSelectItem value="100">100 / trang</DarkOutlineSelectItem>
-                    </DarkOutlineSelectContent>
+                    </RoleSelectTrigger>
+                    <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+                      <RoleSelectItem value="5" className="hover:bg-gray-700 focus:bg-gray-700">5 / trang</RoleSelectItem>
+                      <RoleSelectItem value="10" className="hover:bg-gray-700 focus:bg-gray-700">10 / trang</RoleSelectItem>
+                      <RoleSelectItem value="20" className="hover:bg-gray-700 focus:bg-gray-700">20 / trang</RoleSelectItem>
+                      <RoleSelectItem value="50" className="hover:bg-gray-700 focus:bg-gray-700">50 / trang</RoleSelectItem>
+                      <RoleSelectItem value="100" className="hover:bg-gray-700 focus:bg-gray-700">100 / trang</RoleSelectItem>
+                    </RoleSelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -841,12 +843,12 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                   Chọn vai trò mới
                 </label>
                 <RoleSelect value={newRole} onValueChange={(value: any) => setNewRole(value)}>
-                  <DarkOutlineSelectTrigger className="h-12">
+                  <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white h-12">
                     <RoleSelectValue placeholder="Chọn vai trò..." />
-                  </DarkOutlineSelectTrigger>
-                  <DarkOutlineSelectContent className="z-[9999]">
+                  </RoleSelectTrigger>
+                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
                     {/* Note: ADMIN role cannot be assigned via role change - only STUDENT and INSTRUCTOR are allowed */}
-                    <DarkOutlineSelectItem value="INSTRUCTOR" className="flex items-center gap-3 p-3">
+                    <RoleSelectItem value="INSTRUCTOR" className="flex items-center gap-3 p-3 hover:bg-gray-700 focus:bg-gray-700">
                       <div className="p-1.5 bg-blue-500/20 rounded">
                         <Shield className="h-4 w-4 text-blue-400" />
                       </div>
@@ -854,8 +856,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                         <div className="font-medium text-white">Giảng viên</div>
                         <div className="text-xs text-gray-400">Có thể tạo và quản lý khóa học</div>
                       </div>
-                    </DarkOutlineSelectItem>
-                    <DarkOutlineSelectItem value="STUDENT" className="flex items-center gap-3 p-3">
+                    </RoleSelectItem>
+                    <RoleSelectItem value="STUDENT" className="flex items-center gap-3 p-3 hover:bg-gray-700 focus:bg-gray-700">
                       <div className="p-1.5 bg-green-500/20 rounded">
                         <BookOpen className="h-4 w-4 text-green-400" />
                       </div>
@@ -863,8 +865,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                         <div className="font-medium text-white">Học viên</div>
                         <div className="text-xs text-gray-400">Có thể đăng ký và học các khóa học</div>
                       </div>
-                    </DarkOutlineSelectItem>
-                  </DarkOutlineSelectContent>
+                    </RoleSelectItem>
+                  </RoleSelectContent>
                 </RoleSelect>
               </div>
             </div>
@@ -975,11 +977,11 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                   value={newStatus}
                   onValueChange={(value: any) => setNewStatus(value)}
                 >
-                  <DarkOutlineSelectTrigger className="h-12">
+                  <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white h-12">
                     <RoleSelectValue placeholder="Chọn trạng thái..." />
-                  </DarkOutlineSelectTrigger>
-                  <DarkOutlineSelectContent className="z-[9999]">
-                    <DarkOutlineSelectItem value="ACTIVE" className="flex items-center gap-3 p-3">
+                  </RoleSelectTrigger>
+                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
+                    <RoleSelectItem value="ACTIVE" className="flex items-center gap-3 p-3 hover:bg-gray-700 focus:bg-gray-700">
                       <div className="p-1.5 bg-green-500/20 rounded">
                         <UserCheck className="h-4 w-4 text-green-400" />
                       </div>
@@ -987,8 +989,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                         <div className="font-medium text-white">Hoạt động</div>
                         <div className="text-xs text-gray-400">Người dùng có thể truy cập đầy đủ</div>
                       </div>
-                    </DarkOutlineSelectItem>
-                    <DarkOutlineSelectItem value="INACTIVE" className="flex items-center gap-3 p-3">
+                    </RoleSelectItem>
+                    <RoleSelectItem value="INACTIVE" className="flex items-center gap-3 p-3 hover:bg-gray-700 focus:bg-gray-700">
                       <div className="p-1.5 bg-yellow-500/20 rounded">
                         <UserX className="h-4 w-4 text-yellow-400" />
                       </div>
@@ -996,8 +998,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                         <div className="font-medium text-white">Không hoạt động</div>
                         <div className="text-xs text-gray-400">Tạm thời vô hiệu hóa tài khoản</div>
                       </div>
-                    </DarkOutlineSelectItem>
-                    <DarkOutlineSelectItem value="BANNED" className="flex items-center gap-3 p-3">
+                    </RoleSelectItem>
+                    <RoleSelectItem value="BANNED" className="flex items-center gap-3 p-3 hover:bg-gray-700 focus:bg-gray-700">
                       <div className="p-1.5 bg-red-500/20 rounded">
                         <UserX className="h-4 w-4 text-red-400" />
                       </div>
@@ -1005,8 +1007,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                         <div className="font-medium text-white">Đã khóa</div>
                         <div className="text-xs text-gray-400">Cấm vĩnh viễn, không thể truy cập</div>
                       </div>
-                    </DarkOutlineSelectItem>
-                  </DarkOutlineSelectContent>
+                    </RoleSelectItem>
+                  </RoleSelectContent>
                 </RoleSelect>
 
                 {newStatus === 'BANNED' && (
