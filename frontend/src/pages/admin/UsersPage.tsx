@@ -119,16 +119,16 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   };
 
   // Handle search with debounce
-  // const handleSearch = (query: string) => {
-  //   setSearchInput(query);
+  const handleSearch = (query: string) => {
+    setSearchInput(query);
 
-  //   // Debounce search
-  //   const timer = setTimeout(() => {
-  //     setFilters((prev) => ({ ...prev, search: query, page: 1 }));
-  //   }, 500);
+    // Debounce search
+    const timer = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: query, page: 1 }));
+    }, 500);
 
-  //   return () => clearTimeout(timer);
-  // };
+    return () => clearTimeout(timer);
+  };
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -346,7 +346,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
           filters={filters}
           searchInput={searchInput}
           onFilterChange={handleFilterChange}
-          onSearchInputChange={setSearchInput}
+          onSearchChange={handleSearch}
           onClearFilters={() => {
             setSearchInput('');
             setFilters({

@@ -1,20 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
-import { Button } from '../../../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DarkOutlineInput } from '@/components/ui/dark-outline-input';
 import {
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
   SelectValue,
-} from '../../../ui/select';
-import { Filter } from 'lucide-react';
+} from '@/components/ui/select';
+import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '@/components/ui/dark-outline-select-trigger';
+import { Filter, Search, X } from 'lucide-react';
 import type { GetUsersParams } from '../../../lib/api/users';
 
 interface UserFiltersProps {
   filters: GetUsersParams;
   searchInput: string;
   onFilterChange: (key: keyof GetUsersParams, value: any) => void;
-  onSearchInputChange: (value: string) => void;
+  onSearchChange: (value: string) => void;
   onClearFilters: () => void;
 }
 
@@ -22,7 +21,7 @@ export function UserFilters({
   filters,
   searchInput,
   onFilterChange,
-  onSearchInputChange,
+  onSearchChange,
   onClearFilters,
 }: UserFiltersProps) {
   return (
@@ -35,6 +34,27 @@ export function UserFilters({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <DarkOutlineInput
+              type="text"
+              placeholder="Tìm kiếm theo tên, email..."
+              value={searchInput}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           {/* Filter Buttons Row */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
@@ -47,15 +67,15 @@ export function UserFilters({
                   onFilterChange('role', value === 'all' ? undefined : value)
                 }
               >
-                <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+                <DarkOutlineSelectTrigger>
                   <SelectValue placeholder="Tất cả vai trò" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <SelectItem value="all" className="hover:bg-gray-700 focus:bg-gray-700">Tất cả vai trò</SelectItem>
-                  <SelectItem value="ADMIN" className="hover:bg-gray-700 focus:bg-gray-700">Quản trị viên</SelectItem>
-                  <SelectItem value="INSTRUCTOR" className="hover:bg-gray-700 focus:bg-gray-700">Giảng viên</SelectItem>
-                  <SelectItem value="STUDENT" className="hover:bg-gray-700 focus:bg-gray-700">Học viên</SelectItem>
-                </SelectContent>
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="all">Tất cả vai trò</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="ADMIN">Quản trị viên</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="INSTRUCTOR">Giảng viên</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="STUDENT">Học viên</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
               </Select>
             </div>
             <div className="space-y-2">
@@ -68,15 +88,15 @@ export function UserFilters({
                   onFilterChange('status', value === 'all' ? undefined : value)
                 }
               >
-                <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+                <DarkOutlineSelectTrigger>
                   <SelectValue placeholder="Tất cả trạng thái" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <SelectItem value="all" className="hover:bg-gray-700 focus:bg-gray-700">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="ACTIVE" className="hover:bg-gray-700 focus:bg-gray-700">Hoạt động</SelectItem>
-                  <SelectItem value="INACTIVE" className="hover:bg-gray-700 focus:bg-gray-700">Không hoạt động</SelectItem>
-                  <SelectItem value="BANNED" className="hover:bg-gray-700 focus:bg-gray-700">Đã khóa</SelectItem>
-                </SelectContent>
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="all">Tất cả trạng thái</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="ACTIVE">Hoạt động</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="INACTIVE">Không hoạt động</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="BANNED">Đã khóa</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
               </Select>
             </div>
             <div className="space-y-2">
@@ -87,22 +107,24 @@ export function UserFilters({
                 value={`${filters.sortBy || 'createdAt'}-${filters.sortOrder || 'desc'}`}
                 onValueChange={(value) => {
                   const [sortBy, sortOrder] = value.split('-');
-                  onFilterChange('sort', { sortBy, sortOrder });
+                  // Handle sort change by calling filter change twice
+                  onFilterChange('sortBy', sortBy);
+                  onFilterChange('sortOrder', sortOrder);
                 }}
               >
-                <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+                <DarkOutlineSelectTrigger>
                   <SelectValue placeholder="Mới nhất" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <SelectItem value="createdAt-desc" className="hover:bg-gray-700 focus:bg-gray-700">Mới nhất</SelectItem>
-                  <SelectItem value="createdAt-asc" className="hover:bg-gray-700 focus:bg-gray-700">Cũ nhất</SelectItem>
-                  <SelectItem value="updatedAt-desc" className="hover:bg-gray-700 focus:bg-gray-700">Cập nhật: mới nhất</SelectItem>
-                  <SelectItem value="updatedAt-asc" className="hover:bg-gray-700 focus:bg-gray-700">Cập nhật: cũ nhất</SelectItem>
-                  <SelectItem value="fullName-asc" className="hover:bg-gray-700 focus:bg-gray-700">Tên A-Z</SelectItem>
-                  <SelectItem value="fullName-desc" className="hover:bg-gray-700 focus:bg-gray-700">Tên Z-A</SelectItem>
-                  <SelectItem value="email-asc" className="hover:bg-gray-700 focus:bg-gray-700">Email A-Z</SelectItem>
-                  <SelectItem value="email-desc" className="hover:bg-gray-700 focus:bg-gray-700">Email Z-A</SelectItem>
-                </SelectContent>
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="createdAt-desc">Mới nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="createdAt-asc">Cũ nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="updatedAt-desc">Cập nhật: mới nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="updatedAt-asc">Cập nhật: cũ nhất</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="fullName-asc">Tên A-Z</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="fullName-desc">Tên Z-A</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="email-asc">Email A-Z</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="email-desc">Email Z-A</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
               </Select>
             </div>
             <div className="space-y-2">
@@ -115,16 +137,16 @@ export function UserFilters({
                   onFilterChange('limit', parseInt(value))
                 }
               >
-                <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+                <DarkOutlineSelectTrigger>
                   <SelectValue placeholder="10 / trang" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                  <SelectItem value="5" className="hover:bg-gray-700 focus:bg-gray-700">5 / trang</SelectItem>
-                  <SelectItem value="10" className="hover:bg-gray-700 focus:bg-gray-700">10 / trang</SelectItem>
-                  <SelectItem value="20" className="hover:bg-gray-700 focus:bg-gray-700">20 / trang</SelectItem>
-                  <SelectItem value="50" className="hover:bg-gray-700 focus:bg-gray-700">50 / trang</SelectItem>
-                  <SelectItem value="100" className="hover:bg-gray-700 focus:bg-gray-700">100 / trang</SelectItem>
-                </SelectContent>
+                </DarkOutlineSelectTrigger>
+                <DarkOutlineSelectContent>
+                  <DarkOutlineSelectItem value="5">5 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="10">10 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="20">20 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="50">50 / trang</DarkOutlineSelectItem>
+                  <DarkOutlineSelectItem value="100">100 / trang</DarkOutlineSelectItem>
+                </DarkOutlineSelectContent>
               </Select>
             </div>
             <div className="space-y-2">
