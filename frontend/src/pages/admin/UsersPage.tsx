@@ -107,7 +107,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     if (currentUser?.role === 'ADMIN') {
       loadUsers();
     }
-  }, [currentUser, filters]);
+  }, [filters]); // Remove currentUser dependency since it shouldn't change during user operations
 
   // Handle filter changes
   const handleFilterChange = (key: keyof GetUsersParams, value: any) => {
@@ -203,18 +203,23 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const confirmChangeRole = async () => {
     if (!selectedUser) return;
 
+    const userId = selectedUser.id;
+    const updatedRole = newRole;
+
     try {
       setActionLoading(true);
-      await usersApi.changeUserRole(selectedUser.id, newRole);
+      await usersApi.changeUserRole(userId, updatedRole);
       toast.success('Cập nhật vai trò thành công');
-      setIsRoleDialogOpen(false);
-      setSelectedUser(null);
-      // Update local state instead of reloading
+
+      // Update local state with immutable update
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === selectedUser.id ? { ...u, role: newRole } : u
+          u.id === userId ? { ...u, role: updatedRole } : u
         )
       );
+
+      setIsRoleDialogOpen(false);
+      setSelectedUser(null);
     } catch (error: any) {
       console.error('Error updating user role:', error);
       toast.error(error?.response?.data?.message || 'Không thể cập nhật vai trò');
@@ -226,18 +231,23 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const confirmChangeStatus = async () => {
     if (!selectedUser) return;
 
+    const userId = selectedUser.id;
+    const updatedStatus = newStatus;
+
     try {
       setActionLoading(true);
-      await usersApi.changeUserStatus(selectedUser.id, newStatus);
+      await usersApi.changeUserStatus(userId, updatedStatus);
       toast.success('Cập nhật trạng thái thành công');
-      setIsStatusDialogOpen(false);
-      setSelectedUser(null);
-      // Update local state instead of reloading
+
+      // Update local state with immutable update
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === selectedUser.id ? { ...u, status: newStatus } : u
+          u.id === userId ? { ...u, status: updatedStatus } : u
         )
       );
+
+      setIsStatusDialogOpen(false);
+      setSelectedUser(null);
     } catch (error: any) {
       console.error('Error updating user status:', error);
       toast.error(error?.response?.data?.message || 'Không thể cập nhật trạng thái');
