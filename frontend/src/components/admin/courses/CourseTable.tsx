@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { DarkOutlineTable, DarkOutlineTableHeader, DarkOutlineTableBody, DarkOutlineTableRow, DarkOutlineTableHead, DarkOutlineTableCell } from '@/components/ui/dark-outline-table';
 import { DarkOutlineInput } from '@/components/ui/dark-outline-input';
 import { BookOpen, Loader2, Search, X } from 'lucide-react';
@@ -19,6 +20,8 @@ interface CourseTableProps {
   searchInput: string;
   selectedRowId: number | null;
   onSearchChange: (value: string) => void;
+  onSearchExecute: () => void;
+  onSearchKeyPress: (e: React.KeyboardEvent) => void;
   onToggleFeatured: (course: AdminCourse) => void;
   onRowSelect: (courseId: number | null) => void;
   onPageChange: (newPage: number) => void;
@@ -32,6 +35,8 @@ export function CourseTable({
   searchInput,
   selectedRowId,
   onSearchChange,
+  onSearchExecute,
+  onSearchKeyPress,
   onToggleFeatured,
   onRowSelect,
   onPageChange,
@@ -49,24 +54,34 @@ export function CourseTable({
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {/* Search Bar */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <DarkOutlineInput
-            type="text"
-            placeholder="Tìm kiếm theo tên khóa học, mô tả, giảng viên..."
-            value={searchInput}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        <div className="flex gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <DarkOutlineInput
+              type="text"
+              placeholder="Tìm kiếm theo tên khóa học, mô tả, giảng viên..."
+              value={searchInput}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyPress={onSearchKeyPress}
+              className="pl-10 pr-10"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Button
+            onClick={onSearchExecute}
+            className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!searchInput.trim()}
+          >
+            Tìm Kiếm
+          </Button>
         </div>
 
         {loading ? (

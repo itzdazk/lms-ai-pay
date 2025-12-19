@@ -374,27 +374,6 @@ export function TagsPage() {
         }
     }, [currentUser, authLoading, navigate])
 
-    // Debounce search input
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            const mainContainer = document.querySelector('main')
-            if (mainContainer) {
-                scrollPositionRef.current = (mainContainer as HTMLElement)
-                    .scrollTop
-            } else {
-                scrollPositionRef.current =
-                    window.scrollY || document.documentElement.scrollTop
-            }
-            isPageChangingRef.current = true
-            setFilters((prevFilters) => ({
-                ...prevFilters,
-                search: searchInput,
-                page: 1,
-            }))
-        }, 500)
-
-        return () => clearTimeout(timer)
-    }, [searchInput])
 
     // Load tags when filters change
     useEffect(() => {
@@ -449,8 +428,21 @@ export function TagsPage() {
         }
     }
 
-    const handleSearch = (value: string) => {
+    // Handle search input change (no auto-search)
+    const handleSearchInputChange = (value: string) => {
         setSearchInput(value)
+    }
+
+    // Handle search execution (manual search)
+    const handleSearch = () => {
+        setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }))
+    }
+
+    // Handle search on Enter key
+    const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSearch()
+        }
     }
 
     const handlePageChange = (newPage: number) => {
@@ -844,24 +836,34 @@ export function TagsPage() {
                     </CardHeader>
                     <CardContent className='overflow-x-auto'>
                         {/* Search Bar */}
-                        <div className='relative mb-4'>
-                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
-                            <DarkOutlineInput
-                                type='text'
-                                placeholder='Tìm kiếm theo tên hoặc slug...'
-                                value={searchInput}
-                                onChange={(e) => handleSearch(e.target.value)}
-                                className='pl-10 pr-10'
-                            />
-                            {searchInput && (
-                                <button
-                                    type='button'
-                                    onClick={() => handleSearch('')}
-                                    className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
-                                >
-                                    <X className='h-4 w-4' />
-                                </button>
-                            )}
+                        <div className='flex gap-2 mb-4'>
+                            <div className='relative flex-1'>
+                                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                                <DarkOutlineInput
+                                    type='text'
+                                    placeholder='Tìm kiếm theo tên hoặc slug...'
+                                    value={searchInput}
+                                    onChange={(e) => handleSearchInputChange(e.target.value)}
+                                    onKeyPress={handleSearchKeyPress}
+                                    className='pl-10 pr-10'
+                                />
+                                {searchInput && (
+                                    <button
+                                        type='button'
+                                        onClick={() => handleSearchInputChange('')}
+                                        className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
+                                    >
+                                        <X className='h-4 w-4' />
+                                    </button>
+                                )}
+                            </div>
+                            <Button
+                                onClick={handleSearch}
+                                className='px-6 bg-blue-600 hover:bg-blue-700 text-white'
+                                disabled={!searchInput.trim()}
+                            >
+                                Tìm Kiếm
+                            </Button>
                         </div>
                         {loading ? (
                             <div className='flex items-center justify-center py-12'>

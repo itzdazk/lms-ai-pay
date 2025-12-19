@@ -87,18 +87,6 @@ export function CoursesPage() {
     }
   };
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters((prevFilters) => ({
-        ...prevFilters,
-        search: searchInput,
-        page: 1,
-      }));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   // Load courses when filters change
   useEffect(() => {
@@ -214,8 +202,21 @@ export function CoursesPage() {
     }
   };
 
-  const handleSearch = (value: string) => {
+  // Handle search input change (no auto-search)
+  const handleSearchInputChange = (value: string) => {
     setSearchInput(value);
+  };
+
+  // Handle search execution (manual search)
+  const handleSearch = () => {
+    setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }));
+  };
+
+  // Handle search on Enter key
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const handleFilterChange = (
@@ -500,7 +501,9 @@ export function CoursesPage() {
             pagination={pagination}
             searchInput={searchInput}
             selectedRowId={selectedRowId}
-            onSearchChange={handleSearch}
+            onSearchChange={handleSearchInputChange}
+            onSearchExecute={handleSearch}
+            onSearchKeyPress={handleSearchKeyPress}
             onToggleFeatured={(course) => {
               setSelectedCourse(course);
               setIsFeaturedDialogOpen(true);

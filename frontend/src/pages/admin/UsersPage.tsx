@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
 import { DarkOutlineButton } from '../../components/ui/buttons';
 import { DarkOutlineInput } from '../../components/ui/dark-outline-input';
 import { UserForm } from '../../components/admin/UserForm';
@@ -28,7 +29,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     total: 0,
     totalPages: 0,
   });
-  const [filters, setFilters] = useState<GetUsersParams>({
+  const [filters, setFilters] = useState<GetUsersParams>(() => ({
     page: 1,
     limit: 10,
     search: '',
@@ -36,7 +37,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     status: undefined,
     sortBy: 'createdAt',
     sortOrder: 'desc',
-  });
+  }));
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -135,19 +136,21 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     }));
   };
 
-  // Handle search with debounce
-  const handleSearch = (query: string) => {
+  // Handle search input change (no auto-search)
+  const handleSearchInputChange = (query: string) => {
     setSearchInput(query);
+  };
 
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+  // Handle search execution (manual search)
+  const handleSearch = () => {
+    setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }));
+  };
+
+  // Handle search on Enter key
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
-
-    // Debounce search
-    searchTimeoutRef.current = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: query, page: 1 }));
-    }, 500);
   };
 
   // Handle page change
@@ -164,6 +167,18 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     isPageChangingRef.current = true;
 
     setFilters((prev) => ({ ...prev, page }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      page: 1,
+      limit: 10,
+      search: '',
+      role: undefined,
+      status: undefined,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
   };
 
   // Handle user actions
@@ -378,17 +393,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         <UserFilters
           filters={filters}
           onFilterChange={handleFilterChange}
-          onClearFilters={() => {
-            setFilters({
-              page: 1,
-              limit: 10,
-              search: '',
-              role: undefined,
-              status: undefined,
-              sortBy: 'createdAt',
-              sortOrder: 'desc',
-            });
-          }}
+          onClearFilters={handleClearFilters}
         />
 
         {/* Users Table */}
@@ -403,24 +408,34 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {/* Search Bar */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <DarkOutlineInput
-                type="text"
-                placeholder="Tìm kiếm theo tên, email..."
-                value={searchInput}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 pr-10"
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => handleSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <DarkOutlineInput
+                  type="text"
+                  placeholder="Tìm kiếm theo tên, email..."
+                  value={searchInput}
+                  onChange={(e) => handleSearchInputChange(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
+                  className="pl-10 pr-10"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => handleSearchInputChange('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <Button
+                onClick={handleSearch}
+                className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={!searchInput.trim()}
+              >
+                Tìm Kiếm
+              </Button>
             </div>
             <UserTable
               users={memoizedUsers}
