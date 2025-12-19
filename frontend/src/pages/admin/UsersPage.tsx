@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -48,6 +48,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
   const scrollPositionRef = useRef<number>(0);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPageChangingRef = useRef<boolean>(false);
   const [userStats, setUserStats] = useState({
     total: 0,
@@ -62,6 +63,20 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
       setFilters((prevFilters) => ({ ...prevFilters, role: defaultRole, page: 1 }));
     }
   }, [defaultRole]);
+
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Memoize users data to prevent unnecessary re-processing
+  const memoizedUsers = useMemo(() => {
+    return [...users];
+  }, [users]);
 
   // Check if user is admin
   useEffect(() => {
@@ -104,11 +119,12 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   };
 
   // Load data on mount and when filters change
+  // Load users when specific filter fields change (not entire filters object)
   useEffect(() => {
     if (currentUser?.role === 'ADMIN') {
       loadUsers();
     }
-  }, [filters]); // Remove currentUser dependency since it shouldn't change during user operations
+  }, [filters.page, filters.limit, filters.search, filters.role, filters.status, filters.sortBy, filters.sortOrder, currentUser?.role]);
 
   // Handle filter changes
   const handleFilterChange = (key: keyof GetUsersParams, value: any) => {
@@ -123,12 +139,15 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const handleSearch = (query: string) => {
     setSearchInput(query);
 
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
     // Debounce search
-    const timer = setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       setFilters((prev) => ({ ...prev, search: query, page: 1 }));
     }, 500);
-
-    return () => clearTimeout(timer);
   };
 
   // Handle page change
@@ -404,7 +423,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
               )}
             </div>
             <UserTable
-              users={users}
+              users={memoizedUsers}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onChangeRole={handleChangeRole}

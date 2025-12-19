@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   DarkOutlineTable,
   DarkOutlineTableBody,
@@ -20,7 +21,7 @@ interface UserTableProps {
   onRowSelect?: (userId: string | null) => void;
 }
 
-export function UserTable({
+export const UserTable = React.memo(function UserTable({
   users,
   onEdit,
   onDelete,
@@ -75,4 +76,6 @@ export function UserTable({
       </DarkOutlineTableBody>
     </DarkOutlineTable>
   );
-}
+});
+
+UserTable.displayName = 'UserTable';

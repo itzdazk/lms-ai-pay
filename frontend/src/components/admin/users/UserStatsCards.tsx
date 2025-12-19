@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, UserCheck, UserX, Shield } from 'lucide-react';
 
@@ -12,7 +13,7 @@ interface UserStatsCardsProps {
   userStats: UserStats;
 }
 
-export function UserStatsCards({ userStats }: UserStatsCardsProps) {
+export const UserStatsCards = React.memo(function UserStatsCards({ userStats }: UserStatsCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
@@ -64,4 +65,6 @@ export function UserStatsCards({ userStats }: UserStatsCardsProps) {
       </Card>
     </div>
   );
-}
+});
+
+UserStatsCards.displayName = 'UserStatsCards';
