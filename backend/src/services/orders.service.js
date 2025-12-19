@@ -182,6 +182,8 @@ class OrdersService {
                         title: true,
                         slug: true,
                         thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
                         instructor: {
                             select: {
                                 id: true,
@@ -283,6 +285,8 @@ class OrdersService {
                             title: true,
                             slug: true,
                             thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
                             instructor: {
                                 select: {
                                     id: true,
@@ -331,6 +335,8 @@ class OrdersService {
                         title: true,
                         slug: true,
                         thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
                         description: true,
                         instructor: {
                             select: {
@@ -389,6 +395,8 @@ class OrdersService {
                         title: true,
                         slug: true,
                         thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
                         description: true,
                         instructor: {
                             select: {
