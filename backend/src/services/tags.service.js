@@ -16,6 +16,7 @@ class TagsService {
         const limitNum = parseInt(limit, 10) || 20
         const skip = (pageNum - 1) * limitNum
 
+
         // Build where clause for search
         const where = {}
         if (search) {
@@ -53,7 +54,7 @@ class TagsService {
         }
 
         const tagsWithCountsRaw = await prisma.$queryRaw`
-            SELECT 
+            SELECT
                 t.id,
                 t.name,
                 t.slug,
@@ -61,11 +62,10 @@ class TagsService {
                 t.created_at as "createdAt",
                 COUNT(DISTINCT ct.course_id) as course_count
             FROM tags t
-            INNER JOIN course_tags ct ON ct.tag_id = t.id
-            INNER JOIN courses c ON c.id = ct.course_id AND c.status = ${COURSE_STATUS.PUBLISHED}
+            LEFT JOIN course_tags ct ON ct.tag_id = t.id
+            LEFT JOIN courses c ON c.id = ct.course_id AND c.status = ${COURSE_STATUS.PUBLISHED}
             WHERE 1=1 ${searchCondition}
             GROUP BY t.id, t.name, t.slug, t.description, t.created_at
-            HAVING COUNT(DISTINCT ct.course_id) > 0
             ORDER BY ${orderByClause}
         `
 
@@ -81,7 +81,7 @@ class TagsService {
             },
         }))
 
-        // Get total count of tags with published courses
+        // Get total count of all tags (after filtering by search if any)
         const total = tagsWithPublishedCourses.length
 
         // Apply pagination after sorting
