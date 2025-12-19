@@ -204,6 +204,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     if (!selectedUser) return;
 
     const userId = selectedUser.id;
+    const oldRole = selectedUser.role;
     const updatedRole = newRole;
 
     try {
@@ -217,6 +218,22 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
           u.id === userId ? { ...u, role: updatedRole } : u
         )
       );
+
+      // Update user stats based on role change
+      setUserStats((prev) => {
+        const newStats = { ...prev };
+        // Decrease count for old role
+        if (oldRole === 'STUDENT') newStats.students--;
+        else if (oldRole === 'INSTRUCTOR') newStats.instructors--;
+        else if (oldRole === 'ADMIN') newStats.admins--;
+
+        // Increase count for new role
+        if (updatedRole === 'STUDENT') newStats.students++;
+        else if (updatedRole === 'INSTRUCTOR') newStats.instructors++;
+        else if (updatedRole === 'ADMIN') newStats.admins++;
+
+        return newStats;
+      });
 
       setIsRoleDialogOpen(false);
       setSelectedUser(null);
