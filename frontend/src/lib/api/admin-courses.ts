@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { ApiResponse, PaginatedResponse } from './types'
+import type { ApiResponse, PaginatedResponse, PaginatedApiResponse } from './types'
 import type { User } from './types'
 
 // Types based on ADMIN_COURSE_API_RULES.md
@@ -164,19 +164,11 @@ export const adminCoursesApi = {
         if (filters.minRating !== undefined)
             params.append('minRating', filters.minRating.toString())
 
-        const response = await apiClient.get<ApiResponse<AdminCourse[]>>(
+        const response = await apiClient.get<PaginatedApiResponse<AdminCourse>>(
             `/admin/courses?${params.toString()}`
         )
 
-        return {
-            data: response.data.data,
-            pagination: response.data.pagination || {
-                page: filters.page || 1,
-                limit: filters.limit || 20,
-                total: 0,
-                totalPages: 0,
-            },
-        }
+        return response.data
     },
 
     /**

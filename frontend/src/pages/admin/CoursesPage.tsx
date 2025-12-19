@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
+import { DarkOutlineButton } from '../../components/ui/buttons';
 import { adminCoursesApi, type AdminCourse, type AdminCourseFilters, type PlatformAnalytics } from '../../lib/api/admin-courses';
 import { coursesApi } from '../../lib/api/courses';
 import { useAuth } from '../../contexts/AuthContext';
@@ -352,82 +353,111 @@ export function CoursesPage() {
   };
 
   const renderPagination = () => {
-    const pages: (number | string)[] = [];
-    const totalPages = pagination.totalPages;
     const currentPage = pagination.page;
+    const totalPages = pagination.totalPages;
+    const pages: (number | string)[] = [];
 
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
+    // Calculate range: show 5 pages around current page (2 before, current, 2 after)
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    // Adjust if we're near the start
+    if (currentPage <= 3) {
+      startPage = 1;
+      endPage = Math.min(5, totalPages);
+    }
+
+    // Adjust if we're near the end
+    if (currentPage >= totalPages - 2) {
+      startPage = Math.max(1, totalPages - 4);
+      endPage = totalPages;
+    }
+
+    // Always show first page if not in range
+    if (startPage > 1) {
       pages.push(1);
-      if (currentPage > 3) {
+      if (startPage > 2) {
         pages.push('...');
       }
-      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-        pages.push(i);
-      }
-      if (currentPage < totalPages - 2) {
+    }
+
+    // Add pages in range
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    // Always show last page if not in range
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
         pages.push('...');
       }
       pages.push(totalPages);
     }
 
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
+      <div className="flex items-center justify-center gap-1 mt-6">
+        <DarkOutlineButton
           onClick={() => handlePageChange(1)}
-          disabled={currentPage === 1 || loading}
-          className="px-3 py-2 text-sm bg-[#2D2D2D] border border-[#404040] rounded hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={pagination.page === 1}
+          size="sm"
+          className="min-w-[40px] h-9"
         >
           &lt;&lt;
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1 || loading}
-          className="px-3 py-2 text-sm bg-[#2D2D2D] border border-[#404040] rounded hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+        </DarkOutlineButton>
+        <DarkOutlineButton
+          onClick={() => handlePageChange(pagination.page - 1)}
+          disabled={pagination.page === 1}
+          size="sm"
+          className="min-w-[40px] h-9"
         >
           &lt;
-        </button>
-        {pages.map((page, index) => {
-          if (page === '...') {
+        </DarkOutlineButton>
+
+        {/* Page Numbers */}
+        <div className="flex items-center gap-1">
+          {pages.map((page, index) => {
+            if (page === '...') {
+              return (
+                <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                  ...
+                </span>
+              );
+            }
+            const pageNum = page as number;
             return (
-              <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
-                ...
-              </span>
+              <DarkOutlineButton
+                key={pageNum}
+                onClick={() => handlePageChange(pageNum)}
+                disabled={loading}
+                size="sm"
+                className={
+                  pagination.page === pageNum
+                    ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
+                    : ''
+                }
+              >
+                {pageNum}
+              </DarkOutlineButton>
             );
-          }
-          const pageNum = page as number;
-          return (
-            <button
-              key={pageNum}
-              onClick={() => handlePageChange(pageNum)}
-              disabled={loading}
-              className={`px-3 py-2 text-sm border rounded ${
-                currentPage === pageNum
-                  ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
-                  : 'bg-[#2D2D2D] border-[#404040] hover:bg-[#3D3D3D]'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {pageNum}
-            </button>
-          );
-        })}
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages || loading}
-          className="px-3 py-2 text-sm bg-[#2D2D2D] border border-[#404040] rounded hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+          })}
+        </div>
+
+        <DarkOutlineButton
+          onClick={() => handlePageChange(pagination.page + 1)}
+          disabled={pagination.page === totalPages}
+          size="sm"
+          className="min-w-[40px] h-9"
         >
           &gt;
-        </button>
-        <button
+        </DarkOutlineButton>
+        <DarkOutlineButton
           onClick={() => handlePageChange(totalPages)}
-          disabled={currentPage === totalPages || loading}
-          className="px-3 py-2 text-sm bg-[#2D2D2D] border border-[#404040] rounded hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={pagination.page === totalPages}
+          size="sm"
+          className="min-w-[40px] h-9"
         >
           &gt;&gt;
-        </button>
+        </DarkOutlineButton>
       </div>
     );
   };
