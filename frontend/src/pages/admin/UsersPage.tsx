@@ -93,7 +93,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         total: statsResponse.totalUsers || 0,
         students: statsResponse.totalStudents || 0,
         instructors: statsResponse.totalInstructors || 0,
-        admins: statsResponse.totalAdmins || 0,
+        admins: (statsResponse.totalUsers || 0) - (statsResponse.totalStudents || 0) - (statsResponse.totalInstructors || 0),
       });
     } catch (error) {
       console.error('Error loading users:', error);
@@ -189,6 +189,21 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         total: prev.total - 1,
         totalPages: Math.ceil((prev.total - 1) / prev.limit),
       }));
+
+      // Update user stats
+      setUserStats((prev) => {
+        const newStats = { ...prev };
+        newStats.total--;
+
+        // Decrease count for deleted user's role
+        if (selectedUser.role === 'STUDENT') newStats.students--;
+        else if (selectedUser.role === 'INSTRUCTOR') newStats.instructors--;
+
+        // Recalculate admins
+        newStats.admins = newStats.total - newStats.students - newStats.instructors;
+
+        return newStats;
+      });
       // If current page becomes empty, go to previous page
       if (users.length === 1 && pagination.page > 1) {
         handlePageChange(pagination.page - 1);
@@ -227,12 +242,13 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         // Decrease count for old role
         if (selectedUser.role === 'STUDENT') newStats.students--;
         else if (selectedUser.role === 'INSTRUCTOR') newStats.instructors--;
-        else if (selectedUser.role === 'ADMIN') newStats.admins--;
 
         // Increase count for new role
         if (newRoleValue === 'STUDENT') newStats.students++;
         else if (newRoleValue === 'INSTRUCTOR') newStats.instructors++;
-        else if (newRoleValue === 'ADMIN') newStats.admins++;
+
+        // Recalculate admins (total - students - instructors)
+        newStats.admins = newStats.total - newStats.students - newStats.instructors;
 
         return newStats;
       });
