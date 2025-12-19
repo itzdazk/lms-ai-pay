@@ -19,6 +19,13 @@ router.use(authorize(USER_ROLES.ADMIN))
 router.get('/', adminDashboardController.getDashboard)
 
 /**
+ * @route   GET /api/v1/dashboard/admin/user-stats
+ * @desc    Get user statistics only
+ * @access  Private (Admin)
+ */
+router.get('/user-stats', adminDashboardController.getUserStats)
+
+/**
  * @route   GET /api/v1/dashboard/admin/stats
  * @desc    Get system statistics
  * @access  Private (Admin)

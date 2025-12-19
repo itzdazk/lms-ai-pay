@@ -93,7 +93,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         total: statsResponse.totalUsers || 0,
         students: statsResponse.totalStudents || 0,
         instructors: statsResponse.totalInstructors || 0,
-        admins: (statsResponse.totalUsers || 0) - (statsResponse.totalStudents || 0) - (statsResponse.totalInstructors || 0),
+        admins: statsResponse.totalAdmins || 0,
       });
     } catch (error) {
       console.error('Error loading users:', error);
@@ -198,9 +198,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         // Decrease count for deleted user's role
         if (selectedUser.role === 'STUDENT') newStats.students--;
         else if (selectedUser.role === 'INSTRUCTOR') newStats.instructors--;
-
-        // Recalculate admins
-        newStats.admins = newStats.total - newStats.students - newStats.instructors;
+        else if (selectedUser.role === 'ADMIN') newStats.admins--;
 
         return newStats;
       });
@@ -242,13 +240,12 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         // Decrease count for old role
         if (selectedUser.role === 'STUDENT') newStats.students--;
         else if (selectedUser.role === 'INSTRUCTOR') newStats.instructors--;
+        else if (selectedUser.role === 'ADMIN') newStats.admins--;
 
         // Increase count for new role
         if (newRoleValue === 'STUDENT') newStats.students++;
         else if (newRoleValue === 'INSTRUCTOR') newStats.instructors++;
-
-        // Recalculate admins (total - students - instructors)
-        newStats.admins = newStats.total - newStats.students - newStats.instructors;
+        else if (newRoleValue === 'ADMIN') newStats.admins++;
 
         return newStats;
       });

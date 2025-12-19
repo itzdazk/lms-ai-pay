@@ -246,6 +246,31 @@ class AdminDashboardService {
     }
 
     /**
+     * Get user statistics for admin dashboard
+     * @returns {Promise<object>} User statistics
+     */
+    async getUserStats() {
+        const [
+            totalUsers,
+            totalInstructors,
+            totalStudents,
+        ] = await Promise.all([
+            prisma.user.count(),
+            prisma.user.count({ where: { role: USER_ROLES.INSTRUCTOR } }),
+            prisma.user.count({ where: { role: USER_ROLES.STUDENT } }),
+        ])
+
+        logger.info('User statistics retrieved')
+
+        return {
+            totalUsers,
+            totalInstructors,
+            totalStudents,
+            totalAdmins: totalUsers - totalStudents - totalInstructors,
+        }
+    }
+
+    /**
      * Get system statistics for admin dashboard
      * @returns {Promise<object>} System statistics
      */

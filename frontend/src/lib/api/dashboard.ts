@@ -55,7 +55,7 @@ export const dashboardApi = {
   },
 
   async getAdminStats(): Promise<any> {
-    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin/stats');
+    const response = await apiClient.get<ApiResponse<any>>('/dashboard/admin/user-stats');
     return response.data.data;
   },
 
