@@ -10,7 +10,7 @@ import { dashboardApi } from '../../lib/api/dashboard';
 import { toast } from 'sonner';
 import { UserStatsCards, UserFilters, UserTable, UserDialogs } from '../../components/admin/users';
 import type { User } from '../../lib/api/types';
-import type { GetUsersParams } from '../../lib/api/users';
+import type { GetUsersParams, UpdateUserRequest } from '../../lib/api/users';
 
 interface UsersPageProps {
   defaultRole?: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
@@ -246,10 +246,30 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     }
   };
 
-  // Handle user form update (placeholder for future implementation)
-  const handleUpdateUser = async (userData: any) => {
-    // Implementation for user update form
-    console.log('Update user:', userData);
+  // Handle user form update
+  const handleUpdateUser = async (id: string, userData: UpdateUserRequest) => {
+    if (!selectedUser) return;
+
+    try {
+      setActionLoading(true);
+      await usersApi.updateUser(id, userData);
+      toast.success('Cập nhật thông tin người dùng thành công');
+
+      // Update local state instead of reloading
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, ...userData } : u
+        )
+      );
+
+      setIsEditDialogOpen(false);
+      setSelectedUser(null);
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast.error(error?.response?.data?.message || 'Không thể cập nhật thông tin người dùng');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Loading state
@@ -446,13 +466,15 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         </Card>
 
         {/* Edit User Dialog */}
-        <UserForm
-          user={selectedUser}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSubmit={handleUpdateUser}
-          loading={actionLoading}
-        />
+        {selectedUser && (
+          <UserForm
+            user={selectedUser}
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSubmit={handleUpdateUser}
+            loading={actionLoading}
+          />
+        )}
 
         <UserDialogs
           // Delete Dialog
