@@ -634,7 +634,12 @@ export function CoursesPage() {
       toast.success(newFeaturedStatus ? 'Đã đánh dấu nổi bật khóa học' : 'Đã bỏ đánh dấu nổi bật khóa học');
       setIsFeaturedDialogOpen(false);
       setSelectedCourse(null);
-      loadCourses();
+      // Update local state instead of reloading
+      setCourses((prev) =>
+        prev.map((course) =>
+          course.id === selectedCourse.id ? { ...course, isFeatured: newFeaturedStatus } : course
+        )
+      );
     } catch (error: any) {
       console.error('Error toggling featured:', error);
       // Error toast is already shown by API client interceptor
