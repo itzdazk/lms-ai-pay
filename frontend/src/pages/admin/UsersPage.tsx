@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users } from 'lucide-react';
+import { Users, Search, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { DarkOutlineButton } from '../../components/ui/buttons';
+import { DarkOutlineInput } from '../../components/ui/dark-outline-input';
 import { UserForm } from '../../components/admin/UserForm';
 import { useAuth } from '../../contexts/AuthContext';
 import { usersApi } from '../../lib/api/users';
@@ -344,11 +345,8 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
 
         <UserFilters
           filters={filters}
-          searchInput={searchInput}
           onFilterChange={handleFilterChange}
-          onSearchChange={handleSearch}
           onClearFilters={() => {
-            setSearchInput('');
             setFilters({
               page: 1,
               limit: 10,
@@ -360,6 +358,27 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
             });
           }}
         />
+
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <DarkOutlineInput
+            type="text"
+            placeholder="Tìm kiếm theo tên, email..."
+            value={searchInput}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => handleSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         {/* Users Table */}
         <Card id="users-table-card" className="bg-[#1A1A1A] border-[#2D2D2D]">

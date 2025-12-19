@@ -1,27 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DarkOutlineInput } from '@/components/ui/dark-outline-input';
 import {
   Select,
   SelectValue,
 } from '@/components/ui/select';
 import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '@/components/ui/dark-outline-select-trigger';
-import { Filter, Search, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import type { GetUsersParams } from '../../../lib/api/users';
 
 interface UserFiltersProps {
   filters: GetUsersParams;
-  searchInput: string;
   onFilterChange: (key: keyof GetUsersParams, value: any) => void;
-  onSearchChange: (value: string) => void;
   onClearFilters: () => void;
 }
 
 export function UserFilters({
   filters,
-  searchInput,
   onFilterChange,
-  onSearchChange,
   onClearFilters,
 }: UserFiltersProps) {
   return (
@@ -34,27 +29,6 @@ export function UserFilters({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Search Bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <DarkOutlineInput
-              type="text"
-              placeholder="Tìm kiếm theo tên, email..."
-              value={searchInput}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => onSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
           {/* Filter Buttons Row */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
