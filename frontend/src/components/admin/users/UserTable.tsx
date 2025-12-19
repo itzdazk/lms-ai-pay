@@ -4,7 +4,7 @@ import {
   DarkOutlineTableHead,
   DarkOutlineTableHeader,
   DarkOutlineTableRow,
-} from '../../../ui/dark-outline-table';
+} from '@/components/ui/dark-outline-table';
 import { Loader2 } from 'lucide-react';
 import { UserRow } from './UserRow';
 import type { User } from '../../../lib/api/types';

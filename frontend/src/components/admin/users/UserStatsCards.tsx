@@ -1,4 +1,4 @@
-import { Card, CardContent } from '../../../ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Users, UserCheck, UserX, Shield } from 'lucide-react';
 
 interface UserStats {

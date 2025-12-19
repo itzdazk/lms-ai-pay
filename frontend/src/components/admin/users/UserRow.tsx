@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { DarkOutlineTableRow, DarkOutlineTableCell } from '../../../ui/dark-outline-table';
-import { Button } from '../../../ui/button';
-import { Badge } from '../../../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
+import { DarkOutlineTableRow, DarkOutlineTableCell } from '@/components/ui/dark-outline-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreVertical, Edit, Trash2, Shield, UserCheck, UserX } from 'lucide-react';
 import { formatDate } from '../../../lib/utils';
 import type { User } from '../../../lib/api/types';

@@ -352,25 +352,25 @@ export function CoursesPage() {
         onCategorySearchChange={setCategorySearch}
         onSearchInputChange={setSearchInput}
         onClearFilters={() => {
-          setSearchInput('');
-          setPriceType('all');
-          const mainContainer = document.querySelector('main');
-          if (mainContainer) {
-            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-          } else {
-            scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-          }
-          isPageChangingRef.current = true;
-          setFilters({
-            page: 1,
-            limit: 10,
-            search: '',
-            status: undefined,
-            categoryId: undefined,
-            level: undefined,
-            sort: 'newest',
-          });
-        }}
+                  setSearchInput('');
+                  setPriceType('all');
+                  const mainContainer = document.querySelector('main');
+                  if (mainContainer) {
+                    scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+                  } else {
+                    scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+                  }
+                  isPageChangingRef.current = true;
+                  setFilters({
+                    page: 1,
+                    limit: 10,
+                    search: '',
+                    status: undefined,
+                    categoryId: undefined,
+                    level: undefined,
+                    sort: 'newest',
+                  });
+                }}
       />
 
       <CourseTable
@@ -380,32 +380,32 @@ export function CoursesPage() {
         searchInput={searchInput}
         onSearchChange={handleSearch}
         onCreateCourse={() => {
-          // Save scroll position before navigating
-          const scrollPosition =
-            window.scrollY ||
-            window.pageYOffset ||
-            document.documentElement.scrollTop ||
-            document.body.scrollTop ||
-            0;
-
-          sessionStorage.setItem('instructorDashboardScroll', scrollPosition.toString());
-          navigate('/instructor/courses/create');
-        }}
+                // Save scroll position before navigating
+                const scrollPosition = 
+                  window.scrollY || 
+                  window.pageYOffset || 
+                  document.documentElement.scrollTop || 
+                  document.body.scrollTop || 
+                  0;
+                
+                sessionStorage.setItem('instructorDashboardScroll', scrollPosition.toString());
+                navigate('/instructor/courses/create');
+              }}
         onEditCourse={handleEditCourse}
         onDeleteCourse={(c) => {
-          setSelectedCourse(c);
-          setIsDeleteDialogOpen(true);
-        }}
-        onChangeStatus={(c) => {
-          setSelectedCourse(c);
-          const statusLower = (c.status || 'draft').toLowerCase() as 'draft' | 'published' | 'archived';
-          setNewStatus(statusLower);
-          setIsStatusDialogOpen(true);
-        }}
-        onViewAnalytics={(c) => {
-          setSelectedCourse(c);
-          setIsAnalyticsDialogOpen(true);
-        }}
+                        setSelectedCourse(c);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      onChangeStatus={(c) => {
+                        setSelectedCourse(c);
+                        const statusLower = (c.status || 'draft').toLowerCase() as 'draft' | 'published' | 'archived';
+                        setNewStatus(statusLower);
+                        setIsStatusDialogOpen(true);
+                      }}
+                      onViewAnalytics={(c) => {
+                        setSelectedCourse(c);
+                        setIsAnalyticsDialogOpen(true);
+                      }}
         selectedRowId={selectedRowId}
         onSelectRow={setSelectedRowId}
         onPageChange={handlePageChange}

@@ -4,7 +4,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DarkOutlineInput } from '@/components/ui/dark-outline-input';
 import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '@/components/ui/dark-outline-select-trigger';
-import { X } from 'lucide-react';
 import type { Category } from '@/lib/api/types';
 
 interface Filters {

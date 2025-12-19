@@ -1,15 +1,15 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../ui/dialog';
-import { Button } from '../../../ui/button';
-import { DarkOutlineButton } from '../../../ui/buttons';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { DarkOutlineButton } from '@/components/ui/buttons';
 import {
   Select as RoleSelect,
   SelectContent as RoleSelectContent,
   SelectItem as RoleSelectItem,
   SelectTrigger as RoleSelectTrigger,
   SelectValue as RoleSelectValue,
-} from '../../../ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
-import { Badge } from '../../../ui/badge';
+} from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Loader2, Shield, UserCheck, UserX, BookOpen } from 'lucide-react';
 import type { User } from '../../../lib/api/types';
 
