@@ -198,7 +198,7 @@ export function TagsPage() {
     // Handle clear search (reset both input and filters)
     const handleClearSearch = () => {
         setSearchInput('')
-        setFilters((prev: AdminTagFilters) => ({
+        setFilters(prev => ({
             ...prev,
             search: '',
             page: 1,
@@ -207,7 +207,7 @@ export function TagsPage() {
 
     // Handle search execution (manual search)
     const handleSearch = () => {
-        setFilters((prev: AdminTagFilters) => ({ ...prev, search: searchInput.trim(), page: 1 }))
+        setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }))
     }
 
     // Handle search on Enter key
@@ -229,7 +229,7 @@ export function TagsPage() {
                 window.scrollY || document.documentElement.scrollTop
         }
         isPageChangingRef.current = true
-        setFilters((prev: AdminTagFilters) => ({
+        setFilters(prev => ({
             ...prev,
             [key]: value,
             page: 1,
@@ -249,7 +249,7 @@ export function TagsPage() {
             isPageChangingRef.current = true
         })
 
-        setFilters((prev: AdminTagFilters) => ({ ...prev, page: newPage }))
+        setFilters(prev => ({ ...prev, page: newPage }))
     }, [])
 
     const handleCreate = () => {

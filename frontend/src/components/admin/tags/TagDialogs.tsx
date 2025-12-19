@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Button } from '../../../components/ui/button'
 import { DarkOutlineButton } from '../../../components/ui/buttons'
 import { Input } from '../../../components/ui/input'
@@ -19,7 +18,6 @@ import {
     Loader2,
     Tag as TagIcon,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import type { Tag } from '../../../lib/api/types'
 import type { TagFormState } from '../../../lib/api/admin-tags'
 
@@ -50,49 +48,6 @@ interface TagDialogsProps {
     generateSlug: (text: string) => string
 }
 
-function validateTagPayload({
-    name,
-    slug,
-}: {
-    name: string
-    slug: string
-}) {
-    const errors: string[] = []
-    if (!name || !name.trim()) {
-        errors.push('Tên tag không được để trống')
-    }
-    if (!slug || !slug.trim()) {
-        errors.push('Slug không được để trống')
-    } else if (slug.length < 2 || slug.length > 100) {
-        errors.push('Slug phải từ 2 đến 100 ký tự')
-    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-        errors.push(
-            'Slug chỉ được chứa chữ thường, số, và dấu gạch ngang (a-z, 0-9, -)'
-        )
-    }
-    return errors
-}
-
-function showApiError(error: any) {
-    const apiErrors =
-        error?.response?.data?.errors ||
-        error?.response?.data?.message ||
-        error?.message
-
-    if (Array.isArray(apiErrors)) {
-        apiErrors.forEach((e) => {
-            if (e?.msg) {
-                toast.error(e.msg)
-            } else if (typeof e === 'string') {
-                toast.error(e)
-            }
-        })
-    } else if (typeof apiErrors === 'string') {
-        toast.error(apiErrors)
-    } else {
-        toast.error('Có lỗi xảy ra, vui lòng thử lại')
-    }
-}
 
 export function TagDialogs({
     isCreateDialogOpen,
@@ -167,7 +122,7 @@ export function TagDialogs({
                                             ...formData,
                                             name: newName,
                                             // Auto-generate slug if slug is empty or was auto-generated
-                                            slug: formData.slug === generateSlug(formData.name) || !formData.slug
+                                            slug: formData.slug === generateSlug(formData.name || '') || !formData.slug
                                                 ? generateSlug(newName)
                                                 : formData.slug,
                                         })
@@ -199,14 +154,14 @@ export function TagDialogs({
                                         variant='outline'
                                         size='sm'
                                         onClick={() => {
-                                            const autoSlug = generateSlug(formData.name)
+                                            const autoSlug = generateSlug(formData.name || '')
                                             setFormData({
                                                 ...formData,
                                                 slug: autoSlug,
                                             })
                                         }}
                                         className='border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F] hover:text-white'
-                                        disabled={!formData.name.trim()}
+                                            disabled={!formData.name?.trim()}
                                     >
                                         <div className='h-4 w-4' />
                                         Tự động
@@ -254,7 +209,7 @@ export function TagDialogs({
                                     ? onConfirmCreate
                                     : onConfirmUpdate
                             }
-                            disabled={actionLoading || !formData.name.trim()}
+                            disabled={actionLoading || !formData.name?.trim()}
                             className='bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2'
                         >
                             {actionLoading ? (

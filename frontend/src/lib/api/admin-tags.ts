@@ -1,5 +1,5 @@
-import apiClient from './client'
-import type { ApiResponse, PaginatedResponse, Tag } from './types'
+import { coursesApi } from './courses'
+import type { PaginatedResponse, Tag } from './types'
 
 export interface AdminTagFilters {
     page?: number
@@ -15,7 +15,7 @@ export interface TagFormState {
     description?: string
 }
 
-// API Functions
+// API Functions - Using existing coursesApi since tags are managed via courses
 export const adminTagsApi = {
     /**
      * Get all tags with admin filters
@@ -23,48 +23,48 @@ export const adminTagsApi = {
     async getAllTags(
         filters: AdminTagFilters = {}
     ): Promise<PaginatedResponse<Tag>> {
-        const params = new URLSearchParams()
-
-        if (filters.page) params.append('page', filters.page.toString())
-        if (filters.limit) params.append('limit', filters.limit.toString())
-        if (filters.search) params.append('search', filters.search)
-        if (filters.sort) params.append('sort', filters.sort)
-        if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
-
-        const response = await apiClient.get<PaginatedResponse<Tag>>(
-            `/admin/tags?${params.toString()}`
-        )
-        return response.data
+        const result = await coursesApi.getCourseTags(filters)
+        // Convert format to match PaginatedResponse
+        return {
+            data: result.tags,
+            pagination: result.pagination
+        }
     },
 
     /**
      * Create a new tag
      */
     async createTag(data: TagFormState): Promise<Tag> {
-        const response = await apiClient.post<ApiResponse<Tag>>('/admin/tags', data)
-        return response.data.data
+        if (!data.name) {
+            throw new Error('Tag name is required')
+        }
+        return coursesApi.createTag(data.name, data.description)
     },
 
     /**
      * Update a tag
      */
     async updateTag(id: number, data: Partial<TagFormState>): Promise<Tag> {
-        const response = await apiClient.put<ApiResponse<Tag>>(`/admin/tags/${id}`, data)
-        return response.data.data
+        return coursesApi.updateTag(id, {
+            name: data.name,
+            slug: data.slug,
+            description: data.description,
+        })
     },
 
     /**
      * Delete a tag
      */
     async deleteTag(id: number): Promise<void> {
-        await apiClient.delete(`/admin/tags/${id}`)
+        return coursesApi.deleteTag(id.toString())
     },
 
     /**
-     * Get tag by ID
+     * Get tag by ID - using existing tags API
      */
     async getTagById(id: number): Promise<Tag> {
-        const response = await apiClient.get<ApiResponse<Tag>>(`/admin/tags/${id}`)
-        return response.data.data
+        // This would need a separate API call, but for now we'll use coursesApi approach
+        // In a real scenario, this might need to be implemented in backend
+        throw new Error('Get tag by ID not implemented')
     },
 }

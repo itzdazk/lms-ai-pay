@@ -8,12 +8,10 @@ import {
     DarkOutlineTableBody,
     DarkOutlineTableRow,
     DarkOutlineTableHead,
-    DarkOutlineTableCell,
 } from '../../../components/ui/dark-outline-table'
 import { Loader2, Search, X, Plus } from 'lucide-react'
-import { Badge } from '../../../components/ui/badge'
-import { formatDate } from '../../../lib/utils'
 import type { Tag } from '../../../lib/api/types'
+import { TagRow } from './TagRow'
 
 interface TagsTableProps {
     tags: Tag[]
@@ -48,8 +46,8 @@ export function TagsTable({
     onSearchKeyPress,
     onClearSearch,
     onCreate,
-    onEdit,
-    onDelete,
+    onEdit: _onEdit,
+    onDelete: _onDelete,
     onRowSelect,
     renderPagination,
 }: TagsTableProps) {
@@ -141,65 +139,14 @@ export function TagsTable({
                             </DarkOutlineTableHeader>
                             <DarkOutlineTableBody>
                                 {tags.map((tag) => (
-                                    <DarkOutlineTableRow
+                                    <TagRow
                                         key={tag.id}
-                                        className='cursor-pointer'
-                                        selected={selectedRowId === tag.id}
-                                        onRowToggle={(isSelected) => {
-                                            onRowSelect(isSelected ? tag.id : null)
-                                        }}
-                                    >
-                                        <DarkOutlineTableCell className='min-w-[150px] max-w-[200px]'>
-                                            <div className='flex items-center gap-3 min-w-0'>
-                                                <div className='min-w-0 flex-1'>
-                                                    <p className='font-medium text-gray-900 dark:text-white break-words whitespace-normal'>
-                                                        {tag.name}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </DarkOutlineTableCell>
-                                        <DarkOutlineTableCell className='w-[150px]'>
-                                            <span
-                                                className='text-gray-900 dark:text-gray-300 truncate block'
-                                                title={tag.slug}
-                                            >
-                                                {tag.slug}
-                                            </span>
-                                        </DarkOutlineTableCell>
-                                        <DarkOutlineTableCell className='min-w-[200px] max-w-[300px]'>
-                                            <span className='text-gray-900 dark:text-gray-300 break-words whitespace-normal line-clamp-2'>
-                                                {tag.description || 'Không có mô tả'}
-                                            </span>
-                                        </DarkOutlineTableCell>
-                                        <DarkOutlineTableCell className='w-[100px]'>
-                                            <Badge className='bg-green-600'>Hoạt động</Badge>
-                                        </DarkOutlineTableCell>
-                                        <DarkOutlineTableCell className='w-[100px]'>
-                                            <span className='text-gray-900 dark:text-gray-300'>
-                                                {tag.coursesCount || 0}
-                                            </span>
-                                        </DarkOutlineTableCell>
-                                        <DarkOutlineTableCell className='w-[110px]'>
-                                            <span className='text-gray-900 dark:text-gray-300'>
-                                                {formatDate(tag.createdAt)}
-                                            </span>
-                                        </DarkOutlineTableCell>
-                                        <DarkOutlineTableCell className='text-right w-[100px]'>
-                                            <Button
-                                                variant='ghost'
-                                                size='icon'
-                                                className='text-gray-400 hover:text-white hover:bg-[#1F1F1F]'
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    if (selectedRowId !== tag.id) {
-                                                        onRowSelect(tag.id)
-                                                    }
-                                                }}
-                                            >
-                                                <div className='h-1 w-1 bg-current rounded-full' />
-                                            </Button>
-                                        </DarkOutlineTableCell>
-                                    </DarkOutlineTableRow>
+                                        tag={tag}
+                                        isSelected={selectedRowId === tag.id}
+                                        onRowSelect={onRowSelect}
+                                        onEdit={_onEdit}
+                                        onDelete={_onDelete}
+                                    />
                                 ))}
                             </DarkOutlineTableBody>
                         </DarkOutlineTable>
