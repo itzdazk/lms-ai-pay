@@ -62,7 +62,7 @@ export const adminTagsApi = {
     /**
      * Get tag by ID - using existing tags API
      */
-    async getTagById(id: number): Promise<Tag> {
+    async getTagById(_id: number): Promise<Tag> {
         // This would need a separate API call, but for now we'll use coursesApi approach
         // In a real scenario, this might need to be implemented in backend
         throw new Error('Get tag by ID not implemented')
