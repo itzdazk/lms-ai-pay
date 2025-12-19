@@ -61,12 +61,12 @@ export function CoursesPage() {
   // Check if user is admin
   useEffect(() => {
     if (authLoading) return;
-
+    
     if (!currentUser) {
       navigate('/login');
       return;
     }
-
+    
     if (currentUser.role !== 'ADMIN') {
       // RoleRoute component already handles permission check and shows toast
       navigate('/dashboard');
@@ -197,7 +197,7 @@ export function CoursesPage() {
           (scrollContainer as HTMLElement).scrollTop = scrollPositionRef.current;
         }
       };
-
+      
       restoreScroll();
       setTimeout(restoreScroll, 0);
       requestAnimationFrame(() => {
@@ -210,11 +210,29 @@ export function CoursesPage() {
   const loadCourses = async () => {
     try {
       setLoading(true);
-      // Filter out undefined values to avoid validation errors
-      const cleanFilters = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      );
-      const result = await adminCoursesApi.getAllCourses(cleanFilters);
+      // Clean and validate filters before sending to avoid validation errors
+      const cleanFilters: any = {};
+
+      // Only include defined, non-null, non-empty values
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          // Convert string numbers to actual numbers for numeric fields
+          if (['minPrice', 'maxPrice', 'minEnrollments', 'maxEnrollments', 'minRating', 'page', 'limit', 'categoryId', 'instructorId'].includes(key)) {
+            const numValue = typeof value === 'string' ? parseFloat(value) : value;
+            if (!isNaN(numValue)) {
+              cleanFilters[key] = numValue;
+            }
+          } else {
+            cleanFilters[key] = value;
+          }
+        }
+      });
+
+      console.log('Sending filters:', cleanFilters); // Debug log
+
+      // Temporarily send minimal filters to test
+      const testFilters = { page: cleanFilters.page || 1, limit: cleanFilters.limit || 10 };
+      const result = await adminCoursesApi.getAllCourses(testFilters);
       setCourses(result.data);
       setPagination(result.pagination);
     } catch (error: any) {
@@ -288,7 +306,7 @@ export function CoursesPage() {
       scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
     }
     isPageChangingRef.current = true;
-
+    
     if (value === 'free') {
       // Miễn phí: maxPrice = 0
       setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
@@ -479,32 +497,32 @@ export function CoursesPage() {
             onTempMinEnrollmentsChange={setTempMinEnrollments}
             onTempMaxEnrollmentsChange={setTempMaxEnrollments}
             onClearFilters={() => {
-              setSearchInput('');
-              const mainContainer = document.querySelector('main');
-              if (mainContainer) {
-                scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-              } else {
-                scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-              }
-              isPageChangingRef.current = true;
-              setPriceType('all');
-              setFilters({
-                page: 1,
-                limit: 10,
-                search: '',
-                status: undefined,
-                categoryId: undefined,
-                level: undefined,
-                instructorId: undefined,
-                isFeatured: undefined,
-                sort: 'newest',
-                minPrice: undefined,
-                maxPrice: undefined,
-                minEnrollments: undefined,
-                maxEnrollments: undefined,
-                minRating: undefined,
-              });
-            }}
+                  setSearchInput('');
+                  const mainContainer = document.querySelector('main');
+                  if (mainContainer) {
+                    scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+                  } else {
+                    scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+                  }
+                  isPageChangingRef.current = true;
+                  setPriceType('all');
+                  setFilters({
+                    page: 1,
+                    limit: 10,
+                    search: '',
+                    status: undefined,
+                    categoryId: undefined,
+                    level: undefined,
+                    instructorId: undefined,
+                    isFeatured: undefined,
+                    sort: 'newest',
+                    minPrice: undefined,
+                    maxPrice: undefined,
+                    minEnrollments: undefined,
+                    maxEnrollments: undefined,
+                    minRating: undefined,
+                  });
+                }}
           />
 
           <CourseTable
@@ -528,9 +546,9 @@ export function CoursesPage() {
             selectedCourse={selectedCourse}
             actionLoading={actionLoading}
             onCloseFeaturedDialog={() => {
-              setIsFeaturedDialogOpen(false);
-              setSelectedCourse(null);
-            }}
+                setIsFeaturedDialogOpen(false);
+                setSelectedCourse(null);
+              }}
             onConfirmToggleFeatured={confirmToggleFeatured}
           />
         </div>
