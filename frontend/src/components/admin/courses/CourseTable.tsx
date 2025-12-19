@@ -22,6 +22,7 @@ interface CourseTableProps {
   onSearchChange: (value: string) => void;
   onSearchExecute: () => void;
   onSearchKeyPress: (e: React.KeyboardEvent) => void;
+  onClearSearch: () => void;
   onToggleFeatured: (course: AdminCourse) => void;
   onRowSelect: (courseId: number | null) => void;
   onPageChange: (newPage: number) => void;
@@ -37,6 +38,7 @@ export function CourseTable({
   onSearchChange,
   onSearchExecute,
   onSearchKeyPress,
+  onClearSearch,
   onToggleFeatured,
   onRowSelect,
   onPageChange,
@@ -68,7 +70,7 @@ export function CourseTable({
             {searchInput && (
               <button
                 type="button"
-                onClick={() => onSearchChange('')}
+                onClick={onClearSearch}
                 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
               >
                 <X className="h-4 w-4" />

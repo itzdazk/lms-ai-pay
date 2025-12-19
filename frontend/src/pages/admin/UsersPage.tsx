@@ -152,6 +152,12 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     setSearchInput(query);
   };
 
+  // Handle clear search (reset both input and filters)
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setFilters((prev) => ({ ...prev, search: '', page: 1 }));
+  };
+
   // Handle search execution (manual search)
   const handleSearch = () => {
     setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }));
@@ -436,7 +442,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                 {searchInput && (
                   <button
                     type="button"
-                    onClick={() => handleSearchInputChange('')}
+                    onClick={handleClearSearch}
                     className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10"
                   >
                     <X className="h-4 w-4" />

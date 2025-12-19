@@ -225,6 +225,12 @@ export function CoursesPage() {
     setSearchInput(value);
   };
 
+  // Handle clear search (reset both input and filters)
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setFilters(prev => ({ ...prev, search: '', page: 1 }));
+  };
+
   // Handle search execution (manual search)
   const handleSearch = () => {
     setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }));
@@ -528,6 +534,7 @@ export function CoursesPage() {
             onSearchChange={handleSearchInputChange}
             onSearchExecute={handleSearch}
             onSearchKeyPress={handleSearchKeyPress}
+            onClearSearch={handleClearSearch}
             onToggleFeatured={(course) => {
               setSelectedCourse(course);
               setIsFeaturedDialogOpen(true);
