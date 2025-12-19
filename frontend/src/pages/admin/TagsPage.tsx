@@ -180,8 +180,8 @@ export function TagsPage() {
         try {
             setLoading(true)
             const result = await adminTagsApi.getAllTags(filters)
-            setTags(result.data)
-            setPagination(result.pagination)
+            setTags(result.data || [])
+            setPagination(result.pagination || pagination)
         } catch (error: any) {
             console.error('Error loading tags:', error)
             setTags([])
@@ -306,6 +306,7 @@ export function TagsPage() {
                 }
             })
 
+            console.log('Creating tag with payload:', cleanPayload)
             await adminTagsApi.createTag(cleanPayload)
 
             toast.success('Tạo tag thành công!')
@@ -315,9 +316,13 @@ export function TagsPage() {
                 slug: '',
                 description: '',
             })
+            console.log('Calling loadTags after tag creation...')
             loadTags()
         } catch (error: any) {
             console.error('❌ Error creating tag:', error)
+            console.error('Response data:', error.response?.data)
+            console.error('Response status:', error.response?.status)
+            console.error('Error details:', error.response?.data?.error)
             showApiError(error)
         } finally {
             setActionLoading(false)

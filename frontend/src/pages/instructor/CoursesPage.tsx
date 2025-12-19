@@ -39,6 +39,7 @@ export function CoursesPage() {
   const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
+  const [localSearchInput, setLocalSearchInput] = useState<string>(filters.search || '');
   const [categorySearch, setCategorySearch] = useState<string>('');
   const scrollPositionRef = useRef<number>(0);
   const isPageChangingRef = useRef<boolean>(false);
@@ -66,21 +67,23 @@ export function CoursesPage() {
     }
   }, [currentUser]);
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const mainContainer = document.querySelector('main');
-      if (mainContainer) {
-        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-      } else {
-        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-      }
-      isPageChangingRef.current = true;
-      setFilters((prevFilters) => ({ ...prevFilters, search: searchInput, page: 1 }));
-    }, 500); // 500ms delay
+  // Handle manual search execution
+  const handleSearchExecute = () => {
+    setSearchInput(localSearchInput.trim());
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+    } else {
+      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+    }
+    isPageChangingRef.current = true;
+    setFilters((prevFilters) => ({ ...prevFilters, search: localSearchInput.trim(), page: 1 }));
+  };
 
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  // Update local search input when filters.search changes
+  useEffect(() => {
+    setLocalSearchInput(filters.search || '');
+  }, [filters.search]);
 
   // Load courses when filters change
   useEffect(() => {
@@ -300,8 +303,21 @@ export function CoursesPage() {
     }
   };
 
-  const handleSearch = (value: string) => {
-    setSearchInput(value);
+  const handleSearchInputChange = (value: string) => {
+    setLocalSearchInput(value);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearchInput('');
+    setSearchInput('');
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+    } else {
+      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+    }
+    isPageChangingRef.current = true;
+    setFilters((prevFilters) => ({ ...prevFilters, search: '', page: 1 }));
   };
 
   const handleFilterChange = (key: string, value: any) => {
@@ -377,8 +393,10 @@ export function CoursesPage() {
         courses={memoizedCourses}
         pagination={pagination}
         loading={loading}
-        searchInput={searchInput}
-        onSearchChange={handleSearch}
+        searchInput={localSearchInput}
+        onSearchChange={handleSearchInputChange}
+        onSearchExecute={handleSearchExecute}
+        onClearSearch={handleClearSearch}
         onCreateCourse={() => {
                 // Save scroll position before navigating
                 const scrollPosition = 
