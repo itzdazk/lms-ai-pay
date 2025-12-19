@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
 import { DarkOutlineButton } from '../../components/ui/buttons';
@@ -40,6 +40,24 @@ export function CoursesPage() {
     maxEnrollments: undefined,
     minRating: undefined,
   });
+
+  // Memoize filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [
+    filters.page,
+    filters.limit,
+    filters.search,
+    filters.status,
+    filters.categoryId,
+    filters.level,
+    filters.instructorId,
+    filters.isFeatured,
+    filters.sort,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.minEnrollments,
+    filters.maxEnrollments,
+    filters.minRating,
+  ]);
   const [priceType, setPriceType] = useState<'all' | 'free' | 'paid'>('all');
   const [isFeaturedDialogOpen, setIsFeaturedDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<AdminCourse | null>(null);
@@ -219,7 +237,7 @@ export function CoursesPage() {
     }
   };
 
-  const handleFilterChange = (
+  const handleFilterChange = useCallback((
     key: keyof AdminCourseFilters,
     value: any
   ) => {
@@ -231,14 +249,14 @@ export function CoursesPage() {
         window.scrollY || document.documentElement.scrollTop;
     }
     isPageChangingRef.current = true;
-    setFilters({
-      ...filters,
+    setFilters(prev => ({
+      ...prev,
       [key]: value === 'all' ? undefined : value,
       page: 1,
-    });
-  };
+    }));
+  }, []);
 
-  const handlePriceTypeChange = (value: 'all' | 'free' | 'paid') => {
+  const handlePriceTypeChange = useCallback((value: 'all' | 'free' | 'paid') => {
     setPriceType(value);
 
     // Debounce price type changes
@@ -247,28 +265,29 @@ export function CoursesPage() {
     }
 
     filterDebounceTimerRef.current = setTimeout(() => {
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
-    
-    if (value === 'free') {
-      // Miễn phí: maxPrice = 0
-      setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
-    } else if (value === 'paid') {
-      // Có phí: minPrice > 0
-      setFilters({ ...filters, minPrice: 1, maxPrice: undefined, page: 1 });
-    } else {
-      // Tất cả: clear price filters
-      setFilters({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 });
-    }
-    }, 300);
-  };
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+      } else {
+        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      }
+      isPageChangingRef.current = true;
 
-  const handlePageChange = (newPage: number) => {
+      if (value === 'free') {
+        // Miễn phí: maxPrice = 0
+        setFilters(prev => ({ ...prev, minPrice: undefined, maxPrice: 0, page: 1 }));
+      } else if (value === 'paid') {
+        // Có phí: minPrice > 0
+        setFilters(prev => ({ ...prev, minPrice: 1, maxPrice: undefined, page: 1 }));
+      } else {
+        // Tất cả: clear price filters
+        setFilters(prev => ({ ...prev, minPrice: undefined, maxPrice: undefined, page: 1 }));
+      }
+    }, 300);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchInput('');
     const mainContainer = document.querySelector('main');
     if (mainContainer) {
       scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
@@ -276,8 +295,39 @@ export function CoursesPage() {
       scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
     }
     isPageChangingRef.current = true;
-    setFilters({ ...filters, page: newPage });
-  };
+    setPriceType('all');
+    setFilters({
+      page: 1,
+      limit: 10,
+      search: '',
+      status: undefined,
+      categoryId: undefined,
+      level: undefined,
+      instructorId: undefined,
+      isFeatured: undefined,
+      sort: 'newest',
+      minPrice: undefined,
+      maxPrice: undefined,
+      minEnrollments: undefined,
+      maxEnrollments: undefined,
+      minRating: undefined,
+    });
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    // Use requestAnimationFrame to avoid blocking input
+    requestAnimationFrame(() => {
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+      } else {
+        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      }
+      isPageChangingRef.current = true;
+    });
+
+    setFilters(prev => ({ ...prev, page: newPage }));
+  }, []);
 
   const renderPagination = () => {
     const currentPage = pagination.page;
@@ -456,7 +506,7 @@ export function CoursesPage() {
           />
 
           <CourseFilters
-            filters={filters}
+            filters={memoizedFilters}
             priceType={priceType}
             categorySearch={categorySearch}
             instructorSearch={instructorSearch}
@@ -466,33 +516,7 @@ export function CoursesPage() {
             onPriceTypeChange={handlePriceTypeChange}
             onCategorySearchChange={setCategorySearch}
             onInstructorSearchChange={setInstructorSearch}
-            onClearFilters={() => {
-                  setSearchInput('');
-                  const mainContainer = document.querySelector('main');
-                  if (mainContainer) {
-                    scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-                  } else {
-                    scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-                  }
-                  isPageChangingRef.current = true;
-                  setPriceType('all');
-                  setFilters({
-                    page: 1,
-                    limit: 10,
-                    search: '',
-                    status: undefined,
-                    categoryId: undefined,
-                    level: undefined,
-                    instructorId: undefined,
-                    isFeatured: undefined,
-                    sort: 'newest',
-                    minPrice: undefined,
-                    maxPrice: undefined,
-                    minEnrollments: undefined,
-                    maxEnrollments: undefined,
-                    minRating: undefined,
-                  });
-                }}
+            onClearFilters={handleClearFilters}
           />
 
           <CourseTable

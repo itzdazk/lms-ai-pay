@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -404,6 +404,17 @@ export function CategoriesPage() {
         sort: 'createdAt',
         sortOrder: 'desc',
     })
+
+    // Memoize filters to prevent unnecessary re-renders
+    const memoizedFilters = useMemo(() => filters, [
+        filters.page,
+        filters.limit,
+        filters.search,
+        filters.categoryId,
+        filters.isActive,
+        filters.sort,
+        filters.sortOrder,
+    ])
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(
         null
     )
@@ -627,7 +638,7 @@ export function CategoriesPage() {
         }
     }
 
-    const handleFilterChange = (
+    const handleFilterChange = useCallback((
         key: keyof AdminCategoryFilters,
         value: any
     ) => {
@@ -639,24 +650,28 @@ export function CategoriesPage() {
                 window.scrollY || document.documentElement.scrollTop
         }
         isPageChangingRef.current = true
-        setFilters({
-            ...filters,
+        setFilters(prev => ({
+            ...prev,
             [key]: value === 'all' ? undefined : value,
             page: 1,
-        })
-    }
+        }))
+    }, [])
 
-    const handlePageChange = (newPage: number) => {
-        const mainContainer = document.querySelector('main')
-        if (mainContainer) {
-            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
-        } else {
-            scrollPositionRef.current =
-                window.scrollY || document.documentElement.scrollTop
-        }
-        isPageChangingRef.current = true
-        setFilters({ ...filters, page: newPage })
-    }
+    const handlePageChange = useCallback((newPage: number) => {
+        // Use requestAnimationFrame to avoid blocking input
+        requestAnimationFrame(() => {
+            const mainContainer = document.querySelector('main')
+            if (mainContainer) {
+                scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+            } else {
+                scrollPositionRef.current =
+                    window.scrollY || document.documentElement.scrollTop
+            }
+            isPageChangingRef.current = true
+        })
+
+        setFilters(prev => ({ ...prev, page: newPage }))
+    }, [])
 
     const handleCreate = () => {
         setFormData({

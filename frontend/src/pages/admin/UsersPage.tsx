@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -38,6 +38,17 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     sortBy: 'createdAt',
     sortOrder: 'desc',
   }));
+
+  // Memoize filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [
+    filters.page,
+    filters.limit,
+    filters.search,
+    filters.role,
+    filters.status,
+    filters.sortBy,
+    filters.sortOrder,
+  ]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -128,13 +139,13 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   }, [filters.page, filters.limit, filters.search, filters.role, filters.status, filters.sortBy, filters.sortOrder, currentUser?.role]);
 
   // Handle filter changes
-  const handleFilterChange = (key: keyof GetUsersParams, value: any) => {
+  const handleFilterChange = useCallback((key: keyof GetUsersParams, value: any) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
       page: key === 'page' ? value : 1, // Reset to page 1 when filter changes
     }));
-  };
+  }, []);
 
   // Handle search input change (no auto-search)
   const handleSearchInputChange = (query: string) => {
@@ -158,18 +169,21 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     if (page < 1 || page > pagination.totalPages) return;
 
     // Save current scroll position before changing page
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-    } else {
-      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-    }
-    isPageChangingRef.current = true;
+    // Use requestAnimationFrame to avoid blocking input
+    requestAnimationFrame(() => {
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+      } else {
+        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+      }
+      isPageChangingRef.current = true;
+    });
 
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setFilters({
       page: 1,
       limit: 10,
@@ -179,7 +193,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
       sortBy: 'createdAt',
       sortOrder: 'desc',
     });
-  };
+  }, []);
 
   // Handle user actions
   const handleEdit = (user: User) => {
@@ -391,7 +405,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         <UserStatsCards userStats={userStats} />
 
         <UserFilters
-          filters={filters}
+          filters={memoizedFilters}
           onFilterChange={handleFilterChange}
           onClearFilters={handleClearFilters}
         />
