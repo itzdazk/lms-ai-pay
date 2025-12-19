@@ -243,7 +243,7 @@ export function AdminDashboard() {
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-0'
-        } bg-[#1A1A1A] border-r border-[#2D2D2D] transition-all duration-300 overflow-hidden flex flex-col`}
+        } bg-black border-r border-[#2D2D2D] transition-all duration-300 overflow-hidden flex flex-col`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-[#2D2D2D] flex items-center justify-between">
@@ -327,7 +327,7 @@ export function AdminDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-[#1A1A1A] border-b border-[#2D2D2D] px-6 py-4 flex items-center justify-between">
+        <header className="bg-black border-b border-[#2D2D2D] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {!sidebarOpen && (
               <Button
