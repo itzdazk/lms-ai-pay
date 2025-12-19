@@ -396,7 +396,7 @@ export function AdminDashboard() {
                   <Badge className="bg-blue-600 text-white">Mới</Badge>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-[#2D2D2D]" />
-                <div className="max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D]">
+                <div className="max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D] custom-scrollbar">
                   <div className="p-4 hover:bg-[#1F1F1F] cursor-pointer">
                     <p className="text-sm text-white font-semibold">Người dùng mới đăng ký</p>
                     <p className="text-xs text-gray-500 mt-1">5 phút trước</p>
@@ -547,7 +547,7 @@ export function AdminDashboard() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background p-6 relative">
+        <main className="flex-1 overflow-y-auto bg-background p-6 relative custom-scrollbar">
           {sectionLoading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
