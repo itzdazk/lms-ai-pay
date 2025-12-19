@@ -320,24 +320,24 @@ export function CoursesPage() {
     }
 
     filterDebounceTimerRef.current = setTimeout(() => {
-      const mainContainer = document.querySelector('main');
-      if (mainContainer) {
-        scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
-      } else {
-        scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
-      }
-      isPageChangingRef.current = true;
-
-      if (value === 'free') {
-        // Miễn phí: maxPrice = 0
-        setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
-      } else if (value === 'paid') {
-        // Có phí: minPrice > 0
-        setFilters({ ...filters, minPrice: 1, maxPrice: undefined, page: 1 });
-      } else {
-        // Tất cả: clear price filters
-        setFilters({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 });
-      }
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+      scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop;
+    } else {
+      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop;
+    }
+    isPageChangingRef.current = true;
+    
+    if (value === 'free') {
+      // Miễn phí: maxPrice = 0
+      setFilters({ ...filters, minPrice: undefined, maxPrice: 0, page: 1 });
+    } else if (value === 'paid') {
+      // Có phí: minPrice > 0
+      setFilters({ ...filters, minPrice: 1, maxPrice: undefined, page: 1 });
+    } else {
+      // Tất cả: clear price filters
+      setFilters({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 });
+    }
     }, 300);
   };
 
@@ -383,8 +383,8 @@ export function CoursesPage() {
 
     // Add pages in range
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
+        pages.push(i);
+      }
 
     // Always show last page if not in range
     if (endPage < totalPages) {
@@ -415,31 +415,31 @@ export function CoursesPage() {
 
         {/* Page Numbers */}
         <div className="flex items-center gap-1">
-          {pages.map((page, index) => {
-            if (page === '...') {
-              return (
-                <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
-                  ...
-                </span>
-              );
-            }
-            const pageNum = page as number;
+        {pages.map((page, index) => {
+          if (page === '...') {
             return (
-              <DarkOutlineButton
-                key={pageNum}
-                onClick={() => handlePageChange(pageNum)}
-                disabled={loading}
-                size="sm"
-                className={
-                  pagination.page === pageNum
-                    ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
-                    : ''
-                }
-              >
-                {pageNum}
-              </DarkOutlineButton>
+              <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                ...
+              </span>
             );
-          })}
+          }
+          const pageNum = page as number;
+          return (
+            <DarkOutlineButton
+              key={pageNum}
+              onClick={() => handlePageChange(pageNum)}
+              disabled={loading}
+              size="sm"
+              className={
+                  pagination.page === pageNum
+                  ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
+                  : ''
+              }
+            >
+              {pageNum}
+            </DarkOutlineButton>
+          );
+        })}
         </div>
 
         <DarkOutlineButton
