@@ -1162,7 +1162,7 @@ export function CoursesPage() {
               <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
+              <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
                 <SelectItem value="draft" className="text-white focus:bg-[#2D2D2D]">
                   <div className="flex flex-col">
                     <span>Bản nháp</span>
