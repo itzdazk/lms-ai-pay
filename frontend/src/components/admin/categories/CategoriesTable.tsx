@@ -1,3 +1,4 @@
+import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { DarkOutlineInput } from '../../../components/ui/dark-outline-input'
@@ -8,7 +9,7 @@ import {
 } from '../../../components/ui/dark-outline-table'
 import { Loader2, Search, X, Plus } from 'lucide-react'
 import type { Category } from '../../../lib/api/types'
-import { CategoryRow } from '../../../pages/admin/CategoriesPage'
+import { CategoryRow } from './CategoryRow'
 
 interface CategoriesTableProps {
     categories: Category[]
@@ -30,7 +31,7 @@ interface CategoriesTableProps {
     onDelete: (category: Category) => void
     onChangeStatus: (category: Category) => void
     onRowSelect: (id: number | null) => void
-    renderPagination: () => JSX.Element
+    renderPagination: () => React.ReactElement
 }
 
 export function CategoriesTable({
