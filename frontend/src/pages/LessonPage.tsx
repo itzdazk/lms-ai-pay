@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
@@ -81,6 +81,30 @@ export function LessonPage() {
   const progressSaveTimeoutRef = useRef<number | null>(null);
   const previousCourseSlugRef = useRef<string | null>(null);
   const subtitleBlobUrlRef = useRef<string | null>(null);
+  const { currentChapter, currentChapterLessonIds } = useMemo(() => {
+    if (!selectedLesson) {
+      return { currentChapter: null, currentChapterLessonIds: [] as number[] };
+    }
+
+    const foundChapter = chapters.find((chapter) =>
+      chapter.lessons?.some((l) => l.id === selectedLesson.id)
+    );
+
+    return {
+      currentChapter: foundChapter || null,
+      currentChapterLessonIds: foundChapter?.lessons?.map((l) => l.id) || [],
+    };
+  }, [chapters, selectedLesson?.id]);
+
+  const notesSidebarChapters = useMemo(
+    () =>
+      chapters.map((ch) => ({
+        id: ch.id,
+        title: ch.title,
+        lessonIds: ch.lessons?.map((l) => l.id) || [],
+      })),
+    [chapters]
+  );
 
   // Save referrer when entering lesson page for the first time (when courseSlug changes)
   useEffect(() => {
@@ -1073,81 +1097,48 @@ export function LessonPage() {
       )}
 
       {/* Notes Drawer */}
-      {selectedLesson && (() => {
-        // Find chapter containing the selected lesson
-        let currentChapter: Chapter | null = null;
-        if (chapters.length > 0) {
-          for (const chapter of chapters) {
-            if (chapter.lessons?.some((l) => l.id === selectedLesson.id)) {
-              currentChapter = chapter;
-              break;
-            }
-          }
-        }
-        
-        return (
-          <NotesDrawer
-            isOpen={showNotesDrawer}
-            onClose={() => setShowNotesDrawer(false)}
-            lessonId={selectedLesson.id}
-            initialNotes={lessonNotes}
-            showSidebar={showSidebar}
-            chapterTitle={currentChapter?.title}
-            lessonTitle={selectedLesson.title}
-          />
-        );
-      })()}
+      {selectedLesson && (
+        <NotesDrawer
+          isOpen={showNotesDrawer}
+          onClose={() => setShowNotesDrawer(false)}
+          lessonId={selectedLesson.id}
+          initialNotes={lessonNotes}
+          showSidebar={showSidebar}
+          chapterTitle={currentChapter?.title}
+          lessonTitle={selectedLesson.title}
+        />
+      )}
 
       {/* Notes Sidebar */}
-      {course && isEnrolled && (() => {
-        // Find current chapter and its lesson IDs
-        let currentChapter: Chapter | null = null;
-        let currentChapterLessonIds: number[] = [];
-        
-        if (chapters.length > 0 && selectedLesson) {
-          for (const chapter of chapters) {
-            if (chapter.lessons?.some((l) => l.id === selectedLesson.id)) {
-              currentChapter = chapter;
-              currentChapterLessonIds = chapter.lessons?.map(l => l.id) || [];
-              break;
+      {course && isEnrolled && selectedLesson && (
+        <NotesSidebar
+          isOpen={showNotesSidebar}
+          onClose={() => setShowNotesSidebar(false)}
+          courseId={course.id}
+          currentChapterId={currentChapter?.id}
+          currentChapterTitle={currentChapter?.title}
+          currentChapterLessonIds={currentChapterLessonIds}
+          chapters={notesSidebarChapters}
+          currentLessonId={selectedLesson.id}
+          onLessonSelect={(lessonInfo) => {
+            const allLessons: Lesson[] = [];
+            if (chapters.length > 0) {
+              chapters.forEach((chapter) => {
+                if (chapter.lessons) {
+                  allLessons.push(...chapter.lessons);
+                }
+              });
+            } else {
+              allLessons.push(...lessons);
             }
-          }
-        }
-        
-        return (
-          <NotesSidebar
-            isOpen={showNotesSidebar}
-            onClose={() => setShowNotesSidebar(false)}
-            courseId={course.id}
-            currentChapterId={currentChapter?.id}
-            currentChapterTitle={currentChapter?.title}
-            currentChapterLessonIds={currentChapterLessonIds}
-            chapters={chapters.map(ch => ({
-              id: ch.id,
-              title: ch.title,
-              lessonIds: ch.lessons?.map(l => l.id) || [],
-            }))}
-            currentLessonId={selectedLesson?.id}
-            onLessonSelect={(lessonInfo) => {
-              const allLessons: Lesson[] = [];
-              if (chapters.length > 0) {
-                chapters.forEach((chapter) => {
-                  if (chapter.lessons) {
-                    allLessons.push(...chapter.lessons);
-                  }
-                });
-              } else {
-                allLessons.push(...lessons);
-              }
-              const lesson = allLessons.find((l) => l.id === lessonInfo.id);
-              if (lesson) {
-                handleLessonSelect(lesson);
-                setShowNotesSidebar(false);
-              }
-            }}
-          />
-        );
-      })()}
+            const lesson = allLessons.find((l) => l.id === lessonInfo.id);
+            if (lesson) {
+              handleLessonSelect(lesson);
+              setShowNotesSidebar(false);
+            }
+          }}
+        />
+      )}
 
       {/* AI Chat Sidebar */}
       {course && (
