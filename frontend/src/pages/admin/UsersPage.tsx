@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
+import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { DarkOutlineButton } from '../../components/ui/buttons';
 import { DarkOutlineInput } from '../../components/ui/dark-outline-input';
@@ -9,7 +11,6 @@ import {
   Select,
   SelectValue,
 } from '../../components/ui/select';
-import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../../components/ui/dark-outline-select-trigger';
 import { UserTable } from '../../components/admin/UserTable';
 import { UserForm } from '../../components/admin/UserForm';
 import {
@@ -22,12 +23,10 @@ import {
 } from '../../components/ui/dialog';
 import {
   Select as RoleSelect,
-  SelectContent as RoleSelectContent,
-  SelectItem as RoleSelectItem,
-  SelectTrigger as RoleSelectTrigger,
   SelectValue as RoleSelectValue,
 } from '../../components/ui/select';
-import { Users, Search, Filter, Loader2, UserCheck, UserX, Shield, X } from 'lucide-react';
+import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../../components/ui/dark-outline-select-trigger';
+import { Users, Search, Filter, Loader2, UserCheck, UserX, Shield, X, BookOpen } from 'lucide-react';
 import { usersApi } from '../../lib/api';
 import { dashboardApi } from '../../lib/api/dashboard';
 import { toast } from 'sonner';
@@ -795,39 +794,92 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
 
         {/* Change Role Dialog */}
         <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-          <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
-            <DialogHeader>
-              <DialogTitle>Đổi vai trò</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Đổi vai trò của <strong className="text-white">{selectedUser?.fullName}</strong>
-              </DialogDescription>
+          <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-md">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-full">
+                  <Shield className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl">Đổi vai trò</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Thay đổi quyền hạn của người dùng này
+                  </DialogDescription>
+                </div>
+              </div>
+              {selectedUser && (
+                <div className="flex items-center gap-3 p-3 bg-[#1F1F1F] rounded-lg border border-[#2D2D2D]">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={selectedUser.avatarUrl} />
+                    <AvatarFallback className="bg-blue-600 text-white">
+                      {selectedUser.fullName?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white truncate">{selectedUser.fullName}</p>
+                    <p className="text-sm text-gray-400">{selectedUser.email}</p>
+                    <Badge
+                      className={`mt-1 text-xs ${
+                        selectedUser.role === 'ADMIN'
+                          ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+                          : selectedUser.role === 'INSTRUCTOR'
+                          ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                          : 'bg-green-500/20 text-green-400 border-green-500/30'
+                      }`}
+                    >
+                      {selectedUser.role === 'ADMIN' ? 'Quản trị viên' :
+                       selectedUser.role === 'INSTRUCTOR' ? 'Giảng viên' : 'Học viên'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Vai trò mới</label>
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-white flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-blue-400" />
+                  Chọn vai trò mới
+                </label>
                 <RoleSelect value={newRole} onValueChange={(value: any) => setNewRole(value)}>
-                  <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
-                    <RoleSelectValue />
-                  </RoleSelectTrigger>
-                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
+                  <DarkOutlineSelectTrigger className="h-12">
+                    <RoleSelectValue placeholder="Chọn vai trò..." />
+                  </DarkOutlineSelectTrigger>
+                  <DarkOutlineSelectContent className="z-[9999]">
                     {/* Note: ADMIN role cannot be assigned via role change - only STUDENT and INSTRUCTOR are allowed */}
-                    <RoleSelectItem value="INSTRUCTOR">Giảng viên</RoleSelectItem>
-                    <RoleSelectItem value="STUDENT">Học viên</RoleSelectItem>
-                  </RoleSelectContent>
+                    <DarkOutlineSelectItem value="INSTRUCTOR" className="flex items-center gap-3 p-3">
+                      <div className="p-1.5 bg-blue-500/20 rounded">
+                        <Shield className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-white">Giảng viên</div>
+                        <div className="text-xs text-gray-400">Có thể tạo và quản lý khóa học</div>
+                      </div>
+                    </DarkOutlineSelectItem>
+                    <DarkOutlineSelectItem value="STUDENT" className="flex items-center gap-3 p-3">
+                      <div className="p-1.5 bg-green-500/20 rounded">
+                        <BookOpen className="h-4 w-4 text-green-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-white">Học viên</div>
+                        <div className="text-xs text-gray-400">Có thể đăng ký và học các khóa học</div>
+                      </div>
+                    </DarkOutlineSelectItem>
+                  </DarkOutlineSelectContent>
                 </RoleSelect>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-3">
               <DarkOutlineButton
                 onClick={() => setIsRoleDialogOpen(false)}
                 disabled={actionLoading}
+                className="flex-1"
               >
                 Hủy
               </DarkOutlineButton>
               <Button
                 onClick={confirmChangeRole}
-                disabled={actionLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={actionLoading || !newRole}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
               >
                 {actionLoading ? (
                   <>
@@ -835,7 +887,10 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                     Đang cập nhật...
                   </>
                 ) : (
-                  'Xác nhận'
+                  <>
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Xác nhận
+                  </>
                 )}
               </Button>
             </DialogFooter>
@@ -844,42 +899,161 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
 
         {/* Change Status Dialog */}
         <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-          <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
-            <DialogHeader>
-              <DialogTitle>Đổi trạng thái</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Đổi trạng thái của <strong className="text-white">{selectedUser?.fullName}</strong>
-              </DialogDescription>
+          <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-md">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full ${
+                  newStatus === 'BANNED'
+                    ? 'bg-red-500/20'
+                    : newStatus === 'INACTIVE'
+                    ? 'bg-yellow-500/20'
+                    : 'bg-green-500/20'
+                }`}>
+                  {newStatus === 'BANNED' ? (
+                    <UserX className="h-5 w-5 text-red-400" />
+                  ) : newStatus === 'INACTIVE' ? (
+                    <UserCheck className="h-5 w-5 text-yellow-400" />
+                  ) : (
+                    <UserCheck className="h-5 w-5 text-green-400" />
+                  )}
+                </div>
+                <div>
+                  <DialogTitle className="text-xl">Đổi trạng thái tài khoản</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Thay đổi quyền truy cập của người dùng này
+                  </DialogDescription>
+                </div>
+              </div>
+              {selectedUser && (
+                <div className="flex items-center gap-3 p-3 bg-[#1F1F1F] rounded-lg border border-[#2D2D2D]">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={selectedUser.avatarUrl} />
+                    <AvatarFallback className="bg-blue-600 text-white">
+                      {selectedUser.fullName?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white truncate">{selectedUser.fullName}</p>
+                    <p className="text-sm text-gray-400">{selectedUser.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge
+                        className={`text-xs ${
+                          selectedUser.status === 'ACTIVE'
+                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                            : selectedUser.status === 'INACTIVE'
+                            ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                            : 'bg-red-500/20 text-red-400 border-red-500/30'
+                        }`}
+                      >
+                        {selectedUser.status === 'ACTIVE' ? 'Hoạt động' :
+                         selectedUser.status === 'INACTIVE' ? 'Không hoạt động' : 'Đã khóa'}
+                      </Badge>
+                      <Badge
+                        className={`text-xs ${
+                          selectedUser.role === 'ADMIN'
+                            ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+                            : selectedUser.role === 'INSTRUCTOR'
+                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                            : 'bg-green-500/20 text-green-400 border-green-500/30'
+                        }`}
+                      >
+                        {selectedUser.role === 'ADMIN' ? 'Quản trị viên' :
+                         selectedUser.role === 'INSTRUCTOR' ? 'Giảng viên' : 'Học viên'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Trạng thái mới</label>
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-white flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-blue-400" />
+                  Chọn trạng thái mới
+                </label>
                 <RoleSelect
                   value={newStatus}
                   onValueChange={(value: any) => setNewStatus(value)}
                 >
-                  <RoleSelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
-                    <RoleSelectValue />
-                  </RoleSelectTrigger>
-                  <RoleSelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
-                    <RoleSelectItem value="ACTIVE">Hoạt động</RoleSelectItem>
-                    <RoleSelectItem value="INACTIVE">Không hoạt động</RoleSelectItem>
-                    <RoleSelectItem value="BANNED">Đã khóa</RoleSelectItem>
-                  </RoleSelectContent>
+                  <DarkOutlineSelectTrigger className="h-12">
+                    <RoleSelectValue placeholder="Chọn trạng thái..." />
+                  </DarkOutlineSelectTrigger>
+                  <DarkOutlineSelectContent className="z-[9999]">
+                    <DarkOutlineSelectItem value="ACTIVE" className="flex items-center gap-3 p-3">
+                      <div className="p-1.5 bg-green-500/20 rounded">
+                        <UserCheck className="h-4 w-4 text-green-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-white">Hoạt động</div>
+                        <div className="text-xs text-gray-400">Người dùng có thể truy cập đầy đủ</div>
+                      </div>
+                    </DarkOutlineSelectItem>
+                    <DarkOutlineSelectItem value="INACTIVE" className="flex items-center gap-3 p-3">
+                      <div className="p-1.5 bg-yellow-500/20 rounded">
+                        <UserX className="h-4 w-4 text-yellow-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-white">Không hoạt động</div>
+                        <div className="text-xs text-gray-400">Tạm thời vô hiệu hóa tài khoản</div>
+                      </div>
+                    </DarkOutlineSelectItem>
+                    <DarkOutlineSelectItem value="BANNED" className="flex items-center gap-3 p-3">
+                      <div className="p-1.5 bg-red-500/20 rounded">
+                        <UserX className="h-4 w-4 text-red-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-white">Đã khóa</div>
+                        <div className="text-xs text-gray-400">Cấm vĩnh viễn, không thể truy cập</div>
+                      </div>
+                    </DarkOutlineSelectItem>
+                  </DarkOutlineSelectContent>
                 </RoleSelect>
+
+                {newStatus === 'BANNED' && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <UserX className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-red-400 mb-1">Cảnh báo: Khóa tài khoản vĩnh viễn</p>
+                        <p className="text-red-300/80 text-xs">
+                          Người dùng sẽ không thể truy cập hệ thống. Hành động này không thể hoàn tác.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {newStatus === 'INACTIVE' && (
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <UserCheck className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-400 mb-1">Tạm thời vô hiệu hóa</p>
+                        <p className="text-yellow-300/80 text-xs">
+                          Người dùng không thể truy cập nhưng có thể kích hoạt lại bất kỳ lúc nào.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-3">
               <DarkOutlineButton
                 onClick={() => setIsStatusDialogOpen(false)}
                 disabled={actionLoading}
+                className="flex-1"
               >
                 Hủy
               </DarkOutlineButton>
               <Button
                 onClick={confirmChangeStatus}
-                disabled={actionLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={actionLoading || !newStatus}
+                className={`flex-1 ${
+                  newStatus === 'BANNED'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
               >
                 {actionLoading ? (
                   <>
@@ -887,7 +1061,14 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                     Đang cập nhật...
                   </>
                 ) : (
-                  'Xác nhận'
+                  <>
+                    {newStatus === 'BANNED' ? (
+                      <UserX className="h-4 w-4 mr-2" />
+                    ) : (
+                      <UserCheck className="h-4 w-4 mr-2" />
+                    )}
+                    {newStatus === 'BANNED' ? 'Khóa tài khoản' : 'Xác nhận'}
+                  </>
                 )}
               </Button>
             </DialogFooter>
