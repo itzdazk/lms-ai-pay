@@ -203,19 +203,20 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const confirmChangeRole = async () => {
     if (!selectedUser) return;
 
-    const userId = selectedUser.id;
-    const oldRole = selectedUser.role;
-    const updatedRole = newRole;
-
     try {
       setActionLoading(true);
-      await usersApi.changeUserRole(userId, updatedRole);
+      const newRoleValue = newRole;
+
+      await usersApi.changeUserRole(selectedUser.id, newRoleValue);
       toast.success('Cập nhật vai trò thành công');
 
-      // Update local state with immutable update
+      setIsRoleDialogOpen(false);
+      setSelectedUser(null);
+
+      // Update local state after dialog is closed (same pattern as CoursesPage)
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, role: updatedRole } : u
+        prev.map((user) =>
+          user.id === selectedUser.id ? { ...user, role: newRoleValue } : user
         )
       );
 
@@ -223,23 +224,23 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
       setUserStats((prev) => {
         const newStats = { ...prev };
         // Decrease count for old role
-        if (oldRole === 'STUDENT') newStats.students--;
-        else if (oldRole === 'INSTRUCTOR') newStats.instructors--;
-        else if (oldRole === 'ADMIN') newStats.admins--;
+        if (selectedUser.role === 'STUDENT') newStats.students--;
+        else if (selectedUser.role === 'INSTRUCTOR') newStats.instructors--;
+        else if (selectedUser.role === 'ADMIN') newStats.admins--;
 
         // Increase count for new role
-        if (updatedRole === 'STUDENT') newStats.students++;
-        else if (updatedRole === 'INSTRUCTOR') newStats.instructors++;
-        else if (updatedRole === 'ADMIN') newStats.admins++;
+        if (newRoleValue === 'STUDENT') newStats.students++;
+        else if (newRoleValue === 'INSTRUCTOR') newStats.instructors++;
+        else if (newRoleValue === 'ADMIN') newStats.admins++;
 
         return newStats;
       });
 
-      setIsRoleDialogOpen(false);
-      setSelectedUser(null);
     } catch (error: any) {
       console.error('Error updating user role:', error);
       toast.error(error?.response?.data?.message || 'Không thể cập nhật vai trò');
+      setIsRoleDialogOpen(false);
+      setSelectedUser(null);
     } finally {
       setActionLoading(false);
     }
@@ -248,26 +249,28 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
   const confirmChangeStatus = async () => {
     if (!selectedUser) return;
 
-    const userId = selectedUser.id;
-    const updatedStatus = newStatus;
-
     try {
       setActionLoading(true);
-      await usersApi.changeUserStatus(userId, updatedStatus);
-      toast.success('Cập nhật trạng thái thành công');
+      const newStatusValue = newStatus;
 
-      // Update local state with immutable update
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, status: updatedStatus } : u
-        )
-      );
+      await usersApi.changeUserStatus(selectedUser.id, newStatusValue);
+      toast.success('Cập nhật trạng thái thành công');
 
       setIsStatusDialogOpen(false);
       setSelectedUser(null);
+
+      // Update local state after dialog is closed (same pattern as CoursesPage)
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUser.id ? { ...user, status: newStatusValue } : user
+        )
+      );
+
     } catch (error: any) {
       console.error('Error updating user status:', error);
       toast.error(error?.response?.data?.message || 'Không thể cập nhật trạng thái');
+      setIsStatusDialogOpen(false);
+      setSelectedUser(null);
     } finally {
       setActionLoading(false);
     }
