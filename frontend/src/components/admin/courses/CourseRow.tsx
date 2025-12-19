@@ -282,7 +282,7 @@ export function CourseRow({
           }}
         >
           <Link
-            to={`/courses/${course.id}`}
+            to={`/courses/${course.slug}`}
             className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer"
             onClick={() => setMenuOpen(false)}
           >
