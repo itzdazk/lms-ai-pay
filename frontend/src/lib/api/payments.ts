@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { ApiResponse } from './types'
+import type { ApiResponse, PaymentCallbackResponse } from './types'
 
 type PaymentUrlResponse = {
     paymentUrl?: string
@@ -29,5 +29,31 @@ export const paymentsApi = {
             throw new Error('Không nhận được paymentUrl từ MoMo')
         }
         return url
+    },
+
+    /**
+     * Verify MoMo payment callback (webhook-safe)
+     * This endpoint verifies the signature and processes the payment
+     */
+    async verifyMoMoCallback(
+        params: Record<string, string>
+    ): Promise<PaymentCallbackResponse> {
+        const response = await apiClient.get<
+            ApiResponse<PaymentCallbackResponse>
+        >('/payments/momo/callback', { params })
+        return response.data.data
+    },
+
+    /**
+     * Verify VNPay payment callback (webhook-safe)
+     * This endpoint verifies the signature and processes the payment
+     */
+    async verifyVNPayCallback(
+        params: Record<string, string>
+    ): Promise<PaymentCallbackResponse> {
+        const response = await apiClient.get<
+            ApiResponse<PaymentCallbackResponse>
+        >('/payments/vnpay/callback', { params })
+        return response.data.data
     },
 }

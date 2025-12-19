@@ -25,6 +25,7 @@ import { StudentDashboard } from './pages/StudentDashboard'
 import { VideoPlayerPage } from './pages/VideoPlayerPage'
 import { AIChatPage } from './pages/AIChatPage'
 import { PaymentCheckoutPage } from './pages/PaymentCheckoutPage'
+import { PaymentResultPage } from './pages/PaymentResultPage'
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage'
 import { PaymentFailurePage } from './pages/PaymentFailurePage'
 import { QuizPage } from './pages/QuizPage'
@@ -163,6 +164,10 @@ export default function App() {
                                                 <PaymentCheckoutPage />
                                             </ProtectedRoute>
                                         }
+                                    />
+                                    <Route
+                                        path='/payment/result'
+                                        element={<PaymentResultPage />}
                                     />
                                     <Route
                                         path='/payment/success'
