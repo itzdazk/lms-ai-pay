@@ -113,10 +113,11 @@ export interface Category {
     description?: string
     imageUrl?: string
     parentId?: number
-    parent?: Category
+    parent?: Category | null
     children?: Category[]
     sortOrder: number
     isActive: boolean
+    coursesCount?: number // Số lượng courses trong category
     createdAt: string
     updatedAt: string
 }
@@ -241,12 +242,45 @@ export interface CourseFilters {
 }
 
 // =====================================================
+// CHAPTER TYPES
+// =====================================================
+export interface Chapter {
+    id: number
+    courseId: number
+    title: string
+    slug: string
+    description?: string
+    chapterOrder: number
+    isPublished: boolean
+    lessonsCount?: number
+    lessons?: Lesson[]
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateChapterRequest {
+    title: string
+    slug?: string
+    description?: string
+    chapterOrder?: number
+    isPublished?: boolean
+}
+
+export interface UpdateChapterRequest extends Partial<CreateChapterRequest> {}
+
+// =====================================================
 // LESSON TYPES
 // =====================================================
 export interface Lesson {
     id: number
     courseId: number
+    chapterId?: number
     course?: {
+        id: number
+        title: string
+        slug: string
+    }
+    chapter?: {
         id: number
         title: string
         slug: string
@@ -274,12 +308,13 @@ export interface Lesson {
 
 export interface CreateLessonRequest {
     courseId: number
+    chapterId: number
     title: string
     slug?: string
     description?: string
     content?: string
     videoUrl?: string
-    videoDuration?: number
+    // videoDuration is automatically calculated by backend when video is uploaded
     lessonOrder: number
     isPreview?: boolean
     isPublished?: boolean

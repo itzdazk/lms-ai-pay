@@ -110,33 +110,78 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
  * Check if user has access to lesson (enrolled, instructor, or admin)
  * Also checks if lesson and course are published (unless user is instructor/admin)
  * @param {string} lessonIdParam - Parameter name for lesson ID (default: 'id')
+ * @param {string} courseSlugParam - Optional parameter name for course slug
+ * @param {string} lessonSlugParam - Optional parameter name for lesson slug
  */
-const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id') => {
+const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = null, lessonSlugParam = null) => {
     return async (req, res, next) => {
         try {
             if (!req.user) {
                 return ApiResponse.unauthorized(res, 'Authentication required')
             }
 
-            const lessonId = parseInt(req.params[lessonIdParam])
+            let lesson = null
 
-            if (!lessonId) {
-                return ApiResponse.badRequest(res, 'Lesson ID is required')
-            }
+            // If slug params are provided, use slug lookup
+            if (courseSlugParam && lessonSlugParam) {
+                const courseSlug = req.params[courseSlugParam]
+                const lessonSlug = req.params[lessonSlugParam]
 
-            // Get lesson with course info
-            const lesson = await prisma.lesson.findUnique({
-                where: { id: lessonId },
-                include: {
-                    course: {
-                        select: {
-                            id: true,
-                            status: true,
-                            instructorId: true,
+                if (!courseSlug || !lessonSlug) {
+                    return ApiResponse.badRequest(res, 'Course slug and lesson slug are required')
+                }
+
+                // Find course by slug
+                const course = await prisma.course.findUnique({
+                    where: { slug: courseSlug },
+                    select: { id: true },
+                })
+
+                if (!course) {
+                    return ApiResponse.notFound(res, 'Course not found')
+                }
+
+                // Find lesson by slug within course
+                lesson = await prisma.lesson.findUnique({
+                    where: {
+                        courseId_slug: {
+                            courseId: course.id,
+                            slug: lessonSlug,
                         },
                     },
-                },
-            })
+                    include: {
+                        course: {
+                            select: {
+                                id: true,
+                                status: true,
+                                instructorId: true,
+                            },
+                        },
+                    },
+                })
+            } else if (lessonIdParam) {
+                // Use ID lookup (original behavior)
+                const lessonId = parseInt(req.params[lessonIdParam])
+
+                if (!lessonId || isNaN(lessonId)) {
+                    return ApiResponse.badRequest(res, 'Lesson ID is required')
+                }
+
+                lesson = await prisma.lesson.findUnique({
+                    where: { id: lessonId },
+                    include: {
+                        course: {
+                            select: {
+                                id: true,
+                                status: true,
+                                instructorId: true,
+                            },
+                        },
+                    },
+                })
+            } else {
+                return ApiResponse.badRequest(res, 'Either lesson ID or course slug and lesson slug are required')
+            }
 
             if (!lesson) {
                 return ApiResponse.notFound(res, 'Lesson not found')

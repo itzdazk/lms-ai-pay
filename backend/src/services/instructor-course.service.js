@@ -14,6 +14,7 @@ import path from 'path'
 import fs from 'fs'
 import sharp from 'sharp'
 import { thumbnailsDir, videoPreviewsDir } from '../config/multer.config.js'
+import { getVideoDuration } from '../utils/video.util.js'
 
 class InstructorCourseService {
     /**
@@ -258,7 +259,6 @@ class InstructorCourseService {
             discountPrice,
             categoryId,
             level,
-            durationHours,
             language,
             requirements,
             whatYouLearn,
@@ -311,7 +311,7 @@ class InstructorCourseService {
                 instructorId,
                 categoryId: parseInt(categoryId),
                 level: level || COURSE_LEVEL.BEGINNER,
-                durationHours: durationHours ? parseInt(durationHours) : 0,
+                durationHours: 0, // Will be recalculated from lessons durations
                 language: language || 'vi',
                 requirements,
                 whatYouLearn,
@@ -501,8 +501,6 @@ class InstructorCourseService {
         if (categoryId !== undefined)
             updateData.categoryId = parseInt(categoryId)
         if (level !== undefined) updateData.level = level
-        if (durationHours !== undefined)
-            updateData.durationHours = parseInt(durationHours)
         if (totalLessons !== undefined)
             updateData.totalLessons = parseInt(totalLessons)
         if (language !== undefined) updateData.language = language
@@ -1005,9 +1003,23 @@ class InstructorCourseService {
 
         const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
 
+        // Get video duration
+        let videoPreviewDuration = null
+        try {
+            videoPreviewDuration = await getVideoDuration(file.path)
+            if (videoPreviewDuration) {
+                logger.info(`Video preview duration extracted: ${videoPreviewDuration} seconds for course ${courseId}`)
+            } else {
+                logger.warn(`Could not extract video preview duration for course ${courseId}`)
+            }
+        } catch (error) {
+            logger.error(`Error extracting video preview duration: ${error.message}`, { error: error.stack })
+            // Continue without duration - don't fail the upload
+        }
+
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
-            data: { videoPreviewUrl, videoPreviewDuration: null },
+            data: { videoPreviewUrl, videoPreviewDuration },
             select: {
                 id: true,
                 title: true,

@@ -107,6 +107,22 @@ class AdminCourseController {
             'Platform analytics retrieved successfully'
         )
     })
+
+    /**
+     * Get all instructors for course filtering
+     * @route   GET /api/v1/admin/courses/instructors
+     * @access  Private (Admin)
+     */
+    getInstructorsForCourses = asyncHandler(async (req, res) => {
+        const limit = parseInt(req.query.limit) || 1000
+        const instructors = await adminCourseService.getInstructorsForCourses(limit)
+
+        return ApiResponse.success(
+            res,
+            instructors,
+            'Instructors retrieved successfully'
+        )
+    })
 }
 
 export default new AdminCourseController()

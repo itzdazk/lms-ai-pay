@@ -47,25 +47,59 @@ class TranscriptionService {
 
     /**
      * Cancel transcription job (both running and queued)
+     * Returns true if a job was cancelled, false otherwise
      */
     cancelTranscriptionJob(lessonId) {
+        let cancelled = false
+        
         // Cancel running job
         const job = this.activeJobs.get(lessonId)
         if (job) {
             try {
+                // Try graceful termination first
                 if (process.platform === 'win32') {
-                    spawn('taskkill', ['/pid', job.pid, '/t', '/f'])
+                    // On Windows, use taskkill to forcefully kill the process tree
+                    const killProcess = spawn('taskkill', ['/pid', job.pid.toString(), '/t', '/f'], {
+                        stdio: 'ignore',
+                        detached: true
+                    })
+                    killProcess.unref() // Don't wait for it to finish
                 } else {
-                    job.kill('SIGTERM')
+                    // On Unix-like systems, try SIGTERM first, then SIGKILL if needed
+                    try {
+                        job.kill('SIGTERM')
+                        // If process doesn't terminate within 2 seconds, force kill
+                        setTimeout(() => {
+                            if (this.activeJobs.has(lessonId)) {
+                                try {
+                                    job.kill('SIGKILL')
+                                    logger.warn(`Force killed Whisper job for lesson ${lessonId} after SIGTERM timeout`)
+                                } catch (err) {
+                                    logger.error(`Failed to force kill Whisper job for lesson ${lessonId}: ${err.message}`)
+                                }
+                            }
+                        }, 2000)
+                    } catch (err) {
+                        logger.error(`Failed to send SIGTERM to Whisper job for lesson ${lessonId}: ${err.message}`)
+                        // Try SIGKILL as fallback
+                        try {
+                            job.kill('SIGKILL')
+                        } catch (killErr) {
+                            logger.error(`Failed to kill Whisper job for lesson ${lessonId}: ${killErr.message}`)
+                        }
+                    }
                 }
+                
                 logger.info(
-                    `Cancelled running Whisper job for lesson ${lessonId}`
+                    `Cancelled running Whisper job for lesson ${lessonId} (PID: ${job.pid})`
                 )
+                cancelled = true
             } catch (error) {
                 logger.error(
                     `Failed to cancel Whisper job for lesson ${lessonId}: ${error.message}`
                 )
             } finally {
+                // Always remove from tracking, even if kill failed
                 this.activeJobs.delete(lessonId)
                 this.running.delete(lessonId)
             }
@@ -74,11 +108,23 @@ class TranscriptionService {
         // Remove from queue if pending
         const queueIndex = this.queue.findIndex(job => job.lessonId === lessonId)
         if (queueIndex !== -1) {
+            const queuedJob = this.queue[queueIndex]
+            // Reject the promise if it exists
+            if (queuedJob.reject) {
+                try {
+                    queuedJob.reject(new Error('Transcription job cancelled: new video uploaded'))
+                } catch (err) {
+                    // Ignore if promise already resolved/rejected
+                }
+            }
             this.queue.splice(queueIndex, 1)
             logger.info(
                 `Removed lesson ${lessonId} from transcription queue`
             )
+            cancelled = true
         }
+        
+        return cancelled
     }
 
     /**

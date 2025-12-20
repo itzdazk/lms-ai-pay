@@ -4,7 +4,9 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Loader2, User as UserIcon, Mail, Phone } from 'lucide-react';
+import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
+import { Loader2, User as UserIcon, Phone, FileText, Mail, Shield, UserCheck } from 'lucide-react';
 import type { User, UpdateUserRequest } from '../../lib/api/types';
 
 interface UserFormProps {
@@ -18,7 +20,6 @@ interface UserFormProps {
 export function UserForm({ user, open, onOpenChange, onSubmit, loading = false }: UserFormProps) {
   const [formData, setFormData] = useState<UpdateUserRequest>({
     fullName: '',
-    email: '',
     phone: '',
     bio: '',
   });
@@ -28,7 +29,6 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading = false }
     if (user) {
       setFormData({
         fullName: user.fullName || '',
-        email: user.email || '',
         phone: user.phone || '',
         bio: user.bio || '',
       });
@@ -36,13 +36,24 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading = false }
     } else {
       setFormData({
         fullName: '',
-        email: '',
         phone: '',
         bio: '',
       });
       setErrors({});
     }
   }, [user]);
+
+  // Reset form when dialog closes without saving
+  useEffect(() => {
+    if (!open && user) {
+      setFormData({
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        bio: user.bio || '',
+      });
+      setErrors({});
+    }
+  }, [open, user]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -83,121 +94,216 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading = false }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-white">Chỉnh sửa người dùng</DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Cập nhật thông tin của {user.fullName}
+      <DialogContent className="bg-gradient-to-br from-[#1A1A1A] to-[#0F0F0F] border-[#2D2D2D] text-white max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <UserIcon className="h-5 w-5 text-white" />
+            </div>
+            Chỉnh sửa người dùng
+          </DialogTitle>
+          <DialogDescription className="text-gray-400 text-base">
+            Cập nhật thông tin cá nhân của <span className="text-white font-medium">{user.fullName}</span>
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName" className="text-white">
-              Họ và tên
-            </Label>
-            <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="fullName"
-                type="text"
-                value={formData.fullName}
+
+        {/* User Info Card */}
+        <div className="bg-gradient-to-r from-[#2D2D2D] to-[#1F1F1F] rounded-lg p-4 mb-6 border border-[#3D3D3D]">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-[#3D3D3D]">
+              {user.avatarUrl || user.avatar ? (
+                <img
+                  src={user.avatarUrl || user.avatar}
+                  alt={`${user.fullName} avatar`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    const target = e.target as HTMLElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center"><svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></div>';
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                  <UserIcon className="h-8 w-8 text-white" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white">{user.fullName}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-300">{user.email}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${
+                    user.role === 'ADMIN' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                    user.role === 'INSTRUCTOR' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                    'bg-green-500/20 text-green-400 border-green-500/30'
+                  }`}
+                >
+                  <Shield className="h-3 w-3 mr-1" />
+                  {user.role}
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${
+                    user.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                    user.status === 'INACTIVE' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                    'bg-red-500/20 text-red-400 border-red-500/30'
+                  }`}
+                >
+                  <UserCheck className="h-3 w-3 mr-1" />
+                  {user.status}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <UserIcon className="h-5 w-5 text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">Thông tin cơ bản</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Full Name */}
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="text-white font-medium flex items-center gap-2">
+                  <UserIcon className="h-4 w-4 text-blue-400" />
+                  Họ và tên <span className="text-red-400">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, fullName: e.target.value })
+                    }
+                    className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-200 ${
+                      errors.fullName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                    }`}
+                    placeholder="Nhập họ và tên đầy đủ"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+                {errors.fullName && (
+                  <p className="text-sm text-red-400 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.fullName}
+                  </p>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-white font-medium flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-green-400" />
+                  Số điện thoại
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="0901234567"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all duration-200 ${
+                      errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                    }`}
+                    disabled={loading}
+                  />
+                </div>
+                {errors.phone && (
+                  <p className="text-sm text-red-400 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.phone}
+                  </p>
+                )}
+                {!errors.phone && formData.phone && (
+                  <p className="text-xs text-green-400">✓ Số điện thoại hợp lệ</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Separator className="bg-[#2D2D2D]" />
+
+          {/* Bio Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-purple-400" />
+              <h3 className="text-lg font-semibold text-white">Giới thiệu</h3>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bio" className="text-white font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4 text-purple-400" />
+                Mô tả về người dùng
+              </Label>
+              <Textarea
+                id="bio"
+                rows={5}
+                placeholder="Viết một chút về người dùng, sở thích, kinh nghiệm..."
+                value={formData.bio}
                 onChange={(e) =>
-                  setFormData({ ...formData, fullName: e.target.value })
+                  setFormData({ ...formData, bio: e.target.value })
                 }
-                className={`pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white ${
-                  errors.fullName ? 'border-red-500' : ''
+                className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all duration-200 resize-none ${
+                  errors.bio ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
                 }`}
                 disabled={loading}
-                required
               />
+              <div className="flex justify-between items-center">
+                {errors.bio ? (
+                  <p className="text-sm text-red-400 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.bio}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Chia sẻ thông tin cá nhân để kết nối tốt hơn
+                  </p>
+                )}
+                <span className={`text-xs font-medium ${
+                  (formData.bio?.length || 0) > 450 ? 'text-orange-400' :
+                  (formData.bio?.length || 0) > 400 ? 'text-yellow-400' : 'text-gray-400'
+                }`}>
+                  {formData.bio?.length || 0}/500
+                </span>
+              </div>
             </div>
-            {errors.fullName && (
-              <p className="text-sm text-red-500">{errors.fullName}</p>
-            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-white">
-              Email
-            </Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                disabled
-                className="pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white opacity-60 cursor-not-allowed"
-              />
-            </div>
-            <p className="text-xs text-gray-500">Email không thể thay đổi</p>
-          </div>
+          <Separator className="bg-[#2D2D2D]" />
 
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="text-white">
-              Số điện thoại
-            </Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="0901234567"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                className={`pl-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
-                  errors.phone ? 'border-red-500' : ''
-                }`}
-                disabled={loading}
-              />
-            </div>
-            {errors.phone && (
-              <p className="text-sm text-red-500">{errors.phone}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio" className="text-white">
-              Giới thiệu
-            </Label>
-            <Textarea
-              id="bio"
-              rows={4}
-              placeholder="Viết một chút về người dùng..."
-              value={formData.bio}
-              onChange={(e) =>
-                setFormData({ ...formData, bio: e.target.value })
-              }
-              className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
-                errors.bio ? 'border-red-500' : ''
-              }`}
-              disabled={loading}
-            />
-            {errors.bio ? (
-              <p className="text-sm text-red-500">{errors.bio}</p>
-            ) : (
-              <p className="text-xs text-gray-500">
-                {formData.bio?.length || 0}/500 ký tự
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
+          {/* Action Buttons */}
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="border-[#2D2D2D] text-white hover:bg-[#2D2D2D]"
+              className="border-[#2D2D2D] text-gray-300 hover:bg-[#2D2D2D] hover:text-white transition-all duration-200 min-w-[120px]"
             >
-              Hủy
+              Hủy bỏ
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -205,7 +311,10 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading = false }
                   Đang lưu...
                 </>
               ) : (
-                'Lưu thay đổi'
+                <>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Lưu thay đổi
+                </>
               )}
             </Button>
           </div>

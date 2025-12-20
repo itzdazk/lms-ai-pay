@@ -48,6 +48,25 @@ apiClient.interceptors.response.use(
         const requestUrl = error.config?.url || ''
         const requestMethod = error.config?.method?.toUpperCase() || ''
 
+        // Skip toast for transcript endpoint (transcript is optional) - check early
+        if (status === 404 && requestUrl.includes('/lessons/') && requestUrl.includes('/transcript')) {
+            // Don't show toast, let component handle it silently
+            return Promise.reject(error)
+        }
+
+        // Skip toast for lesson by slug endpoint (404) - let component handle it
+        if (status === 404 && requestUrl.includes('/courses/slug/') && requestUrl.includes('/lessons/')) {
+            // Don't show toast, let component handle it with error page
+            return Promise.reject(error)
+        }
+
+        // Skip toast for validation errors from lesson/course endpoints (422)
+        // Let components handle validation errors themselves to avoid duplicates
+        if (status === 422 && (requestUrl.includes('/lessons/') || requestUrl.includes('/courses/'))) {
+            // Don't show toast, let component handle it
+            return Promise.reject(error)
+        }
+
         // Extract message safely - handle both object and string formats
         let message = 'Đã xảy ra lỗi'
         let errorCode: string | undefined
@@ -131,6 +150,7 @@ apiClient.interceptors.response.use(
                 break
 
             case 404:
+                // Skip toast for transcript endpoint is already handled above
                 // Only show default message if we haven't translated it already
                 if (message === 'Đã xảy ra lỗi' || (message.toLowerCase().includes('not found') && !lowerMessage.includes('user not found'))) {
                     toast.error('Không tìm thấy dữ liệu.')

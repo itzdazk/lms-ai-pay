@@ -33,42 +33,53 @@ import {
     CourseSidebar,
 } from '../components/Courses'
 import { EnrollmentButton } from '../components/Enrollments'
-import { coursesApi } from '../lib/api'
-import type { PublicCourse, Lesson, Instructor } from '../lib/api/types'
+import { coursesApi, chaptersApi } from '../lib/api'
+import type {
+    PublicCourse,
+    Lesson,
+    Instructor,
+    Chapter,
+} from '../lib/api/types'
 import { formatDuration } from '../lib/courseUtils'
 
 export function CourseDetailPage() {
-    const { id } = useParams<{ id: string }>()
+    const { slug } = useParams<{ slug: string }>()
     const navigate = useNavigate()
 
     // State quản lý dữ liệu từ API
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [lessons, setLessons] = useState<Lesson[]>([])
+    const [chapters, setChapters] = useState<Chapter[]>([])
     const [instructor, setInstructor] = useState<Instructor | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isEnrolled] = useState(false) // TODO: Kết nối với auth context sau
     const [showPreviewVideo, setShowPreviewVideo] = useState(false)
 
-    // Fetch dữ liệu khi component mount hoặc id thay đổi
+    // Fetch dữ liệu khi component mount hoặc slug thay đổi
     useEffect(() => {
         const fetchCourseData = async () => {
-            if (!id) return
+            if (!slug) return
 
             try {
                 setIsLoading(true)
 
-                const courseId = parseInt(id)
+                // Lấy thông tin khóa học bằng slug (public pages use slug)
+                const courseData = await coursesApi.getCourseBySlug(slug)
+                const courseId = courseData.id
 
-                // Lấy thông tin khóa học
-                const courseData = await coursesApi.getPublicCourseById(
-                    courseId
-                )
                 setCourse(courseData)
 
                 // Tăng lượt xem (fire and forget)
                 coursesApi.incrementViewCount(courseId).catch(() => {})
 
-                // Lấy danh sách bài học
+                // Lấy danh sách chapters với lessons
+                const chaptersData = await chaptersApi.getChaptersByCourse(
+                    courseId,
+                    true
+                )
+                setChapters(chaptersData || [])
+
+                // Lấy danh sách bài học (fallback nếu không có chapters)
                 const lessonsData = await coursesApi.getCourseLessons(courseId)
                 setLessons(lessonsData.lessons || [])
 
@@ -89,7 +100,7 @@ export function CourseDetailPage() {
         }
 
         fetchCourseData()
-    }, [id])
+    }, [slug])
 
     // Loading state
     if (isLoading) {
@@ -172,7 +183,11 @@ export function CourseDetailPage() {
                                 setShowPreviewVideo(true)
                             }
                             checkoutUrl={`/checkout/${course.id}`}
-                            learnUrl={`/learn/${course.id}`}
+                            learnUrl={
+                                course.slug
+                                    ? `/courses/${course.slug}/lessons`
+                                    : undefined
+                            }
                             useEnrollmentButton={true}
                             publicCourse={course}
                         />
@@ -351,6 +366,7 @@ export function CourseDetailPage() {
                                         <CardContent>
                                             <LessonsList
                                                 lessons={lessons}
+                                                chapters={chapters}
                                                 isEnrolled={isEnrolled}
                                                 totalDuration={
                                                     course.durationHours * 60

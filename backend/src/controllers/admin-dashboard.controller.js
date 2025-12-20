@@ -20,6 +20,21 @@ class AdminDashboardController {
     })
 
     /**
+     * @route   GET /api/v1/dashboard/admin/user-stats
+     * @desc    Get user statistics only
+     * @access  Private (Admin)
+     */
+    getUserStats = asyncHandler(async (req, res) => {
+        const stats = await adminDashboardService.getUserStats()
+
+        return ApiResponse.success(
+            res,
+            stats,
+            'User statistics retrieved successfully'
+        )
+    })
+
+    /**
      * @route   GET /api/v1/dashboard/admin/stats
      * @desc    Get detailed system statistics
      * @access  Private (Admin)

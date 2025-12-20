@@ -19,10 +19,12 @@ import { CoursesPage } from './pages/CoursesPage'
 import { CourseDetailPage } from './pages/CourseDetailPage'
 import { CoursePreviewPage } from './pages/CoursePreviewPage'
 import { AboutPage } from './pages/AboutPage'
+import { CategoriesPage } from './pages/CategoriesPage'
+import { CategoriesDetailPage } from './pages/CategoriesDetailPage'
 
 // Student Pages
 import { StudentDashboard } from './pages/StudentDashboard'
-import { VideoPlayerPage } from './pages/VideoPlayerPage'
+import { LessonPage } from './pages/LessonPage'
 import { AIChatPage } from './pages/AIChatPage'
 import { PaymentCheckoutPage } from './pages/PaymentCheckoutPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
@@ -39,8 +41,10 @@ import { OrderHistoryPage } from './pages/OrderHistoryPage'
 
 // Instructor Pages
 import { InstructorDashboard } from './pages/InstructorDashboard'
+import { CourseLayout } from './pages/instructor/CourseLayout'
 import { CourseCreatePage } from './pages/instructor/CourseCreatePage'
 import { CourseEditPage } from './pages/instructor/CourseEditPage'
+import { CourseChaptersPage } from './pages/instructor/CourseChaptersPage'
 
 // Admin Pages
 import { AdminDashboard } from './pages/AdminDashboard'
@@ -65,6 +69,24 @@ export default function App() {
                         element={<ResetPasswordPage />}
                     />
 
+                    {/* ========== LESSON PAGE (No Layout - Fullscreen Learning Experience) ========== */}
+                    <Route
+                        path='/courses/:slug/lessons'
+                        element={
+                            <ProtectedRoute>
+                                <LessonPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path='/courses/:slug/lessons/:lessonSlug'
+                        element={
+                            <ProtectedRoute>
+                                <LessonPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
                     {/* ========== PUBLIC ROUTES (With Navbar/Footer) ========== */}
                     <Route
                         path='/*'
@@ -85,8 +107,20 @@ export default function App() {
                                         element={<CoursePreviewPage />}
                                     />
                                     <Route
+                                        path='/courses/:slug'
+                                        element={<CourseDetailPage />}
+                                    />
+                                    <Route
                                         path='/courses/:id'
                                         element={<CourseDetailPage />}
+                                    />
+                                    <Route
+                                        path='/categories'
+                                        element={<CategoriesPage />}
+                                    />
+                                    <Route
+                                        path='/categories/:id'
+                                        element={<CategoriesDetailPage />}
                                     />
                                     <Route
                                         path='/about'
@@ -158,14 +192,7 @@ export default function App() {
                                             </ProtectedRoute>
                                         }
                                     />
-                                    <Route
-                                        path='/learn/:id'
-                                        element={
-                                            <ProtectedRoute>
-                                                <VideoPlayerPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
+
                                     <Route
                                         path='/ai-chat'
                                         element={
@@ -267,8 +294,9 @@ export default function App() {
                                             </ProtectedRoute>
                                         }
                                     />
+                                    {/* Course Management Routes with Shared Layout */}
                                     <Route
-                                        path='/instructor/courses/create'
+                                        path='/instructor/courses'
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
@@ -277,26 +305,24 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <CourseCreatePage />
+                                                    <CourseLayout />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
-                                    />
-                                    <Route
-                                        path='/instructor/courses/:id/edit'
-                                        element={
-                                            <ProtectedRoute>
-                                                <RoleRoute
-                                                    allowedRoles={[
-                                                        'INSTRUCTOR',
-                                                        'ADMIN',
-                                                    ]}
-                                                >
-                                                    <CourseEditPage />
-                                                </RoleRoute>
-                                            </ProtectedRoute>
-                                        }
-                                    />
+                                    >
+                                        <Route
+                                            path='create'
+                                            element={<CourseCreatePage />}
+                                        />
+                                        <Route
+                                            path=':id/edit'
+                                            element={<CourseEditPage />}
+                                        />
+                                        <Route
+                                            path=':id/chapters'
+                                            element={<CourseChaptersPage />}
+                                        />
+                                    </Route>
                                 </Routes>
                             </PublicLayout>
                         }

@@ -10,7 +10,7 @@ import instructorQuizzesRoutes from './instructor-quizzes.routes.js'
 import categoryRoutes from './category.routes.js'
 import tagsRoutes from './tags.routes.js'
 import lessonsRoutes from './lessons.routes.js'
-import instructorRoutes from './instructor.routes.js'
+import instructorLessonsRoutes from './instructor-lessons.routes.js'
 import instructorCourseRoutes from './instructor-course.routes.js'
 import adminCourseRoutes from './admin-course.routes.js'
 import enrollmentRoutes from './enrollment.routes.js'
@@ -28,6 +28,8 @@ import uploadRoutes from './upload.routes.js'
 import healthRoutes from './health.routes.js'
 import adminDashboardRoutes from './admin-dashboard.routes.js'
 import aiRoutes from './ai.routes.js'
+import lessonNotesRoutes from './lesson-notes.routes.js'
+import chaptersRoutes from './chapters.routes.js'
 
 const router = express.Router()
 
@@ -66,6 +68,7 @@ router.get('/', (req, res) => {
             health: '/api/v1/health',
             adminDashboard: '/api/v1/dashboard/admin',
             ai: '/api/v1/ai',
+            notes: '/api/v1/notes',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -91,7 +94,7 @@ router.use('/categories', categoryRoutes)
 router.use('/tags', tagsRoutes)
 router.use('/lessons', lessonsRoutes)
 router.use('/instructor/courses', instructorCourseRoutes) // Must be before /instructor to avoid conflict
-router.use('/instructor', instructorRoutes)
+router.use('/instructor', instructorLessonsRoutes)
 router.use('/admin/courses', adminCourseRoutes)
 router.use('/enrollments', enrollmentRoutes)
 router.use('/progress', progressRoutes)
@@ -108,6 +111,8 @@ router.use('/uploads', uploadRoutes)
 router.use('/health', healthRoutes)
 router.use('/dashboard/admin', adminDashboardRoutes)
 router.use('/ai', aiRoutes)
+router.use('/notes', lessonNotesRoutes)
+router.use('/', chaptersRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

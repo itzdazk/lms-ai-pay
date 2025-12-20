@@ -7,8 +7,26 @@ import path from 'path'
 import fs from 'fs'
 import transcriptionService from './transcription.service.js'
 import { videosDir, transcriptsDir } from '../config/multer.config.js'
+import slugify from '../utils/slugify.util.js'
+import { getVideoDuration } from '../utils/video.util.js'
 
 class LessonsService {
+    async _recalcCourseDuration(courseId) {
+        const lessons = await prisma.lesson.findMany({
+            where: { courseId },
+            select: { videoDuration: true },
+        })
+        const totalSeconds = lessons.reduce(
+            (acc, lesson) => acc + (lesson.videoDuration || 0),
+            0
+        )
+        const totalMinutes = Math.round(totalSeconds / 60)
+
+        await prisma.course.update({
+            where: { id: courseId },
+            data: { durationHours: totalMinutes },
+        })
+    }
     _deleteTranscriptFiles(filename) {
         if (!filename) return
 
@@ -37,12 +55,7 @@ class LessonsService {
      * Generate slug from title
      */
     generateSlug(title) {
-        return title
-            .toLowerCase()
-            .trim()
-            .replace(/[^\w\s-]/g, '') // Remove special characters
-            .replace(/\s+/g, '-') // Replace spaces with hyphens
-            .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        return slugify(title)
     }
 
     /**
@@ -78,6 +91,58 @@ class LessonsService {
 
         // Only return published lessons for non-instructors
         // This will be handled in controller based on user role
+
+        return lesson
+    }
+
+    /**
+     * Get lesson by slug and course slug
+     */
+    async getLessonBySlug(courseSlug, lessonSlug) {
+        // First find course by slug
+        const course = await prisma.course.findUnique({
+            where: { slug: courseSlug },
+            select: { id: true },
+        })
+
+        if (!course) {
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Then find lesson by slug within that course
+        const lesson = await prisma.lesson.findUnique({
+            where: {
+                courseId_slug: {
+                    courseId: course.id,
+                    slug: lessonSlug,
+                },
+            },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        status: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                avatarUrl: true,
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+        if (!lesson) {
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
 
         return lesson
     }
@@ -156,12 +221,7 @@ class LessonsService {
             throw error
         }
 
-        if (!lesson.transcriptUrl) {
-            const error = new Error('Transcript not available for this lesson')
-            error.statusCode = HTTP_STATUS.NOT_FOUND
-            throw error
-        }
-
+        // Transcript is optional, return lesson even if transcriptUrl is null
         return lesson
     }
 
@@ -190,6 +250,8 @@ class LessonsService {
 
     /**
      * Create new lesson
+     * Note: videoDuration is NOT accepted from request body.
+     * It is automatically calculated when video is uploaded via uploadVideo() method.
      */
     async createLesson(courseId, data, userId) {
         const {
@@ -200,6 +262,8 @@ class LessonsService {
             lessonOrder,
             isPreview,
             isPublished,
+            chapterId,
+            // videoDuration is intentionally excluded - it's set automatically when video is uploaded
         } = data
 
         // Check if course exists and user is instructor
@@ -214,6 +278,26 @@ class LessonsService {
 
         if (!course) {
             throw new Error('Course not found')
+        }
+
+        // If chapterId is provided, verify it belongs to the course
+        let chapter = null
+        if (chapterId) {
+            chapter = await prisma.chapter.findUnique({
+                where: { id: parseInt(chapterId) },
+                select: {
+                    id: true,
+                    courseId: true,
+                },
+            })
+
+            if (!chapter) {
+                throw new Error('Chapter not found')
+            }
+
+            if (chapter.courseId !== courseId) {
+                throw new Error('Chapter does not belong to this course')
+            }
         }
 
         // Generate slug from title if not provided
@@ -253,20 +337,31 @@ class LessonsService {
         }
 
         // Get max lessonOrder if not provided
+        // If chapterId is provided, calculate order within chapter, otherwise within course
         let finalLessonOrder = lessonOrder
         if (!finalLessonOrder) {
+            const whereClause = chapterId
+                ? { chapterId: parseInt(chapterId) }
+                : { courseId, chapterId: null }
             const maxOrder = await prisma.lesson.aggregate({
-                where: { courseId },
+                where: whereClause,
                 _max: { lessonOrder: true },
             })
             finalLessonOrder = (maxOrder._max.lessonOrder || 0) + 1
         } else {
             // If order is provided, shift other lessons
+            const whereClause = chapterId
+                ? {
+                      chapterId: parseInt(chapterId),
+                      lessonOrder: { gte: finalLessonOrder },
+                  }
+                : {
+                      courseId,
+                      chapterId: null,
+                      lessonOrder: { gte: finalLessonOrder },
+                  }
             await prisma.lesson.updateMany({
-                where: {
-                    courseId,
-                    lessonOrder: { gte: finalLessonOrder },
-                },
+                where: whereClause,
                 data: {
                     lessonOrder: {
                         increment: 1,
@@ -278,6 +373,7 @@ class LessonsService {
         const lesson = await prisma.lesson.create({
             data: {
                 courseId,
+                chapterId: chapterId ? parseInt(chapterId) : null,
                 title,
                 slug: lessonSlug,
                 description,
@@ -308,11 +404,16 @@ class LessonsService {
 
         logger.info(`Lesson created: ${lesson.title} (ID: ${lesson.id})`)
 
+        // Recalculate course duration based on all lesson video durations
+        await this._recalcCourseDuration(courseId)
+
         return lesson
     }
 
     /**
      * Update lesson
+     * Note: videoDuration is NOT accepted from request body.
+     * It is automatically calculated when video is uploaded via uploadVideo() method.
      */
     async updateLesson(courseId, lessonId, data) {
         const {
@@ -323,6 +424,7 @@ class LessonsService {
             lessonOrder,
             isPreview,
             isPublished,
+            // videoDuration is intentionally excluded - it's set automatically when video is uploaded
         } = data
 
         // Check if lesson exists
@@ -549,6 +651,9 @@ class LessonsService {
 
         logger.info(`Lesson deleted: ${lesson.title} (ID: ${lesson.id})`)
 
+        // Recalculate course duration after deletion
+        await this._recalcCourseDuration(courseId)
+
         return true
     }
 
@@ -604,12 +709,36 @@ class LessonsService {
         // Save new video URL
         const videoUrl = `/uploads/videos/${file.filename}`
 
+        // Get video duration
+        let videoDuration = null
+        try {
+            videoDuration = await getVideoDuration(file.path)
+            if (videoDuration) {
+                logger.info(`Video duration extracted: ${videoDuration} seconds for lesson ${lessonId}`)
+            } else {
+                logger.warn(`Could not extract video duration for lesson ${lessonId}`)
+            }
+        } catch (error) {
+            logger.error(`Error extracting video duration: ${error.message}`, { error: error.stack })
+            // Continue without duration - don't fail the upload
+        }
+
         const shouldTranscribe = config.WHISPER_ENABLED !== false
+
+        // Cancel any existing transcription job BEFORE updating database
+        // This ensures the old job is stopped before we start a new one
+        const wasCancelled = transcriptionService.cancelTranscriptionJob(lessonId)
+        if (wasCancelled) {
+            logger.info(`Cancelled existing transcription job for lesson ${lessonId} before uploading new video`)
+            // Give a small delay to ensure the process is killed
+            await new Promise(resolve => setTimeout(resolve, 500))
+        }
 
         const updatedLesson = await prisma.lesson.update({
             where: { id: lessonId },
             data: {
                 videoUrl,
+                videoDuration,
                 transcriptUrl: null,
                 transcriptJsonUrl: null,
                 transcriptStatus: shouldTranscribe
@@ -619,7 +748,7 @@ class LessonsService {
         })
 
         if (shouldTranscribe) {
-            transcriptionService.cancelTranscriptionJob(lessonId)
+            // Start new transcription job after ensuring old one is cancelled
             setImmediate(() => {
                 transcriptionService
                     .transcribeLessonVideo({
@@ -650,6 +779,9 @@ class LessonsService {
         }
 
         logger.info(`Video uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`)
+
+        // Recalculate course duration based on lesson video durations
+        await this._recalcCourseDuration(courseId)
 
         return updatedLesson
     }
@@ -697,6 +829,103 @@ class LessonsService {
 
         logger.info(
             `Transcript uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`
+        )
+
+        return updatedLesson
+    }
+
+    /**
+     * Request transcript creation for a lesson that has video but no transcript
+     */
+    async requestTranscript(courseId, lessonId, userId) {
+        // Check if lesson exists
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: {
+                id: true,
+                courseId: true,
+                title: true,
+                videoUrl: true,
+                transcriptStatus: true,
+            },
+        })
+
+        if (!lesson) {
+            throw new Error('Lesson not found')
+        }
+
+        if (lesson.courseId !== courseId) {
+            throw new Error('Lesson does not belong to this course')
+        }
+
+        // Check if lesson has video
+        if (!lesson.videoUrl) {
+            throw new Error('Lesson does not have a video. Please upload a video first.')
+        }
+
+        // Check if transcript is already processing or completed
+        if (lesson.transcriptStatus === TRANSCRIPT_STATUS.PROCESSING) {
+            throw new Error('Transcript is already being processed')
+        }
+
+        if (lesson.transcriptStatus === TRANSCRIPT_STATUS.COMPLETED) {
+            throw new Error('Transcript already exists for this lesson')
+        }
+
+        // Check if Whisper is enabled
+        if (config.WHISPER_ENABLED === false) {
+            throw new Error('Whisper transcription is disabled')
+        }
+
+        // Get video file path
+        const videoFilename = path.basename(lesson.videoUrl)
+        const videoPath = path.join(videosDir, videoFilename)
+
+        if (!fs.existsSync(videoPath)) {
+            throw new Error('Video file not found')
+        }
+
+        // Update transcript status to PROCESSING
+        const updatedLesson = await prisma.lesson.update({
+            where: { id: lessonId },
+            data: {
+                transcriptStatus: TRANSCRIPT_STATUS.PROCESSING,
+                transcriptUrl: null,
+                transcriptJsonUrl: null,
+            },
+        })
+
+        // Start transcription process
+        transcriptionService.cancelTranscriptionJob(lessonId) // Cancel any existing job
+        setImmediate(() => {
+            transcriptionService
+                .transcribeLessonVideo({
+                    videoPath,
+                    lessonId,
+                    userId,
+                    source: 'manual-request',
+                })
+                .catch((error) => {
+                    logger.error(
+                        `Whisper transcription failed for lesson ${lessonId}: ${error.message}`
+                    )
+                    prisma.lesson
+                        .update({
+                            where: { id: lessonId },
+                            data: {
+                                transcriptStatus: TRANSCRIPT_STATUS.FAILED,
+                            },
+                        })
+                        .catch((statusError) =>
+                            logger.error(
+                                `Failed to update transcript status for lesson ${lessonId}: ${statusError.message}`
+                            )
+                        )
+                })
+        })
+
+        logger.info(
+            `Transcript creation requested for lesson: ${lesson.title} (ID: ${lesson.id})`
         )
 
         return updatedLesson
@@ -780,6 +1009,61 @@ class LessonsService {
         )
 
         return updatedLesson
+    }
+
+    /**
+     * Reorder multiple lessons in a chapter
+     */
+    async reorderLessons(courseId, chapterId, lessonIds) {
+        // Verify chapter belongs to course
+        const chapter = await prisma.chapter.findUnique({
+            where: { id: chapterId },
+            select: {
+                id: true,
+                courseId: true,
+            },
+        })
+
+        if (!chapter) {
+            throw new Error('Chapter not found')
+        }
+
+        if (chapter.courseId !== courseId) {
+            throw new Error('Chapter does not belong to this course')
+        }
+
+        // Verify all lessons belong to this chapter
+        const lessons = await prisma.lesson.findMany({
+            where: {
+                id: { in: lessonIds },
+                chapterId: chapterId,
+            },
+            select: {
+                id: true,
+                lessonOrder: true,
+            },
+        })
+
+        if (lessons.length !== lessonIds.length) {
+            throw new Error('Some lessons do not belong to this chapter or do not exist')
+        }
+
+        // Update lesson orders in transaction
+        await prisma.$transaction(async (tx) => {
+            for (let i = 0; i < lessonIds.length; i++) {
+                const lessonId = lessonIds[i]
+                const newOrder = i + 1
+
+                await tx.lesson.update({
+                    where: { id: lessonId },
+                    data: { lessonOrder: newOrder },
+                })
+            }
+        })
+
+        logger.info(
+            `Lessons reordered in chapter ${chapterId}: ${lessonIds.join(', ')}`
+        )
     }
 
     /**

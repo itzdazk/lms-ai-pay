@@ -59,9 +59,11 @@ backend/logs/
 # Frontend specific
 frontend/dist/
 frontend/.vite/
+frontend/.documentation/
 
 # Documentation files (keep local, don't track in git)
 PROJECT_PLAN_FRONTEND.md
+LMS-AI-PAY_OVERVIEW.md
 docs/
 
 

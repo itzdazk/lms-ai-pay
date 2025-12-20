@@ -66,14 +66,25 @@ export function CourseSearch({
     return (
         <div className={`relative ${className}`}>
             <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400 z-10' />
+            {isListening && (
+                <>
+                    <Mic className='absolute left-10 top-1/2 -translate-y-1/2 h-4 w-4 text-red-600 animate-pulse z-10' />
+                    <div className='absolute left-16 top-1/2 -translate-y-1/2 text-sm text-red-600 animate-pulse pointer-events-none z-10 whitespace-nowrap'>
+                        Đang nghe...
+                    </div>
+                </>
+            )}
             <DarkOutlineInput
                 type='text'
-                placeholder={placeholder}
-                value={value}
+                placeholder={isListening ? '' : placeholder}
+                value={isListening ? '' : value}
                 onChange={(e) => onChange(e.target.value)}
-                className='pl-10 pr-20 h-10 [&::-webkit-search-cancel-button]:hidden [&::-ms-clear]:hidden'
+                className={`pl-10 pr-20 h-10 [&::-webkit-search-cancel-button]:hidden [&::-ms-clear]:hidden ${
+                    isListening ? 'pl-28' : ''
+                }`}
+                disabled={isListening}
             />
-            {value && (
+            {value && !isListening && (
                 <button
                     onClick={() => onChange('')}
                     className='absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors z-10'
@@ -95,12 +106,6 @@ export function CourseSearch({
             >
                 <Mic className='h-4 w-4' />
             </Button>
-            {isListening && (
-                <p className='absolute -bottom-6 left-0 text-sm text-red-600 animate-pulse flex items-center gap-2'>
-                    <Mic className='h-4 w-4' />
-                    Đang nghe...
-                </p>
-            )}
         </div>
     )
 }

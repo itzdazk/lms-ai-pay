@@ -3,6 +3,7 @@ export { default as apiClient } from './client'
 export * from './types'
 export { authApi } from './auth'
 export { coursesApi } from './courses'
+export { chaptersApi } from './chapters'
 export { instructorCoursesApi } from './instructor-courses'
 export { dashboardApi } from './dashboard'
 export { usersApi } from './users'
@@ -16,6 +17,15 @@ export type {
     CreateEnrollmentRequest,
     CreateEnrollmentResponse,
 } from './enrollments'
+export { lessonsApi } from './lessons'
+export { lessonNotesApi } from './lesson-notes'
+export { categoriesApi, getCategoryPath } from './categories'
+export type {
+    LessonNote,
+    LessonNoteResponse,
+    CourseNotesResponse,
+    UpsertLessonNoteRequest,
+} from './lesson-notes'
 export type {
     UpdateProfileRequest,
     ChangePasswordRequest,
@@ -29,3 +39,4 @@ export type {
     AdminCourseFilters,
     PlatformAnalytics,
 } from './admin-courses'
+export type { CategoryFilters, CategoryCoursesFilters } from './categories'

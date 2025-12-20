@@ -4,36 +4,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
 import {
-  Users,
-  BookOpen,
-  DollarSign,
-  TrendingUp,
-  UserCheck,
-  UserX,
-  BarChart3,
-  Settings,
-  ShoppingCart,
-  FolderTree,
-  LayoutDashboard,
-  Menu,
-  X,
-  Loader2,
-  Bell,
-  Sun,
-  Moon,
-  LogOut,
-  User as UserIcon,
-  ChevronRight,
-  Shield,
-  GraduationCap,
-  Tag,
-} from 'lucide-react';
-import { dashboardApi } from '../lib/api/dashboard';
-import { UsersPage } from './admin/UsersPage';
-import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage';
-import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+    Users,
+    BookOpen,
+    DollarSign,
+    TrendingUp,
+    UserCheck,
+    UserX,
+    BarChart3,
+    Settings,
+    ShoppingCart,
+    FolderTree,
+    LayoutDashboard,
+    Menu,
+    X,
+    Loader2,
+    Bell,
+    Sun,
+    Moon,
+    LogOut,
+    User as UserIcon,
+    ChevronRight,
+    Shield,
+    GraduationCap,
+    Tag,
+} from 'lucide-react'
+import { dashboardApi } from '../lib/api/dashboard'
+import { UsersPage } from './admin/UsersPage'
+import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
+import { CategoriesPage } from './admin/CategoriesPage'
+import { TagsPage } from './admin/TagsPage'
+import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,11 +56,11 @@ function formatPrice(price: number): string {
 type AdminSection = 'dashboard' | 'users' | 'students' | 'instructors' | 'courses' | 'analytics' | 'orders' | 'categories' | 'settings' | 'tags';
 
 interface MenuItem {
-  id: AdminSection;
-  label: string;
-  icon: React.ElementType;
-  color?: string;
-  children?: MenuItem[];
+    id: AdminSection
+    label: string
+    icon: React.ElementType
+    color?: string
+    children?: MenuItem[]
 }
 
 interface MenuGroup {
@@ -243,7 +245,7 @@ export function AdminDashboard() {
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-0'
-        } bg-[#1A1A1A] border-r border-[#2D2D2D] transition-all duration-300 overflow-hidden flex flex-col`}
+        } bg-black border-r border-[#2D2D2D] transition-all duration-300 overflow-hidden flex flex-col`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-[#2D2D2D] flex items-center justify-between">
@@ -327,7 +329,7 @@ export function AdminDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-[#1A1A1A] border-b border-[#2D2D2D] px-6 py-4 flex items-center justify-between">
+        <header className="bg-black border-b border-[#2D2D2D] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {!sidebarOpen && (
               <Button
@@ -394,7 +396,7 @@ export function AdminDashboard() {
                   <Badge className="bg-blue-600 text-white">Mới</Badge>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-[#2D2D2D]" />
-                <div className="max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D]">
+                <div className="max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D] custom-scrollbar">
                   <div className="p-4 hover:bg-[#1F1F1F] cursor-pointer">
                     <p className="text-sm text-white font-semibold">Người dùng mới đăng ký</p>
                     <p className="text-xs text-gray-500 mt-1">5 phút trước</p>
@@ -545,7 +547,7 @@ export function AdminDashboard() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background p-6 relative">
+        <main className="flex-1 overflow-y-auto bg-background p-6 relative custom-scrollbar">
           {sectionLoading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
@@ -754,56 +756,40 @@ function OrdersManagement() {
 // Categories Management Component
 function CategoriesManagement() {
   return (
-    <div className="space-y-6">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-        <CardHeader>
-          <CardTitle className="text-white">Quản lý Danh mục</CardTitle>
-          <CardDescription className="text-gray-400">
-            Quản lý các danh mục và thẻ khóa học
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-400">Chức năng quản lý danh mục sẽ được triển khai sau.</p>
-        </CardContent>
-      </Card>
+    <div className='h-full'>
+        <CategoriesPage />
     </div>
-  );
+)
 }
 
 // Tags Management Component
 function TagsManagement() {
-  return (
-    <div className="space-y-6">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-        <CardHeader>
-          <CardTitle className="text-white">Quản lý Tags</CardTitle>
-          <CardDescription className="text-gray-400">
-            Quản lý các tags của khóa học
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-400">Chức năng quản lý tags sẽ được triển khai sau.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    return (
+        <div className='h-full'>
+            <TagsPage />
+        </div>
+    )
 }
 
 // Settings View Component
 function SettingsView() {
-  return (
-    <div className="space-y-6">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-        <CardHeader>
-          <CardTitle className="text-white">Cài đặt Hệ thống</CardTitle>
-          <CardDescription className="text-gray-400">
-            Cấu hình các thiết lập hệ thống
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-400">Chức năng cài đặt hệ thống sẽ được triển khai sau.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    return (
+        <div className='space-y-6'>
+            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                <CardHeader>
+                    <CardTitle className='text-white'>
+                        Cài đặt Hệ thống
+                    </CardTitle>
+                    <CardDescription className='text-gray-400'>
+                        Cấu hình các thiết lập hệ thống
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className='text-gray-400'>
+                        Chức năng cài đặt hệ thống sẽ được triển khai sau.
+                    </p>
+                </CardContent>
+            </Card>
+        </div>
+    )
 }

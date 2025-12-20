@@ -2,6 +2,9 @@
 import { prisma } from '../config/database.config.js'
 import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
+import config from '../config/app.config.js'
+import fs from 'fs/promises'
+import path from 'path'
 
 class CategoryService {
     /**
@@ -90,7 +93,9 @@ class CategoryService {
             })
 
             if (slugExists) {
-                const error = new Error('Category with this slug already exists')
+                const error = new Error(
+                    'Category with this slug already exists'
+                )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -178,7 +183,7 @@ class CategoryService {
         // Check if category has courses
         if (category._count.courses > 0) {
             const error = new Error(
-                `Cannot delete category with ${category._count.courses} active courses. Please reassign courses first.`
+                `Không thể xóa danh mục khi đang có ${category._count.courses} khóa học đang hoạt động. Vui lòng phân bổ lại các khóa học trước.`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -187,7 +192,7 @@ class CategoryService {
         // Check if category has children
         if (category._count.children > 0) {
             const error = new Error(
-                `Cannot delete category with ${category._count.children} subcategories. Please delete subcategories first.`
+                `Không thể xóa danh mục có ${category._count.children} danh mục con. Vui lòng xóa danh mục con trước.`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -206,14 +211,64 @@ class CategoryService {
      * Get all categories with filters
      */
     async getCategories(filters) {
-        const { page, limit, parentId, isActive, search } = filters
+        const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = filters
 
         const skip = (page - 1) * limit
 
         // Build where clause
         const where = {}
 
-        if (parentId !== undefined) {
+        // Filter by specific category ID (highest priority)
+        if (categoryId !== undefined) {
+            // Check if this category has children
+            const category = await prisma.category.findUnique({
+                where: { id: categoryId },
+                select: { id: true },
+            })
+            
+            if (category) {
+                // Filter to show the category itself and all its children
+                // This allows selecting a parent category to see it and all its children
+                const categoryFilter = {
+                    OR: [
+                        { id: categoryId }, // The category itself
+                        { parentId: categoryId }, // All its children
+                    ],
+                }
+                
+                // If there's also a search filter, combine them with AND
+                if (search) {
+                    where.AND = [
+                        categoryFilter,
+                        {
+                            OR: [
+                                { name: { contains: search, mode: 'insensitive' } },
+                                { description: { contains: search, mode: 'insensitive' } },
+                            ],
+                        },
+                    ]
+                } else {
+                    Object.assign(where, categoryFilter)
+                }
+            } else {
+                // Category not found, just filter by id (will return empty)
+                where.id = categoryId
+                if (search) {
+                    where.AND = [
+                        { id: categoryId },
+                        {
+                            OR: [
+                                { name: { contains: search, mode: 'insensitive' } },
+                                { description: { contains: search, mode: 'insensitive' } },
+                            ],
+                        },
+                    ]
+                    delete where.id
+                }
+            }
+        } else if (parentId !== undefined) {
+            // If parentId is null, filter for root categories (no parent)
+            // If parentId is a number, filter for categories with that parent
             where.parentId = parentId
         }
 
@@ -221,11 +276,25 @@ class CategoryService {
             where.isActive = isActive
         }
 
-        if (search) {
+        // Add search filter if not already handled above
+        if (search && categoryId === undefined) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } },
             ]
+        }
+
+        // Build orderBy clause
+        let orderBy = []
+        if (sort === 'name') {
+            orderBy = [{ name: sortOrder }]
+        } else if (sort === 'createdAt') {
+            orderBy = [{ createdAt: sortOrder }]
+        } else if (sort === 'updatedAt') {
+            orderBy = [{ updatedAt: sortOrder }]
+        } else {
+            // Default: sortOrder field
+            orderBy = [{ sortOrder: sortOrder }, { name: 'asc' }]
         }
 
         // Get categories with children count
@@ -234,7 +303,7 @@ class CategoryService {
                 where,
                 skip,
                 take: limit,
-                orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+                orderBy,
                 include: {
                     parent: {
                         select: {
@@ -274,6 +343,7 @@ class CategoryService {
             slug: category.slug,
             description: category.description,
             imageUrl: category.imageUrl,
+            parentId: category.parentId,  // Thêm parentId field
             sortOrder: category.sortOrder,
             isActive: category.isActive,
             parent: category.parent,
@@ -283,7 +353,7 @@ class CategoryService {
             updatedAt: category.updatedAt,
         }))
 
-        logger.info(`Retrieved ${categories.length} categories`)
+        logger.info(`Retrieved ${formattedCategories.length} categories`)
 
         return {
             categories: formattedCategories,
@@ -474,6 +544,180 @@ class CategoryService {
 
         // Reuse getCoursesByCategory method
         return await this.getCoursesByCategory(category.id, filters)
+    }
+
+    /**
+     * Upload category image
+     */
+    async uploadCategoryImage(categoryId, file) {
+        // Check if category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+        })
+
+        if (!category) {
+            const error = new Error('Category not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        try {
+            // Delete old image if exists
+            if (category.imageUrl) {
+                const oldImagePath = path.join(
+                    process.cwd(),
+                    'uploads',
+                    'categories',
+                    path.basename(category.imageUrl)
+                )
+                await fs.unlink(oldImagePath).catch(() => {
+                    // Ignore if file doesn't exist
+                    logger.debug(`Old image file not found: ${oldImagePath}`)
+                })
+            }
+
+            // Generate image URL
+            const imageUrl = `/uploads/categories/${file.filename}`
+
+            // Update category with new image URL
+            const updatedCategory = await prisma.category.update({
+                where: { id: categoryId },
+                data: { imageUrl },
+                include: {
+                    parent: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                    children: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                },
+            })
+
+            logger.info(
+                `Category image uploaded: ${category.name} (ID: ${category.id})`
+            )
+
+            return {
+                category: updatedCategory,
+                imageUrl,
+            }
+        } catch (error) {
+            // Delete uploaded file if database update fails
+            if (file) {
+                await fs.unlink(file.path).catch(() => {
+                    logger.debug(`Failed to delete file: ${file.path}`)
+                })
+            }
+            throw error
+        }
+    }
+
+    /**
+     * Delete category image
+     */
+    async deleteCategoryImage(categoryId) {
+        // Check if category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+        })
+
+        if (!category) {
+            const error = new Error('Category not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        if (!category.imageUrl) {
+            const error = new Error('Category has no image')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        try {
+            // Delete image file
+            const imagePath = path.join(
+                process.cwd(),
+                'uploads',
+                'categories',
+                path.basename(category.imageUrl)
+            )
+            await fs.unlink(imagePath).catch(() => {
+                // Ignore if file doesn't exist
+                logger.warn(`Image file not found: ${imagePath}`)
+            })
+
+            // Update category to remove image URL
+            const updatedCategory = await prisma.category.update({
+                where: { id: categoryId },
+                data: { imageUrl: null },
+                include: {
+                    parent: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                    children: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                        },
+                    },
+                },
+            })
+
+            logger.info(
+                `Category image deleted: ${category.name} (ID: ${category.id})`
+            )
+
+            return updatedCategory
+        } catch (error) {
+            logger.error('Error deleting category image:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get category statistics
+     */
+    async getCategoryStats() {
+        try {
+            // Get total count
+            const total = await prisma.category.count()
+
+            // Get active/inactive counts
+            const [active, inactive] = await Promise.all([
+                prisma.category.count({ where: { isActive: true } }),
+                prisma.category.count({ where: { isActive: false } }),
+            ])
+
+            // Get parent/child counts
+            const [parent, child] = await Promise.all([
+                prisma.category.count({ where: { parentId: null } }),
+                prisma.category.count({ where: { parentId: { not: null } } }),
+            ])
+
+            return {
+                total,
+                active,
+                inactive,
+                parent,
+                child,
+            }
+        } catch (error) {
+            logger.error('Error getting category stats:', error)
+            throw error
+        }
     }
 }
 

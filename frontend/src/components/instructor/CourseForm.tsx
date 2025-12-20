@@ -16,6 +16,7 @@ import type { Course, Category, Tag } from '../../lib/api/types';
 import { coursesApi } from '../../lib/api/courses'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { Checkbox } from '../ui/checkbox';
+import { useCourseForm } from '../../contexts/CourseFormContext';
 import {
   Dialog,
   DialogContent,
@@ -80,7 +81,6 @@ export function CourseForm({
   categories,
   tags: tagsProp,
   onSubmit,
-  onCancel,
   loading = false,
   onTagCreated,
 }: CourseFormProps) {
@@ -133,10 +133,30 @@ export function CourseForm({
   const [isDraggingPreview, setIsDraggingPreview] = useState(false);
   const [videoPreviewRemoved, setVideoPreviewRemoved] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
+
+  // Flatten categories with hierarchical structure for display
+  const flattenCategories = (categories: Category[], level = 0): Category[] => {
+    const result: Category[] = [];
+
+    categories.forEach(category => {
+      // Add the category itself
+      result.push({
+        ...category,
+        name: '  '.repeat(level) + category.name // Add indentation
+      });
+
+      // Add children if they exist
+      if (category.children && category.children.length > 0) {
+        result.push(...flattenCategories(category.children, level + 1));
+      }
+    });
+
+    return result;
+  };
   const [tagSearch, setTagSearch] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [initialFormData, setInitialFormData] = useState<CourseFormData | null>(null);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const { setHasChanges } = useCourseForm();
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<{ submitData: any; thumbnailFile?: File; previewFile?: File } | null>(null);
   const [showThumbnailDialog, setShowThumbnailDialog] = useState(false);
@@ -1015,21 +1035,9 @@ export function CourseForm({
       previewInputRef.current.value = '';
     }
     
-    toast.success('Đã đặt lại form về giá trị ban đầu');
+    toast.success('Đã hủy thay đổi');
   };
 
-  const handleCancel = () => {
-    if (hasChanges()) {
-      setShowCancelDialog(true);
-    } else {
-      onCancel?.();
-    }
-  };
-
-  const confirmCancel = () => {
-    setShowCancelDialog(false);
-    onCancel?.();
-  };
 
   // Check if a field has been changed
   const isFieldChanged = (fieldName: keyof CourseFormData): boolean => {
@@ -1112,11 +1120,17 @@ export function CourseForm({
     );
   };
 
+  // Sync hasChanges with Context
+  useEffect(() => {
+    const hasChangesValue = hasChanges();
+    setHasChanges(hasChangesValue);
+  }, [formData, thumbnailFile, previewFile, thumbnailPreview, previewVideoPreview, thumbnailRemoved, videoPreviewRemoved, initialFormData, course, setHasChanges]);
+
   return (
     <div className="relative">
       <form 
         onSubmit={handleSubmit} 
-        className="space-y-6 pb-24 sm:pb-28"
+        className="space-y-6 pb-24 sm:pb-6"
         noValidate
       >
       {/* Basic Information */}
@@ -1165,6 +1179,9 @@ export function CourseForm({
             minLength={5}
             maxLength={200}
             customValidationMessage="Vui lòng nhập tiêu đề khóa học"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             onInvalid={(e) => {
               const input = e.currentTarget;
               const value = input.value.trim();
@@ -1232,6 +1249,9 @@ export function CourseForm({
             }`}
             rows={3}
             maxLength={500}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             onInvalid={(e) => {
               const textarea = e.currentTarget;
               if (textarea.value.trim().length > 500) {
@@ -1288,6 +1308,9 @@ export function CourseForm({
             }`}
             rows={6}
             maxLength={10000}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             onInvalid={(e) => {
               const textarea = e.currentTarget;
               if (textarea.value.trim().length > 10000) {
@@ -1352,30 +1375,38 @@ export function CourseForm({
                       type="text"
                       placeholder="Tìm kiếm danh mục..."
                       value={categorySearch}
-                      onChange={(e) => setCategorySearch(e.target.value)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setCategorySearch(e.target.value);
+                      }}
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                       className="w-full pl-8 pr-2 py-1.5 text-sm bg-white dark:bg-[#1F1F1F] border border-gray-300 dark:border-[#2D2D2D] rounded text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
-                <div className="max-h-[300px] overflow-y-auto">
-                  {categories
+                <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {flattenCategories(
+                    categories.filter(category => !category.parentId) // Only root categories
+                  )
                     .filter((category) =>
-                      category.name.toLowerCase().includes(categorySearch.toLowerCase())
+                      category.name.trim().toLowerCase().includes(categorySearch.toLowerCase())
                     )
                     .slice(0, 100) // Limit to 100 items for performance
                     .map((category) => (
                       <DarkOutlineSelectItem
                         key={category.id}
                         value={String(category.id)}
+                        onSelect={() => setCategorySearch('')}
                       >
                         {category.name}
                       </DarkOutlineSelectItem>
                     ))}
-                  {categories.filter((category) =>
-                    category.name.toLowerCase().includes(categorySearch.toLowerCase())
-                  ).length === 0 && (
+                  {flattenCategories(
+                    categories.filter(category => !category.parentId)
+                  ).filter((category) =>
+                    category.name.trim().toLowerCase().includes(categorySearch.toLowerCase())
+                  ).length === 0 && categorySearch && (
                     <div className="px-2 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       Không tìm thấy danh mục
                     </div>
@@ -1519,6 +1550,9 @@ export function CourseForm({
                 className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
                   isFieldChanged('price') ? 'border-green-500 ring-1 ring-green-500/50' : ''
                 } ${formData.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 onInvalid={(e) => {
                   const input = e.currentTarget;
                   const price = parsePriceInput(input.value);
@@ -1563,6 +1597,9 @@ export function CourseForm({
                 className={`bg-[#1F1F1F] border-[#2D2D2D] text-white ${
                   isFieldChanged('discountPrice') ? 'border-green-500 ring-1 ring-green-500/50' : ''
                 } ${formData.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 onInvalid={(e) => {
                   const input = e.currentTarget;
                   const discountPrice = parsePriceInput(input.value);
@@ -1674,7 +1711,7 @@ export function CourseForm({
           {thumbnailPreview ? (
             <div className="space-y-3">
               {/* Preview Image */}
-              <div className={`relative w-full max-w-md mx-auto aspect-video rounded-lg overflow-hidden border-2 transition-all group ${
+              <div className={`relative w-full max-w-md mx-auto aspect-video rounded-lg overflow-hidden border-2 transition-all ${
                 thumbnailFile !== null 
                   ? 'border-green-500 ring-2 ring-green-500/30 shadow-lg shadow-green-500/20'
                   : course && thumbnailRemoved
@@ -1686,63 +1723,6 @@ export function CourseForm({
                   alt="Thumbnail preview"
                   className="w-full h-full object-cover"
                 />
-                {/* Overlay with actions */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3 pointer-events-none group/overlay">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenThumbnailDialog();
-                    }}
-                    className="bg-white/90 hover:bg-white text-gray-900 border-0 pointer-events-auto"
-                    size="sm"
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Thay đổi
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeThumbnail();
-                    }}
-                    className="bg-red-600/90 hover:bg-red-700 text-white border-0 pointer-events-auto"
-                    size="sm"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Xóa
-                  </Button>
-                </div>
-                {/* Always visible action buttons at bottom */}
-                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenThumbnailDialog();
-                    }}
-                    className="flex-1 bg-white/95 hover:bg-white text-gray-900 border-0 backdrop-blur-sm"
-                    size="sm"
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Thay đổi
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeThumbnail();
-                    }}
-                    className="bg-red-600/95 hover:bg-red-700 text-white border-0 backdrop-blur-sm"
-                    size="sm"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
                 {/* Status badge */}
                 {thumbnailFile !== null && (
                   <div className="absolute top-3 right-3 px-2 py-1 bg-green-500/90 backdrop-blur-sm rounded-md flex items-center gap-1.5">
@@ -1756,6 +1736,30 @@ export function CourseForm({
                     <span className="text-xs font-medium text-white">Đã xóa </span>
                   </div>
                 )}
+              </div>
+
+              {/* Action buttons below preview */}
+              <div className="flex justify-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleOpenThumbnailDialog}
+                  className="flex-1 !bg-white/95 hover:!bg-white !text-gray-900 !border-0 backdrop-blur-sm cursor-pointer"
+                  size="sm"
+                >
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Thay đổi
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={removeThumbnail}
+                  className="!bg-red-600/95 hover:!bg-red-700 !text-white !border-0 backdrop-blur-sm cursor-pointer"
+                  size="sm"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Xóa
+                </Button>
               </div>
               
               {/* File Info */}
@@ -1875,7 +1879,7 @@ export function CourseForm({
                       e.stopPropagation();
                       handleOpenVideoPreviewDialog();
                     }}
-                    className="bg-white/90 hover:bg-white text-gray-900 border-0 pointer-events-auto"
+                    className="!bg-white/90 hover:!bg-white !text-gray-900 !border-0 pointer-events-auto cursor-pointer"
                     size="sm"
                   >
                     <Video className="h-4 w-4 mr-2" />
@@ -1888,7 +1892,7 @@ export function CourseForm({
                       e.stopPropagation();
                       removePreview();
                     }}
-                    className="bg-red-600/90 hover:bg-red-700 text-white border-0 pointer-events-auto"
+                    className="!bg-red-600/90 hover:!bg-red-700 !text-white !border-0 pointer-events-auto cursor-pointer"
                     size="sm"
                   >
                     <X className="h-4 w-4 mr-2" />
@@ -1938,7 +1942,7 @@ export function CourseForm({
                   type="button"
                   variant="outline"
                   onClick={handleOpenVideoPreviewDialog}
-                  className="flex-1 bg-white/95 hover:bg-white text-gray-900 border-0 backdrop-blur-sm"
+                  className="flex-1 !bg-white/95 hover:!bg-white !text-gray-900 !border-0 backdrop-blur-sm cursor-pointer"
                   size="sm"
                 >
                   <Video className="h-4 w-4 mr-2" />
@@ -1948,7 +1952,7 @@ export function CourseForm({
                   type="button"
                   variant="outline"
                   onClick={removePreview}
-                  className="bg-red-600/95 hover:bg-red-700 text-white border-0 backdrop-blur-sm"
+                  className="!bg-red-600/95 hover:!bg-red-700 !text-white !border-0 backdrop-blur-sm cursor-pointer"
                   size="sm"
                 >
                   <X className="h-4 w-4 mr-2" />
@@ -2100,6 +2104,9 @@ export function CourseForm({
                 onChange={(e) => setTagSearch(e.target.value)}
                 placeholder="Tìm kiếm tags..."
                 className="pl-8 bg-[#1F1F1F] border-[#2D2D2D] text-white"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
               />
             </div>
             {tagSearch.trim() && 
@@ -2157,7 +2164,7 @@ export function CourseForm({
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-[#2D2D2D] rounded-lg">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar p-2 border border-[#2D2D2D] rounded-lg">
                   {Array.isArray(tags) && tags.length > 0 ? (
                     filteredTags.length > 0 ? (
                       filteredTags.map((tag) => (
@@ -2244,6 +2251,9 @@ export function CourseForm({
             }`}
             rows={3}
             maxLength={5000}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
           {formData.requirements.trim().length > 0 && (
             <div className="flex items-center justify-between mt-1">
@@ -2287,6 +2297,9 @@ export function CourseForm({
             }`}
             rows={3}
             maxLength={5000}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
           {formData.whatYouLearn.trim().length > 0 && (
             <div className="flex items-center justify-between mt-1">
@@ -2330,6 +2343,9 @@ export function CourseForm({
             }`}
             rows={3}
             maxLength={5000}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
           {formData.courseObjectives.trim().length > 0 && (
             <div className="flex items-center justify-between mt-1">
@@ -2373,6 +2389,9 @@ export function CourseForm({
             }`}
             rows={3}
             maxLength={5000}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
           {formData.targetAudience.trim().length > 0 && (
             <div className="flex items-center justify-between mt-1">
@@ -2400,18 +2419,16 @@ export function CourseForm({
 
       {/* Sticky Bottom Action Bar - Sticks to bottom of viewport when scrolling, sticks to form bottom when at end */}
       <div className="sticky bottom-0 left-0 right-0 z-50 bg-[#1A1A1A] border-t-2 border-[#2D2D2D] shadow-2xl mt-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
-            {/* Left side - Change Indicator */}
-            <div className="flex items-center justify-center sm:justify-start">
-              {course && hasChanges() && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  <span className="text-sm text-green-500 font-medium whitespace-nowrap">Có thay đổi chưa lưu</span>
-                </div>
-              )}
-            </div>
-
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4">
+            {/* Left side - Change indicator (only when has changes) */}
+            {course && hasChanges() && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg mr-auto">
+                <AlertCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm text-green-500 font-medium whitespace-nowrap">Có thay đổi chưa lưu</span>
+              </div>
+            )}
+            
             {/* Right side - Action Buttons */}
             <div className="flex items-center justify-end gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
               {course && initialFormData && (
@@ -2423,18 +2440,7 @@ export function CourseForm({
                   size="sm"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  <span className="hidden sm:inline">Đặt lại</span>
-                </DarkOutlineButton>
-              )}
-              {onCancel && (
-                <DarkOutlineButton
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={loading || previewLoading}
-                  size="sm"
-                  className="flex-shrink-0"
-                >
-                  Hủy
+                  <span className="hidden sm:inline">Hủy</span>
                 </DarkOutlineButton>
               )}
               <DarkOutlineButton
@@ -2464,8 +2470,8 @@ export function CourseForm({
                     form.requestSubmit();
                   }
                 }}
-                disabled={loading || previewLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+                disabled={loading || previewLoading || (course ? !hasChanges() : false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 size="sm"
               >
                 {loading ? (
@@ -2490,35 +2496,6 @@ export function CourseForm({
         </div>
       </div>
       </form>
-
-      {/* Cancel Confirmation Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">Xác nhận hủy</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              {course 
-                ? 'Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn hủy và rời khỏi trang này không?'
-                : 'Bạn đã nhập dữ liệu. Bạn có chắc chắn muốn hủy và rời khỏi trang này không? Tất cả dữ liệu đã nhập sẽ bị mất.'}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DarkOutlineButton
-              type="button"
-              onClick={() => setShowCancelDialog(false)}
-            >
-              Ở lại
-            </DarkOutlineButton>
-            <Button
-              type="button"
-              onClick={confirmCancel}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Hủy và rời khỏi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Thumbnail Selection Dialog */}
       <Dialog open={showThumbnailDialog} onOpenChange={setShowThumbnailDialog}>

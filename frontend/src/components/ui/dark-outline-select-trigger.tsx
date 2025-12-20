@@ -45,7 +45,7 @@ export const DarkOutlineSelectContent = React.forwardRef<
     <SelectContent
       ref={ref}
       className={cn(
-        "!bg-white !text-black border-gray-300",
+        "!bg-white !text-black border-gray-300 z-[9999]",
         "dark:!bg-[#1A1A1A] dark:!text-white dark:border-[#2D2D2D]",
         className
       )}

@@ -20,6 +20,18 @@ class LessonsController {
     })
 
     /**
+     * @route   GET /api/v1/courses/:slug/lessons/:lessonSlug
+     * @desc    Get lesson by slug
+     * @access  Private (enrolled users, course instructor, admin)
+     */
+    getLessonBySlug = asyncHandler(async (req, res) => {
+        const { slug, lessonSlug } = req.params
+        const lesson = await lessonsService.getLessonBySlug(slug, lessonSlug)
+
+        return ApiResponse.success(res, lesson, 'Lesson retrieved successfully')
+    })
+
+    /**
      * @route   GET /api/v1/lessons/:id/video
      * @desc    Get lesson video URL
      * @access  Private (enrolled users, course instructor, admin)
@@ -50,6 +62,11 @@ class LessonsController {
     getLessonTranscript = asyncHandler(async (req, res) => {
         const { id } = req.params
         const result = await lessonsService.getLessonTranscript(parseInt(id))
+
+        // If no transcript, return 404 (frontend will handle silently)
+        if (!result.transcriptUrl) {
+            return ApiResponse.notFound(res, 'Transcript not available for this lesson')
+        }
 
         return ApiResponse.success(
             res,
@@ -189,6 +206,27 @@ class LessonsController {
     })
 
     /**
+     * @route   POST /api/v1/instructor/courses/:courseId/lessons/:id/transcript/request
+     * @desc    Request transcript creation for a lesson
+     * @access  Private (Instructor/Admin)
+     */
+    requestTranscript = asyncHandler(async (req, res) => {
+        const { courseId, id } = req.params
+
+        const lesson = await lessonsService.requestTranscript(
+            parseInt(courseId),
+            parseInt(id),
+            req.user.id
+        )
+
+        return ApiResponse.success(
+            res,
+            lesson,
+            'Transcript creation requested successfully. Processing will start shortly.'
+        )
+    })
+
+    /**
      * @route   PATCH /api/v1/instructor/courses/:courseId/lessons/:id/order
      * @desc    Reorder lesson
      * @access  Private (Instructor/Admin)
@@ -204,6 +242,24 @@ class LessonsController {
         )
 
         return ApiResponse.success(res, lesson, 'Lesson reordered successfully')
+    })
+
+    /**
+     * @route   PUT /api/v1/instructor/courses/:courseId/chapters/:chapterId/lessons/reorder
+     * @desc    Reorder multiple lessons in a chapter
+     * @access  Private (Instructor/Admin)
+     */
+    reorderLessons = asyncHandler(async (req, res) => {
+        const { courseId, chapterId } = req.params
+        const { lessonIds } = req.body
+
+        await lessonsService.reorderLessons(
+            parseInt(courseId),
+            parseInt(chapterId),
+            lessonIds.map((id) => parseInt(id))
+        )
+
+        return ApiResponse.success(res, null, 'Lessons reordered successfully')
     })
 
     /**

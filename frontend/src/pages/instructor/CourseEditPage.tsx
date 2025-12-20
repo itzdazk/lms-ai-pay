@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { CourseForm } from '../../components/instructor/CourseForm';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { coursesApi } from '../../lib/api/courses'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { toast } from 'sonner';
@@ -304,12 +304,9 @@ export function CourseEditPage() {
   };
 
   const handleCancel = () => {
-    // Navigate back to previous page, or to dashboard if no previous page
-    if (window.history.length > 1) {
-      navigate(-1 as any, { state: { preserveScroll: true } });
-    } else {
-      navigate('/instructor/dashboard', { state: { preserveScroll: true } });
-    }
+    // Always navigate to dashboard - scroll position will be restored automatically
+    // if it was saved when navigating from dashboard to this page
+    navigate('/instructor/dashboard', { state: { preserveScroll: true } });
   };
 
   if (loading) {
@@ -326,7 +323,7 @@ export function CourseEditPage() {
         <div className="text-center">
           <p className="text-gray-400 mb-4">Khóa học không tồn tại</p>
           <DarkOutlineButton onClick={handleCancel}>
-            Quay lại
+            Dashboard
           </DarkOutlineButton>
         </div>
       </div>
@@ -334,20 +331,9 @@ export function CourseEditPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+    <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-white text-2xl">Chỉnh sửa khóa học</CardTitle>
-            <DarkOutlineButton
-              onClick={handleCancel}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Quay lại
-            </DarkOutlineButton>
-          </div>
+          <CardTitle className="text-white text-2xl">Chỉnh sửa khóa học</CardTitle>
         </CardHeader>
         <CardContent>
           <CourseForm
@@ -355,13 +341,12 @@ export function CourseEditPage() {
             categories={categories}
             tags={tags}
             onSubmit={handleSubmit}
-            onCancel={handleCancel}
             loading={submitting}
             onTagCreated={reloadTags}
           />
+
         </CardContent>
       </Card>
-    </div>
   );
 }
 

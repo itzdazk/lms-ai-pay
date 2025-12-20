@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Badge } from '../ui/badge'
 import { BookOpen, Star, Users } from 'lucide-react'
 import type { Instructor } from '../../lib/api/types'
-import { formatNumber, getCoursePrice } from '../../lib/courseUtils'
+import { formatNumber, getCoursePrice, getCourseUrl } from '../../lib/courseUtils'
 
 interface InstructorInfoProps {
     instructor: Instructor
@@ -83,7 +83,7 @@ export function InstructorInfo({
                             return (
                                 <Link
                                     key={course.id}
-                                    to={`/courses/${course.id}`}
+                                    to={getCourseUrl(course)}
                                     className='flex gap-3 p-2 hover:bg-[#1F1F1F] rounded-lg transition-colors group'
                                 >
                                     <img

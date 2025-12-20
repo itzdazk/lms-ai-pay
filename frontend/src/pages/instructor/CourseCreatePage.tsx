@@ -3,11 +3,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { CourseForm } from '../../components/instructor/CourseForm';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { coursesApi } from '../../lib/api/courses'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { toast } from 'sonner';
-import { DarkOutlineButton } from '../../components/ui/buttons';
 import type { Course, Category, Tag } from '../../lib/api/types';
 
 export function CourseCreatePage() {
@@ -108,8 +107,12 @@ export function CourseCreatePage() {
         }
       }
       
-      toast.success('Tạo khóa học thành công!');
-      navigate('/instructor/dashboard');
+      toast.success('Tạo khóa học thành công! Đang chuyển sang tạo chương và bài học...');
+
+      // Navigate directly to chapters page after a short delay
+      setTimeout(() => {
+        navigate(`/instructor/courses/${newCourse.id}/chapters`);
+      }, 1500);
     } catch (error: any) {
       console.error('Error creating course:', error);
       
@@ -150,10 +153,6 @@ export function CourseCreatePage() {
     }
   };
 
-  const handleCancel = () => {
-    navigate('/instructor/dashboard', { state: { preserveScroll: true } });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -163,33 +162,21 @@ export function CourseCreatePage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+    <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-white text-2xl">Tạo khóa học mới</CardTitle>
-            <DarkOutlineButton
-              onClick={handleCancel}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Quay lại
-            </DarkOutlineButton>
-          </div>
+          <CardTitle className="text-white text-2xl">Tạo khóa học mới</CardTitle>
         </CardHeader>
         <CardContent>
           <CourseForm
             categories={categories}
             tags={tags}
             onSubmit={handleSubmit}
-            onCancel={handleCancel}
             loading={submitting}
             onTagCreated={reloadTags}
           />
+
         </CardContent>
       </Card>
-    </div>
   );
 }
 

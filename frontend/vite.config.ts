@@ -17,10 +17,26 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
+        ws: true, // Enable websocket proxy
       },
       '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
+        // Don't log proxy errors for static files when backend is down
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, res) => {
+            // Silently handle connection errors for uploads
+            // Frontend will show broken image icons instead of console errors
+            if (res && !res.headersSent) {
+              res.writeHead(503, {
+                'Content-Type': 'text/plain',
+              })
+              res.end('Backend server is not available')
+            }
+          })
+        },
       }
     }
   }
