@@ -46,6 +46,7 @@ class OrdersController {
             startDate,
             endDate,
             sort,
+            search,
         } = req.query
 
         const filters = {
@@ -56,6 +57,7 @@ class OrdersController {
             startDate: startDate || undefined,
             endDate: endDate || undefined,
             sort: sort || 'newest',
+            search: search || undefined,
         }
 
         const result = await ordersService.getUserOrders(userId, filters)

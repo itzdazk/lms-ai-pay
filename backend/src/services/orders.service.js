@@ -224,6 +224,7 @@ class OrdersService {
             startDate,
             endDate,
             sort = 'newest',
+            search,
         } = filters
 
         const skip = (page - 1) * limit
@@ -252,6 +253,26 @@ class OrdersService {
             if (endDate) {
                 where.createdAt.lte = new Date(endDate)
             }
+        }
+
+        // Filter by search (orderCode or course title)
+        if (search) {
+            where.OR = [
+                {
+                    orderCode: {
+                        contains: search,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    course: {
+                        title: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                },
+            ]
         }
 
         // Build orderBy clause
@@ -285,8 +306,8 @@ class OrdersService {
                             title: true,
                             slug: true,
                             thumbnailUrl: true,
-                        price: true,
-                        discountPrice: true,
+                            price: true,
+                            discountPrice: true,
                             instructor: {
                                 select: {
                                     id: true,
@@ -473,9 +494,8 @@ class OrdersService {
             )
             // Still try to enroll if not already enrolled (idempotent)
             try {
-                const { default: enrollmentService } = await import(
-                    './enrollment.service.js'
-                )
+                const { default: enrollmentService } =
+                    await import('./enrollment.service.js')
                 const enrollment =
                     await enrollmentService.enrollFromPayment(orderId)
                 return {
@@ -556,9 +576,8 @@ class OrdersService {
         // Use dynamic import to avoid circular dependency
         let enrollment = null
         try {
-            const { default: enrollmentService } = await import(
-                './enrollment.service.js'
-            )
+            const { default: enrollmentService } =
+                await import('./enrollment.service.js')
             enrollment = await enrollmentService.enrollFromPayment(orderId)
             logger.info(
                 `User ID ${order.userId} automatically enrolled in course ID ${order.courseId} after payment`
@@ -757,7 +776,7 @@ class OrdersService {
      * @returns {Promise<object>} Order statistics
      */
     async getUserOrderStats(userId) {
-        const [total, paid, pending, failed] = await Promise.all([
+        const [total, paid, pending, failed, refunded] = await Promise.all([
             prisma.order.count({ where: { userId } }),
             prisma.order.count({
                 where: { userId, paymentStatus: PAYMENT_STATUS.PAID },
@@ -767,6 +786,17 @@ class OrdersService {
             }),
             prisma.order.count({
                 where: { userId, paymentStatus: PAYMENT_STATUS.FAILED },
+            }),
+            prisma.order.count({
+                where: {
+                    userId,
+                    paymentStatus: {
+                        in: [
+                            PAYMENT_STATUS.REFUNDED,
+                            PAYMENT_STATUS.PARTIALLY_REFUNDED,
+                        ],
+                    },
+                },
             }),
         ])
 
@@ -786,6 +816,7 @@ class OrdersService {
             paid,
             pending,
             failed,
+            refunded,
             totalSpent: parseFloat(totalSpent._sum.finalPrice || 0),
         }
     }
