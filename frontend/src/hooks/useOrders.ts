@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import type { CreateOrderRequest, Order } from '../lib/api'
+import type { CreateOrderRequest, Order, OrderFilters } from '../lib/api'
 import { ordersApi } from '../lib/api/orders'
+import type { OrderStats } from '../components/Payment/OrderStats'
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -136,5 +137,120 @@ export function useOrderByCode(orderCode?: string) {
         isLoading: status === 'loading',
         isError: status === 'error',
         error,
+    }
+}
+
+/**
+ * Hook: fetch orders list with filters and pagination
+ */
+export function useOrders(filters?: OrderFilters) {
+    const [orders, setOrders] = useState<Order[]>([])
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+    })
+    const [status, setStatus] = useState<FetchStatus>('idle')
+    const [error, setError] = useState<string | null>(null)
+
+    const fetchOrders = useCallback(async () => {
+        setStatus('loading')
+        setError(null)
+        try {
+            const data = await ordersApi.getOrders(filters)
+            setOrders(data.orders)
+            setPagination(data.pagination)
+            setStatus('success')
+        } catch (err) {
+            const message = parseErrorMessage(err)
+            setError(message)
+            setStatus('error')
+            toast.error(message)
+        }
+    }, [filters])
+
+    useEffect(() => {
+        fetchOrders()
+    }, [fetchOrders])
+
+    return {
+        orders,
+        pagination,
+        status,
+        isLoading: status === 'loading',
+        isError: status === 'error',
+        error,
+        refetch: fetchOrders,
+    }
+}
+
+/**
+ * Hook: fetch order statistics
+ */
+export function useOrderStats() {
+    const [stats, setStats] = useState<OrderStats | null>(null)
+    const [status, setStatus] = useState<FetchStatus>('idle')
+    const [error, setError] = useState<string | null>(null)
+
+    const fetchStats = useCallback(async () => {
+        setStatus('loading')
+        setError(null)
+        try {
+            const data = await ordersApi.getOrderStats()
+            setStats(data)
+            setStatus('success')
+        } catch (err) {
+            const message = parseErrorMessage(err)
+            setError(message)
+            setStatus('error')
+            toast.error(message)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchStats()
+    }, [fetchStats])
+
+    return {
+        stats,
+        status,
+        isLoading: status === 'loading',
+        isError: status === 'error',
+        error,
+        refetch: fetchStats,
+    }
+}
+
+/**
+ * Hook: cancel a pending order
+ */
+export function useCancelOrder() {
+    const [status, setStatus] = useState<FetchStatus>('idle')
+    const [error, setError] = useState<string | null>(null)
+
+    const cancelOrder = useCallback(async (orderId: number | string) => {
+        setStatus('loading')
+        setError(null)
+        try {
+            const data = await ordersApi.cancelOrder(orderId)
+            setStatus('success')
+            toast.success('Đã hủy đơn hàng thành công')
+            return data
+        } catch (err) {
+            const message = parseErrorMessage(err)
+            setError(message)
+            setStatus('error')
+            toast.error(message)
+            throw err
+        }
+    }, [])
+
+    return {
+        status,
+        isLoading: status === 'loading',
+        isError: status === 'error',
+        error,
+        cancelOrder,
     }
 }

@@ -39,6 +39,7 @@ import {
     ChevronRight,
     Shield,
     GraduationCap,
+    ReceiptText,
 } from 'lucide-react'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -121,7 +122,9 @@ export function Navbar() {
                         <DropdownMenuLabel className='text-white px-2 py-1.5'>
                             <div className='flex items-center'>
                                 <LayoutDashboard className='mr-2 h-4 w-4 text-blue-400' />
-                                <span className='font-medium'>Dashboard</span>
+                                <span className='font-medium'>
+                                    Bảng điều khiển
+                                </span>
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuItem
@@ -156,7 +159,9 @@ export function Navbar() {
                         <DropdownMenuLabel className='text-white px-2 py-1.5'>
                             <div className='flex items-center'>
                                 <LayoutDashboard className='mr-2 h-4 w-4 text-purple-400' />
-                                <span className='font-medium'>Dashboard</span>
+                                <span className='font-medium'>
+                                    Bảng điều khiển
+                                </span>
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuItem
@@ -206,7 +211,7 @@ export function Navbar() {
                         >
                             <Link to='/dashboard' className='flex items-center'>
                                 <LayoutDashboard className='mr-2 h-4 w-4 text-green-400' />
-                                Dashboard
+                                Bảng điều khiển
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -219,6 +224,15 @@ export function Navbar() {
                             >
                                 <GraduationCap className='mr-2 h-4 w-4 text-blue-600' />
                                 Khóa học của tôi
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link to='/orders' className='flex items-center'>
+                                <ReceiptText className='mr-2 h-4 w-4 text-yellow-300' />
+                                Đơn hàng của tôi
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -237,7 +251,7 @@ export function Navbar() {
                         <div className='px-4 py-2'>
                             <div className='flex items-center gap-2 text-gray-400 text-sm font-medium'>
                                 <LayoutDashboard className='h-4 w-4 text-blue-400' />
-                                Dashboard
+                                Bảng điều khiển
                             </div>
                         </div>
                         <Link
@@ -264,7 +278,7 @@ export function Navbar() {
                         <div className='px-4 py-2'>
                             <div className='flex items-center gap-2 text-gray-400 text-sm font-medium'>
                                 <LayoutDashboard className='h-4 w-4 text-purple-400' />
-                                Dashboard
+                                Bảng điều khiển
                             </div>
                         </div>
                         <Link
@@ -301,7 +315,7 @@ export function Navbar() {
                         onClick={() => setIsMobileMenuOpen(false)}
                     >
                         <LayoutDashboard className='h-5 w-5' />
-                        Dashboard
+                        Bảng điều khiển
                     </Link>
                 )
         }
@@ -578,7 +592,7 @@ export function Navbar() {
                                         className='flex items-center'
                                     >
                                         <User className='mr-2 h-4 w-4 text-gray-300' />
-                                        Hồ sơ
+                                        Thông tin của tôi
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -750,7 +764,7 @@ export function Navbar() {
                                                     setIsMobileMenuOpen(false)
                                                 }
                                             >
-                                                Hồ sơ
+                                                Thông tin của tôi
                                             </Link>
                                             <Link
                                                 to='/settings'

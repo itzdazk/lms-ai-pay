@@ -379,16 +379,12 @@ export interface CreateOrderRequest {
 export interface OrderFilters {
     page?: number
     limit?: number
-    paymentStatus?:
-        | 'PENDING'
-        | 'PAID'
-        | 'FAILED'
-        | 'REFUNDED'
-        | 'PARTIALLY_REFUNDED'
-    paymentGateway?: 'VNPay' | 'MoMo'
+    paymentStatus?: string
+    paymentGateway?: string
     startDate?: string
     endDate?: string
-    sort?: 'newest' | 'oldest' | 'amount'
+    sort?: string
+    search?: string
 }
 
 // =====================================================
