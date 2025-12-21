@@ -122,15 +122,15 @@ export function OrderFilters({
     const getStatusBadgeClassName = (status: string) => {
         switch (status) {
             case 'PAID':
-                return 'bg-green-600/20 text-green-300 border border-green-500/40'
+                return 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40'
             case 'PENDING':
-                return 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'
+                return 'bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40'
             case 'FAILED':
-                return 'bg-red-600/20 text-red-300 border border-red-500/40'
+                return 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40'
             case 'REFUNDED':
-                return 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
+                return 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
             case 'PARTIALLY_REFUNDED':
-                return 'bg-orange-600/20 text-orange-300 border border-orange-500/40'
+                return 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40'
             default:
                 return ''
         }

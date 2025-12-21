@@ -200,10 +200,10 @@ export function OrderHistoryPage() {
     return (
         <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
             <div className='mb-6'>
-                <h1 className='text-3xl font-bold text-white mb-2'>
+                <h1 className='text-3xl font-bold text-gray-900 dark:text-white mb-2'>
                     Lịch sử đơn hàng
                 </h1>
-                <p className='text-gray-400'>
+                <p className='text-gray-600 dark:text-gray-400'>
                     Xem và quản lý tất cả đơn hàng của bạn
                 </p>
             </div>
@@ -232,10 +232,10 @@ export function OrderHistoryPage() {
 
             {/* Cancel Order Dialog */}
             <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+                <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white'>
                     <DialogHeader>
                         <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
-                        <DialogDescription className='text-gray-400'>
+                        <DialogDescription className='text-gray-600 dark:text-gray-400'>
                             Bạn có chắc chắn muốn hủy đơn hàng này? Hành động
                             này không thể hoàn tác.
                         </DialogDescription>
@@ -244,7 +244,7 @@ export function OrderHistoryPage() {
                         <Button
                             variant='outline'
                             onClick={() => setCancelDialogOpen(false)}
-                            className='border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F]'
+                            className='border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
                         >
                             Hủy
                         </Button>

@@ -56,8 +56,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             value: stats.total,
             icon: ShoppingBag,
             color: 'text-blue-600 dark:text-blue-400',
-            bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-            borderColor: 'border-blue-200 dark:border-blue-900',
+            bgColor: 'bg-blue-200 dark:bg-blue-950/30',
+            borderColor: 'border-blue-400 dark:border-blue-900',
             isPrice: false,
             change: null,
         },
@@ -66,8 +66,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             value: stats.paid,
             icon: CheckCircle,
             color: 'text-green-600 dark:text-green-400',
-            bgColor: 'bg-green-50 dark:bg-green-950/30',
-            borderColor: 'border-green-200 dark:border-green-900',
+            bgColor: 'bg-green-200 dark:bg-green-950/30',
+            borderColor: 'border-green-400 dark:border-green-900',
             isPrice: false,
             change:
                 stats.total > 0
@@ -79,8 +79,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             value: stats.pending,
             icon: Clock,
             color: 'text-yellow-600 dark:text-yellow-400',
-            bgColor: 'bg-yellow-50 dark:bg-yellow-950/30',
-            borderColor: 'border-yellow-200 dark:border-yellow-900',
+            bgColor: 'bg-yellow-200 dark:bg-yellow-950/30',
+            borderColor: 'border-yellow-400 dark:border-yellow-900',
             isPrice: false,
             change: null,
         },
@@ -89,8 +89,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             value: stats.failed,
             icon: XCircle,
             color: 'text-red-600 dark:text-red-400',
-            bgColor: 'bg-red-50 dark:bg-red-950/30',
-            borderColor: 'border-red-200 dark:border-red-900',
+            bgColor: 'bg-red-200 dark:bg-red-950/30',
+            borderColor: 'border-red-400 dark:border-red-900',
             isPrice: false,
             change: null,
         },
@@ -99,8 +99,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             value: stats.refunded,
             icon: RefreshCw,
             color: 'text-purple-600 dark:text-purple-400',
-            bgColor: 'bg-purple-50 dark:bg-purple-950/30',
-            borderColor: 'border-purple-200 dark:border-purple-900',
+            bgColor: 'bg-purple-200 dark:bg-purple-950/30',
+            borderColor: 'border-purple-400 dark:border-purple-900',
             isPrice: false,
             change: null,
         },
@@ -109,8 +109,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             value: stats.totalSpent,
             icon: DollarSign,
             color: 'text-orange-600 dark:text-orange-400',
-            bgColor: 'bg-orange-50 dark:bg-orange-950/30',
-            borderColor: 'border-orange-200 dark:border-orange-900',
+            bgColor: 'bg-orange-200 dark:bg-orange-950/30',
+            borderColor: 'border-orange-400 dark:border-orange-900',
             isPrice: true,
             change: null,
         },
@@ -142,7 +142,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
                             </div>
                             {stat.change && (
                                 <div className='flex items-center text-xs text-muted-foreground'>
-                                    <TrendingUp className='h-3 w-3 mr-1 text-green-600' />
+                                    <TrendingUp className='h-3 w-3 mr-1 text-green-600 dark:text-green-400' />
                                     <span>{stat.change} của tổng</span>
                                 </div>
                             )}

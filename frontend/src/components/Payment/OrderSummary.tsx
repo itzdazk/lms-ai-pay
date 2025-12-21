@@ -24,7 +24,7 @@ export function OrderSummary({
         return (
             <Card className={className}>
                 <CardHeader>
-                    <CardTitle className='text-white'>
+                    <CardTitle className='text-gray-900 dark:text-white'>
                         Chi tiết đơn hàng
                     </CardTitle>
                 </CardHeader>
@@ -34,7 +34,7 @@ export function OrderSummary({
                         <Skeleton className='h-4 w-3/4' />
                         <Skeleton className='h-4 w-1/2' />
                     </div>
-                    <Separator className='bg-[#2D2D2D]' />
+                    <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
                     <div className='space-y-2'>
                         <Skeleton className='h-4 w-full' />
                         <Skeleton className='h-4 w-5/6' />
@@ -49,12 +49,12 @@ export function OrderSummary({
         return (
             <Card className={className}>
                 <CardHeader>
-                    <CardTitle className='text-white'>
+                    <CardTitle className='text-gray-900 dark:text-white'>
                         Chi tiết đơn hàng
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className='text-sm text-gray-400'>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
                         Không tìm thấy thông tin khóa học. Vui lòng thử lại.
                     </p>
                 </CardContent>
@@ -76,9 +76,15 @@ export function OrderSummary({
         (course as Course & { thumbnail?: string }).thumbnail
 
     return (
-        <Card className={`bg-[#1A1A1A] border-[#2D2D2D] ${className || ''}`}>
+        <Card
+            className={`bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] ${
+                className || ''
+            }`}
+        >
             <CardHeader>
-                <CardTitle className='text-white'>Chi tiết đơn hàng</CardTitle>
+                <CardTitle className='text-gray-900 dark:text-white'>
+                    Chi tiết đơn hàng
+                </CardTitle>
             </CardHeader>
             <CardContent className='space-y-6'>
                 <div>
@@ -89,16 +95,16 @@ export function OrderSummary({
                             className='w-full h-32 object-cover rounded-lg mb-3'
                         />
                     )}
-                    <h3 className='font-semibold mb-2 line-clamp-2 text-white'>
+                    <h3 className='font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-white'>
                         {course.title}
                     </h3>
                     {course.instructor?.fullName && (
-                        <p className='text-sm text-gray-400 mb-3'>
+                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-3'>
                             {course.instructor.fullName}
                         </p>
                     )}
 
-                    <div className='space-y-2 text-sm text-gray-400'>
+                    <div className='space-y-2 text-sm text-gray-600 dark:text-gray-400'>
                         <div className='flex items-center gap-2'>
                             <BookOpen className='h-4 w-4' />
                             <span>{lessonsCount || 0} bài học</span>
@@ -114,10 +120,10 @@ export function OrderSummary({
                     </div>
                 </div>
 
-                <Separator className='bg-[#2D2D2D]' />
+                <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
 
                 <div className='space-y-3'>
-                    <div className='flex justify-between text-gray-400'>
+                    <div className='flex justify-between text-gray-600 dark:text-gray-400'>
                         <span>Giá gốc:</span>
                         <span
                             className={
@@ -139,17 +145,19 @@ export function OrderSummary({
                             </span>
                         </div>
                     )}
-                    <Separator className='bg-[#2D2D2D]' />
+                    <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
                     <div className='flex justify-between items-center'>
-                        <span className='text-xl text-white'>Tổng cộng:</span>
-                        <span className='text-2xl text-blue-500'>
+                        <span className='text-xl text-gray-900 dark:text-white'>
+                            Tổng cộng:
+                        </span>
+                        <span className='text-2xl text-blue-600 dark:text-blue-500'>
                             {priceInfo.displayPrice}
                         </span>
                     </div>
                 </div>
 
                 {priceInfo.hasDiscount && (
-                    <div className='text-xs text-gray-400'>
+                    <div className='text-xs text-gray-600 dark:text-gray-400'>
                         Tiết kiệm {priceInfo.discountPercentage}% so với giá
                         gốc.
                     </div>
