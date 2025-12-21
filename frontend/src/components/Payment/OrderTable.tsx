@@ -1,7 +1,16 @@
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { DarkOutlineButton } from '../ui/buttons'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../ui/dialog'
 import {
     DarkOutlineTable,
     DarkOutlineTableBody,
@@ -81,6 +90,36 @@ export function OrderTable({
     onCancel,
     cancelLoading,
 }: OrderTableProps) {
+    // Cancel order dialog state
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+    const [orderToCancel, setOrderToCancel] = useState<{
+        id: number
+        orderCode: string
+    } | null>(null)
+
+    // Handle cancel click - open dialog
+    const handleCancelClick = useCallback(
+        (orderId: number, orderCode: string) => {
+            setOrderToCancel({ id: orderId, orderCode })
+            setCancelDialogOpen(true)
+        },
+        []
+    )
+
+    // Handle cancel confirm
+    const handleCancelConfirm = useCallback(async () => {
+        if (!orderToCancel || !onCancel) return
+
+        try {
+            await onCancel(orderToCancel.id)
+            setCancelDialogOpen(false)
+            setOrderToCancel(null)
+        } catch (error) {
+            // Error is already handled in the parent
+            // Keep dialog open so user can retry
+        }
+    }, [orderToCancel, onCancel])
+
     if (loading) {
         return (
             <div className='rounded-lg border border-gray-300 dark:border-[#2D2D2D] overflow-hidden'>
@@ -216,7 +255,10 @@ export function OrderTable({
                                                 variant='outline'
                                                 className='h-8 border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300'
                                                 onClick={() =>
-                                                    onCancel(order.id)
+                                                    handleCancelClick(
+                                                        order.id,
+                                                        order.orderCode
+                                                    )
                                                 }
                                                 disabled={
                                                     cancelLoading === order.id
@@ -241,6 +283,43 @@ export function OrderTable({
                     ))}
                 </DarkOutlineTableBody>
             </DarkOutlineTable>
+
+            {/* Cancel Order Dialog */}
+            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white'>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+                        <DialogDescription className='text-gray-600 dark:text-gray-400'>
+                            Bạn có chắc chắn muốn hủy đơn hàng{' '}
+                            <span className='font-mono font-semibold'>
+                                {orderToCancel?.orderCode}
+                            </span>
+                            ? Hành động này không thể hoàn tác.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant='outline'
+                            onClick={() => setCancelDialogOpen(false)}
+                            className='border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={handleCancelConfirm}
+                            disabled={
+                                cancelLoading === orderToCancel?.id ||
+                                !orderToCancel
+                            }
+                            className='bg-red-600 hover:bg-red-700 text-white'
+                        >
+                            {cancelLoading === orderToCancel?.id
+                                ? 'Đang xử lý...'
+                                : 'Xác nhận hủy'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

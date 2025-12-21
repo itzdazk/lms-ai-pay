@@ -8,15 +8,6 @@ import {
     type OrderFilters as OrderFiltersType,
 } from '../components/Payment/OrderFilters'
 import { useOrders, useOrderStats, useCancelOrder } from '../hooks/useOrders'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '../components/ui/dialog'
-import { Button } from '../components/ui/button'
 
 export function OrderHistoryPage() {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -34,8 +25,7 @@ export function OrderHistoryPage() {
         search: searchParams.get('search') || undefined,
     })
 
-    // Cancel order dialog
-    const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+    // Cancel order state
     const [orderToCancel, setOrderToCancel] = useState<number | null>(null)
 
     // Hooks
@@ -79,24 +69,21 @@ export function OrderHistoryPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [])
 
-    // Handle cancel order
-    const handleCancelClick = useCallback((orderId: number) => {
-        setOrderToCancel(orderId)
-        setCancelDialogOpen(true)
-    }, [])
-
-    const handleCancelConfirm = useCallback(async () => {
-        if (!orderToCancel) return
-
-        try {
-            await cancelOrder(orderToCancel)
-            setCancelDialogOpen(false)
-            setOrderToCancel(null)
-            refetch() // Refresh orders list
-        } catch (error) {
-            // Error is already handled in the hook
-        }
-    }, [orderToCancel, cancelOrder, refetch])
+    // Handle cancel order - called from OrderTable dialog
+    const handleCancelOrder = useCallback(
+        async (orderId: number) => {
+            setOrderToCancel(orderId)
+            try {
+                await cancelOrder(orderId)
+                setOrderToCancel(null)
+                refetch() // Refresh orders list
+            } catch (error) {
+                // Error is already handled in the hook
+                setOrderToCancel(null)
+            }
+        },
+        [cancelOrder, refetch]
+    )
 
     // Clear filters
     const clearFilters = useCallback(() => {
@@ -223,43 +210,12 @@ export function OrderHistoryPage() {
             <OrderTable
                 orders={orders}
                 loading={isLoading}
-                onCancel={handleCancelClick}
+                onCancel={handleCancelOrder}
                 cancelLoading={cancelLoading ? orderToCancel : null}
             />
 
             {/* Pagination */}
             {pagination.totalPages > 1 && renderPagination()}
-
-            {/* Cancel Order Dialog */}
-            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-                <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white'>
-                    <DialogHeader>
-                        <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
-                        <DialogDescription className='text-gray-600 dark:text-gray-400'>
-                            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động
-                            này không thể hoàn tác.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant='outline'
-                            onClick={() => setCancelDialogOpen(false)}
-                            className='border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
-                        >
-                            Hủy
-                        </Button>
-                        <Button
-                            onClick={handleCancelConfirm}
-                            disabled={cancelLoading !== null}
-                            className='bg-red-600 hover:bg-red-700 text-white'
-                        >
-                            {cancelLoading !== null
-                                ? 'Đang xử lý...'
-                                : 'Xác nhận hủy'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     )
 }

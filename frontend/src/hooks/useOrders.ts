@@ -72,26 +72,26 @@ export function useOrderById(orderId?: number | string) {
     const [status, setStatus] = useState<FetchStatus>('idle')
     const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
+    const fetchOrder = useCallback(async () => {
         if (!orderId) return
 
-        const fetchOrder = async () => {
-            setStatus('loading')
-            setError(null)
-            try {
-                const data = await ordersApi.getOrderById(orderId)
-                setOrder(data)
-                setStatus('success')
-            } catch (err) {
-                const message = parseErrorMessage(err)
-                setError(message)
-                setStatus('error')
-                toast.error(message)
-            }
+        setStatus('loading')
+        setError(null)
+        try {
+            const data = await ordersApi.getOrderById(orderId)
+            setOrder(data)
+            setStatus('success')
+        } catch (err) {
+            const message = parseErrorMessage(err)
+            setError(message)
+            setStatus('error')
+            toast.error(message)
         }
-
-        fetchOrder()
     }, [orderId])
+
+    useEffect(() => {
+        fetchOrder()
+    }, [fetchOrder])
 
     return {
         order,
@@ -99,6 +99,7 @@ export function useOrderById(orderId?: number | string) {
         isLoading: status === 'loading',
         isError: status === 'error',
         error,
+        refetch: fetchOrder,
     }
 }
 

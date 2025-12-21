@@ -38,6 +38,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { MyCoursesPage } from './pages/MyCoursesPage'
 import { EnrollmentDetailPage } from './pages/EnrollmentDetailPage'
 import { OrderHistoryPage } from './pages/OrderHistoryPage'
+import { OrderDetailPage } from './pages/OrderDetailPage'
 
 // Instructor Pages
 import { InstructorDashboard } from './pages/InstructorDashboard'
@@ -188,6 +189,22 @@ export default function App() {
                                                     ]}
                                                 >
                                                     <OrderHistoryPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/orders/:id'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'STUDENT',
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <OrderDetailPage />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
