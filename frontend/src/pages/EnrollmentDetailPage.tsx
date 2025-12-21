@@ -334,7 +334,7 @@ export function EnrollmentDetailPage() {
                                                     asChild
                                                 >
                                                     <Link
-                                                        to={`/learn/${course.id}?lesson=${lesson.id}`}
+                                                        to={`/courses/${course.slug}/lessons?lesson=${lesson.id}`}
                                                     >
                                                         <PlayCircle className='h-4 w-4' />
                                                     </Link>
@@ -468,7 +468,7 @@ export function EnrollmentDetailPage() {
                                                 <Button
                                                     onClick={() =>
                                                         navigate(
-                                                            `/learn/${course.id}`
+                                                            `/courses/${course.slug}/lessons`
                                                         )
                                                     }
                                                     variant='outline'
@@ -482,7 +482,7 @@ export function EnrollmentDetailPage() {
                                             <Button
                                                 onClick={() =>
                                                     navigate(
-                                                        `/learn/${course.id}`
+                                                        `/courses/${course.slug}/lessons`
                                                     )
                                                 }
                                                 className='w-full bg-foreground text-background hover:bg-foreground/90'

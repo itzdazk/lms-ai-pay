@@ -309,7 +309,9 @@ export function PaymentSuccessPage() {
                                             size='lg'
                                             className='gap-2'
                                         >
-                                            <Link to={`/learn/${course.id}`}>
+                                            <Link
+                                                to={`/courses/${course.slug}/lessons`}
+                                            >
                                                 Bắt đầu học ngay
                                                 <ArrowRight className='ml-2 h-4 w-4' />
                                             </Link>

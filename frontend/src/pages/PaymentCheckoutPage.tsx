@@ -112,7 +112,9 @@ export function PaymentCheckoutPage() {
                     asChild
                     className='bg-blue-600 hover:bg-blue-700 text-white'
                 >
-                    <Link to={`/learn/${course.id}`}>Bắt đầu học ngay</Link>
+                    <Link to={`/courses/${course.slug}/lessons`}>
+                        Bắt đầu học ngay
+                    </Link>
                 </Button>
             </div>
         )

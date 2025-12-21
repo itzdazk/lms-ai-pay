@@ -66,7 +66,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
     }
 
     const handleContinueLearning = () => {
-        navigate(`/learn/${course.id}`)
+        navigate(`/courses/${course.slug}/lessons`)
     }
 
     const handleViewCertificate = () => {

@@ -78,7 +78,7 @@ export function EnrollmentButton({
                 }
 
                 setTimeout(() => {
-                    navigate(`/learn/${course.id}`)
+                    navigate(`/courses/${course.slug}/lessons`)
                 }, 1000)
             } else {
                 console.error('Unexpected response structure:', response.data)
@@ -96,7 +96,7 @@ export function EnrollmentButton({
     }
 
     const handleGoToCourse = () => {
-        navigate(`/learn/${course.id}`)
+        navigate(`/courses/${course.slug}/lessons`)
     }
 
     if (isLoading) {
