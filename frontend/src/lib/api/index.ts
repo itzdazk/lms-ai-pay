@@ -11,6 +11,8 @@ export { adminCoursesApi } from './admin-courses'
 export { enrollmentsApi } from './enrollments'
 export { ordersApi } from './orders'
 export { paymentsApi } from './payments'
+export { transactionsApi } from './transactions'
+export type { TransactionFilters } from './transactions'
 export type {
     EnrollmentWithCourse,
     EnrollmentCheckResponse,

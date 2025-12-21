@@ -16,6 +16,7 @@ import { CreditCard, Wallet } from 'lucide-react'
 type TransactionListProps = {
     transactions: PaymentTransaction[]
     loading?: boolean
+    onTransactionClick?: (transaction: PaymentTransaction) => void
 }
 
 function getStatusBadge(status?: PaymentTransaction['status']) {
@@ -79,6 +80,7 @@ function getGatewayBadge(gateway: PaymentTransaction['paymentGateway']) {
 export function TransactionList({
     transactions,
     loading,
+    onTransactionClick,
 }: TransactionListProps) {
     if (loading) {
         return (
@@ -161,7 +163,15 @@ export function TransactionList({
                 </DarkOutlineTableHeader>
                 <DarkOutlineTableBody>
                     {transactions.map((transaction) => (
-                        <DarkOutlineTableRow key={transaction.id}>
+                        <DarkOutlineTableRow
+                            key={transaction.id}
+                            className={
+                                onTransactionClick
+                                    ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F] transition-colors'
+                                    : ''
+                            }
+                            onClick={() => onTransactionClick?.(transaction)}
+                        >
                             <DarkOutlineTableCell className='font-mono text-sm text-gray-600 dark:text-gray-400'>
                                 #{transaction.id}
                             </DarkOutlineTableCell>
