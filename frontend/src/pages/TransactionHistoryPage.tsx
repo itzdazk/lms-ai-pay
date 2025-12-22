@@ -30,6 +30,7 @@ export function TransactionHistoryPage() {
             (searchParams.get('paymentGateway') as any) || undefined,
         startDate: searchParams.get('startDate') || undefined,
         endDate: searchParams.get('endDate') || undefined,
+        transactionId: searchParams.get('transactionId') || undefined,
     })
 
     // Transaction detail dialog
@@ -50,6 +51,8 @@ export function TransactionHistoryPage() {
             params.set('paymentGateway', filters.paymentGateway)
         if (filters.startDate) params.set('startDate', filters.startDate)
         if (filters.endDate) params.set('endDate', filters.endDate)
+        if (filters.transactionId)
+            params.set('transactionId', filters.transactionId)
 
         setSearchParams(params, { replace: true })
     }, [filters, setSearchParams])

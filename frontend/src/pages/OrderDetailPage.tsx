@@ -202,7 +202,9 @@ export function OrderDetailPage() {
               if (orderId) {
                   try {
                       setIsLoading(true)
-                      const orderData = await adminOrdersApi.getOrderById(orderId)
+                      const orderData = await adminOrdersApi.getOrderById(
+                          orderId
+                      )
                       setOrder(orderData)
                   } catch (error: any) {
                       console.error('Error refetching admin order:', error)
@@ -450,7 +452,9 @@ export function OrderDetailPage() {
                     <DarkOutlineButton asChild>
                         <Link to={isAdmin ? '/admin/orders' : '/orders'}>
                             <ArrowLeft className='mr-2 h-4 w-4' />
-                            {isAdmin ? 'Quay lại quản lý đơn hàng' : 'Quay lại lịch sử đơn hàng'}
+                            {isAdmin
+                                ? 'Quay lại quản lý đơn hàng'
+                                : 'Quay lại lịch sử đơn hàng'}
                         </Link>
                     </DarkOutlineButton>
                 </div>
@@ -466,9 +470,9 @@ export function OrderDetailPage() {
             {/* Header */}
             <div className='mb-6'>
                 <DarkOutlineButton asChild variant='ghost' className='mb-4'>
-                    <Link to={isAdmin ? '/admin/orders' : '/orders'}>
+                    <Link to={isAdmin ? '/admin/dashboard' : '/orders'}>
                         <ArrowLeft className='mr-2 h-4 w-4' />
-                        {isAdmin ? 'Quay lại quản lý đơn hàng' : 'Quay lại lịch sử đơn hàng'}
+                        {isAdmin ? 'Quay lại' : 'Quay lại lịch sử đơn hàng'}
                     </Link>
                 </DarkOutlineButton>
                 <div className='flex items-center justify-between'>
@@ -478,7 +482,9 @@ export function OrderDetailPage() {
                         </h1>
                         <p className='text-gray-600 dark:text-gray-400'>
                             Mã đơn:{' '}
-                            <span className='font-mono'>{finalOrder.orderCode}</span>
+                            <span className='font-mono'>
+                                {finalOrder.orderCode}
+                            </span>
                         </p>
                     </div>
                     {finalOrder.paymentStatus === 'PENDING' && (
@@ -521,7 +527,9 @@ export function OrderDetailPage() {
                                         Trạng thái
                                     </p>
                                     <div>
-                                        {getStatusBadge(finalOrder.paymentStatus)}
+                                        {getStatusBadge(
+                                            finalOrder.paymentStatus
+                                        )}
                                     </div>
                                 </div>
                                 <div>
@@ -532,7 +540,9 @@ export function OrderDetailPage() {
                                         variant='outline'
                                         className='border-gray-300 text-gray-700 dark:border-[#2D2D2D] dark:text-gray-300 flex items-center gap-1.5 w-fit'
                                     >
-                                        {getGatewayIcon(finalOrder.paymentGateway)}
+                                        {getGatewayIcon(
+                                            finalOrder.paymentGateway
+                                        )}
                                         {finalOrder.paymentGateway}
                                     </Badge>
                                 </div>
@@ -571,7 +581,10 @@ export function OrderDetailPage() {
                                     <div className='flex justify-between text-green-500'>
                                         <span>Giảm giá:</span>
                                         <span>
-                                            -{formatPrice(finalOrder.discountAmount)}
+                                            -
+                                            {formatPrice(
+                                                finalOrder.discountAmount
+                                            )}
                                         </span>
                                     </div>
                                 )}
@@ -592,13 +605,17 @@ export function OrderDetailPage() {
                                     <div className='flex justify-between text-purple-500'>
                                         <span>Đã hoàn tiền:</span>
                                         <span className='font-semibold'>
-                                            {formatPrice(finalOrder.refundAmount)}
+                                            {formatPrice(
+                                                finalOrder.refundAmount
+                                            )}
                                         </span>
                                     </div>
                                     {finalOrder.refundedAt && (
                                         <p className='text-xs text-gray-500 dark:text-gray-400'>
                                             Ngày hoàn tiền:{' '}
-                                            {formatDateTime(finalOrder.refundedAt)}
+                                            {formatDateTime(
+                                                finalOrder.refundedAt
+                                            )}
                                         </p>
                                     )}
                                 </>
@@ -743,37 +760,47 @@ export function OrderDetailPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className='space-y-3'>
-                                {finalOrder.paymentStatus === 'PAID' && course && (
-                                    <DarkOutlineButton
-                                        asChild
-                                        className='w-full'
-                                    >
-                                        <Link
-                                            to={`/courses/${
-                                                course.slug || course.id
-                                            }`}
+                                {finalOrder.paymentStatus === 'PAID' &&
+                                    course && (
+                                        <DarkOutlineButton
+                                            asChild
+                                            className='w-full'
                                         >
-                                            Vào học ngay
-                                        </Link>
-                                    </DarkOutlineButton>
-                                )}
-                                {finalOrder.paymentStatus === 'FAILED' && course && (
-                                    <DarkOutlineButton
-                                        asChild
-                                        className='w-full'
-                                    >
-                                        <Link to={`/checkout/${course.id}`}>
-                                            Thử lại thanh toán
-                                        </Link>
-                                    </DarkOutlineButton>
-                                )}
+                                            <Link
+                                                to={`/courses/${
+                                                    course.slug || course.id
+                                                }`}
+                                            >
+                                                Vào học ngay
+                                            </Link>
+                                        </DarkOutlineButton>
+                                    )}
+                                {finalOrder.paymentStatus === 'FAILED' &&
+                                    course && (
+                                        <DarkOutlineButton
+                                            asChild
+                                            className='w-full'
+                                        >
+                                            <Link to={`/checkout/${course.id}`}>
+                                                Thử lại thanh toán
+                                            </Link>
+                                        </DarkOutlineButton>
+                                    )}
                                 <DarkOutlineButton
                                     asChild
                                     variant='outline'
                                     className='w-full'
                                 >
-                                    <Link to={isAdmin ? '/admin/orders' : '/orders'}>
-                                        {isAdmin ? 'Quản lý đơn hàng' : 'Xem tất cả đơn hàng'}
+                                    <Link
+                                        to={
+                                            isAdmin
+                                                ? '/admin/orders'
+                                                : '/orders'
+                                        }
+                                    >
+                                        {isAdmin
+                                            ? 'Quản lý đơn hàng'
+                                            : 'Xem tất cả đơn hàng'}
                                     </Link>
                                 </DarkOutlineButton>
                                 <DarkOutlineButton

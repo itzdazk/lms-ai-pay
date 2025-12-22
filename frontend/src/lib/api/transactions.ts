@@ -12,6 +12,7 @@ export interface TransactionFilters {
     startDate?: string
     endDate?: string
     userId?: number // Admin only
+    transactionId?: string // Search by transaction ID
 }
 
 /**
@@ -39,6 +40,8 @@ export const transactionsApi = {
         if (filters?.startDate) params.append('startDate', filters.startDate)
         if (filters?.endDate) params.append('endDate', filters.endDate)
         if (filters?.userId) params.append('userId', filters.userId.toString())
+        if (filters?.transactionId)
+            params.append('transactionId', filters.transactionId)
 
         const response = await apiClient.get<
             ApiResponse<{

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Loader2 } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { ShoppingCart, Loader2, History } from 'lucide-react'
 import {
     adminOrdersApi,
     type AdminOrderFilters,
@@ -16,6 +16,7 @@ import {
     OrdersPagination,
     OrderDialogs,
 } from '../../components/admin/orders'
+import { DarkOutlineButton } from '../../components/ui/buttons'
 
 export function OrdersPage() {
     const { user: currentUser, loading: authLoading } = useAuth()
@@ -330,13 +331,30 @@ export function OrdersPage() {
         <div className='w-full px-4 py-4 bg-background text-foreground min-h-screen'>
             <div className='w-full'>
                 <div className='mb-6'>
-                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
-                        <ShoppingCart className='h-8 w-8' />
-                        Quản lý Đơn hàng
-                    </h1>
-                    <p className='text-muted-foreground'>
-                        Xem và quản lý tất cả đơn hàng trong hệ thống
-                    </p>
+                    <div className='flex items-start justify-between gap-4 mb-2'>
+                        <div>
+                            <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
+                                <ShoppingCart className='h-8 w-8' />
+                                Quản lý Đơn hàng
+                            </h1>
+                            <p className='text-muted-foreground'>
+                                Xem và quản lý tất cả đơn hàng trong hệ thống
+                            </p>
+                        </div>
+                        <DarkOutlineButton
+                            asChild
+                            variant='outline'
+                            className='shrink-0'
+                        >
+                            <Link
+                                to='/transactions'
+                                className='flex items-center justify-center gap-2'
+                            >
+                                <History className='h-4 w-4' />
+                                Xem toàn bộ lịch sử giao dịch
+                            </Link>
+                        </DarkOutlineButton>
+                    </div>
                 </div>
 
                 {/* Stats */}

@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import { Calendar } from '../ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import { X, Calendar as CalendarIcon, SlidersHorizontal } from 'lucide-react'
+import {
+    X,
+    Calendar as CalendarIcon,
+    SlidersHorizontal,
+    Search,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import type { TransactionFilters as TransactionFiltersType } from '../../lib/api/transactions'
@@ -58,13 +64,15 @@ export function TransactionFilters({
         filters.status ||
         filters.paymentGateway ||
         filters.startDate ||
-        filters.endDate
+        filters.endDate ||
+        filters.transactionId
 
     const activeFilterCount = [
         filters.status,
         filters.paymentGateway,
         filters.startDate,
         filters.endDate,
+        filters.transactionId,
     ].filter(Boolean).length
 
     const handleDateSelect = (
@@ -104,6 +112,37 @@ export function TransactionFilters({
     return (
         <Card className='mb-6 overflow-hidden border-2 shadow-sm'>
             <CardContent className='p-6 space-y-6'>
+                {/* Search by Transaction ID */}
+                <div>
+                    <div className='relative'>
+                        <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                        <Input
+                            type='text'
+                            placeholder='Tìm kiếm theo mã giao dịch...'
+                            value={filters.transactionId || ''}
+                            onChange={(e) =>
+                                onFilterChange(
+                                    'transactionId',
+                                    e.target.value || undefined
+                                )
+                            }
+                            className='pl-10 h-11'
+                        />
+                        {filters.transactionId && (
+                            <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() =>
+                                    onFilterChange('transactionId', undefined)
+                                }
+                                className='absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0'
+                            >
+                                <X className='h-4 w-4' />
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
                 {/* Quick Actions */}
                 <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2'>
