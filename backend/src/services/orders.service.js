@@ -308,6 +308,8 @@ class OrdersService {
                             thumbnailUrl: true,
                             price: true,
                             discountPrice: true,
+                            totalLessons: true,
+                            durationHours: true,
                             instructor: {
                                 select: {
                                     id: true,
@@ -359,6 +361,8 @@ class OrdersService {
                         price: true,
                         discountPrice: true,
                         description: true,
+                        totalLessons: true,
+                        durationHours: true,
                         instructor: {
                             select: {
                                 id: true,
@@ -419,6 +423,8 @@ class OrdersService {
                         price: true,
                         discountPrice: true,
                         description: true,
+                        totalLessons: true,
+                        durationHours: true,
                         instructor: {
                             select: {
                                 id: true,
