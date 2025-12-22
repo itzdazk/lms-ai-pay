@@ -33,6 +33,7 @@ import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
 import { CategoriesPage } from './admin/CategoriesPage'
 import { TagsPage } from './admin/TagsPage'
+import { OrdersPage } from './admin/OrdersPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -213,7 +214,11 @@ export function AdminDashboard() {
       case 'analytics':
         return <AnalyticsView stats={displayStats} />;
       case 'orders':
-        return <OrdersManagement />;
+        return (
+          <div className="h-full">
+            <OrdersPage />
+          </div>
+        );
       case 'categories':
         return <CategoriesManagement />;
       case 'tags':
@@ -734,24 +739,6 @@ function AnalyticsView({ stats }: { stats: any }) {
   );
 }
 
-// Orders Management Component
-function OrdersManagement() {
-  return (
-    <div className="space-y-6">
-      <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-        <CardHeader>
-          <CardTitle className="text-white">Quản lý Đơn hàng</CardTitle>
-          <CardDescription className="text-gray-400">
-            Xem và quản lý tất cả đơn hàng trong hệ thống
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-400">Chức năng quản lý đơn hàng sẽ được triển khai sau.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 // Categories Management Component
 function CategoriesManagement() {

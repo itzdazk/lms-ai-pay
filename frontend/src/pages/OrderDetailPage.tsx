@@ -26,10 +26,13 @@ import { TransactionList } from '../components/Payment/TransactionList'
 import { TransactionFilters } from '../components/Payment/TransactionFilters'
 import { useOrderById, useCancelOrder } from '../hooks/useOrders'
 import { useTransactions } from '../hooks/useTransactions'
+import { useAuth } from '../contexts/AuthContext'
+import { adminOrdersApi } from '../lib/api/admin-orders'
 import type { TransactionFilters as TransactionFiltersType } from '../lib/api/transactions'
 import { formatPrice } from '../lib/courseUtils'
 import { formatDateTime } from '../lib/utils'
-import type { PaymentTransaction } from '../lib/api/types'
+import type { PaymentTransaction, Order } from '../lib/api/types'
+import { toast } from 'sonner'
 import {
     ArrowLeft,
     X,
@@ -127,6 +130,14 @@ export function OrderDetailPage() {
     const { id } = useParams<{ id: string }>()
     const [searchParams, setSearchParams] = useSearchParams()
     const orderId = id ? parseInt(id, 10) : undefined
+    const { user: currentUser } = useAuth()
+
+    // Check if user is admin
+    const isAdmin = currentUser?.role === 'ADMIN'
+
+    // Order state (for admin, we'll fetch manually)
+    const [order, setOrder] = useState<Order | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
 
     // Cancel order dialog
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
@@ -152,9 +163,59 @@ export function OrderDetailPage() {
             endDate: searchParams.get('txEndDate') || undefined,
         })
 
-    // Hooks
-    const { order, isLoading, refetch } = useOrderById(orderId)
+    // Hooks - use regular hook for non-admin users
+    const {
+        order: regularOrder,
+        isLoading: regularLoading,
+        refetch: regularRefetch,
+    } = useOrderById(isAdmin ? undefined : orderId)
     const { cancelOrder, isLoading: cancelLoading } = useCancelOrder()
+
+    // Fetch order for admin
+    useEffect(() => {
+        if (isAdmin && orderId) {
+            const fetchAdminOrder = async () => {
+                try {
+                    setIsLoading(true)
+                    const orderData = await adminOrdersApi.getOrderById(orderId)
+                    setOrder(orderData)
+                } catch (error: any) {
+                    console.error('Error fetching admin order:', error)
+                    toast.error(
+                        error?.response?.data?.message ||
+                            'Không thể tải thông tin đơn hàng'
+                    )
+                    setOrder(null)
+                } finally {
+                    setIsLoading(false)
+                }
+            }
+            fetchAdminOrder()
+        }
+    }, [isAdmin, orderId])
+
+    // Use appropriate order and loading state
+    const finalOrder = isAdmin ? order : regularOrder
+    const finalIsLoading = isAdmin ? isLoading : regularLoading
+    const refetch = isAdmin
+        ? async () => {
+              if (orderId) {
+                  try {
+                      setIsLoading(true)
+                      const orderData = await adminOrdersApi.getOrderById(orderId)
+                      setOrder(orderData)
+                  } catch (error: any) {
+                      console.error('Error refetching admin order:', error)
+                      toast.error(
+                          error?.response?.data?.message ||
+                              'Không thể tải thông tin đơn hàng'
+                      )
+                  } finally {
+                      setIsLoading(false)
+                  }
+              }
+          }
+        : regularRefetch
     const {
         transactions: allTransactions,
         pagination: transactionPagination,
@@ -349,7 +410,7 @@ export function OrderDetailPage() {
     }
 
     // Loading state
-    if (isLoading) {
+    if (finalIsLoading) {
         return (
             <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
                 <div className='mb-6'>
@@ -376,7 +437,7 @@ export function OrderDetailPage() {
     }
 
     // Error state
-    if (!order) {
+    if (!finalOrder) {
         return (
             <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
                 <div className='text-center py-12'>
@@ -387,9 +448,9 @@ export function OrderDetailPage() {
                         Đơn hàng không tồn tại hoặc bạn không có quyền xem.
                     </p>
                     <DarkOutlineButton asChild>
-                        <Link to='/orders'>
+                        <Link to={isAdmin ? '/admin/orders' : '/orders'}>
                             <ArrowLeft className='mr-2 h-4 w-4' />
-                            Quay lại lịch sử đơn hàng
+                            {isAdmin ? 'Quay lại quản lý đơn hàng' : 'Quay lại lịch sử đơn hàng'}
                         </Link>
                     </DarkOutlineButton>
                 </div>
@@ -397,17 +458,17 @@ export function OrderDetailPage() {
         )
     }
 
-    const transactions = order.paymentTransactions || []
-    const course = order.course
+    const transactions = finalOrder.paymentTransactions || []
+    const course = finalOrder.course
 
     return (
         <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
             {/* Header */}
             <div className='mb-6'>
                 <DarkOutlineButton asChild variant='ghost' className='mb-4'>
-                    <Link to='/orders'>
+                    <Link to={isAdmin ? '/admin/orders' : '/orders'}>
                         <ArrowLeft className='mr-2 h-4 w-4' />
-                        Quay lại lịch sử đơn hàng
+                        {isAdmin ? 'Quay lại quản lý đơn hàng' : 'Quay lại lịch sử đơn hàng'}
                     </Link>
                 </DarkOutlineButton>
                 <div className='flex items-center justify-between'>
@@ -417,10 +478,10 @@ export function OrderDetailPage() {
                         </h1>
                         <p className='text-gray-600 dark:text-gray-400'>
                             Mã đơn:{' '}
-                            <span className='font-mono'>{order.orderCode}</span>
+                            <span className='font-mono'>{finalOrder.orderCode}</span>
                         </p>
                     </div>
-                    {order.paymentStatus === 'PENDING' && (
+                    {finalOrder.paymentStatus === 'PENDING' && (
                         <Button
                             variant='outline'
                             className='border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300'
@@ -460,7 +521,7 @@ export function OrderDetailPage() {
                                         Trạng thái
                                     </p>
                                     <div>
-                                        {getStatusBadge(order.paymentStatus)}
+                                        {getStatusBadge(finalOrder.paymentStatus)}
                                     </div>
                                 </div>
                                 <div>
@@ -471,8 +532,8 @@ export function OrderDetailPage() {
                                         variant='outline'
                                         className='border-gray-300 text-gray-700 dark:border-[#2D2D2D] dark:text-gray-300 flex items-center gap-1.5 w-fit'
                                     >
-                                        {getGatewayIcon(order.paymentGateway)}
-                                        {order.paymentGateway}
+                                        {getGatewayIcon(finalOrder.paymentGateway)}
+                                        {finalOrder.paymentGateway}
                                     </Badge>
                                 </div>
                                 <div>
@@ -481,17 +542,17 @@ export function OrderDetailPage() {
                                     </p>
                                     <p className='text-sm text-gray-900 dark:text-white flex items-center gap-1.5'>
                                         <Calendar className='h-4 w-4' />
-                                        {formatDateTime(order.createdAt)}
+                                        {formatDateTime(finalOrder.createdAt)}
                                     </p>
                                 </div>
-                                {order.paidAt && (
+                                {finalOrder.paidAt && (
                                     <div>
                                         <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
                                             Ngày thanh toán
                                         </p>
                                         <p className='text-sm text-gray-900 dark:text-white flex items-center gap-1.5'>
                                             <Calendar className='h-4 w-4' />
-                                            {formatDateTime(order.paidAt)}
+                                            {formatDateTime(finalOrder.paidAt)}
                                         </p>
                                     </div>
                                 )}
@@ -503,14 +564,14 @@ export function OrderDetailPage() {
                                 <div className='flex justify-between text-gray-600 dark:text-gray-400'>
                                     <span>Giá gốc:</span>
                                     <span>
-                                        {formatPrice(order.originalPrice)}
+                                        {formatPrice(finalOrder.originalPrice)}
                                     </span>
                                 </div>
-                                {order.discountAmount > 0 && (
+                                {finalOrder.discountAmount > 0 && (
                                     <div className='flex justify-between text-green-500'>
                                         <span>Giảm giá:</span>
                                         <span>
-                                            -{formatPrice(order.discountAmount)}
+                                            -{formatPrice(finalOrder.discountAmount)}
                                         </span>
                                     </div>
                                 )}
@@ -520,30 +581,30 @@ export function OrderDetailPage() {
                                         Tổng cộng:
                                     </span>
                                     <span className='text-xl font-bold text-blue-600 dark:text-blue-500'>
-                                        {formatPrice(order.finalPrice)}
+                                        {formatPrice(finalOrder.finalPrice)}
                                     </span>
                                 </div>
                             </div>
 
-                            {order.refundAmount > 0 && (
+                            {finalOrder.refundAmount > 0 && (
                                 <>
                                     <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
                                     <div className='flex justify-between text-purple-500'>
                                         <span>Đã hoàn tiền:</span>
                                         <span className='font-semibold'>
-                                            {formatPrice(order.refundAmount)}
+                                            {formatPrice(finalOrder.refundAmount)}
                                         </span>
                                     </div>
-                                    {order.refundedAt && (
+                                    {finalOrder.refundedAt && (
                                         <p className='text-xs text-gray-500 dark:text-gray-400'>
                                             Ngày hoàn tiền:{' '}
-                                            {formatDateTime(order.refundedAt)}
+                                            {formatDateTime(finalOrder.refundedAt)}
                                         </p>
                                     )}
                                 </>
                             )}
 
-                            {order.notes && (
+                            {finalOrder.notes && (
                                 <>
                                     <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
                                     <div>
@@ -552,7 +613,7 @@ export function OrderDetailPage() {
                                             Ghi chú
                                         </p>
                                         <p className='text-sm text-gray-900 dark:text-white'>
-                                            {order.notes}
+                                            {finalOrder.notes}
                                         </p>
                                     </div>
                                 </>
@@ -561,7 +622,7 @@ export function OrderDetailPage() {
                     </Card>
 
                     {/* Billing Address */}
-                    {order.billingAddress && (
+                    {finalOrder.billingAddress && (
                         <Card className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D]'>
                             <CardHeader>
                                 <CardTitle className='text-gray-900 dark:text-white flex items-center gap-2'>
@@ -570,31 +631,31 @@ export function OrderDetailPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className='space-y-2'>
-                                {order.billingAddress.fullName && (
+                                {finalOrder.billingAddress.fullName && (
                                     <p className='text-sm text-gray-900 dark:text-white flex items-center gap-2'>
                                         <User className='h-4 w-4 text-gray-500' />
-                                        {order.billingAddress.fullName}
+                                        {finalOrder.billingAddress.fullName}
                                     </p>
                                 )}
-                                {order.billingAddress.email && (
+                                {finalOrder.billingAddress.email && (
                                     <p className='text-sm text-gray-900 dark:text-white flex items-center gap-2'>
                                         <Mail className='h-4 w-4 text-gray-500' />
-                                        {order.billingAddress.email}
+                                        {finalOrder.billingAddress.email}
                                     </p>
                                 )}
-                                {order.billingAddress.phone && (
+                                {finalOrder.billingAddress.phone && (
                                     <p className='text-sm text-gray-900 dark:text-white flex items-center gap-2'>
                                         <Phone className='h-4 w-4 text-gray-500' />
-                                        {order.billingAddress.phone}
+                                        {finalOrder.billingAddress.phone}
                                     </p>
                                 )}
-                                {order.billingAddress.address && (
+                                {finalOrder.billingAddress.address && (
                                     <p className='text-sm text-gray-600 dark:text-gray-400'>
-                                        {order.billingAddress.address}
-                                        {order.billingAddress.city &&
-                                            `, ${order.billingAddress.city}`}
-                                        {order.billingAddress.country &&
-                                            `, ${order.billingAddress.country}`}
+                                        {finalOrder.billingAddress.address}
+                                        {finalOrder.billingAddress.city &&
+                                            `, ${finalOrder.billingAddress.city}`}
+                                        {finalOrder.billingAddress.country &&
+                                            `, ${finalOrder.billingAddress.country}`}
                                     </p>
                                 )}
                             </CardContent>
@@ -682,7 +743,7 @@ export function OrderDetailPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className='space-y-3'>
-                                {order.paymentStatus === 'PAID' && course && (
+                                {finalOrder.paymentStatus === 'PAID' && course && (
                                     <DarkOutlineButton
                                         asChild
                                         className='w-full'
@@ -696,7 +757,7 @@ export function OrderDetailPage() {
                                         </Link>
                                     </DarkOutlineButton>
                                 )}
-                                {order.paymentStatus === 'FAILED' && course && (
+                                {finalOrder.paymentStatus === 'FAILED' && course && (
                                     <DarkOutlineButton
                                         asChild
                                         className='w-full'
@@ -711,8 +772,8 @@ export function OrderDetailPage() {
                                     variant='outline'
                                     className='w-full'
                                 >
-                                    <Link to='/orders'>
-                                        Xem tất cả đơn hàng
+                                    <Link to={isAdmin ? '/admin/orders' : '/orders'}>
+                                        {isAdmin ? 'Quản lý đơn hàng' : 'Xem tất cả đơn hàng'}
                                     </Link>
                                 </DarkOutlineButton>
                                 <DarkOutlineButton
@@ -742,7 +803,7 @@ export function OrderDetailPage() {
                         <DialogDescription className='text-gray-600 dark:text-gray-400'>
                             Bạn có chắc chắn muốn hủy đơn hàng{' '}
                             <span className='font-mono font-semibold'>
-                                {order.orderCode}
+                                {finalOrder.orderCode}
                             </span>
                             ? Hành động này không thể hoàn tác.
                         </DialogDescription>
