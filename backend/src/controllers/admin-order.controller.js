@@ -80,6 +80,24 @@ class AdminOrderController {
             'Revenue trend retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/admin/orders/:id
+     * @desc    Get order details by ID (Admin can view any order)
+     * @access  Private (Admin)
+     */
+    getOrderById = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const orderId = parseInt(id)
+
+        if (isNaN(orderId)) {
+            return ApiResponse.badRequest(res, 'Invalid order ID')
+        }
+
+        const order = await adminOrderService.getOrderById(orderId)
+
+        return ApiResponse.success(res, order, 'Order retrieved successfully')
+    })
 }
 
 export default new AdminOrderController()

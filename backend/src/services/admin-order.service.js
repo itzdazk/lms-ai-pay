@@ -328,6 +328,60 @@ class AdminOrderService {
 
         return trend
     }
+
+    /**
+     * Get order by ID (Admin only - can view any order)
+     * @param {number} orderId - Order ID
+     * @returns {Promise<Object>} Order
+     */
+    async getOrderById(orderId) {
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        thumbnailUrl: true,
+                        price: true,
+                        discountPrice: true,
+                        description: true,
+                        totalLessons: true,
+                        durationHours: true,
+                        instructor: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+                user: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        email: true,
+                        userName: true,
+                    },
+                },
+                paymentTransactions: {
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                },
+            },
+        })
+
+        if (!order) {
+            const error = new Error('Order not found')
+            error.statusCode = 404
+            throw error
+        }
+
+        return order
+    }
 }
 
 export default new AdminOrderService()

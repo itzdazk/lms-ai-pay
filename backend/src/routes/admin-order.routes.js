@@ -26,6 +26,14 @@ router.get('/stats', adminOrderController.getOrderStatistics)
 router.get('/revenue-trend', adminOrderController.getRevenueTrend)
 
 /**
+ * @route   GET /api/v1/admin/orders/:id
+ * @desc    Get order details by ID (Admin can view any order)
+ * @access  Private (Admin)
+ * @note    Must be defined before / route to avoid conflict
+ */
+router.get('/:id', adminOrderController.getOrderById)
+
+/**
  * @route   GET /api/v1/admin/orders
  * @desc    Get all orders with admin filters
  * @access  Private (Admin)
