@@ -1,9 +1,6 @@
 import { param, query } from 'express-validator'
 import { validate } from '../middlewares/validate.middleware.js'
-import {
-    PAYMENT_GATEWAY,
-    TRANSACTION_STATUS,
-} from '../config/constants.js'
+import { PAYMENT_GATEWAY, TRANSACTION_STATUS } from '../config/constants.js'
 
 const getTransactionsValidator = [
     query('page')
@@ -38,6 +35,11 @@ const getTransactionsValidator = [
         .optional()
         .isInt({ min: 1 })
         .withMessage('userId must be a positive integer'),
+    query('transactionId')
+        .optional()
+        .trim()
+        .notEmpty()
+        .withMessage('transactionId cannot be empty'),
     validate,
 ]
 
@@ -51,5 +53,3 @@ const getTransactionByIdValidator = [
 ]
 
 export { getTransactionsValidator, getTransactionByIdValidator }
-
-

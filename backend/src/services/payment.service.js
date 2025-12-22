@@ -240,7 +240,9 @@ class PaymentService {
             throw error
         }
         if (order.userId !== userId) {
-            const error = new Error('You are not authorized to pay for this order')
+            const error = new Error(
+                'You are not authorized to pay for this order'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -412,13 +414,17 @@ class PaymentService {
         }
 
         if (order.userId !== userId) {
-            const error = new Error('You are not authorized to pay for this order')
+            const error = new Error(
+                'You are not authorized to pay for this order'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
         if (order.paymentGateway !== PAYMENT_GATEWAY.MOMO) {
-            const error = new Error('Order is not assigned to MoMo payment gateway')
+            const error = new Error(
+                'Order is not assigned to MoMo payment gateway'
+            )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -1035,6 +1041,14 @@ class PaymentService {
             paymentGateway: filters.paymentGateway || undefined,
             status: filters.status || undefined,
             createdAt: filters.startDate || filters.endDate ? {} : undefined,
+        }
+
+        // Search by transactionId (partial match)
+        if (filters.transactionId) {
+            whereClause.transactionId = {
+                contains: filters.transactionId,
+                mode: 'insensitive',
+            }
         }
 
         if (filters.startDate) {
