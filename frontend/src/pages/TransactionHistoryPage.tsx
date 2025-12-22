@@ -86,6 +86,23 @@ export function TransactionHistoryPage() {
         })
     }, [])
 
+    function getTransactionStatusText(status: string | undefined): string {
+        switch (status) {
+            case 'SUCCESS':
+                return 'Thành công'
+            case 'PENDING':
+                return 'Đang chờ'
+            case 'FAILED':
+                return 'Thất bại'
+            case 'REFUNDED':
+                return 'Đã hoàn tiền'
+            case 'PARTIALLY_REFUNDED':
+                return 'Hoàn tiền một phần'
+            default:
+                return status || 'N/A'
+        }
+    }
+
     // Render pagination
     const renderPagination = () => {
         if (!pagination) return null
@@ -271,10 +288,18 @@ export function TransactionHistoryPage() {
                                                 : selectedTransaction.status ===
                                                   'FAILED'
                                                 ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40'
-                                                : 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
+                                                : selectedTransaction.status ===
+                                                  'REFUNDED'
+                                                ? 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
+                                                : selectedTransaction.status ===
+                                                  'PARTIALLY_REFUNDED'
+                                                ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40'
+                                                : 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-600/20 dark:text-gray-300 dark:border-gray-500/40'
                                         }
                                     >
-                                        {selectedTransaction.status || 'N/A'}
+                                        {getTransactionStatusText(
+                                            selectedTransaction.status
+                                        )}
                                     </Badge>
                                 </div>
                                 <div>
@@ -330,16 +355,6 @@ export function TransactionHistoryPage() {
                                         )}
                                     </p>
                                 </div>
-                                {selectedTransaction.ipAddress && (
-                                    <div>
-                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                            IP Address
-                                        </p>
-                                        <p className='font-mono text-sm text-gray-900 dark:text-white'>
-                                            {selectedTransaction.ipAddress}
-                                        </p>
-                                    </div>
-                                )}
                             </div>
 
                             {selectedTransaction.errorMessage && (
@@ -350,21 +365,6 @@ export function TransactionHistoryPage() {
                                     <p className='text-sm text-red-700 dark:text-red-400'>
                                         {selectedTransaction.errorMessage}
                                     </p>
-                                </div>
-                            )}
-
-                            {selectedTransaction.gatewayResponse && (
-                                <div>
-                                    <p className='text-sm font-semibold text-gray-900 dark:text-white mb-2'>
-                                        Gateway Response:
-                                    </p>
-                                    <pre className='p-4 bg-gray-50 dark:bg-[#1F1F1F] border border-gray-300 dark:border-[#2D2D2D] rounded-lg overflow-x-auto text-xs'>
-                                        {JSON.stringify(
-                                            selectedTransaction.gatewayResponse,
-                                            null,
-                                            2
-                                        )}
-                                    </pre>
                                 </div>
                             )}
                         </div>

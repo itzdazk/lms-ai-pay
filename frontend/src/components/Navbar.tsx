@@ -309,14 +309,32 @@ export function Navbar() {
                 )
             default:
                 return (
-                    <Link
-                        to='/dashboard'
-                        className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
-                        onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                        <LayoutDashboard className='h-5 w-5' />
-                        Bảng điều khiển
-                    </Link>
+                    <>
+                        <Link
+                            to='/dashboard'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <LayoutDashboard className='h-5 w-5' />
+                            Bảng điều khiển
+                        </Link>
+                        <Link
+                            to='/my-courses'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <GraduationCap className='h-5 w-5' />
+                            Khóa học của tôi
+                        </Link>
+                        <Link
+                            to='/orders'
+                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            <ReceiptText className='h-5 w-5' />
+                            Đơn hàng của tôi
+                        </Link>
+                    </>
                 )
         }
     }
