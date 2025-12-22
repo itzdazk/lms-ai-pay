@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { DarkOutlineTableRow, DarkOutlineTableCell } from '../../../components/ui/dark-outline-table'
+import {
+    DarkOutlineTableRow,
+    DarkOutlineTableCell,
+} from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import { MoreVertical, Eye, RotateCcw } from 'lucide-react'
@@ -90,7 +93,10 @@ export function OrderRow({
     // Close menu on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
                 setMenuOpen(false)
             }
         }
@@ -106,87 +112,103 @@ export function OrderRow({
 
     const getStatusBadge = (status: Order['paymentStatus']) => {
         const statusMap = {
-            PENDING: { label: 'Đang chờ', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
-            PAID: { label: 'Đã thanh toán', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
-            FAILED: { label: 'Thất bại', className: 'bg-red-500/20 text-red-400 border-red-500/30' },
-            REFUNDED: { label: 'Đã hoàn tiền', className: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-            PARTIALLY_REFUNDED: { label: 'Hoàn tiền một phần', className: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+            PENDING: {
+                label: 'Đang chờ',
+                className:
+                    'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+            },
+            PAID: {
+                label: 'Đã thanh toán',
+                className: 'bg-green-500/20 text-green-400 border-green-500/30',
+            },
+            FAILED: {
+                label: 'Thất bại',
+                className: 'bg-red-500/20 text-red-400 border-red-500/30',
+            },
+            REFUNDED: {
+                label: 'Đã hoàn tiền',
+                className:
+                    'bg-purple-500/20 text-purple-400 border-purple-500/30',
+            },
+            PARTIALLY_REFUNDED: {
+                label: 'Hoàn tiền một phần',
+                className:
+                    'bg-orange-500/20 text-orange-400 border-orange-500/30',
+            },
         }
         const statusInfo = statusMap[status] || statusMap.PENDING
         return (
-            <Badge className={statusInfo.className}>
-                {statusInfo.label}
-            </Badge>
+            <Badge className={statusInfo.className}>{statusInfo.label}</Badge>
         )
     }
 
-    const canRefund = order.paymentStatus === 'PAID' || order.paymentStatus === 'PARTIALLY_REFUNDED'
+    const canRefund =
+        order.paymentStatus === 'PAID' ||
+        order.paymentStatus === 'PARTIALLY_REFUNDED'
 
     return (
         <>
             <DarkOutlineTableRow
-                className="cursor-pointer"
+                className='cursor-pointer'
                 selected={isSelected}
                 onRowToggle={handleToggle}
             >
-                <DarkOutlineTableCell className="min-w-[120px]">
-                    <div className="flex flex-col gap-1">
-                        <span className="font-medium text-white">
+                <DarkOutlineTableCell className='min-w-[120px]'>
+                    <div className='flex flex-col gap-1'>
+                        <span className='font-medium text-white'>
                             {order.orderCode}
                         </span>
                         {order.user && (
-                            <span className="text-xs text-gray-400">
+                            <span className='text-xs text-gray-400'>
                                 {order.user.fullName}
                             </span>
                         )}
                     </div>
                 </DarkOutlineTableCell>
-                <DarkOutlineTableCell className="min-w-[200px]">
+                <DarkOutlineTableCell className='min-w-[200px]'>
                     {order.course ? (
-                        <div className="flex flex-col gap-1">
-                            <span className="text-white font-medium">
+                        <div className='flex flex-col gap-1'>
+                            <span className='text-white font-medium'>
                                 {order.course.title}
                             </span>
                             {order.course.instructor && (
-                                <span className="text-xs text-gray-400">
+                                <span className='text-xs text-gray-400'>
                                     {order.course.instructor.fullName}
                                 </span>
                             )}
                         </div>
                     ) : (
-                        <span className="text-gray-400">N/A</span>
+                        <span className='text-gray-400'>N/A</span>
                     )}
                 </DarkOutlineTableCell>
-                <DarkOutlineTableCell className="w-[120px]">
+                <DarkOutlineTableCell className='w-[120px]'>
                     {getStatusBadge(order.paymentStatus)}
                 </DarkOutlineTableCell>
-                <DarkOutlineTableCell className="w-[100px]">
-                    <span className="text-white">
-                        {order.paymentGateway}
-                    </span>
+                <DarkOutlineTableCell className='w-[100px]'>
+                    <span className='text-white'>{order.paymentGateway}</span>
                 </DarkOutlineTableCell>
-                <DarkOutlineTableCell className="w-[130px]">
-                    <div className="flex flex-col gap-1">
-                        <span className="text-white font-medium">
+                <DarkOutlineTableCell className='w-[130px]'>
+                    <div className='flex flex-col gap-1'>
+                        <span className='text-white font-medium'>
                             {formatPrice(order.finalPrice)}
                         </span>
                         {order.discountAmount > 0 && (
-                            <span className="text-xs text-gray-400 line-through">
+                            <span className='text-xs text-gray-400 line-through'>
                                 {formatPrice(order.originalPrice)}
                             </span>
                         )}
                     </div>
                 </DarkOutlineTableCell>
-                <DarkOutlineTableCell className="w-[150px]">
-                    <span className="text-gray-300">
+                <DarkOutlineTableCell className='w-[150px]'>
+                    <span className='text-gray-300'>
                         {formatDateTime(order.createdAt)}
                     </span>
                 </DarkOutlineTableCell>
-                <DarkOutlineTableCell className="text-right w-[100px]">
+                <DarkOutlineTableCell className='text-right w-[100px]'>
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-gray-400 hover:text-white hover:bg-[#1F1F1F]"
+                        variant='ghost'
+                        size='icon'
+                        className='text-gray-400 hover:text-white hover:bg-[#1F1F1F]'
                         onClick={(e) => {
                             e.stopPropagation()
                             if (!isSelected) {
@@ -196,7 +218,7 @@ export function OrderRow({
                             setMenuOpen(true)
                         }}
                     >
-                        <MoreVertical className="h-4 w-4" />
+                        <MoreVertical className='h-4 w-4' />
                     </Button>
                 </DarkOutlineTableCell>
             </DarkOutlineTableRow>
@@ -204,7 +226,7 @@ export function OrderRow({
             {menuOpen && (
                 <div
                     ref={menuRef}
-                    className="fixed z-50 min-w-[8rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md"
+                    className='fixed z-50 min-w-[8rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
                     style={{
                         left: `${adjustedPosition.x}px`,
                         top: `${adjustedPosition.y}px`,
@@ -212,24 +234,24 @@ export function OrderRow({
                     }}
                 >
                     <div
-                        className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer"
+                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
                         onClick={() => {
                             onViewDetail(order)
                             setMenuOpen(false)
                         }}
                     >
-                        <Eye className="h-4 w-4" />
+                        <Eye className='h-4 w-4' />
                         Xem chi tiết
                     </div>
                     {canRefund && (
                         <div
-                            className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer"
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer'
                             onClick={() => {
                                 onRefund(order)
                                 setMenuOpen(false)
                             }}
                         >
-                            <RotateCcw className="h-4 w-4" />
+                            <RotateCcw className='h-4 w-4' />
                             Hoàn tiền
                         </div>
                     )}
@@ -238,4 +260,3 @@ export function OrderRow({
         </>
     )
 }
-
