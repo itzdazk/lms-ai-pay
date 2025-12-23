@@ -27,7 +27,7 @@ type OrderStatsProps = {
 export function OrderStats({ stats, loading }: OrderStatsProps) {
     if (loading || !stats) {
         return (
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mb-8'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4'>
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                     <Card key={i} className='overflow-hidden'>
                         <CardHeader className='pb-3'>
@@ -117,7 +117,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
     ]
 
     return (
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mb-8'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4'>
             {statsCards.map((stat) => (
                 <Card
                     key={stat.label}

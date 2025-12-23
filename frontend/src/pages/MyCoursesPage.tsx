@@ -4,6 +4,7 @@ import { BookOpen, TrendingUp, Award, Sparkles } from 'lucide-react'
 import { enrollmentsApi } from '../lib/api/enrollments'
 import type { EnrollmentWithCourse } from '../lib/api/enrollments'
 import type { EnrollmentStatus } from '../lib/api/types'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 
 export function MyCoursesPage() {
     const [enrollments, setEnrollments] = useState<EnrollmentWithCourse[]>([])
@@ -76,109 +77,99 @@ export function MyCoursesPage() {
 
     const statCards = [
         {
-            title: 'Tổng khóa học',
+            label: 'Tổng khóa học',
             value: stats.total,
             icon: BookOpen,
-            gradient: 'from-violet-500 to-purple-600',
-            bgGradient: 'from-violet-500/10 to-purple-600/10',
-            iconColor: 'text-violet-600',
+            color: 'text-violet-600 dark:text-violet-400',
+            bgColor: 'bg-violet-200 dark:bg-violet-950/30',
+            borderColor: 'border-violet-400 dark:border-violet-900',
         },
         {
-            title: 'Đang học',
+            label: 'Đang học',
             value: stats.active,
             icon: TrendingUp,
-            gradient: 'from-blue-500 to-cyan-600',
-            bgGradient: 'from-blue-500/10 to-cyan-600/10',
-            iconColor: 'text-blue-600',
+            color: 'text-blue-600 dark:text-blue-400',
+            bgColor: 'bg-blue-200 dark:bg-blue-950/30',
+            borderColor: 'border-blue-400 dark:border-blue-900',
         },
         {
-            title: 'Hoàn thành',
+            label: 'Hoàn thành',
             value: stats.completed,
             icon: Award,
-            gradient: 'from-green-500 to-emerald-600',
-            bgGradient: 'from-green-500/10 to-emerald-600/10',
-            iconColor: 'text-green-600',
+            color: 'text-green-600 dark:text-green-400',
+            bgColor: 'bg-green-200 dark:bg-green-950/30',
+            borderColor: 'border-green-400 dark:border-green-900',
         },
         {
-            title: 'Tiến độ TB',
+            label: 'Tiến độ TB',
             value: `${stats.avgProgress}%`,
             icon: Sparkles,
-            gradient: 'from-orange-500 to-pink-600',
-            bgGradient: 'from-orange-500/10 to-pink-600/10',
-            iconColor: 'text-orange-600',
+            color: 'text-orange-600 dark:text-orange-400',
+            bgColor: 'bg-orange-200 dark:bg-orange-950/30',
+            borderColor: 'border-orange-400 dark:border-orange-900',
         },
     ]
 
     return (
-        <div className='min-h-screen bg-background'>
-            {/* Hero Header */}
-            <div className='relative overflow-hidden border-b border-border bg-card'>
-                <div className='absolute inset-0 bg-grid-white/[0.02] dark:bg-grid-white/[0.05] bg-[size:20px_20px]'></div>
-
-                <div className='relative container mx-auto px-4 py-12'>
-                    <div className='text-center mb-12 animate-fade-in-up'>
-                        <h1 className='text-4xl md:text-5xl text-foreground mb-4 font-bold'>
+        <div className='bg-background min-h-screen'>
+            {/* Header Section */}
+            <div className='bg-[#1A1A1A] border-b border-gray-800 dark:border-gray-800'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                    <div className='mb-8'>
+                        <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white dark:text-white'>
                             Hành trình học tập của tôi
                         </h1>
-                        <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
+                        <p className='text-base text-gray-300 dark:text-gray-300 leading-relaxed'>
                             Theo dõi tiến độ, tiếp tục học tập và đạt được mục
                             tiêu của bạn
                         </p>
                     </div>
-
-                    {/* Stats Cards */}
-                    <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
+                    {/* Stats */}
+                    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
                         {statCards.map((stat) => (
-                            <div key={stat.title}>
-                                <div className='bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border border-white/20 dark:bg-black/50 dark:border-black/20'>
-                                    <div className='flex items-start justify-between mb-4'>
-                                        <div
-                                            className={`p-3 rounded-xl bg-gradient-to-br ${stat.bgGradient} group-hover:scale-110 transition-transform duration-300`}
-                                        >
-                                            <stat.icon
-                                                className={`h-6 w-6 ${stat.iconColor}`}
-                                            />
+                            <Card
+                                key={stat.label}
+                                className={`overflow-hidden border-l-4 ${stat.borderColor} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+                            >
+                                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                    <CardTitle className='text-sm font-medium text-muted-foreground'>
+                                        {stat.label}
+                                    </CardTitle>
+                                    <div
+                                        className={`p-2.5 rounded-lg ${stat.bgColor}`}
+                                    >
+                                        <stat.icon
+                                            className={`h-4 w-4 ${stat.color}`}
+                                        />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className='space-y-1'>
+                                        <div className='text-2xl font-bold'>
+                                            {stat.value}
                                         </div>
                                     </div>
-                                    <div>
-                                        <p className='text-sm text-gray-600 mb-1'>
-                                            {stat.title}
-                                        </p>
-                                        <p
-                                            className={`text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
-                                        >
-                                            {stat.value}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className='container mx-auto px-4 py-8'>
+            <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8'>
                 {/* Filters */}
-                <div
-                    className='mb-8 animate-fade-in-up'
-                    style={{ animationDelay: '400ms' }}
-                >
-                    <EnrollmentFilters
-                        status={filters.status}
-                        search={filters.search}
-                        sort={filters.sort}
-                        onStatusChange={handleStatusChange}
-                        onSearchChange={handleSearchChange}
-                        onSortChange={handleSortChange}
-                    />
-                </div>
+                <EnrollmentFilters
+                    status={filters.status}
+                    search={filters.search}
+                    sort={filters.sort}
+                    onStatusChange={handleStatusChange}
+                    onSearchChange={handleSearchChange}
+                    onSortChange={handleSortChange}
+                />
 
                 {/* Enrollments List */}
-                <div
-                    className='animate-fade-in-up'
-                    style={{ animationDelay: '500ms' }}
-                >
+                <div className='mt-6'>
                     <EnrollmentList
                         enrollments={enrollments}
                         isLoading={isLoading}

@@ -185,37 +185,45 @@ export function OrderHistoryPage() {
     }
 
     return (
-        <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
-            <div className='mb-6'>
-                <h1 className='text-3xl font-bold text-gray-900 dark:text-white mb-2'>
-                    Lịch sử đơn hàng
-                </h1>
-                <p className='text-gray-600 dark:text-gray-400'>
-                    Xem và quản lý tất cả đơn hàng của bạn
-                </p>
+        <div className='bg-background min-h-screen'>
+            {/* Header Section */}
+            <div className='bg-[#1A1A1A] border-b border-gray-800 dark:border-gray-800'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                    <div className='mb-8'>
+                        <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white dark:text-white'>
+                            Lịch sử đơn hàng
+                        </h1>
+                        <p className='text-base text-gray-300 dark:text-gray-300 leading-relaxed'>
+                            Xem và quản lý tất cả đơn hàng của bạn
+                        </p>
+                    </div>
+
+                    {/* Stats */}
+                    <OrderStats stats={stats} loading={statsLoading} />
+                </div>
             </div>
 
-            {/* Stats */}
-            <OrderStats stats={stats} loading={statsLoading} />
+            {/* Main Content */}
+            <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8'>
+                {/* Filters */}
+                <OrderFilters
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    onClearFilters={clearFilters}
+                    totalResults={pagination.total}
+                />
 
-            {/* Filters */}
-            <OrderFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onClearFilters={clearFilters}
-                totalResults={pagination.total}
-            />
+                {/* Orders Table */}
+                <OrderTable
+                    orders={orders}
+                    loading={isLoading}
+                    onCancel={handleCancelOrder}
+                    cancelLoading={cancelLoading ? orderToCancel : null}
+                />
 
-            {/* Orders Table */}
-            <OrderTable
-                orders={orders}
-                loading={isLoading}
-                onCancel={handleCancelOrder}
-                cancelLoading={cancelLoading ? orderToCancel : null}
-            />
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && renderPagination()}
+                {/* Pagination */}
+                {pagination.totalPages > 1 && renderPagination()}
+            </div>
         </div>
     )
 }
