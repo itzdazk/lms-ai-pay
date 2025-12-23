@@ -7,7 +7,6 @@ import {
     type AdminOrderFilters,
     type AdminOrderStats,
 } from '../../lib/api/admin-orders'
-import { toast } from 'sonner'
 import type { Order } from '../../lib/api/types'
 import {
     OrdersStats,
@@ -242,18 +241,12 @@ export function OrdersPage() {
 
             const amount = parseFloat(refundAmount)
             if (isNaN(amount) || amount <= 0) {
-                toast.error('Vui lòng nhập số tiền hợp lệ')
                 return
             }
 
             const maxRefund =
                 selectedOrder.finalPrice - selectedOrder.refundAmount
             if (amount > maxRefund) {
-                toast.error(
-                    `Số tiền hoàn lại không được vượt quá ${maxRefund.toLocaleString(
-                        'vi-VN'
-                    )} VND`
-                )
                 return
             }
 
@@ -261,8 +254,6 @@ export function OrdersPage() {
                 amount: amount,
                 reason: refundReason.trim() || undefined,
             })
-
-            toast.success('Hoàn tiền thành công!')
             setIsRefundDialogOpen(false)
             setSelectedOrder(null)
             setRefundAmount('')
@@ -272,9 +263,6 @@ export function OrdersPage() {
             await Promise.all([loadOrders(), loadStats()])
         } catch (error: any) {
             console.error('Error refunding order:', error)
-            toast.error(
-                error?.response?.data?.message || 'Không thể hoàn tiền đơn hàng'
-            )
         } finally {
             setActionLoading(false)
         }

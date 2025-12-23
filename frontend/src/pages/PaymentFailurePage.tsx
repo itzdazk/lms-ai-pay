@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import {
     Card,
@@ -12,7 +12,6 @@ import { XCircle, RefreshCw, ArrowLeft, Loader2 } from 'lucide-react'
 import { ordersApi } from '../lib/api/orders'
 import type { Order } from '../lib/api/types'
 import { OrderSummary } from '../components/Payment/OrderSummary'
-import { toast } from 'sonner'
 
 // ==================== Helper Functions - Phần Chung ====================
 
@@ -166,6 +165,26 @@ const parseMoMoError = (params: URLSearchParams): string | null => {
 }
 
 /**
+ * Check if payment was actually successful (should redirect to success page)
+ */
+const isPaymentSuccessful = (params: URLSearchParams): boolean => {
+    // Check VNPay success
+    const vnpCode = params.get('vnp_ResponseCode')
+    const vnpStatus = params.get('vnp_TransactionStatus')
+    if (vnpCode === '00' || vnpStatus === '00') {
+        return true
+    }
+
+    // Check MoMo success
+    const momoResult = params.get('resultCode')
+    if (momoResult === '0' || momoResult === '00' || momoResult === '9000') {
+        return true
+    }
+
+    return false
+}
+
+/**
  * Parse error message from URL params
  */
 const parseErrorMessage = (params: URLSearchParams): string => {
@@ -213,6 +232,7 @@ const getOrderInfoFromParams = (
 
 export function PaymentFailurePage() {
     const [searchParams] = useSearchParams()
+    const navigate = useNavigate()
     const { orderCode, orderId } = getOrderInfoFromParams(searchParams)
     const error = parseErrorMessage(searchParams)
 
@@ -220,6 +240,16 @@ export function PaymentFailurePage() {
     const [status, setStatus] = useState<
         'idle' | 'loading' | 'success' | 'error'
     >('idle')
+
+    // Redirect to success page if payment was actually successful
+    useEffect(() => {
+        if (isPaymentSuccessful(searchParams)) {
+            // Build success URL with same params
+            const successParams = new URLSearchParams(searchParams)
+            const successUrl = `/payment/success?${successParams.toString()}`
+            navigate(successUrl, { replace: true })
+        }
+    }, [searchParams, navigate])
 
     const fetchOrder = async () => {
         if (!orderCode && !orderId) return
@@ -231,9 +261,6 @@ export function PaymentFailurePage() {
             setOrder(data)
             setStatus('success')
         } catch (err: any) {
-            toast.error(
-                err?.response?.data?.message || 'Không thể tải đơn hàng'
-            )
             setStatus('error')
         }
     }
@@ -293,7 +320,7 @@ export function PaymentFailurePage() {
                             <div className='flex flex-col sm:flex-row gap-3 justify-center'>
                                 {course && (
                                     <DarkOutlineButton asChild size='lg'>
-                                        <Link to={`/checkout/${course.id}`}>
+                                        <Link to={`/checkout/${course.slug}`}>
                                             <RefreshCw className='mr-2 h-4 w-4' />
                                             Thử lại thanh toán
                                         </Link>

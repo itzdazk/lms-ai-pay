@@ -17,7 +17,6 @@ import { Checkbox } from '../components/ui/checkbox'
 import { CreditCard, ShieldCheck, CheckCircle, ArrowLeft } from 'lucide-react'
 import VnpayLogo from '../assets/images/payment_method/VNPAY-Logo-App.png'
 import MomoLogo from '../assets/images/payment_method/MOMO-Logo-App.png'
-import { toast } from 'sonner'
 import { coursesApi } from '../lib/api'
 import type { PublicCourse } from '../lib/api/types'
 import { getCoursePrice } from '../lib/courseUtils'
@@ -56,10 +55,6 @@ export function PaymentCheckoutPage() {
                 setCourse(data)
             } catch (error: any) {
                 console.error('Error fetching course', error)
-                toast.error(
-                    error?.response?.data?.message ||
-                        'Không thể tải thông tin khóa học'
-                )
                 setCourse(null)
             } finally {
                 setIsLoading(false)
@@ -137,12 +132,10 @@ export function PaymentCheckoutPage() {
 
     const handlePayment = async () => {
         if (!agreeTerms) {
-            toast.error('Vui lòng đồng ý với điều khoản sử dụng')
             return
         }
 
         if (!course || !priceInfo) {
-            toast.error('Không tìm thấy thông tin đơn hàng')
             return
         }
 
@@ -168,14 +161,9 @@ export function PaymentCheckoutPage() {
                     : await paymentsApi.createMoMoUrl(order.id)
             console.log('paymentUrl', paymentUrl)
 
-            toast.success('Đang chuyển hướng đến cổng thanh toán...')
             window.location.href = paymentUrl
         } catch (error: any) {
             console.error('handlePayment error', error)
-            toast.error(
-                error?.response?.data?.message ||
-                    'Không thể tạo đơn hàng/thanh toán. Vui lòng thử lại.'
-            )
         } finally {
             setIsProcessing(false)
         }

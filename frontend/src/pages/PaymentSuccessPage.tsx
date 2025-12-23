@@ -19,7 +19,6 @@ import {
 import { ordersApi } from '../lib/api/orders'
 import type { Order } from '../lib/api/types'
 import { OrderSummary } from '../components/Payment/OrderSummary'
-import { toast } from 'sonner'
 
 // ==================== Helper Functions - Phần Chung ====================
 
@@ -149,7 +148,6 @@ export function PaymentSuccessPage() {
     const fetchOrder = async () => {
         if (!orderCode && !orderId) {
             setStatus('error')
-            toast.error('Không tìm thấy thông tin đơn hàng trong URL')
             return
         }
 
@@ -161,10 +159,6 @@ export function PaymentSuccessPage() {
             setOrder(data)
             setStatus('success')
         } catch (error: any) {
-            toast.error(
-                error?.response?.data?.message ||
-                    'Không thể tải thông tin đơn hàng'
-            )
             setStatus('error')
         }
     }

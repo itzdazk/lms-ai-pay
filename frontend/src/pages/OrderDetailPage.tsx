@@ -32,7 +32,6 @@ import type { TransactionFilters as TransactionFiltersType } from '../lib/api/tr
 import { formatPrice } from '../lib/courseUtils'
 import { formatDateTime } from '../lib/utils'
 import type { PaymentTransaction, Order } from '../lib/api/types'
-import { toast } from 'sonner'
 import {
     ArrowLeft,
     X,
@@ -181,10 +180,6 @@ export function OrderDetailPage() {
                     setOrder(orderData)
                 } catch (error: any) {
                     console.error('Error fetching admin order:', error)
-                    toast.error(
-                        error?.response?.data?.message ||
-                            'Không thể tải thông tin đơn hàng'
-                    )
                     setOrder(null)
                 } finally {
                     setIsLoading(false)
@@ -208,10 +203,6 @@ export function OrderDetailPage() {
                       setOrder(orderData)
                   } catch (error: any) {
                       console.error('Error refetching admin order:', error)
-                      toast.error(
-                          error?.response?.data?.message ||
-                              'Không thể tải thông tin đơn hàng'
-                      )
                   } finally {
                       setIsLoading(false)
                   }
@@ -781,7 +772,9 @@ export function OrderDetailPage() {
                                             asChild
                                             className='w-full'
                                         >
-                                            <Link to={`/checkout/${course.id}`}>
+                                            <Link
+                                                to={`/checkout/${course.slug}`}
+                                            >
                                                 Thử lại thanh toán
                                             </Link>
                                         </DarkOutlineButton>

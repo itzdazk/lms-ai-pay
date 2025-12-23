@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { paymentsApi } from '../lib/api/payments'
 import type { PaymentCallbackResponse } from '../lib/api/types'
 import { Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
 
 // ==================== Helper Functions - Phần Chung====================
 
@@ -248,13 +247,6 @@ export function PaymentResultPage() {
 
                 // Handle error and build redirect params
                 const redirectParams = handleError(error, searchParams)
-
-                // Show error toast
-                const errorMessage =
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    'Không thể xác thực thanh toán'
-                toast.error(errorMessage)
 
                 // Redirect to failure page after a short delay
                 const failureUrl = `/payment/failure?${redirectParams.toString()}`
