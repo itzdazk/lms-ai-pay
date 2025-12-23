@@ -182,7 +182,7 @@ export function CourseDetailPage() {
                             onVideoPreviewClick={() =>
                                 setShowPreviewVideo(true)
                             }
-                            checkoutUrl={`/checkout/${course.id}`}
+                            checkoutUrl={`/checkout/${course.slug}`}
                             learnUrl={
                                 course.slug
                                     ? `/courses/${course.slug}/lessons`

@@ -26,7 +26,7 @@ import { useCreateOrder } from '../hooks/useOrders'
 import { paymentsApi } from '../lib/api/payments'
 
 export function PaymentCheckoutPage() {
-    const { id } = useParams<{ id: string }>()
+    const { slug } = useParams<{ slug: string }>()
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [isLoading, setIsLoading] = useState<boolean>(true)
     const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>(
@@ -45,15 +45,14 @@ export function PaymentCheckoutPage() {
 
     useEffect(() => {
         const fetchCourse = async () => {
-            if (!id) {
+            if (!slug) {
                 setIsLoading(false)
                 return
             }
 
             try {
                 setIsLoading(true)
-                const courseId = parseInt(id, 10)
-                const data = await coursesApi.getPublicCourseById(courseId)
+                const data = await coursesApi.getCourseBySlug(slug)
                 setCourse(data)
             } catch (error: any) {
                 console.error('Error fetching course', error)
@@ -68,7 +67,7 @@ export function PaymentCheckoutPage() {
         }
 
         fetchCourse()
-    }, [id])
+    }, [slug])
 
     const priceInfo = useMemo(
         () =>
@@ -82,7 +81,7 @@ export function PaymentCheckoutPage() {
         [course]
     )
 
-    if (!id) {
+    if (!slug) {
         return (
             <div className='container mx-auto px-4 py-20 text-center bg-background min-h-screen'>
                 <h1 className='text-3xl mb-4 text-white'>
@@ -191,7 +190,7 @@ export function PaymentCheckoutPage() {
                     size='lg'
                     asChild
                 >
-                    <Link to={`/courses/${id}`}>
+                    <Link to={`/courses/${slug}`}>
                         <ArrowLeft className='h-4 w-4 mr-2' />
                         Quay lại
                     </Link>

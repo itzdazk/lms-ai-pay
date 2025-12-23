@@ -237,7 +237,7 @@ export default function App() {
                                         }
                                     />
                                     <Route
-                                        path='/checkout/:id'
+                                        path='/checkout/:slug'
                                         element={
                                             <ProtectedRoute>
                                                 <PaymentCheckoutPage />

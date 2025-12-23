@@ -53,7 +53,7 @@ export function EnrollmentButton({
         // Phase 1: nếu khóa học có phí, chuyển sang trang checkout để test flow "Mua ngay -> checkout"
         if (!priceInfo.isFree) {
             toast.info('Đang chuyển hướng tới trang thanh toán...')
-            navigate(`/checkout/${course.id}`)
+            navigate(`/checkout/${course.slug}`)
             return
         }
 
