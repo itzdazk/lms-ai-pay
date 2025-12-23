@@ -6,7 +6,7 @@ import {
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import { MoreVertical, Eye, RotateCcw } from 'lucide-react'
-import { formatDate, formatDateTime } from '../../../lib/utils'
+import { formatDateTime } from '../../../lib/utils'
 import type { Order } from '../../../lib/api/types'
 
 function formatPrice(price: number): string {
@@ -115,25 +115,27 @@ export function OrderRow({
             PENDING: {
                 label: 'Đang chờ',
                 className:
-                    'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                    'bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40',
             },
             PAID: {
                 label: 'Đã thanh toán',
-                className: 'bg-green-500/20 text-green-400 border-green-500/30',
+                className:
+                    'bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40',
             },
             FAILED: {
                 label: 'Thất bại',
-                className: 'bg-red-500/20 text-red-400 border-red-500/30',
+                className:
+                    'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40',
             },
             REFUNDED: {
                 label: 'Đã hoàn tiền',
                 className:
-                    'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                    'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40',
             },
             PARTIALLY_REFUNDED: {
                 label: 'Hoàn tiền một phần',
                 className:
-                    'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                    'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40',
             },
         }
         const statusInfo = statusMap[status] || statusMap.PENDING
@@ -155,11 +157,11 @@ export function OrderRow({
             >
                 <DarkOutlineTableCell className='min-w-[120px]'>
                     <div className='flex flex-col gap-1'>
-                        <span className='font-medium text-white'>
+                        <span className='font-medium text-gray-900 dark:text-white'>
                             {order.orderCode}
                         </span>
                         {order.user && (
-                            <span className='text-xs text-gray-400'>
+                            <span className='text-xs text-gray-600 dark:text-gray-400'>
                                 {order.user.fullName}
                             </span>
                         )}
@@ -168,39 +170,43 @@ export function OrderRow({
                 <DarkOutlineTableCell className='min-w-[200px]'>
                     {order.course ? (
                         <div className='flex flex-col gap-1'>
-                            <span className='text-white font-medium'>
+                            <span className='text-gray-900 dark:text-white font-medium'>
                                 {order.course.title}
                             </span>
                             {order.course.instructor && (
-                                <span className='text-xs text-gray-400'>
+                                <span className='text-xs text-gray-600 dark:text-gray-400'>
                                     {order.course.instructor.fullName}
                                 </span>
                             )}
                         </div>
                     ) : (
-                        <span className='text-gray-400'>N/A</span>
+                        <span className='text-gray-600 dark:text-gray-400'>
+                            N/A
+                        </span>
                     )}
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[120px]'>
                     {getStatusBadge(order.paymentStatus)}
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[100px]'>
-                    <span className='text-white'>{order.paymentGateway}</span>
+                    <span className='text-gray-900 dark:text-white'>
+                        {order.paymentGateway}
+                    </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[130px]'>
                     <div className='flex flex-col gap-1'>
-                        <span className='text-white font-medium'>
+                        <span className='text-gray-900 dark:text-white font-medium'>
                             {formatPrice(order.finalPrice)}
                         </span>
                         {order.discountAmount > 0 && (
-                            <span className='text-xs text-gray-400 line-through'>
+                            <span className='text-xs text-gray-600 dark:text-gray-400 line-through'>
                                 {formatPrice(order.originalPrice)}
                             </span>
                         )}
                     </div>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[150px]'>
-                    <span className='text-gray-300'>
+                    <span className='text-gray-700 dark:text-gray-300'>
                         {formatDateTime(order.createdAt)}
                     </span>
                 </DarkOutlineTableCell>
@@ -208,7 +214,7 @@ export function OrderRow({
                     <Button
                         variant='ghost'
                         size='icon'
-                        className='text-gray-400 hover:text-white hover:bg-[#1F1F1F]'
+                        className='text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
                         onClick={(e) => {
                             e.stopPropagation()
                             if (!isSelected) {
@@ -226,7 +232,7 @@ export function OrderRow({
             {menuOpen && (
                 <div
                     ref={menuRef}
-                    className='fixed z-50 min-w-[8rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
+                    className='fixed z-50 min-w-32 rounded-md border bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] p-1 shadow-md'
                     style={{
                         left: `${adjustedPosition.x}px`,
                         top: `${adjustedPosition.y}px`,
@@ -234,7 +240,7 @@ export function OrderRow({
                     }}
                 >
                     <div
-                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-[#1F1F1F] cursor-pointer'
                         onClick={() => {
                             onViewDetail(order)
                             setMenuOpen(false)
@@ -245,7 +251,7 @@ export function OrderRow({
                     </div>
                     {canRefund && (
                         <div
-                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer'
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/10 hover:text-orange-700 dark:hover:text-orange-300 cursor-pointer'
                             onClick={() => {
                                 onRefund(order)
                                 setMenuOpen(false)

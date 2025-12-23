@@ -794,7 +794,7 @@ export function OrderDetailPage() {
                                     <Link
                                         to={
                                             isAdmin
-                                                ? '/admin/orders'
+                                                ? '/admin/dashboard'
                                                 : '/orders'
                                         }
                                     >
