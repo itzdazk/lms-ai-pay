@@ -209,7 +209,7 @@ export function AboutPage() {
               {[
                 { year: '2020', title: 'Thành lập', desc: 'EduLearn được thành lập với 10 khóa học đầu tiên' },
                 { year: '2021', title: 'Mở rộng', desc: 'Đạt 10,000 học viên và 100 khóa học' },
-                { year: '2022', title: 'Tích hợp AI', desc: 'Ra mắt AI Tutor - trợ lý học tập thông minh' },
+                { year: '2022', title: 'Tích hợp AI', desc: 'Ra mắt Gia sư AI - trợ lý học tập thông minh' },
                 { year: '2023', title: 'Tăng trưởng', desc: 'Vượt 50,000 học viên và 1,000 khóa học' },
                 { year: '2024', title: 'Đổi mới', desc: 'Ra mắt Voice Search và Smart Recommendations' },
                 { year: '2025', title: 'Mở rộng toàn cầu', desc: 'Hợp tác với 50+ đối tác quốc tế và ra mắt chương trình chứng chỉ toàn cầu' },

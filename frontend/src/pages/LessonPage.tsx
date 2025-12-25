@@ -688,7 +688,7 @@ export function LessonPage() {
                 title="Mở AI Tutor"
               >
                 <MessageCircle className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">AI Tutor</span>
+                <span className="hidden md:inline">Gia sư AI</span>
               </DarkOutlineButton>
               <DarkOutlineButton
                 size="icon"

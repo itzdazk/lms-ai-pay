@@ -692,7 +692,35 @@ class KnowledgeBaseService {
     /**
      * Build complete context cho conversation
      */
-    async buildContext(userId, query, conversationId = null) {
+    async buildContext(userId, query, conversationId = null, options = {}) {
+        const { mode = 'course' } = options
+        // Fast path for general mode: skip transcript/lesson/course searches
+        if (mode === 'general') {
+            try {
+                const userContext = await this.getUserContext(userId)
+                return {
+                    userContext,
+                    searchResults: {
+                        courses: [],
+                        lessons: [],
+                        transcripts: [],
+                        totalResults: 0,
+                    },
+                    conversationHistory: [],
+                    query,
+                    mode,
+                }
+            } catch (error) {
+                logger.error('Error building minimal context for general mode:', error)
+                return {
+                    userContext: null,
+                    searchResults: { courses: [], lessons: [], transcripts: [], totalResults: 0 },
+                    conversationHistory: [],
+                    query,
+                    mode,
+                }
+            }
+        }
         try {
             // 1. Get user context, enrolled courses, and conversation context (optimize: fetch once)
             const [userContext, enrolledCoursesData, conversation] = await Promise.all([
@@ -869,10 +897,6 @@ class KnowledgeBaseService {
             return []
         }
     }
-
-    /**
-     * Calculate relevance score (0-1) - Improved algorithm
-     */
     calculateRelevanceScore(query, text) {
         if (!text || !query) return 0
 

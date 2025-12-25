@@ -110,6 +110,36 @@ class AIChatService {
                 },
             })
 
+            // Create an initial assistant greeting message so AI is the first sender
+            try {
+                const greetingText = (() => {
+                    if (lesson) {
+                        return `Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp về bài học "${lesson.title}" và hỗ trợ học tập. Bạn cần hỗ trợ gì không?`
+                    }
+                    if (course) {
+                        return `Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp về khóa học "${course.title}" và hỗ trợ học tập. Bạn cần hỗ trợ gì không?`
+                    }
+                    return 'Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp thắc mắc, hỗ trợ học tập và tư vấn lộ trình. Bạn cần hỗ trợ gì không?'
+                })()
+
+                await prisma.chatMessage.create({
+                    data: {
+                        conversationId: conversation.id,
+                        senderType: 'ai',
+                        message: greetingText,
+                        messageType: 'text',
+                    },
+                })
+
+                // Update lastMessageAt to the greeting timestamp
+                await prisma.conversation.update({
+                    where: { id: conversation.id },
+                    data: { lastMessageAt: new Date() },
+                })
+            } catch (greetErr) {
+                logger.warn('Failed to create initial AI greeting message:', greetErr)
+            }
+
             logger.info(
                 `Created conversation ${conversation.id} for user ${userId}`
             )
@@ -123,7 +153,7 @@ class AIChatService {
     /**
      * Gửi message và nhận response
      */
-    async sendMessage(userId, conversationId, messageText) {
+    async sendMessage(userId, conversationId, messageText, mode = 'course') {
         try {
             // 1. Verify conversation belongs to user
             const conversation = await prisma.conversation.findFirst({
@@ -151,10 +181,12 @@ class AIChatService {
 
             // 3. Build context từ knowledge base (with timing)
             const contextStartTime = Date.now()
+            // Pass mode so knowledgeBaseService can short-circuit for 'general'
             const context = await knowledgeBaseService.buildContext(
                 userId,
                 messageText,
-                conversationId
+                conversationId,
+                { mode }
             )
             const contextDuration = Date.now() - contextStartTime
             logger.debug(`Knowledge base context built in ${contextDuration}ms`)
@@ -200,7 +232,8 @@ class AIChatService {
                                 this.generateOllamaResponse(
                                     messageText,
                                     conversationHistory,
-                                    context
+                                    context,
+                                    mode
                                 )
 
                             responseData = await Promise.race([
@@ -291,6 +324,7 @@ class AIChatService {
                         usedOllama,
                         fallbackReason: fallbackReason || null,
                         responseTime: Date.now() - responseStartTime,
+                        mode,
                     },
                 },
             })
@@ -320,7 +354,7 @@ class AIChatService {
     /**
      * Send message with streaming response (for better UX)
      */
-    async sendMessageStream(userId, conversationId, messageText, onChunk) {
+    async sendMessageStream(userId, conversationId, messageText, mode = 'course', onChunk) {
         try {
             // 1. Verify conversation belongs to user
             const conversation = await prisma.conversation.findFirst({
@@ -356,7 +390,8 @@ class AIChatService {
             const context = await knowledgeBaseService.buildContext(
                 userId,
                 messageText,
-                conversationId
+                conversationId,
+                { mode }
             )
 
             // 4. Get conversation history
@@ -371,6 +406,7 @@ class AIChatService {
             let sources = []
             let suggestedActions = []
             let streamingError = null
+            let usedOllama = false
 
             try {
                 if (ollamaService.enabled) {
@@ -378,7 +414,7 @@ class AIChatService {
                     if (isOllamaAvailable) {
                         // Build system prompt
                         const systemPrompt =
-                            ollamaService.buildSystemPrompt(context)
+                            ollamaService.buildSystemPrompt(context, mode)
 
                         // Stream response from Ollama
                         try {
@@ -394,6 +430,8 @@ class AIChatService {
                                     accumulated: fullResponse,
                                 })
                             }
+
+                            usedOllama = true
 
                             // Extract sources and actions from context
                             if (context.searchResults.transcripts.length > 0) {
@@ -527,6 +565,10 @@ class AIChatService {
                     metadata: {
                         sources,
                         suggestedActions,
+                        usedOllama,
+                        fallbackReason: streamingError ? (streamingError.message || String(streamingError)) : null,
+                        responseTime: Date.now() - responseStartTime,
+                        mode,
                     },
                 },
             })
@@ -553,10 +595,10 @@ class AIChatService {
     /**
      * Generate response using Ollama with knowledge base context
      */
-    async generateOllamaResponse(messageText, conversationHistory, context) {
+    async generateOllamaResponse(messageText, conversationHistory, context, mode = 'course') {
         try {
             // Build system prompt with knowledge base
-            const systemPrompt = ollamaService.buildSystemPrompt(context)
+            const systemPrompt = ollamaService.buildSystemPrompt(context, mode)
 
             // Generate response from Ollama
             const aiResponse = await ollamaService.generateResponse(
@@ -634,7 +676,12 @@ class AIChatService {
      * @param {Object} options - Additional options (error, reason)
      */
     generateTemplateResponse(context, query, options = {}) {
-        const { searchResults, userContext } = context
+        const { searchResults, userContext, mode } = context
+
+        // If in general mode, return a friendly conversational fallback
+        if (mode === 'general') {
+            return this.generateGeneralFallbackResponse(query)
+        }
 
         // CASE 1: Tìm thấy trong TRANSCRIPT (Best case!)
         if (searchResults.transcripts.length > 0) {
@@ -920,6 +967,20 @@ class AIChatService {
     }
 
     /**
+     * General fallback for non-course mode (friendly conversational replies)
+     */
+    generateGeneralFallbackResponse(query) {
+        const greetingRegex = /(xin chào|chào|hello|hi|hey|có ở đó|are you there)/i
+        if (greetingRegex.test(query)) {
+            const text = `Chào bạn! Mình là Gia sư AI — mình có thể giúp bạn những gì về lập trình hoặc học tập hôm nay?`
+            return { text, sources: [], suggestedActions: [] }
+        }
+
+        const text = `Mình có thể giúp trả lời các câu hỏi về lập trình, khóa học và học tập. Bạn muốn hỏi điều gì cụ thể?`
+        return { text, sources: [], suggestedActions: [] }
+    }
+
+    /**
      * Get messages trong conversation (optimized: combine verification with count)
      */
     async getMessages(conversationId, userId, page = 1, limit = 50) {
@@ -1051,13 +1112,28 @@ class AIChatService {
                     _count: {
                         select: { messages: true },
                     },
+                    messages: {
+                        take: 1,
+                        orderBy: { createdAt: 'desc' },
+                        select: {
+                            message: true,
+                            senderType: true,
+                        },
+                    },
                 },
             })
+
+            // Map to include lastMessage in a cleaner format
+            const conversationsWithLastMessage = conversations.map(conv => ({
+                ...conv,
+                lastMessage: conv.messages?.[0]?.message || null,
+                lastMessageSender: conv.messages?.[0]?.senderType || null,
+            }))
 
             const total = await prisma.conversation.count({ where })
 
             return {
-                conversations,
+                conversations: conversationsWithLastMessage,
                 pagination: {
                     page,
                     limit,

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import apiClient from '../../lib/api/client';
 import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
 import { Textarea } from '../ui/textarea';
@@ -46,16 +47,18 @@ export function AIChatSidebar({
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState<'general' | 'course'>('general');
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Xin chào! Tôi là AI Tutor. Tôi có thể giúp bạn giải đáp thắc mắc về bài học này, hỗ trợ học tập, và tư vấn lộ trình. Bạn cần hỗ trợ gì không?',
+      content: 'Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp thắc mắc về bài học này, hỗ trợ học tập, và tư vấn lộ trình. Bạn cần hỗ trợ gì không?',
       timestamp: new Date()
     }
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const skipAutoScrollRef = useRef(false);
 
   // Helper function to get avatar URL
   const getAvatarUrl = (avatarUrl?: string | null, avatar?: string | null) => {
@@ -84,11 +87,19 @@ export function AIChatSidebar({
 
   // Scroll to bottom when new message arrives
   useEffect(() => {
+    if (skipAutoScrollRef.current) {
+      skipAutoScrollRef.current = false
+      return
+    }
+
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
   const handleSendMessage = () => {
     if (!inputMessage.trim() || isLoading) return;
+
+    // Prevent auto-scroll while sending
+    skipAutoScrollRef.current = true;
 
     // Add user message
     const userMessage: Message = {
@@ -107,17 +118,112 @@ export function AIChatSidebar({
     }
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Đây là câu trả lời mẫu cho câu hỏi: "${currentInput}". Trong môi trường thực tế, đây sẽ là response từ OpenAI API.\n\nCâu trả lời sẽ chi tiết, có cấu trúc rõ ràng và bao gồm ví dụ cụ thể. AI sẽ phân tích ngữ cảnh của khóa học và bài học bạn đang học để đưa ra câu trả lời phù hợp nhất.`,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1500);
+    (async () => {
+      try {
+        let convId = conversationId;
+
+        // If no conversation exists yet, create one
+        if (!convId) {
+          const createResp = await apiClient.post('/ai/conversations', {
+            courseId,
+            lessonId,
+            title: currentInput.slice(0, 120),
+          });
+          // Load existing conversation/messages for this lesson/course when sidebar opens
+          useEffect(() => {
+            if (!isOpen) return;
+
+            (async () => {
+              try {
+                // Fetch user's conversations and try to find one for this course/lesson
+                const convResp = await apiClient.get('/ai/conversations');
+                const convs = convResp?.data?.data ?? [];
+
+                let existing = null;
+                if (lessonId) {
+                  existing = convs.find((c: any) => c.lessonId === lessonId || c.lesson?.id === lessonId);
+                }
+                if (!existing && courseId) {
+                  existing = convs.find((c: any) => c.courseId === courseId || c.course?.id === courseId);
+                }
+
+                if (existing) {
+                  setConversationId(existing.id);
+
+                  // Load messages for this conversation
+                  const msgsResp = await apiClient.get(`/ai/conversations/${existing.id}/messages`);
+                  const msgs = msgsResp?.data?.data ?? [];
+                  const mapped: Message[] = msgs.map((m: any) => ({
+                    id: String(m.id),
+                    role: m.senderType === 'ai' ? 'assistant' : 'user',
+                    content: m.message,
+                    timestamp: new Date(m.createdAt),
+                  }));
+
+                  if (mapped.length > 0) setMessages(mapped);
+                }
+              } catch (err) {
+                console.error('Failed to load conversation/messages', err);
+              }
+            })();
+          }, [isOpen, courseId, lessonId]);
+          // createResp.data.data is the created conversation
+          convId = createResp?.data?.data?.id ?? null;
+          if (convId) setConversationId(convId);
+        }
+
+        if (!convId) {
+          throw new Error('Không thể tạo conversation');
+        }
+
+        // Send message with mode
+        const resp = await apiClient.post(`/ai/conversations/${convId}/messages`, {
+          message: currentInput,
+          mode: chatMode,
+        });
+
+        const payload = resp?.data?.data;
+        const aiMsg = payload?.aiMessage ?? payload?.ai_message ?? null;
+        const aiText = aiMsg?.message ?? aiMsg?.text ?? (payload?.aiMessage?.text) ?? null;
+
+        if (aiText) {
+          const aiMessageObj: Message = {
+            id: aiMsg.id?.toString() ?? Date.now().toString(),
+            role: 'assistant',
+            content: aiText,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, aiMessageObj]);
+        } else if (payload?.aiMessage?.message) {
+          setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: payload.aiMessage.message,
+            timestamp: new Date()
+          }]);
+        } else {
+          // Fallback text
+          setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: 'Xin lỗi, không nhận được phản hồi từ server.',
+            timestamp: new Date()
+          }]);
+        }
+      } catch (error) {
+        console.error('AI chat error', error);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: 'Đã xảy ra lỗi khi gọi AI. Vui lòng thử lại sau.',
+          timestamp: new Date()
+        }]);
+      } finally {
+        setIsLoading(false);
+        // Re-enable auto-scroll after send completes
+        skipAutoScrollRef.current = false;
+      }
+    })();
   };
 
 
@@ -148,7 +254,7 @@ export function AIChatSidebar({
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                AI Tutor
+                Gia sư AI
               </h3>
             </div>
             <DarkOutlineButton

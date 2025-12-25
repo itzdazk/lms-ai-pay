@@ -183,7 +183,7 @@ class AIController {
      */
     sendMessage = asyncHandler(async (req, res) => {
         const { id } = req.params
-        const { message } = req.body
+        const { message, mode = 'course' } = req.body
         const { stream } = req.query // Check if client wants streaming
 
         // If streaming requested, use streaming endpoint
@@ -194,7 +194,8 @@ class AIController {
         const result = await aiChatService.sendMessage(
             req.user.id,
             parseInt(id),
-            message
+            message,
+            mode
         )
 
         return ApiResponse.success(res, result, 'Message sent successfully')
@@ -205,7 +206,7 @@ class AIController {
      */
     sendMessageStream = asyncHandler(async (req, res) => {
         const { id } = req.params
-        const { message } = req.body
+        const { message, mode = 'course' } = req.body
 
         // Set headers for SSE (Server-Sent Events)
         res.setHeader('Content-Type', 'text/event-stream')
@@ -218,6 +219,7 @@ class AIController {
                 req.user.id,
                 parseInt(id),
                 message,
+                mode,
                 (chunk) => {
                     // Send chunk to client
                     res.write(`data: ${JSON.stringify({ chunk, done: false })}\n\n`)

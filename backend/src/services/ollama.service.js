@@ -313,7 +313,10 @@ class OllamaService {
     /**
      * Build system prompt with knowledge base context
      */
-    buildSystemPrompt(context) {
+    buildSystemPrompt(context, mode = 'course') {
+        if (mode === 'general') {
+            return `Bạn là Gia sư AI chuyên về lập trình. Trả lời ngắn gọn, chính xác, và hữu ích bằng tiếng Việt. \n- Chỉ trả lời các câu hỏi liên quan tới lập trình, công nghệ và học tập.\n- Nếu câu hỏi KHÔNG liên quan, trả lời lịch sự: "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến lập trình và nội dung học tập trên nền tảng này."\n- Giữ câu trả lời ngắn gọn và tập trung vào ví dụ/giải pháp thực tế khi cần.`
+        }
         const { searchResults, userContext, query = '' } = context
 
         // Detect if query is about specific course content
@@ -321,7 +324,7 @@ class OllamaService {
         // Detect if query is unrelated to programming/learning
         const isUnrelatedQuery = this._isUnrelatedToProgramming(query)
 
-        let systemPrompt = `Bạn là AI Tutor thông minh và nhiệt tình, chuyên hỗ trợ học viên trong hệ thống E-Learning. 
+        let systemPrompt = `Bạn là Gia sư AI thông minh và nhiệt tình, chuyên hỗ trợ học viên trong hệ thống E-Learning. 
 Nhiệm vụ của bạn là trả lời câu hỏi dựa trên kiến thức từ các khóa học và bài học mà học viên đã đăng ký.
 
 HƯỚNG DẪN:
@@ -442,14 +445,14 @@ HƯỚNG DẪN:
             if (isUnrelatedQuery) {
                 // Query không liên quan đến lập trình/học tập
                 systemPrompt += `QUAN TRỌNG: Câu hỏi này KHÔNG liên quan đến lập trình hoặc nội dung khóa học.
-Bạn là AI Tutor chuyên về lập trình và hỗ trợ học tập. Bạn KHÔNG nên trả lời các câu hỏi về:
+Bạn là Gia sư AI chuyên về lập trình và hỗ trợ học tập. Bạn KHÔNG nên trả lời các câu hỏi về:
 - Nấu ăn, công thức nấu ăn
 - Thời tiết, tin tức
 - Giải trí, phim ảnh
 - Các chủ đề không liên quan đến lập trình/học tập
 
 Hãy lịch sự từ chối và redirect học viên về chủ đề học tập:
-"Xin lỗi, tôi là AI Tutor chuyên hỗ trợ về lập trình và các khóa học trên nền tảng này. Tôi không thể trả lời câu hỏi này vì nó không liên quan đến lập trình hoặc nội dung học tập.
+"Xin lỗi, tôi là Gia sư AI chuyên hỗ trợ về lập trình và các khóa học trên nền tảng này. Tôi không thể trả lời câu hỏi này vì nó không liên quan đến lập trình hoặc nội dung học tập.
 
 Bạn có muốn hỏi về:
 - Các khái niệm lập trình (JavaScript, React, Python, v.v.)
