@@ -330,14 +330,16 @@ Nhiệm vụ của bạn là trả lời câu hỏi dựa trên kiến thức t�
 HƯỚNG DẪN:
 - Trả lời bằng tiếng Việt, tự nhiên và dễ hiểu
 - Ưu tiên sử dụng thông tin từ knowledge base được cung cấp bên dưới
+- CHỈ trả lời dựa trên thông tin từ KNOWLEDGE BASE, KHÔNG trộn lẫn với khóa học khác của học viên
 - Luôn khuyến khích và động viên học viên
 - Có thể đưa ra ví dụ cụ thể để giải thích
 - Giữ câu trả lời ngắn gọn nhưng đầy đủ thông tin
 
 `
 
-        // Add user context
-        if (userContext && userContext.currentCourse) {
+        // In lesson mode, skip user current course context to avoid mixing
+        // Only use knowledge base results (which contain the actual lesson being asked about)
+        if (mode !== 'course' && userContext && userContext.currentCourse) {
             systemPrompt += `NGỮ CẢNH HỌC VIÊN:
 - Đang học khóa học: "${userContext.currentCourse.title}"
 - Tiến độ: ${userContext.currentCourse.progress}%
