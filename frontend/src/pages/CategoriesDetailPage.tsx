@@ -134,7 +134,7 @@ export function CategoriesDetailPage() {
                     )
                 }
             >
-                <SelectTrigger className='w-[160px] bg-white dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2D2D2D]'>
+                <SelectTrigger className='w-[160px] bg-[#1A1A1A] border-[#2D2D2D] text-white'>
                     <SelectValue placeholder='Cấp độ' />
                 </SelectTrigger>
                 <SelectContent>
@@ -158,7 +158,7 @@ export function CategoriesDetailPage() {
                     )
                 }
             >
-                <SelectTrigger className='w-[180px] bg-white dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2D2D2D]'>
+                <SelectTrigger className='w-[180px] bg-[#1A1A1A] border-[#2D2D2D] text-white'>
                     <SelectValue placeholder='Sắp xếp' />
                 </SelectTrigger>
                 <SelectContent>
@@ -175,26 +175,26 @@ export function CategoriesDetailPage() {
     const isLoading = isLoadingCategory && !category
 
     return (
-        <div className='min-h-screen bg-gray-50 dark:bg-[#0A0A0A]'>
+        <div className='min-h-screen bg-white dark:bg-black'>
             {/* Header */}
-            <div className='bg-white border-b border-gray-200 dark:bg-[#0F0F0F] dark:border-[#2D2D2D]'>
+            <div className='bg-[#1A1A1A] border-b border-gray-800 dark:border-gray-800'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>
                     <div className='flex items-center gap-4'>
                         <Button
                             variant='ghost'
                             size='icon'
                             onClick={handleBack}
-                            className='bg-black rounded-lg hover:bg-gray-600 dark:bg-[#1A1A1A] dark:hover:bg-[#2D2D2D] dark:border dark:border-[#2D2D2D]'
+                            className='bg-[#1A1A1A] hover:bg-[#2D2D2D] border border-[#2D2D2D] rounded-lg'
                         >
-                            <ArrowLeft className='h-5 w-5 text-white dark:text-gray-200' />
+                            <ArrowLeft className='h-5 w-5 text-gray-200' />
                         </Button>
                         <div className='space-y-2'>
-                            <h1 className='text-2xl md:text-3xl font-bold text-gray-900 dark:text-white'>
+                            <h1 className='text-2xl md:text-3xl font-bold text-white'>
                                 {category
                                     ? category.name
                                     : 'Đang tải danh mục...'}
                             </h1>
-                            <p className='text-gray-600 dark:text-gray-300'>
+                            <p className='text-gray-300'>
                                 Khám phá các khóa học trong danh mục đã chọn
                             </p>
                         </div>
@@ -207,7 +207,7 @@ export function CategoriesDetailPage() {
                 <Breadcrumb items={breadcrumbItems} />
 
                 {isLoading ? (
-                    <Card className='p-10 flex flex-col items-center justify-center text-center space-y-3 bg-white dark:bg-gradient-to-br dark:from-[#1A1A1A] dark:to-[#151515] border-gray-200 dark:border-[#2D2D2D]'>
+                    <Card className='p-10 flex flex-col items-center justify-center text-center space-y-3 bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-[#2D2D2D]'>
                         <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
                         <p className='text-sm text-muted-foreground'>
                             Đang tải danh mục...
@@ -228,7 +228,7 @@ export function CategoriesDetailPage() {
                         filtersSlot={filtersSlot}
                     />
                 ) : (
-                    <Card className='p-8 text-center text-muted-foreground bg-white dark:bg-gradient-to-br dark:from-[#1A1A1A] dark:to-[#151515] border-gray-200 dark:border-[#2D2D2D]'>
+                    <Card className='p-8 text-center text-muted-foreground bg-gradient-to-br from-[#1A1A1A] to-[#151515] border-[#2D2D2D]'>
                         Không tìm thấy danh mục.
                     </Card>
                 )}

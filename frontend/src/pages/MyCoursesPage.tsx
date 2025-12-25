@@ -80,33 +80,33 @@ export function MyCoursesPage() {
             label: 'Tổng khóa học',
             value: stats.total,
             icon: BookOpen,
-            color: 'text-violet-600 dark:text-violet-400',
-            bgColor: 'bg-violet-200 dark:bg-violet-950/30',
-            borderColor: 'border-violet-400 dark:border-violet-900',
+            color: 'text-violet-400',
+            bgColor: 'bg-violet-950/50',
+            borderColor: 'border-violet-900',
         },
         {
             label: 'Đang học',
             value: stats.active,
             icon: TrendingUp,
-            color: 'text-blue-600 dark:text-blue-400',
-            bgColor: 'bg-blue-200 dark:bg-blue-950/30',
-            borderColor: 'border-blue-400 dark:border-blue-900',
+            color: 'text-blue-400',
+            bgColor: 'bg-blue-950/50',
+            borderColor: 'border-blue-900',
         },
         {
             label: 'Hoàn thành',
             value: stats.completed,
             icon: Award,
-            color: 'text-green-600 dark:text-green-400',
-            bgColor: 'bg-green-200 dark:bg-green-950/30',
-            borderColor: 'border-green-400 dark:border-green-900',
+            color: 'text-green-400',
+            bgColor: 'bg-green-950/50',
+            borderColor: 'border-green-900',
         },
         {
             label: 'Tiến độ TB',
             value: `${stats.avgProgress}%`,
             icon: Sparkles,
-            color: 'text-orange-600 dark:text-orange-400',
-            bgColor: 'bg-orange-200 dark:bg-orange-950/30',
-            borderColor: 'border-orange-400 dark:border-orange-900',
+            color: 'text-orange-400',
+            bgColor: 'bg-orange-950/50',
+            borderColor: 'border-orange-900',
         },
     ]
 
@@ -129,10 +129,10 @@ export function MyCoursesPage() {
                         {statCards.map((stat) => (
                             <Card
                                 key={stat.label}
-                                className={`overflow-hidden border-l-4 ${stat.borderColor} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+                                className={`overflow-hidden border-l-4 ${stat.borderColor} bg-[#1A1A1A] hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
                             >
                                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                                    <CardTitle className='text-sm font-medium text-muted-foreground'>
+                                    <CardTitle className='text-sm font-medium text-gray-300 dark:text-gray-300'>
                                         {stat.label}
                                     </CardTitle>
                                     <div
@@ -145,7 +145,7 @@ export function MyCoursesPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className='space-y-1'>
-                                        <div className='text-2xl font-bold'>
+                                        <div className='text-2xl font-bold text-gray-300 dark:text-gray-300'>
                                             {stat.value}
                                         </div>
                                     </div>

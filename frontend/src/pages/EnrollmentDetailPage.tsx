@@ -15,7 +15,6 @@ import {
     TrendingUp,
     Award,
     PlayCircle,
-    CheckCircle2,
     Star,
     User,
     FileText,
@@ -87,20 +86,21 @@ export function EnrollmentDetailPage() {
             case 'ACTIVE':
                 return {
                     badge: 'Đang học',
-                    className: 'bg-foreground text-background border-0',
+                    className: 'bg-white text-gray-900 border-0',
                     description: 'Bạn đang học khóa học này',
                 }
             case 'COMPLETED':
                 return {
                     badge: 'Hoàn thành',
-                    className: 'bg-muted text-foreground border border-border',
+                    className:
+                        'bg-[#1f1f1f] text-white border border-[#2d2d2d]',
                     description: 'Bạn đã hoàn thành khóa học này',
                 }
             case 'DROPPED':
                 return {
                     badge: 'Đã hủy',
                     className:
-                        'bg-muted text-muted-foreground border border-border',
+                        'bg-[#1f1f1f] text-gray-400 border border-[#2d2d2d]',
                     description: 'Bạn đã hủy đăng ký khóa học này',
                 }
             default:
@@ -115,10 +115,10 @@ export function EnrollmentDetailPage() {
 
     if (isLoading) {
         return (
-            <div className='min-h-screen bg-background flex items-center justify-center'>
+            <div className='min-h-screen bg-white dark:bg-black flex items-center justify-center'>
                 <div className='text-center'>
-                    <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-foreground mx-auto mb-4'></div>
-                    <p className='text-muted-foreground'>Đang tải...</p>
+                    <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4'></div>
+                    <p className='text-gray-400'>Đang tải...</p>
                 </div>
             </div>
         )
@@ -126,15 +126,18 @@ export function EnrollmentDetailPage() {
 
     if (!enrollment) {
         return (
-            <div className='min-h-screen bg-background flex items-center justify-center'>
+            <div className='min-h-screen bg-white dark:bg-black flex items-center justify-center'>
                 <div className='text-center'>
-                    <h2 className='text-2xl font-bold text-foreground mb-2'>
+                    <h2 className='text-2xl font-bold text-white mb-2'>
                         Không tìm thấy đăng ký
                     </h2>
-                    <p className='text-muted-foreground mb-4'>
+                    <p className='text-gray-400 mb-4'>
                         Đăng ký bạn đang tìm không tồn tại.
                     </p>
-                    <Button onClick={() => navigate('/my-courses')}>
+                    <Button
+                        onClick={() => navigate('/my-courses')}
+                        className='bg-white text-gray-900 hover:bg-gray-100'
+                    >
                         Quay lại khóa học của tôi
                     </Button>
                 </div>
@@ -146,14 +149,14 @@ export function EnrollmentDetailPage() {
     const statusConfig = getStatusConfig()
 
     return (
-        <div className='min-h-screen bg-background'>
+        <div className='min-h-screen bg-white dark:bg-black'>
             {/* Header */}
-            <div className='border-b border-border bg-card'>
+            <div className='border-b border-[#2d2d2d] bg-[#1a1a1a]'>
                 <div className='container mx-auto px-4 py-6'>
                     <Button
                         variant='outline'
                         onClick={() => navigate('/my-courses')}
-                        className='mb-4 cursor-pointer'
+                        className='mb-4 cursor-pointer border-[#2d2d2d] hover:bg-[#414040] text-gray-900 dark:bg-white dark:hover:bg-[#414040]'
                     >
                         <ArrowLeft className='mr-2 h-4 w-4' />
                         Quay lại
@@ -161,7 +164,7 @@ export function EnrollmentDetailPage() {
 
                     <div className='flex items-center justify-between'>
                         <div>
-                            <h1 className='text-3xl font-bold text-foreground mb-2'>
+                            <h1 className='text-3xl font-bold text-white mb-2'>
                                 {course.title}
                             </h1>
                             {statusConfig && (
@@ -169,7 +172,7 @@ export function EnrollmentDetailPage() {
                                     <Badge className={statusConfig.className}>
                                         {statusConfig.badge}
                                     </Badge>
-                                    <span className='text-sm text-muted-foreground'>
+                                    <span className='text-sm text-gray-400'>
                                         {statusConfig.description}
                                     </span>
                                 </div>
@@ -184,9 +187,9 @@ export function EnrollmentDetailPage() {
                     {/* Main Content */}
                     <div className='lg:col-span-2 space-y-6'>
                         {/* Progress Overview */}
-                        <Card className='bg-card border-border'>
+                        <Card className='bg-[#1a1a1a] border-[#2d2d2d]'>
                             <CardHeader>
-                                <CardTitle className='flex items-center gap-2'>
+                                <CardTitle className='flex items-center gap-2 text-white'>
                                     <TrendingUp className='h-5 w-5' />
                                     Tiến độ học tập
                                 </CardTitle>
@@ -194,25 +197,25 @@ export function EnrollmentDetailPage() {
                             <CardContent className='space-y-4'>
                                 <div>
                                     <div className='flex justify-between items-center mb-2'>
-                                        <span className='text-sm text-muted-foreground'>
+                                        <span className='text-sm text-gray-400'>
                                             Tổng tiến độ
                                         </span>
-                                        <span className='text-2xl font-bold text-foreground'>
+                                        <span className='text-2xl font-bold text-white'>
                                             {progressPercentage}%
                                         </span>
                                     </div>
                                     <Progress
                                         value={progressPercentage}
-                                        className='h-3 bg-muted'
+                                        className='h-3 bg-[#1f1f1f]'
                                     />
                                 </div>
 
-                                <div className='grid grid-cols-2 gap-4 pt-4 border-t border-border'>
+                                <div className='grid grid-cols-2 gap-4 pt-4 border-t border-[#2d2d2d]'>
                                     <div>
-                                        <p className='text-xs text-muted-foreground mb-1'>
+                                        <p className='text-xs text-gray-400 mb-1'>
                                             Bài học đã hoàn thành
                                         </p>
-                                        <p className='text-lg font-semibold text-foreground'>
+                                        <p className='text-lg font-semibold text-white'>
                                             {Math.round(
                                                 (progressPercentage / 100) *
                                                     course.totalLessons
@@ -221,10 +224,10 @@ export function EnrollmentDetailPage() {
                                         </p>
                                     </div>
                                     <div>
-                                        <p className='text-xs text-muted-foreground mb-1'>
+                                        <p className='text-xs text-gray-400 mb-1'>
                                             Thời gian đã học
                                         </p>
-                                        <p className='text-lg font-semibold text-foreground'>
+                                        <p className='text-lg font-semibold text-white'>
                                             {course.durationHours}h
                                         </p>
                                     </div>
@@ -233,9 +236,9 @@ export function EnrollmentDetailPage() {
                         </Card>
 
                         {/* Enrollment Information */}
-                        <Card className='bg-card border-border'>
+                        <Card className='bg-[#1a1a1a] border-[#2d2d2d]'>
                             <CardHeader>
-                                <CardTitle className='flex items-center gap-2'>
+                                <CardTitle className='flex items-center gap-2 text-white'>
                                     <Calendar className='h-5 w-5' />
                                     Thông tin đăng ký
                                 </CardTitle>
@@ -243,19 +246,19 @@ export function EnrollmentDetailPage() {
                             <CardContent className='space-y-4'>
                                 <div className='grid grid-cols-2 gap-4'>
                                     <div>
-                                        <p className='text-xs text-muted-foreground mb-1'>
+                                        <p className='text-xs text-gray-400 mb-1'>
                                             Ngày đăng ký
                                         </p>
-                                        <p className='text-sm font-medium text-foreground'>
+                                        <p className='text-sm font-medium text-white'>
                                             {formatDate(enrollment.enrolledAt)}
                                         </p>
                                     </div>
                                     {enrollment.startedAt && (
                                         <div>
-                                            <p className='text-xs text-muted-foreground mb-1'>
+                                            <p className='text-xs text-gray-400 mb-1'>
                                                 Ngày bắt đầu
                                             </p>
-                                            <p className='text-sm font-medium text-foreground'>
+                                            <p className='text-sm font-medium text-white'>
                                                 {formatDate(
                                                     enrollment.startedAt
                                                 )}
@@ -264,10 +267,10 @@ export function EnrollmentDetailPage() {
                                     )}
                                     {enrollment.completedAt && (
                                         <div>
-                                            <p className='text-xs text-muted-foreground mb-1'>
+                                            <p className='text-xs text-gray-400 mb-1'>
                                                 Ngày hoàn thành
                                             </p>
-                                            <p className='text-sm font-medium text-foreground'>
+                                            <p className='text-sm font-medium text-white'>
                                                 {formatDate(
                                                     enrollment.completedAt
                                                 )}
@@ -276,10 +279,10 @@ export function EnrollmentDetailPage() {
                                     )}
                                     {enrollment.lastAccessedAt && (
                                         <div>
-                                            <p className='text-xs text-muted-foreground mb-1'>
+                                            <p className='text-xs text-gray-400 mb-1'>
                                                 Truy cập lần cuối
                                             </p>
-                                            <p className='text-sm font-medium text-foreground'>
+                                            <p className='text-sm font-medium text-white'>
                                                 {formatDate(
                                                     enrollment.lastAccessedAt
                                                 )}
@@ -292,9 +295,9 @@ export function EnrollmentDetailPage() {
 
                         {/* Course Lessons */}
                         {lessons.length > 0 && (
-                            <Card className='bg-card border-border'>
+                            <Card className='bg-[#1a1a1a] border-[#2d2d2d]'>
                                 <CardHeader>
-                                    <CardTitle className='flex items-center gap-2'>
+                                    <CardTitle className='flex items-center gap-2 text-white'>
                                         <BookOpen className='h-5 w-5' />
                                         Nội dung khóa học ({lessons.length} bài
                                         học)
@@ -305,17 +308,17 @@ export function EnrollmentDetailPage() {
                                         {lessons.map((lesson, index) => (
                                             <div
                                                 key={lesson.id}
-                                                className='flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors'
+                                                className='flex items-center gap-3 p-3 rounded-lg border border-[#2d2d2d] hover:bg-[#1f1f1f] transition-colors'
                                             >
-                                                <div className='flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-foreground'>
+                                                <div className='shrink-0 w-8 h-8 rounded-full bg-[#1f1f1f] flex items-center justify-center text-sm font-medium text-white'>
                                                     {index + 1}
                                                 </div>
                                                 <div className='flex-1'>
-                                                    <p className='text-sm font-medium text-foreground'>
+                                                    <p className='text-sm font-medium text-white'>
                                                         {lesson.title}
                                                     </p>
                                                     {lesson.videoDuration && (
-                                                        <p className='text-xs text-muted-foreground'>
+                                                        <p className='text-xs text-gray-400'>
                                                             {Math.floor(
                                                                 lesson.videoDuration /
                                                                     60
@@ -332,6 +335,7 @@ export function EnrollmentDetailPage() {
                                                     variant='ghost'
                                                     size='sm'
                                                     asChild
+                                                    className='text-gray-300 hover:text-white hover:bg-[#1f1f1f]'
                                                 >
                                                     <Link
                                                         to={`/courses/${course.slug}/lessons?lesson=${lesson.id}`}
@@ -351,11 +355,11 @@ export function EnrollmentDetailPage() {
                     <div className='lg:col-span-1'>
                         <div className='sticky top-4 space-y-6'>
                             {/* Course Info Card */}
-                            <Card className='bg-card border-border'>
+                            <Card className='bg-[#1a1a1a] border-[#2d2d2d]'>
                                 <CardContent className='p-6'>
                                     {/* Thumbnail */}
                                     {course.thumbnailUrl && (
-                                        <div className='relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-muted'>
+                                        <div className='relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-[#1f1f1f]'>
                                             <img
                                                 src={course.thumbnailUrl}
                                                 alt={course.title}
@@ -366,65 +370,65 @@ export function EnrollmentDetailPage() {
 
                                     {/* Instructor */}
                                     <div className='mb-4'>
-                                        <p className='text-xs text-muted-foreground mb-2'>
+                                        <p className='text-xs text-gray-400 mb-2'>
                                             Giảng viên
                                         </p>
                                         <div className='flex items-center gap-2'>
-                                            <Avatar className='h-10 w-10 border-2 border-border'>
+                                            <Avatar className='h-10 w-10 border-2 border-[#2d2d2d]'>
                                                 <AvatarImage
                                                     src={
                                                         course.instructor
                                                             .avatarUrl
                                                     }
                                                 />
-                                                <AvatarFallback className='bg-muted text-foreground'>
+                                                <AvatarFallback className='bg-[#1f1f1f] text-gray-300'>
                                                     <User className='h-5 w-5' />
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div>
-                                                <p className='text-sm font-medium text-foreground'>
+                                                <p className='text-sm font-medium text-white'>
                                                     {course.instructor.fullName}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <Separator className='my-4' />
+                                    <Separator className='my-4 bg-[#2d2d2d]' />
 
                                     {/* Course Stats */}
                                     <div className='space-y-3'>
                                         <div className='flex items-center justify-between'>
                                             <div className='flex items-center gap-2'>
-                                                <BookOpen className='h-4 w-4 text-muted-foreground' />
-                                                <span className='text-sm text-muted-foreground'>
+                                                <BookOpen className='h-4 w-4 text-gray-400' />
+                                                <span className='text-sm text-gray-400'>
                                                     Bài học
                                                 </span>
                                             </div>
-                                            <span className='text-sm font-medium text-foreground'>
+                                            <span className='text-sm font-medium text-white'>
                                                 {course.totalLessons}
                                             </span>
                                         </div>
                                         <div className='flex items-center justify-between'>
                                             <div className='flex items-center gap-2'>
-                                                <Clock className='h-4 w-4 text-muted-foreground' />
-                                                <span className='text-sm text-muted-foreground'>
+                                                <Clock className='h-4 w-4 text-gray-400' />
+                                                <span className='text-sm text-gray-400'>
                                                     Thời lượng
                                                 </span>
                                             </div>
-                                            <span className='text-sm font-medium text-foreground'>
+                                            <span className='text-sm font-medium text-white'>
                                                 {course.durationHours}h
                                             </span>
                                         </div>
                                         <div className='flex items-center justify-between'>
                                             <div className='flex items-center gap-2'>
-                                                <FileText className='h-4 w-4 text-muted-foreground' />
-                                                <span className='text-sm text-muted-foreground'>
+                                                <FileText className='h-4 w-4 text-gray-400' />
+                                                <span className='text-sm text-gray-400'>
                                                     Cấp độ
                                                 </span>
                                             </div>
                                             <Badge
                                                 variant='outline'
-                                                className='border-border'
+                                                className='border-[#2d2d2d] text-gray-300'
                                             >
                                                 {course.level}
                                             </Badge>
@@ -433,12 +437,12 @@ export function EnrollmentDetailPage() {
                                             course.ratingAvg > 0 && (
                                                 <div className='flex items-center justify-between'>
                                                     <div className='flex items-center gap-2'>
-                                                        <Star className='h-4 w-4 text-muted-foreground fill-yellow-400 text-yellow-400' />
-                                                        <span className='text-sm text-muted-foreground'>
+                                                        <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
+                                                        <span className='text-sm text-gray-400'>
                                                             Đánh giá
                                                         </span>
                                                     </div>
-                                                    <span className='text-sm font-medium text-foreground'>
+                                                    <span className='text-sm font-medium text-white'>
                                                         {Number(
                                                             course.ratingAvg ||
                                                                 0
@@ -448,7 +452,7 @@ export function EnrollmentDetailPage() {
                                             )}
                                     </div>
 
-                                    <Separator className='my-4' />
+                                    <Separator className='my-4 bg-[#2d2d2d]' />
 
                                     {/* Action Buttons */}
                                     <div className='space-y-2'>
@@ -460,7 +464,7 @@ export function EnrollmentDetailPage() {
                                                             `/certificate/${enrollment.courseId}`
                                                         )
                                                     }
-                                                    className='w-full bg-foreground text-background hover:bg-foreground/90'
+                                                    className='w-full bg-white text-gray-900 hover:bg-gray-100'
                                                 >
                                                     <Award className='mr-2 h-4 w-4' />
                                                     Xem chứng chỉ
@@ -472,7 +476,7 @@ export function EnrollmentDetailPage() {
                                                         )
                                                     }
                                                     variant='outline'
-                                                    className='w-full border-border'
+                                                    className='w-full border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
                                                 >
                                                     <PlayCircle className='mr-2 h-4 w-4' />
                                                     Xem lại khóa học
@@ -485,7 +489,7 @@ export function EnrollmentDetailPage() {
                                                         `/courses/${course.slug}/lessons`
                                                     )
                                                 }
-                                                className='w-full bg-foreground text-background hover:bg-foreground/90'
+                                                className='w-full bg-white text-gray-900 hover:bg-gray-100'
                                             >
                                                 <PlayCircle className='mr-2 h-4 w-4' />
                                                 Tiếp tục học

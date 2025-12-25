@@ -79,10 +79,10 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
 
     return (
         <div className='group relative animate-fade-in-up'>
-            <div className='relative bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1'>
+            <div className='relative bg-[#1a1a1a] border border-[#2d2d2d] rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1'>
                 {/* Thumbnail Section */}
                 <div
-                    className='relative h-48 overflow-hidden bg-muted cursor-pointer'
+                    className='relative h-48 overflow-hidden bg-[#1f1f1f] cursor-pointer'
                     onClick={handleViewDetail}
                 >
                     {course.thumbnailUrl ? (
@@ -92,8 +92,8 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                             className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500'
                         />
                     ) : (
-                        <div className='w-full h-full flex items-center justify-center bg-muted'>
-                            <BookOpen className='h-16 w-16 text-muted-foreground' />
+                        <div className='w-full h-full flex items-center justify-center bg-[#1f1f1f]'>
+                            <BookOpen className='h-16 w-16 text-gray-600' />
                         </div>
                     )}
 
@@ -121,34 +121,34 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                 </div>
 
                 {/* Content Section */}
-                <div className='p-6'>
+                <div className='p-6 bg-[#1a1a1a]'>
                     {/* Course Title */}
                     <h3
                         onClick={handleViewDetail}
-                        className='mb-3 line-clamp-2 min-h-[4rem] group-hover:text-primary transition-colors font-semibold text-lg text-foreground cursor-pointer'
+                        className='mb-3 line-clamp-2 min-h-16 group-hover:text-blue-400 transition-colors font-semibold text-lg text-white cursor-pointer'
                     >
                         {course.title}
                     </h3>
 
                     {/* Instructor Info */}
                     <div className='flex items-center gap-2 mb-4'>
-                        <Avatar className='h-8 w-8 border-2 border-border'>
+                        <Avatar className='h-8 w-8 border-2 border-[#2d2d2d]'>
                             <AvatarImage src={course.instructor.avatarUrl} />
-                            <AvatarFallback className='bg-muted text-foreground text-xs'>
+                            <AvatarFallback className='bg-[#1f1f1f] text-gray-300 text-xs'>
                                 {course.instructor.fullName
                                     .split(' ')
                                     .map((n) => n[0])
                                     .join('')}
                             </AvatarFallback>
                         </Avatar>
-                        <span className='text-sm text-muted-foreground'>
+                        <span className='text-sm text-gray-400'>
                             {course.instructor.fullName}
                         </span>
                         {course.ratingAvg !== undefined &&
                             course.ratingAvg > 0 && (
                                 <div className='flex items-center gap-1 ml-auto'>
                                     <Star className='h-4 w-4 fill-yellow-400 text-yellow-400 group-hover/item:scale-110 transition-transform' />
-                                    <span className='text-sm font-medium text-foreground'>
+                                    <span className='text-sm font-medium text-white'>
                                         {Number(course.ratingAvg || 0).toFixed(
                                             1
                                         )}
@@ -161,34 +161,32 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                     <div className='mb-4'>
                         <Progress
                             value={progressPercentage}
-                            className='h-2 bg-muted'
+                            className='h-2 bg-[#1f1f1f]'
                         />
                     </div>
 
                     {/* Course Stats */}
-                    <div className='grid grid-cols-2 gap-3 mb-4 p-3 dark:bg-muted bg-muted-foreground/5 rounded-xl'>
+                    <div className='grid grid-cols-2 gap-3 mb-4 p-3 bg-[#1f1f1f] rounded-xl'>
                         <div className='flex items-center gap-2'>
-                            <div className='p-2 bg-background rounded-lg border border-border'>
-                                <BookOpen className='h-4 w-4 text-foreground' />
+                            <div className='p-2 bg-[#1a1a1a] rounded-lg border border-[#2d2d2d]'>
+                                <BookOpen className='h-4 w-4 text-gray-300' />
                             </div>
                             <div>
-                                <p className='text-xs text-muted-foreground'>
-                                    Bài học
-                                </p>
-                                <p className='text-sm font-medium text-foreground'>
+                                <p className='text-xs text-gray-500'>Bài học</p>
+                                <p className='text-sm font-medium text-white'>
                                     {course.totalLessons}
                                 </p>
                             </div>
                         </div>
                         <div className='flex items-center gap-2'>
-                            <div className='p-2 bg-background rounded-lg border border-border'>
-                                <Clock className='h-4 w-4 text-foreground' />
+                            <div className='p-2 bg-[#1a1a1a] rounded-lg border border-[#2d2d2d]'>
+                                <Clock className='h-4 w-4 text-gray-300' />
                             </div>
                             <div>
-                                <p className='text-xs text-muted-foreground'>
+                                <p className='text-xs text-gray-500'>
                                     Thời lượng
                                 </p>
-                                <p className='text-sm font-medium text-foreground'>
+                                <p className='text-sm font-medium text-white'>
                                     {course.durationHours}h
                                 </p>
                             </div>
@@ -196,7 +194,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                     </div>
 
                     {/* Enrollment Info */}
-                    <div className='flex items-center gap-2 text-xs text-muted-foreground mb-4'>
+                    <div className='flex items-center gap-2 text-xs text-gray-500 mb-4'>
                         <Calendar className='h-3 w-3' />
                         <span>Đăng ký {formatDate(enrollment.enrolledAt)}</span>
                     </div>
@@ -206,7 +204,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                         <div className='grid grid-cols-2 gap-2'>
                             <Button
                                 onClick={handleViewCertificate}
-                                className='bg-foreground text-background hover:bg-foreground/90 border-0 shadow-sm'
+                                className='bg-white text-gray-900 hover:bg-gray-100 border-0 shadow-sm transition-colors'
                                 size='sm'
                             >
                                 <Award className='mr-2 h-4 w-4' />
@@ -216,7 +214,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                                 onClick={handleContinueLearning}
                                 variant='outline'
                                 size='sm'
-                                className='border-border hover:bg-muted'
+                                className='border-[#2d2d2d] hover:bg-[#1f1f1f] text-gray-300 transition-colors'
                             >
                                 <PlayCircle className='mr-2 h-4 w-4' />
                                 Xem lại
@@ -225,7 +223,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                     ) : (
                         <Button
                             onClick={handleContinueLearning}
-                            className='w-full bg-foreground text-background hover:bg-foreground/90 border-0 shadow-sm'
+                            className='w-full bg-white text-gray-900 hover:bg-gray-100 border-0 shadow-sm transition-colors'
                         >
                             <PlayCircle className='mr-2 h-4 w-4' />
                             Tiếp tục học

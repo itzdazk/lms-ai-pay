@@ -143,7 +143,7 @@ export function OrderHistoryPage() {
                         return (
                             <span
                                 key={`ellipsis-${index}`}
-                                className='px-2 text-gray-500'
+                                className='px-2 text-gray-400'
                             >
                                 ...
                             </span>
@@ -185,15 +185,15 @@ export function OrderHistoryPage() {
     }
 
     return (
-        <div className='bg-background min-h-screen'>
+        <div className='bg-white dark:bg-black min-h-screen'>
             {/* Header Section */}
-            <div className='bg-[#1A1A1A] border-b border-gray-800 dark:border-gray-800'>
+            <div className='bg-[#1A1A1A] border-b border-[#2d2d2d]'>
                 <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
                     <div className='mb-8'>
-                        <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white dark:text-white'>
+                        <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white'>
                             Lịch sử đơn hàng
                         </h1>
-                        <p className='text-base text-gray-300 dark:text-gray-300 leading-relaxed'>
+                        <p className='text-base text-gray-300 leading-relaxed'>
                             Xem và quản lý tất cả đơn hàng của bạn
                         </p>
                     </div>

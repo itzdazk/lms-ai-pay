@@ -55,42 +55,42 @@ function getStatusBadge(status: string) {
     switch (status) {
         case 'PAID':
             return (
-                <Badge className='bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40 flex items-center gap-1.5'>
+                <Badge className='bg-green-600/20 text-green-300 border border-green-500/40 flex items-center gap-1.5'>
                     <CheckCircle className='h-3 w-3' />
                     Đã thanh toán
                 </Badge>
             )
         case 'PENDING':
             return (
-                <Badge className='bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40 flex items-center gap-1.5'>
+                <Badge className='bg-yellow-600/20 text-yellow-300 border border-yellow-500/40 flex items-center gap-1.5'>
                     <Clock className='h-3 w-3' />
                     Đang chờ
                 </Badge>
             )
         case 'FAILED':
             return (
-                <Badge className='bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40 flex items-center gap-1.5'>
+                <Badge className='bg-red-600/20 text-red-300 border border-red-500/40 flex items-center gap-1.5'>
                     <XCircle className='h-3 w-3' />
                     Thất bại
                 </Badge>
             )
         case 'REFUNDED':
             return (
-                <Badge className='bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40 flex items-center gap-1.5'>
+                <Badge className='bg-purple-600/20 text-purple-300 border border-purple-500/40 flex items-center gap-1.5'>
                     <RefreshCw className='h-3 w-3' />
                     Đã hoàn tiền
                 </Badge>
             )
         case 'PARTIALLY_REFUNDED':
             return (
-                <Badge className='bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40 flex items-center gap-1.5'>
+                <Badge className='bg-orange-600/20 text-orange-300 border border-orange-500/40 flex items-center gap-1.5'>
                     <RefreshCw className='h-3 w-3' />
                     Hoàn tiền một phần
                 </Badge>
             )
         default:
             return (
-                <Badge className='bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-600/20 dark:text-gray-300 dark:border-gray-500/40'>
+                <Badge className='bg-gray-600/20 text-gray-300 border border-gray-500/40'>
                     {status}
                 </Badge>
             )
@@ -361,7 +361,7 @@ export function OrderDetailPage() {
                         return (
                             <span
                                 key={`ellipsis-${index}`}
-                                className='px-2 text-gray-500'
+                                className='px-2 text-gray-400'
                             >
                                 ...
                             </span>
@@ -405,14 +405,14 @@ export function OrderDetailPage() {
     // Loading state
     if (finalIsLoading) {
         return (
-            <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
+            <div className='container mx-auto px-4 py-8 bg-white dark:bg-black min-h-screen'>
                 <div className='mb-6'>
                     <Skeleton className='h-8 w-48 mb-2' />
                     <Skeleton className='h-4 w-64' />
                 </div>
                 <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
                     <div className='lg:col-span-2'>
-                        <Card>
+                        <Card className='bg-[#1a1a1a] border-[#2d2d2d]'>
                             <CardHeader>
                                 <Skeleton className='h-6 w-32' />
                             </CardHeader>
@@ -432,12 +432,12 @@ export function OrderDetailPage() {
     // Error state
     if (!finalOrder) {
         return (
-            <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
+            <div className='container mx-auto px-4 py-8 bg-white dark:bg-black min-h-screen'>
                 <div className='text-center py-12'>
-                    <h2 className='text-2xl font-bold text-gray-900 dark:text-white mb-2'>
+                    <h2 className='text-2xl font-bold text-white mb-2'>
                         Không tìm thấy đơn hàng
                     </h2>
-                    <p className='text-gray-600 dark:text-gray-400 mb-6'>
+                    <p className='text-gray-400 mb-6'>
                         Đơn hàng không tồn tại hoặc bạn không có quyền xem.
                     </p>
                     <DarkOutlineButton asChild>
@@ -457,7 +457,7 @@ export function OrderDetailPage() {
     const course = finalOrder.course
 
     return (
-        <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
+        <div className='container mx-auto px-4 py-8 bg-white dark:bg-black min-h-screen'>
             {/* Header */}
             <div className='mb-6'>
                 <DarkOutlineButton asChild variant='ghost' className='mb-4'>
@@ -468,10 +468,10 @@ export function OrderDetailPage() {
                 </DarkOutlineButton>
                 <div className='flex items-center justify-between'>
                     <div>
-                        <h1 className='text-3xl font-bold text-gray-900 dark:text-white mb-2'>
+                        <h1 className='text-3xl font-bold text-black mb-2 dark:text-white'>
                             Chi tiết đơn hàng
                         </h1>
-                        <p className='text-gray-600 dark:text-gray-400'>
+                        <p className='text-gray-800 dark:text-gray-300'>
                             Mã đơn:{' '}
                             <span className='font-mono'>
                                 {finalOrder.orderCode}
@@ -505,16 +505,16 @@ export function OrderDetailPage() {
                 {/* Main Content */}
                 <div className='lg:col-span-2 space-y-6'>
                     {/* Order Info */}
-                    <Card className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D]'>
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                         <CardHeader>
-                            <CardTitle className='text-gray-900 dark:text-white'>
+                            <CardTitle className='text-white'>
                                 Thông tin đơn hàng
                             </CardTitle>
                         </CardHeader>
                         <CardContent className='space-y-4'>
                             <div className='grid grid-cols-2 gap-4'>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Trạng thái
                                     </p>
                                     <div>
@@ -524,12 +524,12 @@ export function OrderDetailPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Phương thức thanh toán
                                     </p>
                                     <Badge
                                         variant='outline'
-                                        className='border-gray-300 text-gray-700 dark:border-[#2D2D2D] dark:text-gray-300 flex items-center gap-1.5 w-fit'
+                                        className='border-[#2D2D2D] text-gray-300 flex items-center gap-1.5 w-fit'
                                     >
                                         {getGatewayIcon(
                                             finalOrder.paymentGateway
@@ -538,20 +538,20 @@ export function OrderDetailPage() {
                                     </Badge>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Ngày tạo
                                     </p>
-                                    <p className='text-sm text-gray-900 dark:text-white flex items-center gap-1.5'>
+                                    <p className='text-sm text-white flex items-center gap-1.5'>
                                         <Calendar className='h-4 w-4' />
                                         {formatDateTime(finalOrder.createdAt)}
                                     </p>
                                 </div>
                                 {finalOrder.paidAt && (
                                     <div>
-                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                        <p className='text-sm text-gray-400 mb-1'>
                                             Ngày thanh toán
                                         </p>
-                                        <p className='text-sm text-gray-900 dark:text-white flex items-center gap-1.5'>
+                                        <p className='text-sm text-white flex items-center gap-1.5'>
                                             <Calendar className='h-4 w-4' />
                                             {formatDateTime(finalOrder.paidAt)}
                                         </p>
@@ -559,17 +559,17 @@ export function OrderDetailPage() {
                                 )}
                             </div>
 
-                            <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
+                            <Separator className='bg-[#2D2D2D]' />
 
                             <div className='space-y-2'>
-                                <div className='flex justify-between text-gray-600 dark:text-gray-400'>
+                                <div className='flex justify-between text-gray-400'>
                                     <span>Giá gốc:</span>
                                     <span>
                                         {formatPrice(finalOrder.originalPrice)}
                                     </span>
                                 </div>
                                 {finalOrder.discountAmount > 0 && (
-                                    <div className='flex justify-between text-green-500'>
+                                    <div className='flex justify-between text-green-400'>
                                         <span>Giảm giá:</span>
                                         <span>
                                             -
@@ -579,12 +579,12 @@ export function OrderDetailPage() {
                                         </span>
                                     </div>
                                 )}
-                                <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
+                                <Separator className='bg-[#2D2D2D]' />
                                 <div className='flex justify-between items-center'>
-                                    <span className='text-lg font-semibold text-gray-900 dark:text-white'>
+                                    <span className='text-lg font-semibold text-white'>
                                         Tổng cộng:
                                     </span>
-                                    <span className='text-xl font-bold text-blue-600 dark:text-blue-500'>
+                                    <span className='text-xl font-bold text-blue-400'>
                                         {formatPrice(finalOrder.finalPrice)}
                                     </span>
                                 </div>
@@ -592,8 +592,8 @@ export function OrderDetailPage() {
 
                             {finalOrder.refundAmount > 0 && (
                                 <>
-                                    <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
-                                    <div className='flex justify-between text-purple-500'>
+                                    <Separator className='bg-[#2D2D2D]' />
+                                    <div className='flex justify-between text-purple-400'>
                                         <span>Đã hoàn tiền:</span>
                                         <span className='font-semibold'>
                                             {formatPrice(
@@ -602,7 +602,7 @@ export function OrderDetailPage() {
                                         </span>
                                     </div>
                                     {finalOrder.refundedAt && (
-                                        <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                        <p className='text-xs text-gray-500'>
                                             Ngày hoàn tiền:{' '}
                                             {formatDateTime(
                                                 finalOrder.refundedAt
@@ -614,13 +614,13 @@ export function OrderDetailPage() {
 
                             {finalOrder.notes && (
                                 <>
-                                    <Separator className='bg-gray-300 dark:bg-[#2D2D2D]' />
+                                    <Separator className='bg-[#2D2D2D]' />
                                     <div>
-                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1.5'>
+                                        <p className='text-sm text-gray-400 mb-1 flex items-center gap-1.5'>
                                             <FileText className='h-4 w-4' />
                                             Ghi chú
                                         </p>
-                                        <p className='text-sm text-gray-900 dark:text-white'>
+                                        <p className='text-sm text-white'>
                                             {finalOrder.notes}
                                         </p>
                                     </div>
@@ -631,34 +631,34 @@ export function OrderDetailPage() {
 
                     {/* Billing Address */}
                     {finalOrder.billingAddress && (
-                        <Card className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D]'>
+                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                             <CardHeader>
-                                <CardTitle className='text-gray-900 dark:text-white flex items-center gap-2'>
+                                <CardTitle className='text-white flex items-center gap-2'>
                                     <MapPin className='h-5 w-5' />
                                     Địa chỉ thanh toán
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className='space-y-2'>
                                 {finalOrder.billingAddress.fullName && (
-                                    <p className='text-sm text-gray-900 dark:text-white flex items-center gap-2'>
+                                    <p className='text-sm text-white flex items-center gap-2'>
                                         <User className='h-4 w-4 text-gray-500' />
                                         {finalOrder.billingAddress.fullName}
                                     </p>
                                 )}
                                 {finalOrder.billingAddress.email && (
-                                    <p className='text-sm text-gray-900 dark:text-white flex items-center gap-2'>
+                                    <p className='text-sm text-white flex items-center gap-2'>
                                         <Mail className='h-4 w-4 text-gray-500' />
                                         {finalOrder.billingAddress.email}
                                     </p>
                                 )}
                                 {finalOrder.billingAddress.phone && (
-                                    <p className='text-sm text-gray-900 dark:text-white flex items-center gap-2'>
+                                    <p className='text-sm text-white flex items-center gap-2'>
                                         <Phone className='h-4 w-4 text-gray-500' />
                                         {finalOrder.billingAddress.phone}
                                     </p>
                                 )}
                                 {finalOrder.billingAddress.address && (
-                                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                                    <p className='text-sm text-gray-400'>
                                         {finalOrder.billingAddress.address}
                                         {finalOrder.billingAddress.city &&
                                             `, ${finalOrder.billingAddress.city}`}
@@ -670,69 +670,26 @@ export function OrderDetailPage() {
                         </Card>
                     )}
 
-                    {/* Transactions Card with Tabs */}
-                    <Card className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D]'>
+                    {/* Transactions Card */}
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                         <CardHeader>
-                            <CardTitle className='text-gray-900 dark:text-white'>
-                                Giao dịch
+                            <CardTitle className='text-white'>
+                                Giao dịch của đơn hàng này
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Tabs
-                                value={activeTransactionTab}
-                                onValueChange={setActiveTransactionTab}
-                                className='w-full'
-                            >
-                                <TabsList className='w-full justify-start bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2D2D2D]'>
-                                    <TabsTrigger
-                                        value='order-transactions'
-                                        className='flex items-center gap-2'
-                                    >
-                                        <Receipt className='h-4 w-4' />
-                                        Giao dịch của đơn hàng này
-                                    </TabsTrigger>
-                                    <TabsTrigger
-                                        value='all-transactions'
-                                        className='flex items-center gap-2'
-                                    >
-                                        <History className='h-4 w-4' />
-                                        Lịch sử toàn bộ giao dịch
-                                    </TabsTrigger>
-                                </TabsList>
-
-                                {/* Order Transactions Tab */}
-                                <TabsContent
-                                    value='order-transactions'
-                                    className='space-y-4 mt-6'
-                                >
-                                    <CardDescription className='text-gray-600 dark:text-gray-400'>
-                                        {transactions.length > 0
-                                            ? `${transactions.length} giao dịch`
-                                            : 'Chưa có giao dịch nào'}
-                                    </CardDescription>
-                                    <TransactionList
-                                        transactions={transactions}
-                                        loading={false}
-                                        onTransactionClick={handleViewDetail}
-                                    />
-                                </TabsContent>
-
-                                {/* All Transactions Tab */}
-                                <TabsContent
-                                    value='all-transactions'
-                                    className='space-y-6 mt-6'
-                                >
-                                    {/* Transactions Table */}
-                                    <TransactionList
-                                        transactions={allTransactions}
-                                        loading={transactionsLoading}
-                                        onTransactionClick={handleViewDetail}
-                                    />
-
-                                    {/* Pagination */}
-                                    {renderTransactionPagination()}
-                                </TabsContent>
-                            </Tabs>
+                            <div className='space-y-4'>
+                                <CardDescription className='text-gray-400'>
+                                    {transactions.length > 0
+                                        ? `${transactions.length} giao dịch`
+                                        : 'Chưa có giao dịch nào'}
+                                </CardDescription>
+                                <TransactionList
+                                    transactions={transactions}
+                                    loading={false}
+                                    onTransactionClick={handleViewDetail}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -744,9 +701,9 @@ export function OrderDetailPage() {
 
                     {/* Actions */}
                     {course && (
-                        <Card className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D]'>
+                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                             <CardHeader>
-                                <CardTitle className='text-gray-900 dark:text-white'>
+                                <CardTitle className='text-white'>
                                     Thao tác
                                 </CardTitle>
                             </CardHeader>
@@ -817,10 +774,10 @@ export function OrderDetailPage() {
 
             {/* Cancel Order Dialog */}
             <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-                <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white'>
+                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
                     <DialogHeader>
                         <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
-                        <DialogDescription className='text-gray-600 dark:text-gray-400'>
+                        <DialogDescription className='text-gray-400'>
                             Bạn có chắc chắn muốn hủy đơn hàng{' '}
                             <span className='font-mono font-semibold'>
                                 {finalOrder.orderCode}
@@ -832,7 +789,7 @@ export function OrderDetailPage() {
                         <Button
                             variant='outline'
                             onClick={() => setCancelDialogOpen(false)}
-                            className='border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
+                            className='border-[#2D2D2D] text-gray-300 hover:bg-[#1F1F1F]'
                         >
                             Hủy
                         </Button>
@@ -849,10 +806,10 @@ export function OrderDetailPage() {
 
             {/* Transaction Detail Dialog */}
             <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-                <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white max-w-2xl max-h-[80vh] overflow-y-auto'>
+                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-2xl max-h-[80vh] overflow-y-auto'>
                     <DialogHeader>
                         <DialogTitle>Chi tiết giao dịch</DialogTitle>
-                        <DialogDescription className='text-gray-600 dark:text-gray-400'>
+                        <DialogDescription className='text-gray-400'>
                             Thông tin chi tiết về giao dịch thanh toán
                         </DialogDescription>
                     </DialogHeader>
@@ -860,52 +817,55 @@ export function OrderDetailPage() {
                         <div className='space-y-4 mt-4'>
                             <div className='grid grid-cols-2 gap-4'>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         ID Giao dịch
                                     </p>
-                                    <p className='font-mono text-sm text-gray-900 dark:text-white'>
+                                    <p className='font-mono text-sm text-white'>
                                         #{selectedTransaction.id}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Mã giao dịch
                                     </p>
-                                    <p className='font-mono text-sm text-gray-900 dark:text-white'>
+                                    <p className='font-mono text-sm text-white'>
                                         {selectedTransaction.transactionId ||
                                             'N/A'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Phương thức
                                     </p>
-                                    <Badge variant='outline'>
+                                    <Badge
+                                        variant='outline'
+                                        className='border-[#2d2d2d] text-gray-300'
+                                    >
                                         {selectedTransaction.paymentGateway}
                                     </Badge>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Trạng thái
                                     </p>
                                     <Badge
                                         className={
                                             selectedTransaction.status ===
                                             'SUCCESS'
-                                                ? 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40'
+                                                ? 'bg-green-600/20 text-green-300 border border-green-500/40'
                                                 : selectedTransaction.status ===
                                                   'PENDING'
-                                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40'
+                                                ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'
                                                 : selectedTransaction.status ===
                                                   'FAILED'
-                                                ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40'
+                                                ? 'bg-red-600/20 text-red-300 border border-red-500/40'
                                                 : selectedTransaction.status ===
                                                   'REFUNDED'
-                                                ? 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
+                                                ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
                                                 : selectedTransaction.status ===
                                                   'PARTIALLY_REFUNDED'
-                                                ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40'
-                                                : 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-600/20 dark:text-gray-300 dark:border-gray-500/40'
+                                                ? 'bg-orange-600/20 text-orange-300 border border-orange-500/40'
+                                                : 'bg-gray-600/20 text-gray-300 border border-gray-500/40'
                                         }
                                     >
                                         {getTransactionStatusText(
@@ -914,10 +874,10 @@ export function OrderDetailPage() {
                                     </Badge>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Số tiền
                                     </p>
-                                    <p className='font-semibold text-gray-900 dark:text-white'>
+                                    <p className='font-semibold text-white'>
                                         {formatPrice(
                                             typeof selectedTransaction.amount ===
                                                 'string'
@@ -929,38 +889,38 @@ export function OrderDetailPage() {
                                     </p>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Đơn hàng
                                     </p>
                                     {selectedTransaction.order ? (
                                         <Link
                                             to={`/orders/${selectedTransaction.order.id}`}
-                                            className='text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm'
+                                            className='text-blue-400 hover:underline font-mono text-sm'
                                         >
                                             {selectedTransaction.order
                                                 .orderCode || 'N/A'}
                                         </Link>
                                     ) : (
-                                        <p className='text-sm text-gray-900 dark:text-white'>
+                                        <p className='text-sm text-white'>
                                             N/A
                                         </p>
                                     )}
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Ngày tạo
                                     </p>
-                                    <p className='text-sm text-gray-900 dark:text-white'>
+                                    <p className='text-sm text-white'>
                                         {formatDateTime(
                                             selectedTransaction.createdAt
                                         )}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                    <p className='text-sm text-gray-400 mb-1'>
                                         Cập nhật lần cuối
                                     </p>
-                                    <p className='text-sm text-gray-900 dark:text-white'>
+                                    <p className='text-sm text-white'>
                                         {formatDateTime(
                                             selectedTransaction.updatedAt
                                         )}

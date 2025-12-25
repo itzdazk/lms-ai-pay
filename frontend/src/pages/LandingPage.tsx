@@ -27,10 +27,12 @@ import Slider from 'react-slick'
 import { mockCourses, formatPrice, formatDuration } from '../lib/mockData'
 import { categoriesApi } from '../lib/api'
 import type { Category } from '../lib/api'
+import { useTheme } from '../contexts/ThemeContext'
 
 // Custom Arrow Components
 function NextArrow(props: any) {
     const { onClick, className } = props
+    const { theme } = useTheme()
     const disabled = className?.includes('slick-disabled')
 
     return (
@@ -41,22 +43,27 @@ function NextArrow(props: any) {
                 w-10 h-10 md:w-12 md:h-12 
                 -right-2 md:-right-6
                 rounded-full 
-                backdrop-blur-md bg-white/10 border border-white/20
                 flex items-center justify-center
                 transition-all duration-300
                 disabled:opacity-30 disabled:cursor-not-allowed
-                hover:bg-white/20 hover:scale-110 hover:border-white/40
+                hover:scale-110
                 shadow-lg hover:shadow-2xl
+                ${
+                    theme === 'dark'
+                        ? 'bg-gray-800/90 backdrop-blur-md border-2 border-gray-600 text-white hover:bg-gray-700 hover:border-gray-500'
+                        : 'bg-white/95 backdrop-blur-md border-2 border-gray-300 text-gray-800 hover:bg-white hover:border-gray-400 shadow-md'
+                }
             `}
             aria-label='Next'
         >
-            <ChevronRight className='w-5 h-5 md:w-6 md:h-6 text-white' />
+            <ChevronRight className='w-5 h-5 md:w-6 md:h-6' />
         </button>
     )
 }
 
 function PrevArrow(props: any) {
     const { onClick, className } = props
+    const { theme } = useTheme()
     const disabled = className?.includes('slick-disabled')
 
     return (
@@ -67,15 +74,20 @@ function PrevArrow(props: any) {
                 w-10 h-10 md:w-12 md:h-12 
                 -left-2 md:-left-6
                 rounded-full
-                backdrop-blur-md bg-white/10 border border-white/20
                 flex items-center justify-center
                 transition-all duration-300
                 disabled:opacity-30 disabled:cursor-not-allowed
-                hover:bg-white/20 hover:scale-110 hover:border-white/40
+                hover:scale-110
                 shadow-lg hover:shadow-2xl
+                ${
+                    theme === 'dark'
+                        ? 'bg-gray-800/90 backdrop-blur-md border-2 border-gray-600 text-white hover:bg-gray-700 hover:border-gray-500'
+                        : 'bg-white/95 backdrop-blur-md border-2 border-gray-300 text-gray-800 hover:bg-white hover:border-gray-400 shadow-md'
+                }
             `}
+            aria-label='Previous'
         >
-            <ChevronLeft className='w-5 h-5 md:w-6 md:h-6 text-white' />
+            <ChevronLeft className='w-5 h-5 md:w-6 md:h-6' />
         </button>
     )
 }
@@ -463,7 +475,7 @@ export function LandingPage() {
                                                         </h3>
 
                                                         {/* Description */}
-                                                        <p className='text-sm text-muted-foreground mb-3 line-clamp-2'>
+                                                        <p className='text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem]'>
                                                             {
                                                                 category.description
                                                             }

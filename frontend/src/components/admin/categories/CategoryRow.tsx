@@ -1,8 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
-import { DarkOutlineTableRow, DarkOutlineTableCell } from '../../../components/ui/dark-outline-table'
+import {
+    DarkOutlineTableRow,
+    DarkOutlineTableCell,
+} from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
-import { MoreVertical, FolderTree, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import {
+    MoreVertical,
+    FolderTree,
+    Edit,
+    Trash2,
+    ToggleLeft,
+    ToggleRight,
+} from 'lucide-react'
 import type { Category } from '../../../lib/api/types'
 import { formatDate } from '../../../lib/utils'
 
@@ -120,27 +130,27 @@ export function CategoryRow({
                                 className='w-12 h-12 object-cover rounded flex-shrink-0'
                             />
                         ) : (
-                            <div className='w-12 h-12 bg-gray-200 dark:bg-[#2D2D2D] rounded flex items-center justify-center flex-shrink-0'>
-                                <FolderTree className='h-6 w-6 text-gray-500 dark:text-gray-400' />
+                            <div className='w-12 h-12 bg-[#2D2D2D] rounded flex items-center justify-center flex-shrink-0'>
+                                <FolderTree className='h-6 w-6 text-gray-400' />
                             </div>
                         )}
                         <div className='min-w-0 flex-1'>
                             <div className='flex items-start gap-2 min-w-0'>
-                                <p className='font-medium text-gray-900 dark:text-white break-words whitespace-normal'>
+                                <p className='font-medium text-white break-words whitespace-normal'>
                                     {category.name}
                                 </p>
                             </div>
                             {category.description && (
-                                <p className='text-sm text-gray-500 dark:text-gray-400 break-words whitespace-normal line-clamp-1'>
+                                <p className='text-sm text-gray-400 break-words whitespace-normal line-clamp-1'>
                                     {category.description}
                                 </p>
                             )}
                             {category.parent && (
                                 <div className='flex items-center gap-1.5 mt-2'>
-                                    <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>
+                                    <span className='text-xs font-medium text-gray-400'>
                                         Danh mục cha:
                                     </span>
-                                    <span className='inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'>
+                                    <span className='inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-800'>
                                         {category.parent.name}
                                     </span>
                                 </div>
@@ -150,7 +160,7 @@ export function CategoryRow({
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[120px]'>
                     <span
-                        className='text-gray-900 dark:text-gray-300 truncate block'
+                        className='text-gray-300 truncate block'
                         title={category.slug}
                     >
                         {category.slug}
@@ -162,29 +172,27 @@ export function CategoryRow({
                     ) : (
                         <Badge
                             variant='outline'
-                            className='border-gray-300 dark:border-[#2D2D2D] text-gray-700 dark:text-gray-300'
+                            className='border-[#2D2D2D] text-gray-300'
                         >
                             Không hoạt động
                         </Badge>
                     )}
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[100px]'>
-                    <span className='text-gray-900 dark:text-gray-300'>
+                    <span className='text-gray-300'>
                         {category.coursesCount || 0}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[100px]'>
-                    <span className='text-gray-900 dark:text-gray-300'>
-                        {category.sortOrder}
-                    </span>
+                    <span className='text-gray-300'>{category.sortOrder}</span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[110px]'>
-                    <span className='text-gray-900 dark:text-gray-300'>
+                    <span className='text-gray-300'>
                         {formatDate(category.createdAt)}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[110px]'>
-                    <span className='text-gray-900 dark:text-gray-300'>
+                    <span className='text-gray-300'>
                         {formatDate(category.updatedAt)}
                     </span>
                 </DarkOutlineTableCell>

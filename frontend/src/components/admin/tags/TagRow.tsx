@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { DarkOutlineTableRow, DarkOutlineTableCell } from '../../../components/ui/dark-outline-table'
+import {
+    DarkOutlineTableRow,
+    DarkOutlineTableCell,
+} from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
-import { Badge } from '../../../components/ui/badge'
 import { Tag as TagIcon, Edit, Trash2, MoreVertical } from 'lucide-react'
 import type { Tag } from '../../../lib/api/types'
 import { formatDate } from '../../../lib/utils'
@@ -14,7 +16,13 @@ interface TagRowProps {
     onDelete: (tag: Tag) => void
 }
 
-export function TagRow({ tag, isSelected, onRowSelect, onEdit, onDelete }: TagRowProps) {
+export function TagRow({
+    tag,
+    isSelected,
+    onRowSelect,
+    onEdit,
+    onDelete,
+}: TagRowProps) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
     const [adjustedPosition, setAdjustedPosition] = useState({
@@ -77,7 +85,10 @@ export function TagRow({ tag, isSelected, onRowSelect, onEdit, onDelete }: TagRo
     // Close menu on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
                 setMenuOpen(false)
             }
         }
@@ -102,33 +113,31 @@ export function TagRow({ tag, isSelected, onRowSelect, onEdit, onDelete }: TagRo
             >
                 <DarkOutlineTableCell className='min-w-[150px] max-w-[200px]'>
                     <div className='flex items-center gap-3 min-w-0'>
-                        <div className='w-10 h-10 bg-gray-200 dark:bg-[#2D2D2D] rounded-full flex items-center justify-center flex-shrink-0'>
-                            <TagIcon className='h-5 w-5 text-gray-600 dark:text-gray-300' />
+                        <div className='w-10 h-10 bg-[#2D2D2D] rounded-full flex items-center justify-center flex-shrink-0'>
+                            <TagIcon className='h-5 w-5 text-gray-300' />
                         </div>
                         <div className='min-w-0 flex-1'>
-                            <p className='font-medium text-gray-900 dark:text-white break-words whitespace-normal'>
+                            <p className='font-medium text-white break-words whitespace-normal'>
                                 {tag.name}
                             </p>
                         </div>
                     </div>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='min-w-[120px] max-w-[150px]'>
-                    <span className='text-gray-900 dark:text-gray-300 break-words whitespace-normal'>
+                    <span className='text-gray-300 break-words whitespace-normal'>
                         {tag.slug}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='min-w-[150px] max-w-[200px]'>
-                    <span className='text-gray-900 dark:text-gray-300 break-words whitespace-normal'>
+                    <span className='text-gray-300 break-words whitespace-normal'>
                         {tag.description || 'Không có mô tả'}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[100px]'>
-                    <span className='text-gray-900 dark:text-gray-300'>
-                        {coursesCount}
-                    </span>
+                    <span className='text-gray-300'>{coursesCount}</span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[110px]'>
-                    <span className='text-gray-900 dark:text-gray-300'>
+                    <span className='text-gray-300'>
                         {formatDate(tag.createdAt)}
                     </span>
                 </DarkOutlineTableCell>

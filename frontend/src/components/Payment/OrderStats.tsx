@@ -55,9 +55,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Tổng đơn hàng',
             value: stats.total,
             icon: ShoppingBag,
-            color: 'text-blue-600 dark:text-blue-400',
-            bgColor: 'bg-blue-200 dark:bg-blue-950/30',
-            borderColor: 'border-blue-400 dark:border-blue-900',
+            color: 'text-blue-400',
+            bgColor: 'bg-blue-950/30',
+            borderColor: 'border-blue-900',
             isPrice: false,
             change: null,
         },
@@ -65,9 +65,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Đã thanh toán',
             value: stats.paid,
             icon: CheckCircle,
-            color: 'text-green-600 dark:text-green-400',
-            bgColor: 'bg-green-200 dark:bg-green-950/30',
-            borderColor: 'border-green-400 dark:border-green-900',
+            color: 'text-green-400',
+            bgColor: 'bg-green-950/30',
+            borderColor: 'border-green-900',
             isPrice: false,
             change:
                 stats.total > 0
@@ -78,9 +78,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Đang chờ',
             value: stats.pending,
             icon: Clock,
-            color: 'text-yellow-600 dark:text-yellow-400',
-            bgColor: 'bg-yellow-200 dark:bg-yellow-950/30',
-            borderColor: 'border-yellow-400 dark:border-yellow-900',
+            color: 'text-yellow-400',
+            bgColor: 'bg-yellow-950/30',
+            borderColor: 'border-yellow-900',
             isPrice: false,
             change: null,
         },
@@ -88,9 +88,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Thất bại',
             value: stats.failed,
             icon: XCircle,
-            color: 'text-red-600 dark:text-red-400',
-            bgColor: 'bg-red-200 dark:bg-red-950/30',
-            borderColor: 'border-red-400 dark:border-red-900',
+            color: 'text-red-400',
+            bgColor: 'bg-red-950/30',
+            borderColor: 'border-red-900',
             isPrice: false,
             change: null,
         },
@@ -98,9 +98,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Đã hoàn tiền',
             value: stats.refunded,
             icon: RefreshCw,
-            color: 'text-purple-600 dark:text-purple-400',
-            bgColor: 'bg-purple-200 dark:bg-purple-950/30',
-            borderColor: 'border-purple-400 dark:border-purple-900',
+            color: 'text-purple-400',
+            bgColor: 'bg-purple-950/30',
+            borderColor: 'border-purple-900',
             isPrice: false,
             change: null,
         },
@@ -108,9 +108,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Tổng chi tiêu',
             value: stats.totalSpent,
             icon: DollarSign,
-            color: 'text-orange-600 dark:text-orange-400',
-            bgColor: 'bg-orange-200 dark:bg-orange-950/30',
-            borderColor: 'border-orange-400 dark:border-orange-900',
+            color: 'text-orange-400',
+            bgColor: 'bg-orange-950/30',
+            borderColor: 'border-orange-900',
             isPrice: true,
             change: null,
         },
@@ -121,10 +121,10 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             {statsCards.map((stat) => (
                 <Card
                     key={stat.label}
-                    className={`overflow-hidden border-l-4 ${stat.borderColor} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+                    className={`overflow-hidden border-l-4 ${stat.borderColor} bg-[#1A1A1A] hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
                 >
                     <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-muted-foreground'>
+                        <CardTitle className='text-sm font-medium text-gray-300 dark:text-gray-300'>
                             {stat.label}
                         </CardTitle>
                         <div className={`p-2.5 rounded-lg ${stat.bgColor}`}>
@@ -133,7 +133,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
                     </CardHeader>
                     <CardContent>
                         <div className='space-y-1'>
-                            <div className='text-2xl font-bold'>
+                            <div className='text-2xl font-bold text-gray-300 dark:text-gray-300'>
                                 {stat.isPrice
                                     ? formatPrice(stat.value as number)
                                     : (stat.value as number).toLocaleString(
@@ -141,8 +141,8 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
                                       )}
                             </div>
                             {stat.change && (
-                                <div className='flex items-center text-xs text-muted-foreground'>
-                                    <TrendingUp className='h-3 w-3 mr-1 text-green-600 dark:text-green-400' />
+                                <div className='flex items-center text-xs text-gray-300 dark:text-gray-300'>
+                                    <TrendingUp className='h-3 w-3 mr-1 text-green-600 dark:text-green-600' />
                                     <span>{stat.change} của tổng</span>
                                 </div>
                             )}

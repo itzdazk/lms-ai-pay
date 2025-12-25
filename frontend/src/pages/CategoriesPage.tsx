@@ -154,8 +154,8 @@ export function CategoriesPage() {
     return (
         <div className='min-h-screen bg-gray-50 dark:bg-black'>
             {/* Header */}
-            <div className='bg-white dark:bg-[#1A1A1A] border-b border-gray-200 dark:border-[#2D2D2D]'>
-                <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>
+            <div className='bg-[#1A1A1A]  border-b border-gray-800 dark:border-gray-800'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
                     <div className='flex items-center gap-4'>
                         {viewState.mode === 'detail' && (
                             <button
@@ -166,13 +166,13 @@ export function CategoriesPage() {
                             </button>
                         )}
                         <div className='flex-1'>
-                            <h1 className='mb-2 text-gray-900 dark:text-white'>
+                            <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white dark:text-white'>
                                 {viewState.mode === 'list'
                                     ? 'Khám phá danh mục'
                                     : viewState.selectedCategory?.name}
                             </h1>
                             {viewState.mode === 'list' && (
-                                <p className='text-gray-600 dark:text-gray-400'>
+                                <p className='text-base text-gray-300 dark:text-gray-300 leading-relaxed'>
                                     Tìm kiếm khóa học phù hợp với mục tiêu học
                                     tập của bạn
                                 </p>

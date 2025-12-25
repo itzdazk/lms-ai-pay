@@ -199,181 +199,193 @@ export function TransactionHistoryPage() {
     }
 
     return (
-        <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
-            <div className='mb-6'>
-                <h1 className='text-3xl font-bold text-gray-900 dark:text-white mb-2'>
-                    Lịch sử giao dịch
-                </h1>
-                <p className='text-gray-600 dark:text-gray-400'>
-                    Xem và quản lý tất cả giao dịch thanh toán của bạn
-                </p>
-            </div>
-
-            {/* Filters */}
-            <TransactionFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onClearFilters={clearFilters}
-                totalResults={pagination?.total || 0}
-            />
-
-            {/* Transactions Table */}
-            {isLoading ? (
-                <div className='rounded-lg border border-gray-300 dark:border-[#2D2D2D] overflow-hidden'>
-                    <div className='p-6 space-y-4'>
-                        {[1, 2, 3, 4, 5].map((i) => (
-                            <Skeleton key={i} className='h-16 w-full' />
-                        ))}
+        <div className='bg-background min-h-screen'>
+            <div className='bg-[#1A1A1A]  border-b border-gray-800 dark:border-gray-800'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                    <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-6 '>
+                        <div>
+                            <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white dark:text-white'>
+                                Lịch sử giao dịch
+                            </h1>
+                            <p className='text-base text-gray-300 dark:text-gray-300 leading-relaxed'>
+                                Xem và quản lý tất cả giao dịch thanh toán của
+                                bạn
+                            </p>
+                        </div>
                     </div>
                 </div>
-            ) : (
-                <div className='rounded-lg border border-gray-300 dark:border-[#2D2D2D] overflow-hidden'>
-                    <TransactionList
-                        transactions={transactions}
-                        loading={false}
-                        onTransactionClick={handleViewDetail}
-                    />
-                </div>
-            )}
+            </div>
 
-            {/* Pagination */}
-            {pagination && pagination.totalPages > 1 && renderPagination()}
+            <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
+                {/* Filters */}
+                <TransactionFilters
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    onClearFilters={clearFilters}
+                    totalResults={pagination?.total || 0}
+                />
 
-            {/* Transaction Detail Dialog */}
-            <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-                <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white max-w-2xl max-h-[80vh] overflow-y-auto'>
-                    <DialogHeader>
-                        <DialogTitle>Chi tiết giao dịch</DialogTitle>
-                        <DialogDescription className='text-gray-600 dark:text-gray-400'>
-                            Thông tin chi tiết về giao dịch thanh toán
-                        </DialogDescription>
-                    </DialogHeader>
-                    {selectedTransaction && (
-                        <div className='space-y-4 mt-4'>
-                            <div className='grid grid-cols-2 gap-4'>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        ID Giao dịch
-                                    </p>
-                                    <p className='font-mono text-sm text-gray-900 dark:text-white'>
-                                        #{selectedTransaction.id}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Mã giao dịch
-                                    </p>
-                                    <p className='font-mono text-sm text-gray-900 dark:text-white'>
-                                        {selectedTransaction.transactionId ||
-                                            'N/A'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Phương thức
-                                    </p>
-                                    <Badge variant='outline'>
-                                        {selectedTransaction.paymentGateway}
-                                    </Badge>
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Trạng thái
-                                    </p>
-                                    <Badge
-                                        className={
-                                            selectedTransaction.status ===
-                                            'SUCCESS'
-                                                ? 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40'
-                                                : selectedTransaction.status ===
-                                                  'PENDING'
-                                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40'
-                                                : selectedTransaction.status ===
-                                                  'FAILED'
-                                                ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40'
-                                                : selectedTransaction.status ===
-                                                  'REFUNDED'
-                                                ? 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
-                                                : selectedTransaction.status ===
-                                                  'PARTIALLY_REFUNDED'
-                                                ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40'
-                                                : 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-600/20 dark:text-gray-300 dark:border-gray-500/40'
-                                        }
-                                    >
-                                        {getTransactionStatusText(
-                                            selectedTransaction.status
-                                        )}
-                                    </Badge>
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Số tiền
-                                    </p>
-                                    <p className='font-semibold text-gray-900 dark:text-white'>
-                                        {formatPrice(
-                                            typeof selectedTransaction.amount ===
-                                                'string'
-                                                ? parseFloat(
-                                                      selectedTransaction.amount
-                                                  )
-                                                : selectedTransaction.amount
-                                        )}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Đơn hàng
-                                    </p>
-                                    {selectedTransaction.order ? (
-                                        <Link
-                                            to={`/orders/${selectedTransaction.order.id}`}
-                                            className='text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm'
-                                        >
-                                            {selectedTransaction.order
-                                                .orderCode || 'N/A'}
-                                        </Link>
-                                    ) : (
-                                        <p className='text-sm text-gray-900 dark:text-white'>
-                                            N/A
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Ngày tạo
-                                    </p>
-                                    <p className='text-sm text-gray-900 dark:text-white'>
-                                        {formatDateTime(
-                                            selectedTransaction.createdAt
-                                        )}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                                        Cập nhật lần cuối
-                                    </p>
-                                    <p className='text-sm text-gray-900 dark:text-white'>
-                                        {formatDateTime(
-                                            selectedTransaction.updatedAt
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {selectedTransaction.errorMessage && (
-                                <div className='p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>
-                                    <p className='text-sm font-semibold text-red-800 dark:text-red-300 mb-1'>
-                                        Lỗi:
-                                    </p>
-                                    <p className='text-sm text-red-700 dark:text-red-400'>
-                                        {selectedTransaction.errorMessage}
-                                    </p>
-                                </div>
-                            )}
+                {/* Transactions Table */}
+                {isLoading ? (
+                    <div className='rounded-lg border border-gray-300 dark:border-[#2D2D2D] overflow-hidden'>
+                        <div className='p-6 space-y-4'>
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Skeleton key={i} className='h-16 w-full' />
+                            ))}
                         </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+                    </div>
+                ) : (
+                    <div className='rounded-lg border border-gray-300 dark:border-[#2D2D2D] overflow-hidden'>
+                        <TransactionList
+                            transactions={transactions}
+                            loading={false}
+                            onTransactionClick={handleViewDetail}
+                        />
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && renderPagination()}
+
+                {/* Transaction Detail Dialog */}
+                <Dialog
+                    open={detailDialogOpen}
+                    onOpenChange={setDetailDialogOpen}
+                >
+                    <DialogContent className='bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2D2D2D] text-gray-900 dark:text-white max-w-2xl max-h-[80vh] overflow-y-auto'>
+                        <DialogHeader>
+                            <DialogTitle>Chi tiết giao dịch</DialogTitle>
+                            <DialogDescription className='text-gray-600 dark:text-gray-400'>
+                                Thông tin chi tiết về giao dịch thanh toán
+                            </DialogDescription>
+                        </DialogHeader>
+                        {selectedTransaction && (
+                            <div className='space-y-4 mt-4'>
+                                <div className='grid grid-cols-2 gap-4'>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            ID Giao dịch
+                                        </p>
+                                        <p className='font-mono text-sm text-gray-900 dark:text-white'>
+                                            #{selectedTransaction.id}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Mã giao dịch
+                                        </p>
+                                        <p className='font-mono text-sm text-gray-900 dark:text-white'>
+                                            {selectedTransaction.transactionId ||
+                                                'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Phương thức
+                                        </p>
+                                        <Badge variant='outline'>
+                                            {selectedTransaction.paymentGateway}
+                                        </Badge>
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Trạng thái
+                                        </p>
+                                        <Badge
+                                            className={
+                                                selectedTransaction.status ===
+                                                'SUCCESS'
+                                                    ? 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40'
+                                                    : selectedTransaction.status ===
+                                                      'PENDING'
+                                                    ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40'
+                                                    : selectedTransaction.status ===
+                                                      'FAILED'
+                                                    ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40'
+                                                    : selectedTransaction.status ===
+                                                      'REFUNDED'
+                                                    ? 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
+                                                    : selectedTransaction.status ===
+                                                      'PARTIALLY_REFUNDED'
+                                                    ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40'
+                                                    : 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-600/20 dark:text-gray-300 dark:border-gray-500/40'
+                                            }
+                                        >
+                                            {getTransactionStatusText(
+                                                selectedTransaction.status
+                                            )}
+                                        </Badge>
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Số tiền
+                                        </p>
+                                        <p className='font-semibold text-gray-900 dark:text-white'>
+                                            {formatPrice(
+                                                typeof selectedTransaction.amount ===
+                                                    'string'
+                                                    ? parseFloat(
+                                                          selectedTransaction.amount
+                                                      )
+                                                    : selectedTransaction.amount
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Đơn hàng
+                                        </p>
+                                        {selectedTransaction.order ? (
+                                            <Link
+                                                to={`/orders/${selectedTransaction.order.id}`}
+                                                className='text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm'
+                                            >
+                                                {selectedTransaction.order
+                                                    .orderCode || 'N/A'}
+                                            </Link>
+                                        ) : (
+                                            <p className='text-sm text-gray-900 dark:text-white'>
+                                                N/A
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Ngày tạo
+                                        </p>
+                                        <p className='text-sm text-gray-900 dark:text-white'>
+                                            {formatDateTime(
+                                                selectedTransaction.createdAt
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                                            Cập nhật lần cuối
+                                        </p>
+                                        <p className='text-sm text-gray-900 dark:text-white'>
+                                            {formatDateTime(
+                                                selectedTransaction.updatedAt
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {selectedTransaction.errorMessage && (
+                                    <div className='p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>
+                                        <p className='text-sm font-semibold text-red-800 dark:text-red-300 mb-1'>
+                                            Lỗi:
+                                        </p>
+                                        <p className='text-sm text-red-700 dark:text-red-400'>
+                                            {selectedTransaction.errorMessage}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
     )
 }

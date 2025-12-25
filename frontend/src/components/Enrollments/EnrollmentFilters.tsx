@@ -61,7 +61,7 @@ export function EnrollmentFilters({
                 ${
                     isActive
                         ? 'bg-foreground text-background shadow-sm hover:bg-foreground/90'
-                        : 'hover:bg-muted border-border'
+                        : 'hover:bg-black border-border dark:hover:bg-white dark:hover:text-gray-800'
                 }
               `}
                         >

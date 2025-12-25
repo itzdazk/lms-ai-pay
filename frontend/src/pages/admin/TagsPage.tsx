@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import {
-    Loader2,
-    Tag as TagIcon,
-} from 'lucide-react'
+import { Loader2, Tag as TagIcon } from 'lucide-react'
 import {
     adminTagsApi,
     type AdminTagFilters,
@@ -36,13 +33,7 @@ const generateSlug = (text: string): string => {
 
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
-function validateTagPayload({
-    name,
-    slug,
-}: {
-    name: string
-    slug: string
-}) {
+function validateTagPayload({ name, slug }: { name: string; slug: string }) {
     const errors: string[] = []
     if (!name || !name.trim()) {
         errors.push('Tên tag không được để trống')
@@ -100,13 +91,16 @@ export function TagsPage() {
     })
 
     // Memoize filters to prevent unnecessary re-renders
-    const memoizedFilters = useMemo(() => filters, [
-        filters.page,
-        filters.limit,
-        filters.search,
-        filters.sort,
-        filters.sortOrder,
-    ])
+    const memoizedFilters = useMemo(
+        () => filters,
+        [
+            filters.page,
+            filters.limit,
+            filters.search,
+            filters.sort,
+            filters.sortOrder,
+        ]
+    )
     const [selectedTag, setSelectedTag] = useState<Tag | null>(null)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -198,7 +192,7 @@ export function TagsPage() {
     // Handle clear search (reset both input and filters)
     const handleClearSearch = () => {
         setSearchInput('')
-        setFilters(prev => ({
+        setFilters((prev) => ({
             ...prev,
             search: '',
             page: 1,
@@ -217,31 +211,35 @@ export function TagsPage() {
         }
     }
 
-    const handleFilterChange = useCallback((
-        key: keyof AdminTagFilters,
-        value: any
-    ) => {
-        const mainContainer = document.querySelector('main')
-        if (mainContainer) {
-            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
-        } else {
-            scrollPositionRef.current =
-                window.scrollY || document.documentElement.scrollTop
-        }
-        isPageChangingRef.current = true
-        setFilters(prev => ({
-            ...prev,
-            [key]: value,
-            page: 1,
-        }))
-    }, [])
+    const handleFilterChange = useCallback(
+        (key: keyof AdminTagFilters, value: any) => {
+            const mainContainer = document.querySelector('main')
+            if (mainContainer) {
+                scrollPositionRef.current = (
+                    mainContainer as HTMLElement
+                ).scrollTop
+            } else {
+                scrollPositionRef.current =
+                    window.scrollY || document.documentElement.scrollTop
+            }
+            isPageChangingRef.current = true
+            setFilters((prev) => ({
+                ...prev,
+                [key]: value,
+                page: 1,
+            }))
+        },
+        []
+    )
 
     const handlePageChange = useCallback((newPage: number) => {
         // Use requestAnimationFrame to avoid blocking input
         requestAnimationFrame(() => {
             const mainContainer = document.querySelector('main')
             if (mainContainer) {
-                scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+                scrollPositionRef.current = (
+                    mainContainer as HTMLElement
+                ).scrollTop
             } else {
                 scrollPositionRef.current =
                     window.scrollY || document.documentElement.scrollTop
@@ -249,7 +247,7 @@ export function TagsPage() {
             isPageChangingRef.current = true
         })
 
-        setFilters(prev => ({ ...prev, page: newPage }))
+        setFilters((prev) => ({ ...prev, page: newPage }))
     }, [])
 
     const handleCreate = () => {
@@ -283,7 +281,8 @@ export function TagsPage() {
 
             const payload: TagFormState = {
                 name: formData.name?.trim(),
-                slug: formData.slug?.trim() || generateSlug(formData.name || ''),
+                slug:
+                    formData.slug?.trim() || generateSlug(formData.name || ''),
                 description: formData.description?.trim() || undefined,
             }
 
@@ -362,10 +361,7 @@ export function TagsPage() {
                 }
             })
 
-            await adminTagsApi.updateTag(
-                selectedTag.id,
-                cleanPayload
-            )
+            await adminTagsApi.updateTag(selectedTag.id, cleanPayload)
 
             toast.success('Cập nhật tag thành công!')
             setIsEditDialogOpen(false)
@@ -397,17 +393,19 @@ export function TagsPage() {
     }
 
     const renderPagination = () => {
-        return <TagsPagination
-            pagination={pagination}
-            loading={loading}
-            onPageChange={handlePageChange}
-        />
+        return (
+            <TagsPagination
+                pagination={pagination}
+                loading={loading}
+                onPageChange={handlePageChange}
+            />
+        )
     }
 
     // Show loading while checking auth
     if (authLoading) {
         return (
-            <div className='container mx-auto px-4 py-4 bg-background text-foreground min-h-screen flex items-center justify-center'>
+            <div className='container mx-auto px-4 py-4 bg-white dark:bg-black min-h-screen flex items-center justify-center'>
                 <Loader2 className='h-8 w-8 animate-spin text-primary' />
             </div>
         )
@@ -419,14 +417,14 @@ export function TagsPage() {
     }
 
     return (
-        <div className='w-full px-4 py-4 bg-background text-foreground min-h-screen'>
+        <div className='w-full px-4 py-4 bg-white dark:bg-black min-h-screen'>
             <div className='w-full'>
                 <div className='mb-6'>
-                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
+                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-black dark:text-white flex items-center gap-3'>
                         <TagIcon className='h-8 w-8' />
                         Quản lý Tags
                     </h1>
-                    <p className='text-muted-foreground'>
+                    <p className='text-gray-600 dark:text-gray-300'>
                         Quản lý và theo dõi tất cả tags của khóa học
                     </p>
                 </div>
@@ -439,9 +437,13 @@ export function TagsPage() {
                         setSearchInput('')
                         const mainContainer = document.querySelector('main')
                         if (mainContainer) {
-                            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+                            scrollPositionRef.current = (
+                                mainContainer as HTMLElement
+                            ).scrollTop
                         } else {
-                            scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop
+                            scrollPositionRef.current =
+                                window.scrollY ||
+                                document.documentElement.scrollTop
                         }
                         isPageChangingRef.current = true
                         setFilters({

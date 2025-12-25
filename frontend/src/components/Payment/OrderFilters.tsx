@@ -122,28 +122,28 @@ export function OrderFilters({
     const getStatusBadgeClassName = (status: string) => {
         switch (status) {
             case 'PAID':
-                return 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-600/20 dark:text-green-300 dark:border-green-500/40'
+                return 'bg-green-600/20 text-green-300 border border-green-500/40'
             case 'PENDING':
-                return 'bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-600/20 dark:text-yellow-300 dark:border-yellow-500/40'
+                return 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'
             case 'FAILED':
-                return 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/40'
+                return 'bg-red-600/20 text-red-300 border border-red-500/40'
             case 'REFUNDED':
-                return 'bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-600/20 dark:text-purple-300 dark:border-purple-500/40'
+                return 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
             case 'PARTIALLY_REFUNDED':
-                return 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-600/20 dark:text-orange-300 dark:border-orange-500/40'
+                return 'bg-orange-600/20 text-orange-300 border border-orange-500/40'
             default:
                 return ''
         }
     }
 
     return (
-        <Card className='mb-6 overflow-hidden border-2 shadow-sm'>
+        <Card className='mb-6 overflow-hidden border-2 border-[#2d2d2d] shadow-sm bg-[#1a1a1a]'>
             <CardContent className='p-6 space-y-6'>
                 {/* Search Bar & Quick Actions */}
                 <div className='flex flex-col lg:flex-row gap-4'>
                     {/* Search */}
                     <div className='flex-1 relative'>
-                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
                         <Input
                             placeholder='Tìm kiếm theo mã đơn, tên khóa học...'
                             value={filters.search || ''}
@@ -153,14 +153,14 @@ export function OrderFilters({
                                     e.target.value || undefined
                                 )
                             }
-                            className='pl-10 pr-10 h-11'
+                            className='pl-10 pr-10 h-11 bg-[#1f1f1f] border-[#2d2d2d] text-white placeholder:text-gray-500'
                         />
                         {filters.search && (
                             <button
                                 onClick={() =>
                                     onFilterChange('search', undefined)
                                 }
-                                className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors'
+                                className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors'
                             >
                                 <X className='h-4 w-4' />
                             </button>
@@ -173,12 +173,12 @@ export function OrderFilters({
                             variant='outline'
                             size='sm'
                             onClick={() => setShowAdvanced(!showAdvanced)}
-                            className='h-11'
+                            className='h-11 border-[#2d2d2d] text-gray-800 dark:text-gray-300 hover:bg-gray-400 hover:text-gray-800 dark:hover:bg-gray-800 cursor-pointer'
                         >
                             <SlidersHorizontal className='h-4 w-4 mr-2' />
                             Bộ lọc nâng cao
                             {activeFilterCount > 0 && (
-                                <Badge className='ml-2 h-5 w-5 p-0 flex items-center justify-center rounded-full'>
+                                <Badge className='ml-2 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-white text-gray-900'>
                                     {activeFilterCount}
                                 </Badge>
                             )}
@@ -189,7 +189,7 @@ export function OrderFilters({
                                 variant='ghost'
                                 size='sm'
                                 onClick={onClearFilters}
-                                className='h-11 text-muted-foreground hover:text-foreground'
+                                className='h-11 text-gray-400 hover:text-white hover:bg-[#1f1f1f]'
                             >
                                 <X className='h-4 w-4 mr-2' />
                                 Xóa
@@ -201,7 +201,7 @@ export function OrderFilters({
                 {/* Status Chips */}
                 <div>
                     <div className='flex items-center gap-2 mb-3'>
-                        <span className='text-sm font-medium text-muted-foreground'>
+                        <span className='text-sm font-medium text-gray-400'>
                             Trạng thái:
                         </span>
                     </div>
@@ -219,7 +219,10 @@ export function OrderFilters({
                                     key={status.value}
                                     variant={isSelected ? undefined : 'outline'}
                                     className={`cursor-pointer px-4 py-2 text-sm transition-all hover:scale-105 ${
-                                        statusClassName || ''
+                                        statusClassName ||
+                                        (isSelected && status.value === 'all'
+                                            ? 'bg-white text-gray-900 border-0'
+                                            : 'border-[#2d2d2d] text-gray-300')
                                     }`}
                                     onClick={() =>
                                         onFilterChange(
@@ -242,49 +245,58 @@ export function OrderFilters({
 
                 {/* Advanced Filters */}
                 {showAdvanced && (
-                    <div className='space-y-4 pt-4 border-t'>
+                    <div className='space-y-4 pt-4 border-t border-[#2d2d2d]'>
                         {/* Payment Gateway */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
-                                <span className='text-sm font-medium text-muted-foreground'>
+                                <span className='text-sm font-medium text-gray-400'>
                                     Phương thức thanh toán:
                                 </span>
                             </div>
                             <div className='flex flex-wrap gap-2'>
-                                {paymentGateways.map((gateway) => (
-                                    <Badge
-                                        key={gateway.value}
-                                        variant={
-                                            (filters.paymentGateway ||
-                                                'all') === gateway.value
-                                                ? 'default'
-                                                : 'outline'
-                                        }
-                                        className='cursor-pointer px-4 py-2 text-sm transition-all hover:scale-105'
-                                        onClick={() =>
-                                            onFilterChange(
-                                                'paymentGateway',
-                                                gateway.value === 'all'
+                                {paymentGateways.map((gateway) => {
+                                    const isSelected =
+                                        (filters.paymentGateway || 'all') ===
+                                        gateway.value
+                                    return (
+                                        <Badge
+                                            key={gateway.value}
+                                            variant={
+                                                isSelected
                                                     ? undefined
-                                                    : gateway.value
-                                            )
-                                        }
-                                    >
-                                        {gateway.label}
-                                        {(filters.paymentGateway || 'all') ===
-                                            gateway.value && (
-                                            <span className='ml-1.5'>✓</span>
-                                        )}
-                                    </Badge>
-                                ))}
+                                                    : 'outline'
+                                            }
+                                            className={`cursor-pointer px-4 py-2 text-sm transition-all hover:scale-105 ${
+                                                isSelected
+                                                    ? 'bg-white text-gray-900 border-0'
+                                                    : 'border-[#2d2d2d] text-gray-300'
+                                            }`}
+                                            onClick={() =>
+                                                onFilterChange(
+                                                    'paymentGateway',
+                                                    gateway.value === 'all'
+                                                        ? undefined
+                                                        : gateway.value
+                                                )
+                                            }
+                                        >
+                                            {gateway.label}
+                                            {isSelected && (
+                                                <span className='ml-1.5'>
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </Badge>
+                                    )
+                                })}
                             </div>
                         </div>
 
                         {/* Date Range */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
-                                <CalendarIcon className='h-4 w-4 text-muted-foreground' />
-                                <span className='text-sm font-medium text-muted-foreground'>
+                                <CalendarIcon className='h-4 w-4 text-gray-400' />
+                                <span className='text-sm font-medium text-gray-400'>
                                     Khoảng thời gian:
                                 </span>
                             </div>
@@ -293,7 +305,7 @@ export function OrderFilters({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant='outline'
-                                            className='justify-start text-left font-normal'
+                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
                                         >
                                             <CalendarIcon className='mr-2 h-4 w-4' />
                                             {startDate ? (
@@ -303,14 +315,14 @@ export function OrderFilters({
                                                     { locale: vi }
                                                 )
                                             ) : (
-                                                <span className='text-muted-foreground'>
+                                                <span className='text-gray-500'>
                                                     Từ ngày
                                                 </span>
                                             )}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent
-                                        className='w-auto p-0'
+                                        className='w-auto p-0 bg-[#1a1a1a] border-[#2d2d2d] text-white [&_*]:text-white [&_button]:text-gray-300 [&_button:hover]:bg-[#1f1f1f] [&_button:hover]:text-white [&_.bg-primary]:!bg-blue-600 [&_.bg-accent]:!bg-[#1f1f1f] [&_.text-muted-foreground]:!text-gray-400'
                                         align='start'
                                     >
                                         <Calendar
@@ -324,7 +336,7 @@ export function OrderFilters({
                                     </PopoverContent>
                                 </Popover>
 
-                                <span className='flex items-center text-muted-foreground'>
+                                <span className='flex items-center text-gray-400'>
                                     →
                                 </span>
 
@@ -332,7 +344,7 @@ export function OrderFilters({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant='outline'
-                                            className='justify-start text-left font-normal'
+                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
                                         >
                                             <CalendarIcon className='mr-2 h-4 w-4' />
                                             {endDate ? (
@@ -340,14 +352,14 @@ export function OrderFilters({
                                                     locale: vi,
                                                 })
                                             ) : (
-                                                <span className='text-muted-foreground'>
+                                                <span className='text-gray-500'>
                                                     Đến ngày
                                                 </span>
                                             )}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent
-                                        className='w-auto p-0'
+                                        className='w-auto p-0 bg-[#1a1a1a] border-[#2d2d2d] text-white [&_*]:text-white [&_button]:text-gray-300 [&_button:hover]:bg-[#1f1f1f] [&_button:hover]:text-white [&_.bg-primary]:!bg-blue-600 [&_.bg-accent]:!bg-[#1f1f1f] [&_.text-muted-foreground]:!text-gray-400'
                                         align='start'
                                     >
                                         <Calendar
@@ -374,6 +386,7 @@ export function OrderFilters({
                                             )
                                             onFilterChange('endDate', undefined)
                                         }}
+                                        className='text-gray-400 hover:text-white hover:bg-[#1f1f1f]'
                                     >
                                         <X className='h-4 w-4 mr-1' />
                                         Xóa
@@ -385,46 +398,58 @@ export function OrderFilters({
                         {/* Sort Options */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
-                                <ArrowUpDown className='h-4 w-4 text-muted-foreground' />
-                                <span className='text-sm font-medium text-muted-foreground'>
+                                <ArrowUpDown className='h-4 w-4 text-gray-400' />
+                                <span className='text-sm font-medium text-gray-400'>
                                     Sắp xếp:
                                 </span>
                             </div>
                             <div className='flex flex-wrap gap-2'>
-                                {sortOptions.map((option) => (
-                                    <Badge
-                                        key={option.value}
-                                        variant={
-                                            (filters.sort || 'newest') ===
-                                            option.value
-                                                ? 'default'
-                                                : 'outline'
-                                        }
-                                        className='cursor-pointer px-4 py-2 text-sm transition-all hover:scale-105'
-                                        onClick={() =>
-                                            onFilterChange('sort', option.value)
-                                        }
-                                    >
-                                        <span className='mr-1.5'>
-                                            {option.icon}
-                                        </span>
-                                        {option.label}
-                                        {(filters.sort || 'newest') ===
-                                            option.value && (
-                                            <span className='ml-1.5'>✓</span>
-                                        )}
-                                    </Badge>
-                                ))}
+                                {sortOptions.map((option) => {
+                                    const isSelected =
+                                        (filters.sort || 'newest') ===
+                                        option.value
+                                    return (
+                                        <Badge
+                                            key={option.value}
+                                            variant={
+                                                isSelected
+                                                    ? undefined
+                                                    : 'outline'
+                                            }
+                                            className={`cursor-pointer px-4 py-2 text-sm transition-all hover:scale-105 ${
+                                                isSelected
+                                                    ? 'bg-white text-gray-900 border-0'
+                                                    : 'border-[#2d2d2d] text-gray-300'
+                                            }`}
+                                            onClick={() =>
+                                                onFilterChange(
+                                                    'sort',
+                                                    option.value
+                                                )
+                                            }
+                                        >
+                                            <span className='mr-1.5'>
+                                                {option.icon}
+                                            </span>
+                                            {option.label}
+                                            {isSelected && (
+                                                <span className='ml-1.5'>
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </Badge>
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>
                 )}
 
                 {/* Results Count */}
-                <div className='flex items-center justify-between pt-3 border-t text-sm text-muted-foreground'>
+                <div className='flex items-center justify-between pt-3 border-t border-[#2d2d2d] text-sm text-gray-400'>
                     <span>
                         Tìm thấy{' '}
-                        <span className='font-semibold text-foreground'>
+                        <span className='font-semibold text-white'>
                             {totalResults}
                         </span>{' '}
                         kết quả

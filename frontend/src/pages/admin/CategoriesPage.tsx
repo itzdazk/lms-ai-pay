@@ -10,11 +10,7 @@ import {
 } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { DarkOutlineButton } from '../../components/ui/buttons'
-import {
-    FolderTree,
-    Loader2,
-    Plus,
-} from 'lucide-react'
+import { FolderTree, Loader2, Plus } from 'lucide-react'
 import {
     adminCategoriesApi,
     type AdminCategoryFilters,
@@ -118,15 +114,18 @@ export function CategoriesPage() {
     })
 
     // Memoize filters to prevent unnecessary re-renders
-    const memoizedFilters = useMemo(() => filters, [
-        filters.page,
-        filters.limit,
-        filters.search,
-        filters.categoryId,
-        filters.isActive,
-        filters.sort,
-        filters.sortOrder,
-    ])
+    const memoizedFilters = useMemo(
+        () => filters,
+        [
+            filters.page,
+            filters.limit,
+            filters.search,
+            filters.categoryId,
+            filters.isActive,
+            filters.sort,
+            filters.sortOrder,
+        ]
+    )
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(
         null
     )
@@ -147,9 +146,12 @@ export function CategoriesPage() {
         sortOrder: 0,
         isActive: false,
     })
-    const [isStatusUpdateDialogOpen, setIsStatusUpdateDialogOpen] = useState(false)
-    const [newlyCreatedCategory, setNewlyCreatedCategory] = useState<Category | null>(null)
-    const [isChangeStatusDialogOpen, setIsChangeStatusDialogOpen] = useState(false)
+    const [isStatusUpdateDialogOpen, setIsStatusUpdateDialogOpen] =
+        useState(false)
+    const [newlyCreatedCategory, setNewlyCreatedCategory] =
+        useState<Category | null>(null)
+    const [isChangeStatusDialogOpen, setIsChangeStatusDialogOpen] =
+        useState(false)
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imageRemoved, setImageRemoved] = useState(false)
     const scrollPositionRef = useRef<number>(0)
@@ -177,7 +179,6 @@ export function CategoriesPage() {
             loadStats()
         }
     }, [currentUser])
-
 
     // Load categories when filters change
     useEffect(() => {
@@ -250,7 +251,9 @@ export function CategoriesPage() {
         try {
             // Load all categories for dropdown filter (using admin API to get all, including inactive)
             // Backend MAX_LIMIT is 100, so we use 100
-            const result = await adminCategoriesApi.getAllCategories({ limit: 100 })
+            const result = await adminCategoriesApi.getAllCategories({
+                limit: 100,
+            })
             const categories = result.data || []
 
             // Flatten categories including children from nested structure
@@ -271,11 +274,16 @@ export function CategoriesPage() {
                     category.children.forEach((child: any) => {
                         // Backend only returns: id, name, slug, isActive for children
                         // Check if child already exists in main array
-                        const existingChild = allCategoriesFlat.find((cat) => cat.id === child.id)
+                        const existingChild = allCategoriesFlat.find(
+                            (cat) => cat.id === child.id
+                        )
 
                         if (existingChild) {
                             // Child already exists in main array, ensure parentId is set correctly
-                            if (!existingChild.parentId || existingChild.parentId !== category.id) {
+                            if (
+                                !existingChild.parentId ||
+                                existingChild.parentId !== category.id
+                            ) {
                                 existingChild.parentId = category.id
                             }
                         } else if (!processedIds.has(child.id)) {
@@ -302,8 +310,12 @@ export function CategoriesPage() {
             })
 
             // Build hierarchical structure: parent categories first, then their children
-            const parentCategories = allCategoriesFlat.filter((cat) => !cat.parentId)
-            const childCategories = allCategoriesFlat.filter((cat) => cat.parentId)
+            const parentCategories = allCategoriesFlat.filter(
+                (cat) => !cat.parentId
+            )
+            const childCategories = allCategoriesFlat.filter(
+                (cat) => cat.parentId
+            )
 
             const hierarchicalCategories: Category[] = []
             parentCategories.forEach((parent) => {
@@ -323,8 +335,12 @@ export function CategoriesPage() {
             })
 
             // Add any remaining categories that might not have been included (orphaned children)
-            const includedIds = new Set(hierarchicalCategories.map((cat) => cat.id))
-            const remaining = allCategoriesFlat.filter((cat) => !includedIds.has(cat.id))
+            const includedIds = new Set(
+                hierarchicalCategories.map((cat) => cat.id)
+            )
+            const remaining = allCategoriesFlat.filter(
+                (cat) => !includedIds.has(cat.id)
+            )
             hierarchicalCategories.push(...remaining)
 
             setAllCategories(hierarchicalCategories)
@@ -341,7 +357,7 @@ export function CategoriesPage() {
     // Handle clear search (reset both input and filters)
     const handleClearSearch = () => {
         setSearchInput('')
-        setFilters(prev => ({
+        setFilters((prev) => ({
             ...prev,
             search: '',
             page: 1,
@@ -360,31 +376,35 @@ export function CategoriesPage() {
         }
     }
 
-    const handleFilterChange = useCallback((
-        key: keyof AdminCategoryFilters,
-        value: any
-    ) => {
-        const mainContainer = document.querySelector('main')
-        if (mainContainer) {
-            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
-        } else {
-            scrollPositionRef.current =
-                window.scrollY || document.documentElement.scrollTop
-        }
-        isPageChangingRef.current = true
-        setFilters(prev => ({
-            ...prev,
-            [key]: value === 'all' ? undefined : value,
-            page: 1,
-        }))
-    }, [])
+    const handleFilterChange = useCallback(
+        (key: keyof AdminCategoryFilters, value: any) => {
+            const mainContainer = document.querySelector('main')
+            if (mainContainer) {
+                scrollPositionRef.current = (
+                    mainContainer as HTMLElement
+                ).scrollTop
+            } else {
+                scrollPositionRef.current =
+                    window.scrollY || document.documentElement.scrollTop
+            }
+            isPageChangingRef.current = true
+            setFilters((prev) => ({
+                ...prev,
+                [key]: value === 'all' ? undefined : value,
+                page: 1,
+            }))
+        },
+        []
+    )
 
     const handlePageChange = useCallback((newPage: number) => {
         // Use requestAnimationFrame to avoid blocking input
         requestAnimationFrame(() => {
             const mainContainer = document.querySelector('main')
             if (mainContainer) {
-                scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+                scrollPositionRef.current = (
+                    mainContainer as HTMLElement
+                ).scrollTop
             } else {
                 scrollPositionRef.current =
                     window.scrollY || document.documentElement.scrollTop
@@ -392,7 +412,7 @@ export function CategoriesPage() {
             isPageChangingRef.current = true
         })
 
-        setFilters(prev => ({ ...prev, page: newPage }))
+        setFilters((prev) => ({ ...prev, page: newPage }))
     }, [])
 
     const handleCreate = () => {
@@ -624,14 +644,13 @@ export function CategoriesPage() {
 
         try {
             setActionLoading(true)
-            await adminCategoriesApi.updateCategory(
-                selectedCategory.id,
-                {
-                    isActive: selectedCategory.isActive,
-                }
-            )
+            await adminCategoriesApi.updateCategory(selectedCategory.id, {
+                isActive: selectedCategory.isActive,
+            })
             toast.success(
-                `Danh mục đã được ${selectedCategory.isActive ? 'kích hoạt' : 'tắt'} thành công!`
+                `Danh mục đã được ${
+                    selectedCategory.isActive ? 'kích hoạt' : 'tắt'
+                } thành công!`
             )
             await loadCategories()
             loadAllCategories()
@@ -649,17 +668,19 @@ export function CategoriesPage() {
     }
 
     const renderPagination = () => {
-        return <CategoriesPagination
-            pagination={pagination}
-            loading={loading}
-            onPageChange={handlePageChange}
-        />
+        return (
+            <CategoriesPagination
+                pagination={pagination}
+                loading={loading}
+                onPageChange={handlePageChange}
+            />
+        )
     }
 
     // Show loading while checking auth
     if (authLoading) {
         return (
-            <div className='container mx-auto px-4 py-4 bg-background text-foreground min-h-screen flex items-center justify-center'>
+            <div className='container mx-auto px-4 py-4 bg-white dark:bg-black min-h-screen flex items-center justify-center'>
                 <Loader2 className='h-8 w-8 animate-spin text-primary' />
             </div>
         )
@@ -671,14 +692,14 @@ export function CategoriesPage() {
     }
 
     return (
-        <div className='w-full px-4 py-4 bg-background text-foreground min-h-screen'>
+        <div className='w-full px-4 py-4 bg-white dark:bg-black min-h-screen'>
             <div className='w-full'>
                 <div className='mb-6'>
-                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-foreground flex items-center gap-3'>
+                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-black dark:text-white flex items-center gap-3'>
                         <FolderTree className='h-8 w-8' />
                         Quản lý Danh mục
                     </h1>
-                    <p className='text-muted-foreground'>
+                    <p className='text-gray-600 dark:text-gray-300'>
                         Quản lý và theo dõi tất cả danh mục khóa học
                     </p>
                 </div>
@@ -697,9 +718,13 @@ export function CategoriesPage() {
                         setSearchInput('')
                         const mainContainer = document.querySelector('main')
                         if (mainContainer) {
-                            scrollPositionRef.current = (mainContainer as HTMLElement).scrollTop
+                            scrollPositionRef.current = (
+                                mainContainer as HTMLElement
+                            ).scrollTop
                         } else {
-                            scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop
+                            scrollPositionRef.current =
+                                window.scrollY ||
+                                document.documentElement.scrollTop
                         }
                         isPageChangingRef.current = true
                         setCategorySearch('')
