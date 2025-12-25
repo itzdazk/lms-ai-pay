@@ -28,6 +28,7 @@ import { mockCourses, formatPrice, formatDuration } from '../lib/mockData'
 import { categoriesApi } from '../lib/api'
 import type { Category } from '../lib/api'
 import { useTheme } from '../contexts/ThemeContext'
+import { AdvisorCard } from '../components/AI/AdvisorCard'
 
 // Custom Arrow Components
 function NextArrow(props: any) {
@@ -176,7 +177,7 @@ export function LandingPage() {
                             công nghệ AI tiên tiến
                         </p>
                     </div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
                         <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                             <CardContent className='pt-6'>
                                 <Bot className='h-12 w-12 text-blue-500 mb-4' />
@@ -504,6 +505,9 @@ export function LandingPage() {
                     )}
                 </div>
             </section>
+            
+            {/* AI Advisor - Floating Button */}
+            <AdvisorCard />
         </div>
     )
 }

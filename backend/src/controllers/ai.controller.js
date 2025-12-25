@@ -12,12 +12,13 @@ class AIController {
      * @access  Private
      */
     getConversations = asyncHandler(async (req, res) => {
-        const { page = 1, limit = 20, isArchived = false } = req.query
+        const { page = 1, limit = 20, isArchived = false, mode } = req.query
 
         const result = await aiChatService.getConversations(req.user.id, {
             isArchived: isArchived === 'true',
             page: parseInt(page),
             limit: parseInt(limit),
+            mode: mode || undefined, // Pass mode if provided
         })
 
         return ApiResponse.success(
@@ -73,15 +74,17 @@ class AIController {
 
     /**
      * @route   POST /api/v1/ai/conversations
-     * @desc    Create new conversation
-     * @access  Private
+     * @route   POST /api/v1/ai/advisor/conversations
+     * @desc    Create new conversation (tutor or advisor)
+     * @access  Private (tutor) or Public (advisor)
      */
     createConversation = asyncHandler(async (req, res) => {
-        const { courseId, lessonId, title } = req.body
+        const { courseId, lessonId, title, mode } = req.body
+        const userId = req.user?.id // Optional - undefined for advisor
 
         const conversation = await aiChatService.createConversation(
-            req.user.id,
-            { courseId, lessonId, title }
+            userId,
+            { courseId, lessonId, title, mode }
         )
 
         return ApiResponse.created(
@@ -206,8 +209,9 @@ class AIController {
      */
     sendMessage = asyncHandler(async (req, res) => {
         const { id } = req.params
-        const { message, mode = 'course', lessonId } = req.body
+        const { message, mode = 'general', lessonId } = req.body
         const { stream } = req.query // Check if client wants streaming
+        const userId = req.user?.id // Optional - undefined for advisor
 
         // If streaming requested, use streaming endpoint
         if (stream === 'true') {
@@ -215,7 +219,7 @@ class AIController {
         }
 
         const result = await aiChatService.sendMessage(
-            req.user.id,
+            userId,
             parseInt(id),
             message,
             mode,
@@ -230,7 +234,8 @@ class AIController {
      */
     sendMessageStream = asyncHandler(async (req, res) => {
         const { id } = req.params
-        const { message, mode = 'course', lessonId } = req.body
+        const { message, mode = 'general', lessonId } = req.body
+        const userId = req.user?.id // Optional - undefined for advisor
 
         // Set headers for SSE (Server-Sent Events)
         res.setHeader('Content-Type', 'text/event-stream')
@@ -240,7 +245,7 @@ class AIController {
 
         try {
             await aiChatService.sendMessageStream(
-                req.user.id,
+                userId,
                 parseInt(id),
                 message,
                 mode,

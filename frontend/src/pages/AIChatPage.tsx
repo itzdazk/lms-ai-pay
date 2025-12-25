@@ -110,7 +110,8 @@ export function AIChatPage() {
   useEffect(() => {
     (async () => {
       try {
-        const resp = await apiClient.get('/ai/conversations');
+        // Filter by mode=general to exclude advisor conversations
+        const resp = await apiClient.get('/ai/conversations?mode=general');
         const convs = resp?.data?.data ?? [];
         const mapped = convs.map((c: any) => ({
           id: String(c.id),
@@ -158,6 +159,7 @@ export function AIChatPage() {
     try {
       const createResp = await apiClient.post('/ai/conversations', {
         title: 'Trò chuyện chung',
+        mode: 'general', // Important: tutor mode conversations
       });
       const convId = String(createResp?.data?.data?.id);
       if (!convId) throw new Error('Không thể tạo conversation');
@@ -185,7 +187,8 @@ export function AIChatPage() {
   // Reload conversations list
   const reloadConversations = async () => {
     try {
-      const resp = await apiClient.get('/ai/conversations');
+      // Filter by mode=general to exclude advisor conversations
+      const resp = await apiClient.get('/ai/conversations?mode=general');
       const convs = resp?.data?.data ?? [];
       const mapped = convs.map((c: any) => ({
         id: String(c.id),

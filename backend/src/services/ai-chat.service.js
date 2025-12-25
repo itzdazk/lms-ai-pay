@@ -8,11 +8,43 @@ import { HTTP_STATUS, AI_INTERACTION_TYPES } from '../config/constants.js'
 
 class AIChatService {
     /**
+     * Helper: Verify conversation access
+     * - If conversation.userId is null: public advisor conversation, allow access
+     * - If conversation.userId is set: must match current userId
+     * @returns {Promise<Object>} conversation object
+     * @throws Error if conversation not found or access denied
+     */
+    async verifyConversationAccess(conversationId, userId) {
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId }
+        })
+
+        if (!conversation) {
+            const error = new Error('Conversation not found')
+            error.statusCode = 404
+            throw error
+        }
+
+        // Public advisor conversation (userId = null) - allow access
+        if (conversation.userId === null) {
+            return conversation
+        }
+
+        // Private conversation - must match current user
+        if (conversation.userId !== userId) {
+            const error = new Error('Access denied: This conversation belongs to another user')
+            error.statusCode = 403
+            throw error
+        }
+
+        return conversation
+    }
+    /**
      * Tạo conversation mới
      */
     async createConversation(userId, data = {}) {
         try {
-            const { courseId, lessonId, title } = data
+            const { courseId, lessonId, title, mode = 'general' } = data
 
             // Validate courseId and lessonId exist (if provided)
             let validCourseId = null
@@ -87,6 +119,7 @@ class AIChatService {
                     lessonId: validLessonId,
                     title: conversationTitle,
                     contextType,
+                    mode, // Add mode from data or default to 'general'
                     aiModel: config.OLLAMA_MODEL || 'llama3.1:latest', // Use Ollama model name
                     isActive: true,
                     isArchived: false,
@@ -155,19 +188,8 @@ class AIChatService {
      */
     async sendMessage(userId, conversationId, messageText, mode = 'course', lessonId = null) {
         try {
-            // 1. Verify conversation belongs to user
-            const conversation = await prisma.conversation.findFirst({
-                where: {
-                    id: conversationId,
-                    userId,
-                },
-            })
-
-            if (!conversation) {
-                const error = new Error('Conversation not found or access denied')
-                error.statusCode = 404
-                throw error
-            }
+            // 1. Verify conversation access (handles both public advisor and private conversations)
+            const conversation = await this.verifyConversationAccess(conversationId, userId)
 
             // 2. Lưu message của user
             const userMessage = await prisma.chatMessage.create({
@@ -356,19 +378,8 @@ class AIChatService {
      */
     async sendMessageStream(userId, conversationId, messageText, mode = 'course', onChunk, lessonId = null) {
         try {
-            // 1. Verify conversation belongs to user
-            const conversation = await prisma.conversation.findFirst({
-                where: {
-                    id: conversationId,
-                    userId,
-                },
-            })
-
-            if (!conversation) {
-                const error = new Error('Conversation not found or access denied')
-                error.statusCode = 404
-                throw error
-            }
+            // 1. Verify conversation access (handles both public advisor and private conversations)
+            const conversation = await this.verifyConversationAccess(conversationId, userId)
 
             // 2. Lưu message của user
             const userMessage = await prisma.chatMessage.create({
@@ -1010,15 +1021,10 @@ class AIChatService {
      */
     async getMessages(conversationId, userId, page = 1, limit = 50, order = 'asc') {
         try {
-            // Verify ownership and get messages in parallel
-            const [conversation, messages, total] = await Promise.all([
-                prisma.conversation.findFirst({
-                    where: {
-                        id: conversationId,
-                        userId,
-                    },
-                    select: { id: true }, // Only need id for verification
-                }),
+            // Verify conversation access (allows both public advisor and private conversations)
+            const conversation = await this.verifyConversationAccess(conversationId, userId)
+
+            const [messages, total] = await Promise.all([
                 prisma.chatMessage.findMany({
                     where: { conversationId },
                     orderBy: { createdAt: order === 'desc' ? 'desc' : 'asc' },
@@ -1039,12 +1045,6 @@ class AIChatService {
                     where: { conversationId },
                 }),
             ])
-
-            if (!conversation) {
-                const error = new Error('Conversation not found or access denied')
-                error.statusCode = 404
-                throw error
-            }
 
             return {
                 messages,
@@ -1106,11 +1106,16 @@ class AIChatService {
      */
     async getConversations(userId, options = {}) {
         try {
-            const { isArchived = false, page = 1, limit = 20 } = options
+            const { isArchived = false, page = 1, limit = 20, mode } = options
 
             const where = {
                 userId,
                 isArchived,
+            }
+
+            // Add mode filter if provided
+            if (mode) {
+                where.mode = mode
             }
 
             const conversations = await prisma.conversation.findMany({
@@ -1177,16 +1182,21 @@ class AIChatService {
      */
     async archiveConversation(conversationId, userId) {
         try {
-            const conversation = await prisma.conversation.findFirst({
-                where: {
-                    id: conversationId,
-                    userId,
-                },
+            // Verify conversation access (only allow deletion of conversations owned by user, not public advisor conversations)
+            const conversation = await prisma.conversation.findUnique({
+                where: { id: conversationId }
             })
 
             if (!conversation) {
-                const error = new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found')
                 error.statusCode = 404
+                throw error
+            }
+
+            // Only owner can archive their conversation
+            if (conversation.userId !== userId) {
+                const error = new Error('Access denied: Only conversation owner can archive')
+                error.statusCode = 403
                 throw error
             }
 
@@ -1207,16 +1217,20 @@ class AIChatService {
      */
     async deleteConversation(conversationId, userId) {
         try {
-            const conversation = await prisma.conversation.findFirst({
-                where: {
-                    id: conversationId,
-                    userId,
-                },
+            const conversation = await prisma.conversation.findUnique({
+                where: { id: conversationId }
             })
 
             if (!conversation) {
-                const error = new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found')
                 error.statusCode = 404
+                throw error
+            }
+
+            // Only owner can delete their conversation (advisor conversations are temporary and read-only)
+            if (conversation.userId !== userId) {
+                const error = new Error('Access denied: Only conversation owner can delete')
+                error.statusCode = 403
                 throw error
             }
 
@@ -1237,16 +1251,20 @@ class AIChatService {
      */
     async updateConversation(conversationId, userId, data) {
         try {
-            const conversation = await prisma.conversation.findFirst({
-                where: {
-                    id: conversationId,
-                    userId,
-                },
+            const conversation = await prisma.conversation.findUnique({
+                where: { id: conversationId }
             })
 
             if (!conversation) {
-                const error = new Error('Conversation not found or access denied')
+                const error = new Error('Conversation not found')
                 error.statusCode = 404
+                throw error
+            }
+
+            // Only owner can update their conversation (advisor conversations are read-only)
+            if (conversation.userId !== userId) {
+                const error = new Error('Access denied: Only conversation owner can update')
+                error.statusCode = 403
                 throw error
             }
 

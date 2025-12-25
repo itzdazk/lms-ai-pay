@@ -618,7 +618,13 @@ class KnowledgeBaseService {
             let lessons = []
             let transcripts = []
 
-            if (mode === 'course' && targetLessonId) {
+            if (mode === 'advisor') {
+                // Advisor mode: No knowledge base search needed
+                // AI advisor will recommend courses based on conversation only
+                courses = []
+                lessons = []
+                transcripts = []
+            } else if (mode === 'course' && targetLessonId) {
                 // Restrict to the exact lesson's transcript; searchInTranscripts already
                 // falls back to lesson content/description/title if transcript is missing
                 transcripts = await this.searchInTranscripts(
@@ -630,26 +636,15 @@ class KnowledgeBaseService {
                 )
                 // No course-level fallback; rely only on lesson transcript + lesson content
             } else {
-                // Broader search when no specific lesson is targeted
-                const results = await Promise.all([
-                    this.searchInCourses(query, userId, enrolledCourseIds),
-                    this.searchInLessons(
-                        query,
-                        targetCourseId,
-                        userId,
-                        enrolledCourseIds
-                    ),
-                    this.searchInTranscripts(
-                        query,
-                        targetLessonId,
-                        targetCourseId,
-                        userId,
-                        enrolledCourseIds
-                    ),
-                ])
-                courses = results[0]
-                lessons = results[1]
-                transcripts = results[2]
+                // Broader search for general mode - only search transcripts
+                // (searchInCourses and searchInLessons methods don't exist)
+                transcripts = await this.searchInTranscripts(
+                    query,
+                    targetLessonId,
+                    targetCourseId,
+                    userId,
+                    enrolledCourseIds
+                )
             }
 
             // 3. Get conversation history (nếu có)

@@ -444,8 +444,8 @@ model AiRecommendation {
 // =====================================================
 model Conversation {
   id            Int       @id @default(autoincrement())
-  userId        Int       @map("user_id")
-  user          User      @relation(fields: [userId], references: [id])
+  userId        Int?      @map("user_id") // Optional for advisor conversations (public)
+  user          User?     @relation(fields: [userId], references: [id])
   courseId      Int?      @map("course_id")
   course        Course?   @relation(fields: [courseId], references: [id])
   lessonId      Int?      @map("lesson_id")
@@ -453,6 +453,7 @@ model Conversation {
   title         String?   @db.VarChar(200)
   aiModel       String    @default("gpt-4") @map("ai_model") @db.VarChar(50)
   contextType   String?   @map("context_type") @db.VarChar(50)
+  mode          String    @default("general") @db.VarChar(50)
   isActive      Boolean   @default(true) @map("is_active")
   isArchived    Boolean   @default(false) @map("is_archived")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -464,6 +465,8 @@ model Conversation {
   @@index([userId])
   @@index([courseId])
   @@index([lessonId])
+  @@index([mode])
+  @@index([userId, mode])
   @@index([isActive])
   @@index([lastMessageAt])
   @@map("conversations")

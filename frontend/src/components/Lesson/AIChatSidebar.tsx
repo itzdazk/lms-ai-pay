@@ -127,7 +127,8 @@ export function AIChatSidebar({
     if (!isHistoryOpen) return;
     (async () => {
       try {
-        const resp = await apiClient.get('/ai/conversations');
+        // Filter by mode=general to exclude advisor conversations
+        const resp = await apiClient.get('/ai/conversations?mode=general');
         const convs = resp?.data?.data ?? [];
         const mapped = convs.map((c: any) => ({
           id: String(c.id),
@@ -150,7 +151,8 @@ export function AIChatSidebar({
 
     (async () => {
       try {
-        const convResp = await apiClient.get('/ai/conversations');
+        // Filter by mode=general to exclude advisor conversations
+        const convResp = await apiClient.get('/ai/conversations?mode=general');
         const convs = convResp?.data?.data ?? [];
 
         let existing: any = null;
@@ -334,6 +336,7 @@ export function AIChatSidebar({
         title: 'Trò chuyện chung',
         courseId,
         lessonId,
+        mode: 'general', // Important: tutor mode conversations
       });
       const convId = createResp?.data?.data?.id;
       if (!convId) throw new Error('Không thể tạo conversation');
@@ -372,8 +375,8 @@ export function AIChatSidebar({
         title: newConvTitle.trim()
       });
 
-      // Refresh conversation list
-      const resp = await apiClient.get('/ai/conversations');
+      // Refresh conversation list (filter by mode=general to exclude advisor conversations)
+      const resp = await apiClient.get('/ai/conversations?mode=general');
       const convs = resp?.data?.data ?? [];
       const mapped = convs.map((c: any) => ({
         id: String(c.id),
@@ -420,8 +423,8 @@ export function AIChatSidebar({
         }]);
       }
       
-      // Refresh conversation list
-      const resp = await apiClient.get('/ai/conversations');
+      // Refresh conversation list (filter by mode=general to exclude advisor conversations)
+      const resp = await apiClient.get('/ai/conversations?mode=general');
       const convs = resp?.data?.data ?? [];
       const mapped = convs.map((c: any) => ({
         id: String(c.id),
