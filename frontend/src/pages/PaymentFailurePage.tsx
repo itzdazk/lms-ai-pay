@@ -271,77 +271,140 @@ export function PaymentFailurePage() {
     }, [orderCode, orderId])
 
     const course = order?.course
+    const isLoading = status === 'loading'
 
     return (
-        <div className='min-h-screen bg-background flex items-center justify-center py-4 px-4'>
-            <div className='w-full max-w-3xl'>
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D] text-center'>
-                    <CardHeader>
-                        <div className='mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-600/20'>
-                            <XCircle className='h-12 w-12 text-red-500' />
-                        </div>
-                        <CardTitle className='text-3xl text-white'>
-                            Thanh toán thất bại
-                        </CardTitle>
-                        <CardDescription className='text-lg text-gray-400'>
-                            {error}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className='space-y-6'>
-                        {status === 'loading' && (
-                            <div className='flex justify-center py-4 text-gray-300 items-center gap-2'>
-                                <Loader2 className='h-5 w-5 animate-spin' />
-                                Đang lấy thông tin đơn hàng...
+        <div className='h-screen bg-background flex items-center justify-center p-3 overflow-hidden'>
+            <div className='w-full max-w-6xl h-full max-h-[95vh]'>
+                <Card className='bg-[#1A1A1A] border-[#2D2D2D] h-full flex flex-col'>
+                    {/* Compact Header - Horizontal */}
+                    <CardHeader className='pb-3 border-b border-[#2D2D2D] shrink-0'>
+                        <div className='flex items-center gap-4'>
+                            <div className='flex h-16 w-16 items-center justify-center rounded-full bg-red-600/20 shrink-0'>
+                                <XCircle className='h-10 w-10 text-red-500' />
                             </div>
-                        )}
-
-                        {!order && status !== 'loading' && (
-                            <p className='text-sm text-gray-400'>
-                                Không tìm thấy thông tin đơn hàng. Vui lòng thử
-                                lại.
-                            </p>
-                        )}
-
-                        {order && (
-                            <div className='bg-[#1F1F1F] rounded-lg p-6 text-left'>
-                                <OrderSummary course={order.course || null} />
-                                <div className='mt-4 text-sm text-gray-300 space-y-1'>
-                                    <p>Mã đơn: {order.orderCode}</p>
-                                    <p>Trạng thái: {order.paymentStatus}</p>
+                            <div className='flex-1 min-w-0'>
+                                <CardTitle className='text-xl lg:text-2xl text-white mb-1'>
+                                    Thanh toán thất bại
+                                </CardTitle>
+                                <CardDescription className='text-xs lg:text-sm text-gray-400 space-y-1'>
+                                    <div className='line-clamp-1'>{error}</div>
+                                    <div className='text-gray-500'>
+                                        Mã đơn:{' '}
+                                        <span className='text-gray-300 font-mono'>
+                                            {order?.orderCode || orderCode}
+                                        </span>
+                                    </div>
+                                </CardDescription>
+                            </div>
+                            {!isLoading && order && (
+                                <div className='hidden lg:flex flex-col gap-1 text-right shrink-0'>
+                                    <span className='text-xs text-gray-400'>
+                                        Trạng thái
+                                    </span>
+                                    <span className='text-sm font-medium text-white'>
+                                        {order.paymentStatus}
+                                    </span>
+                                    <span className='text-xs text-gray-400'>
+                                        Tổng:{' '}
+                                        {order.finalPrice.toLocaleString(
+                                            'vi-VN'
+                                        )}{' '}
+                                        ₫
+                                    </span>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
+                    </CardHeader>
 
-                        <div className='space-y-3'>
-                            <p className='text-gray-300'>
-                                Vui lòng thử lại hoặc liên hệ hỗ trợ nếu vấn đề
-                                vẫn tiếp tục.
-                            </p>
-                            <div className='flex flex-col sm:flex-row gap-3 justify-center'>
-                                {course && (
-                                    <DarkOutlineButton asChild size='lg'>
-                                        <Link to={`/checkout/${course.slug}`}>
-                                            <RefreshCw className='mr-2 h-4 w-4' />
-                                            Thử lại thanh toán
+                    {/* Main Content - 2 Columns */}
+                    <CardContent className='flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden min-h-0'>
+                        {/* Left Column - Order Summary */}
+                        <div className='flex-1 flex flex-col min-w-0'>
+                            {status === 'loading' && (
+                                <div className='flex justify-center items-center h-full text-gray-300 gap-2'>
+                                    <Loader2 className='h-4 w-4 animate-spin' />
+                                    <span className='text-sm'>
+                                        Đang lấy thông tin đơn hàng...
+                                    </span>
+                                </div>
+                            )}
+
+                            {!order && status !== 'loading' && (
+                                <div className='flex items-center justify-center h-full'>
+                                    <div className='bg-[#1F1F1F] rounded-lg p-4 max-w-md'>
+                                        <p className='text-sm text-gray-400 text-center'>
+                                            Không tìm thấy thông tin đơn hàng.
+                                            Vui lòng thử lại.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {order && (
+                                <div className='bg-[#1F1F1F] rounded-lg p-4 flex-1 min-h-0 overflow-y-auto'>
+                                    <OrderSummary
+                                        course={order.course || null}
+                                    />
+                                    <div className='mt-3 pt-3 border-t border-[#2D2D2D] lg:hidden text-xs text-gray-300 space-y-1'>
+                                        <p>Mã đơn: {order.orderCode}</p>
+                                        <p>Trạng thái: {order.paymentStatus}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Column - Actions & Info */}
+                        <div className='lg:w-80 flex flex-col gap-3 shrink-0'>
+                            <div className='bg-[#1F1F1F] rounded-lg p-4'>
+                                <p className='text-xs text-gray-300 mb-3'>
+                                    Vui lòng thử lại hoặc liên hệ hỗ trợ nếu vấn
+                                    đề vẫn tiếp tục.
+                                </p>
+                                <div className='flex flex-col gap-2'>
+                                    {course && (
+                                        <DarkOutlineButton
+                                            asChild
+                                            size='sm'
+                                            className='w-full'
+                                        >
+                                            <Link
+                                                to={`/checkout/${course.slug}`}
+                                            >
+                                                <RefreshCw className='mr-2 h-3 w-3' />
+                                                Thử lại thanh toán
+                                            </Link>
+                                        </DarkOutlineButton>
+                                    )}
+                                    <DarkOutlineButton
+                                        asChild
+                                        size='sm'
+                                        className='w-full'
+                                    >
+                                        <Link
+                                            to={
+                                                course?.slug
+                                                    ? `/courses/${course.slug}`
+                                                    : '/courses'
+                                            }
+                                        >
+                                            <ArrowLeft className='mr-2 h-3 w-3' />
+                                            {course?.slug
+                                                ? 'Quay lại khóa học'
+                                                : 'Xem khóa học'}
                                         </Link>
                                     </DarkOutlineButton>
-                                )}
-                                <DarkOutlineButton asChild size='lg'>
-                                    <Link to='/courses'>
-                                        <ArrowLeft className='mr-2 h-4 w-4' />
-                                        Quay lại khóa học
-                                    </Link>
-                                </DarkOutlineButton>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className='pt-6 border-t border-[#2D2D2D]'>
-                            <p className='text-sm text-gray-400 mb-2'>
-                                Cần hỗ trợ? Liên hệ chúng tôi:
-                            </p>
-                            <p className='text-sm text-blue-500'>
-                                support@edulearn.vn
-                            </p>
+                            <div className='bg-[#1F1F1F] rounded-lg p-4 border-t border-[#2D2D2D]'>
+                                <p className='text-xs text-gray-400 mb-2'>
+                                    Cần hỗ trợ? Liên hệ chúng tôi:
+                                </p>
+                                <p className='text-sm text-blue-500'>
+                                    support@edulearn.vn
+                                </p>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
