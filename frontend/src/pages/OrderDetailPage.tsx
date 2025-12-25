@@ -736,6 +736,19 @@ export function OrderDetailPage() {
                                             </Link>
                                         </DarkOutlineButton>
                                     )}
+                                {finalOrder.paymentStatus === 'PENDING' &&
+                                    course && (
+                                        <DarkOutlineButton
+                                            asChild
+                                            className='w-full'
+                                        >
+                                            <Link
+                                                to={`/checkout/${course.slug}`}
+                                            >
+                                                Thử lại thanh toán
+                                            </Link>
+                                        </DarkOutlineButton>
+                                    )}
                                 <DarkOutlineButton
                                     asChild
                                     variant='outline'
