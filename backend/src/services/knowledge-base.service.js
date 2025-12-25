@@ -100,170 +100,6 @@ class KnowledgeBaseService {
     }
 
     /**
-     * Search trong courses mà user đã enroll
-     */
-    async searchInCourses(query, userId, enrolledCourseIds = null) {
-        try {
-            // Use provided courseIds or fetch if not provided (removed unused extractKeywords)
-            let courseIds = enrolledCourseIds
-            if (!courseIds || courseIds.length === 0) {
-                const enrolledCourses = await prisma.enrollment.findMany({
-                    where: {
-                        userId,
-                        status: 'ACTIVE',
-                    },
-                    select: { courseId: true },
-                })
-                courseIds = enrolledCourses.map((e) => e.courseId)
-            }
-
-            if (courseIds.length === 0) {
-                return []
-            }
-
-            // Search trong courses đó
-            const courses = await prisma.course.findMany({
-                where: {
-                    id: { in: courseIds },
-                    OR: [
-                        { title: { contains: query, mode: 'insensitive' } },
-                        {
-                            description: {
-                                contains: query,
-                                mode: 'insensitive',
-                            },
-                        },
-                        {
-                            whatYouLearn: {
-                                contains: query,
-                                mode: 'insensitive',
-                            },
-                        },
-                        {
-                            courseObjectives: {
-                                contains: query,
-                                mode: 'insensitive',
-                            },
-                        },
-                    ],
-                },
-                select: {
-                    id: true,
-                    title: true,
-                    slug: true,
-                    description: true,
-                    shortDescription: true,
-                    whatYouLearn: true,
-                    thumbnailUrl: true,
-                    level: true,
-                },
-                take: 5,
-            })
-
-            // Calculate relevance score
-            return courses
-                .map((course) => ({
-                    ...course,
-                    type: 'course',
-                    relevanceScore: this.calculateRelevanceScore(
-                        query,
-                        [
-                            course.title,
-                            course.description,
-                            course.whatYouLearn,
-                        ].join(' ')
-                    ),
-                }))
-                .sort((a, b) => b.relevanceScore - a.relevanceScore)
-        } catch (error) {
-            logger.error('Error searching in courses:', error)
-            return []
-        }
-    }
-
-    /**
-     * Search trong lessons
-     */
-    async searchInLessons(
-        query,
-        courseId = null,
-        userId = null,
-        enrolledCourseIds = null
-    ) {
-        try {
-            const whereClause = {
-                isPublished: true,
-                OR: [
-                    { title: { contains: query, mode: 'insensitive' } },
-                    { description: { contains: query, mode: 'insensitive' } },
-                    { content: { contains: query, mode: 'insensitive' } },
-                ],
-            }
-
-            // Nếu có courseId, chỉ search trong course đó
-            if (courseId) {
-                whereClause.courseId = courseId
-            } else if (userId && enrolledCourseIds && enrolledCourseIds.length > 0) {
-                // Use provided courseIds to avoid duplicate query
-                whereClause.courseId = {
-                    in: enrolledCourseIds,
-                }
-            } else if (userId && !courseId) {
-                // Fallback: fetch if not provided
-                const enrolledCourses = await prisma.enrollment.findMany({
-                    where: { userId, status: 'ACTIVE' },
-                    select: { courseId: true },
-                })
-                whereClause.courseId = {
-                    in: enrolledCourses.map((e) => e.courseId),
-                }
-            }
-
-            const lessons = await prisma.lesson.findMany({
-                where: whereClause,
-                select: {
-                    id: true,
-                    courseId: true,
-                    title: true,
-                    slug: true,
-                    description: true,
-                    content: true,
-                    videoUrl: true,
-                    videoDuration: true,
-                    transcriptUrl: true,
-                    lessonOrder: true,
-                    course: {
-                        select: {
-                            id: true,
-                            title: true,
-                            slug: true,
-                        },
-                    },
-                },
-                take: 10,
-                orderBy: { lessonOrder: 'asc' },
-            })
-
-            return lessons
-                .map((lesson) => ({
-                    ...lesson,
-                    type: 'lesson',
-                    relevanceScore: this.calculateRelevanceScore(
-                        query,
-                        [lesson.title, lesson.description, lesson.content].join(
-                            ' '
-                        )
-                    ),
-                }))
-                .filter((lesson) => lesson.relevanceScore >= this.MIN_RELEVANCE_THRESHOLD.LESSON)
-                .sort((a, b) => b.relevanceScore - a.relevanceScore)
-        } catch (error) {
-            logger.error('Error searching in lessons:', error)
-            return []
-        }
-    }
-
-    /**
      * Search trong transcript files (QUAN TRỌNG NHẤT!)
      */
     async searchInTranscripts(
@@ -276,29 +112,35 @@ class KnowledgeBaseService {
         try {
             // Lấy lessons có transcript
             const whereClause = {
-                transcriptUrl: { not: null },
                 isPublished: true,
             }
 
             if (lessonId) {
                 whereClause.id = lessonId
                 logger.debug(`Searching transcript for specific lessonId: ${lessonId}`)
-            } else if (courseId) {
-                whereClause.courseId = courseId
-                logger.debug(`Searching transcript for specific courseId: ${courseId}`)
-            } else if (userId && enrolledCourseIds && enrolledCourseIds.length > 0) {
-                // Use provided courseIds to avoid duplicate query
-                whereClause.courseId = {
-                    in: enrolledCourseIds,
-                }
-            } else if (userId) {
-                // Fallback: fetch if not provided
-                const enrolledCourses = await prisma.enrollment.findMany({
-                    where: { userId, status: 'ACTIVE' },
-                    select: { courseId: true },
-                })
-                whereClause.courseId = {
-                    in: enrolledCourses.map((e) => e.courseId),
+                // NOTE: Do NOT apply transcriptUrl constraint in lesson mode
+                // Allow finding lessons without transcripts so fallback logic can work
+            } else {
+                // Only require transcript for non-lesson modes (course, user, general search)
+                whereClause.transcriptUrl = { not: null }
+                
+                if (courseId) {
+                    whereClause.courseId = courseId
+                    logger.debug(`Searching transcript for specific courseId: ${courseId}`)
+                } else if (userId && enrolledCourseIds && enrolledCourseIds.length > 0) {
+                    // Use provided courseIds to avoid duplicate query
+                    whereClause.courseId = {
+                        in: enrolledCourseIds,
+                    }
+                } else if (userId) {
+                    // Fallback: fetch if not provided
+                    const enrolledCourses = await prisma.enrollment.findMany({
+                        where: { userId, status: 'ACTIVE' },
+                        select: { courseId: true },
+                    })
+                    whereClause.courseId = {
+                        in: enrolledCourses.map((e) => e.courseId),
+                    }
                 }
             }
 
@@ -693,11 +535,15 @@ class KnowledgeBaseService {
      * Build complete context cho conversation
      */
     async buildContext(userId, query, conversationId = null, options = {}) {
-        const { mode = 'course' } = options
+        const { mode = 'course', dynamicLessonId = null } = options
         // Fast path for general mode: skip transcript/lesson/course searches
         if (mode === 'general') {
             try {
                 const userContext = await this.getUserContext(userId)
+                // Include conversation history in general mode if available
+                const conversationHistory = conversationId
+                    ? await this.getConversationHistory(conversationId)
+                    : []
                 return {
                     userContext,
                     searchResults: {
@@ -706,7 +552,7 @@ class KnowledgeBaseService {
                         transcripts: [],
                         totalResults: 0,
                     },
-                    conversationHistory: [],
+                    conversationHistory,
                     query,
                     mode,
                 }
@@ -742,44 +588,20 @@ class KnowledgeBaseService {
 
             const enrolledCourseIds = enrolledCoursesData.map((e) => e.courseId).sort()
             
-            // Priority: Use lessonId/courseId from conversation if available, otherwise use userContext
-            const targetLessonId = conversation?.lessonId || userContext.currentLesson?.id
+            // In lesson mode ('course' + dynamicLessonId): use only dynamicLessonId
+            // In general mode: no specific lesson target
+            const targetLessonId = mode === 'course' ? dynamicLessonId : null
             const targetCourseId = conversation?.courseId || userContext.currentCourse?.id
-            
-            // Get lesson info if conversation has lessonId
-            let conversationLesson = null
-            if (conversation?.lessonId) {
-                try {
-                    conversationLesson = await prisma.lesson.findUnique({
-                        where: { id: conversation.lessonId },
-                        select: {
-                            id: true,
-                            title: true,
-                            slug: true,
-                            description: true,
-                            content: true,
-                            courseId: true,
-                            course: {
-                                select: {
-                                    id: true,
-                                    title: true,
-                                },
-                            },
-                        },
-                    })
-                } catch (error) {
-                    logger.error(`Error fetching conversation lesson: ${error.message}`)
-                }
-            }
             
             logger.debug(
                 `Building context for query: "${query}", conversationId: ${conversationId}, ` +
-                `targetLessonId: ${targetLessonId}, targetCourseId: ${targetCourseId}, ` +
-                `conversationLessonId: ${conversation?.lessonId}, conversationCourseId: ${conversation?.courseId}`
+                `mode: ${mode}, targetLessonId: ${targetLessonId}, targetCourseId: ${targetCourseId}`
             )
             
-            // Check cache for search results (key: query + courseIds + lessonId)
-            const cacheKey = `${query.toLowerCase()}:${enrolledCourseIds.join(',')}:${targetLessonId || ''}:${targetCourseId || ''}`
+            // Check cache for search results (key: query + mode + lessonId + courseIds)
+            const cacheKey = mode === 'course' && targetLessonId 
+                ? `${query.toLowerCase()}:lesson:${targetLessonId}`
+                : `${query.toLowerCase()}:general:${enrolledCourseIds.join(',')}`
             const cached = this.searchCache.get(cacheKey)
             if (cached && Date.now() - cached.timestamp < this.searchCacheMaxAge) {
                 logger.debug(`Using cached search results for query: ${query}`)
@@ -790,25 +612,45 @@ class KnowledgeBaseService {
                 }
             }
 
-            // 2. Search trong courses, lessons, transcripts (parallel, reuse courseIds)
-            // Limit transcript search to 2 lessons max for better performance
-            // IMPORTANT: Use conversation's lessonId/courseId if available
-            const [courses, lessons, transcripts] = await Promise.all([
-                this.searchInCourses(query, userId, enrolledCourseIds),
-                this.searchInLessons(
-                    query,
-                    targetCourseId,
-                    userId,
-                    enrolledCourseIds
-                ),
-                this.searchInTranscripts(
+            // 2. Search strategy
+            // Short-circuit for lesson-specific mode: only search transcripts for the current lesson
+            let courses = []
+            let lessons = []
+            let transcripts = []
+
+            if (mode === 'course' && targetLessonId) {
+                // Restrict to the exact lesson's transcript; searchInTranscripts already
+                // falls back to lesson content/description/title if transcript is missing
+                transcripts = await this.searchInTranscripts(
                     query,
                     targetLessonId,
-                    targetCourseId,
+                    null,
                     userId,
                     enrolledCourseIds
-                ),
-            ])
+                )
+                // No course-level fallback; rely only on lesson transcript + lesson content
+            } else {
+                // Broader search when no specific lesson is targeted
+                const results = await Promise.all([
+                    this.searchInCourses(query, userId, enrolledCourseIds),
+                    this.searchInLessons(
+                        query,
+                        targetCourseId,
+                        userId,
+                        enrolledCourseIds
+                    ),
+                    this.searchInTranscripts(
+                        query,
+                        targetLessonId,
+                        targetCourseId,
+                        userId,
+                        enrolledCourseIds
+                    ),
+                ])
+                courses = results[0]
+                lessons = results[1]
+                transcripts = results[2]
+            }
 
             // 3. Get conversation history (nếu có)
             let conversationHistory = []
@@ -817,24 +659,8 @@ class KnowledgeBaseService {
                     await this.getConversationHistory(conversationId)
             }
 
-            // Update userContext with conversation lesson if available
-            const enhancedUserContext = {
-                ...userContext,
-                // Override currentLesson with conversation lesson if available
-                currentLesson: conversationLesson
-                    ? {
-                          id: conversationLesson.id,
-                          title: conversationLesson.title,
-                          slug: conversationLesson.slug,
-                          description: conversationLesson.description,
-                          content: conversationLesson.content,
-                          courseId: conversationLesson.courseId,
-                      }
-                    : userContext.currentLesson,
-            }
-
             const context = {
-                userContext: enhancedUserContext,
+                userContext,
                 searchResults: {
                     courses,
                     lessons,
@@ -844,6 +670,7 @@ class KnowledgeBaseService {
                 },
                 conversationHistory,
                 query,
+                mode,
             }
 
             // Cache search results (without userContext which is user-specific)

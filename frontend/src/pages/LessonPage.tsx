@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   PenTool,
   Bell,
+  Bot,
 } from 'lucide-react';
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
@@ -687,7 +688,7 @@ export function LessonPage() {
                 onClick={() => setShowAIChatSidebar(true)}
                 title="Mở AI Tutor"
               >
-                <MessageCircle className="h-4 w-4 md:mr-2" />
+                <Bot className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Gia sư AI</span>
               </DarkOutlineButton>
               <DarkOutlineButton

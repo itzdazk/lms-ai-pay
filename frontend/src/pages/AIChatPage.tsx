@@ -66,7 +66,8 @@ export function AIChatPage() {
   const { user } = useAuth();
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'general' | 'course'>('general');
+  // AIChatPage only supports general mode (no lesson context here)
+  const [selectedMode] = useState<'general'>('general');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -311,7 +312,8 @@ export function AIChatPage() {
 
       const resp = await apiClient.post(`/ai/conversations/${convId}/messages`, {
         message: currentInput,
-        mode: selectedMode,
+        // Force general mode on AIChatPage
+        mode: 'general',
       });
 
       const payload = resp?.data?.data;
@@ -710,51 +712,15 @@ export function AIChatPage() {
                 </Button>
               </div>
               <div className="mb-2 flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="h-8 px-3 text-xs justify-between w-[140px] cursor-pointer flex items-center rounded-md border transition-colors border-[#2D2D2D] text-white bg-black hover:bg-[#1F1F1F]"
-                    >
-                      <span className="flex items-center">
-                        {selectedMode === 'general' ? (
-                          <>
-                            <MessageCircle className="h-3 w-3 mr-1" />
-                            Tổng quát
-                          </>
-                        ) : (
-                          <>
-                            <BookOpen className="h-3 w-3 mr-1" />
-                            Khóa học
-                          </>
-                        )}
-                      </span>
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="bg-[#1F1F1F] border-[#2D2D2D]"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => setSelectedMode('general')}
-                      className={`text-xs text-gray-300 hover:bg-[#2D2D2D] hover:text-white ${selectedMode === 'general' ? 'bg-[#2D2D2D]' : ''}`}
-                    >
-                      <MessageCircle className="h-3 w-3 mr-2" />
-                      Tổng quát
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setSelectedMode('course')}
-                      className={`text-xs text-gray-300 hover:bg-[#2D2D2D] hover:text-white ${selectedMode === 'course' ? 'bg-[#2D2D2D]' : ''}`}
-                    >
-                      <BookOpen className="h-3 w-3 mr-2" />
-                      Khóa học
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <p className="text-xs text-gray-500">
+                <div className="h-8 px-3 text-xs inline-flex items-center rounded-md border border-[#2D2D2D] text-white bg-black">
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  Tổng quát
+                </div>
+                <p className="text-xs text-gray-500">
                 Gia sư AI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
               </p>
+              </div>
+              
             </div>
           </Card>
         </div>

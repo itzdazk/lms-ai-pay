@@ -153,7 +153,7 @@ class AIChatService {
     /**
      * Gửi message và nhận response
      */
-    async sendMessage(userId, conversationId, messageText, mode = 'course') {
+    async sendMessage(userId, conversationId, messageText, mode = 'course', lessonId = null) {
         try {
             // 1. Verify conversation belongs to user
             const conversation = await prisma.conversation.findFirst({
@@ -181,12 +181,12 @@ class AIChatService {
 
             // 3. Build context từ knowledge base (with timing)
             const contextStartTime = Date.now()
-            // Pass mode so knowledgeBaseService can short-circuit for 'general'
+            // Pass mode and lessonId so knowledgeBaseService can use dynamic lessonId
             const context = await knowledgeBaseService.buildContext(
                 userId,
                 messageText,
                 conversationId,
-                { mode }
+                { mode, dynamicLessonId: lessonId }
             )
             const contextDuration = Date.now() - contextStartTime
             logger.debug(`Knowledge base context built in ${contextDuration}ms`)
@@ -354,7 +354,7 @@ class AIChatService {
     /**
      * Send message with streaming response (for better UX)
      */
-    async sendMessageStream(userId, conversationId, messageText, mode = 'course', onChunk) {
+    async sendMessageStream(userId, conversationId, messageText, mode = 'course', onChunk, lessonId = null) {
         try {
             // 1. Verify conversation belongs to user
             const conversation = await prisma.conversation.findFirst({
@@ -391,7 +391,7 @@ class AIChatService {
                 userId,
                 messageText,
                 conversationId,
-                { mode }
+                { mode, dynamicLessonId: lessonId }
             )
 
             // 4. Get conversation history
@@ -656,8 +656,30 @@ class AIChatService {
                 })
             }
 
+            // Prefix clarity for lesson mode: always state which lesson/course
+            let prefix = ''
+            if (mode === 'course') {
+                const lessonTitle =
+                    context?.searchResults?.transcripts?.[0]?.lessonTitle ||
+                    context?.userContext?.currentLesson?.title ||
+                    null
+                const courseTitle =
+                    context?.searchResults?.transcripts?.[0]?.courseTitle ||
+                    context?.userContext?.currentCourse?.title ||
+                    null
+
+                if (lessonTitle || courseTitle) {
+                    prefix += `🔎 Ngữ cảnh: Bài học${lessonTitle ? ` "${lessonTitle}"` : ''}${courseTitle ? ` trong khóa "${courseTitle}"` : ''}.\n\n`
+                }
+                // If nothing found in this lesson, state it clearly and suggest options
+                const hasResults = (context?.searchResults?.totalResults || 0) > 0
+                if (!hasResults && lessonTitle) {
+                    prefix += `⚠️ Không tìm thấy nội dung liên quan trong bài học này. Bạn có thể:\n- Chuyển sang tùy chọn "Tổng quan" để hỏi chung\n- Hoặc mô tả chi tiết hơn câu hỏi\n\n`
+                }
+            }
+
             return {
-                text: aiResponse,
+                text: prefix + aiResponse,
                 sources: sources.slice(0, 5), // Limit to 5 sources
                 suggestedActions,
             }
@@ -935,8 +957,11 @@ class AIChatService {
         )
 
         if (isAskingAboutContent && userContext.currentLesson) {
-            text += `Tôi không tìm thấy transcript cho bài học hiện tại. `
+            text += `Trong bài học: **${userContext.currentLesson.title}**, tôi không tìm thấy nội dung liên quan. `
             text += `Bạn có thể xem lại video bài học hoặc mô tả bài học để biết thêm chi tiết.\n\n`
+            text += `**Gợi ý chuyển tùy chọn:**\n`
+            text += `- Chuyển sang "Khóa học" để tìm trong toàn bộ khóa\n`
+            text += `- Chuyển sang "Tổng quan" để đặt câu hỏi chung\n\n`
         }
 
         if (userContext.currentCourse) {
@@ -983,7 +1008,7 @@ class AIChatService {
     /**
      * Get messages trong conversation (optimized: combine verification with count)
      */
-    async getMessages(conversationId, userId, page = 1, limit = 50) {
+    async getMessages(conversationId, userId, page = 1, limit = 50, order = 'asc') {
         try {
             // Verify ownership and get messages in parallel
             const [conversation, messages, total] = await Promise.all([
@@ -996,7 +1021,7 @@ class AIChatService {
                 }),
                 prisma.chatMessage.findMany({
                     where: { conversationId },
-                    orderBy: { createdAt: 'asc' },
+                    orderBy: { createdAt: order === 'desc' ? 'desc' : 'asc' },
                     skip: (page - 1) * limit,
                     take: limit,
                     select: {

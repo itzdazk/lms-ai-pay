@@ -364,7 +364,7 @@ export function Navbar() {
                         to='/ai-chat'
                         className='text-gray-300 hover:text-gray-600 transition-colors font-semibold'
                     >
-                        AI Chat
+                        Gia sư AI
                     </Link>
                     <Link
                         to='/about'

@@ -21,7 +21,7 @@ import {
 } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import { X, Send, Bot, User, ThumbsUp, ThumbsDown, Copy, MessageCircle, BookOpen, ChevronDown, Plus, MoreVertical, Trash2 } from 'lucide-react';
+import { X, Send,Bot , User, ThumbsUp, ThumbsDown, Copy, MessageCircle, BookOpen, ChevronDown, Plus, MoreVertical, Trash2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { notifyConversationsChanged, notifyMessagesChanged, AI_CONVERSATIONS_CHANGED, AI_MESSAGES_CHANGED } from '../../lib/events/aiChatEvents';
@@ -154,9 +154,11 @@ export function AIChatSidebar({
         const convs = convResp?.data?.data ?? [];
 
         let existing: any = null;
-        if (lessonId) {
-          existing = convs.find((c: any) => c.lessonId === lessonId || c.lesson?.id === lessonId);
+        // Prioritize finding conversation for this course (without lessonId)
+        if (courseId) {
+          existing = convs.find((c: any) => (c.courseId === courseId || c.course?.id === courseId) && !c.lessonId);
         }
+        // Fallback: find any conversation for this course (even with lessonId)
         if (!existing && courseId) {
           existing = convs.find((c: any) => c.courseId === courseId || c.course?.id === courseId);
         }
@@ -179,7 +181,7 @@ export function AIChatSidebar({
         console.error('Failed to load conversation/messages', err);
       }
     })();
-  }, [isOpen, courseId, lessonId]);
+  }, [isOpen, courseId]); // Removed lessonId dependency to prevent auto-switching
 
   // Listen for external updates to conversations/messages to keep in sync
   useEffect(() => {
@@ -241,7 +243,7 @@ export function AIChatSidebar({
         if (!convId) {
           const createResp = await apiClient.post('/ai/conversations', {
             courseId,
-            lessonId,
+            // Don't pass lessonId here - only set it when user chooses 'course' mode
             title: currentInput.slice(0, 120),
           });
           // createResp.data.data is the created conversation
@@ -254,10 +256,11 @@ export function AIChatSidebar({
           throw new Error('Không thể tạo conversation');
         }
 
-        // Send message with mode
+        // Send message with mode and lessonId (if in course mode)
         const resp = await apiClient.post(`/ai/conversations/${convId}/messages`, {
           message: currentInput,
           mode: chatMode,
+          lessonId: chatMode === 'course' ? lessonId : undefined, // Only send lessonId in course mode
         });
 
         const payload = resp?.data?.data;
@@ -702,7 +705,7 @@ export function AIChatSidebar({
                       ) : (
                         <>
                           <BookOpen className="h-3 w-3 mr-1" />
-                          Khóa học
+                          Bài học
                         </>
                       )}
                     </span>
@@ -733,7 +736,7 @@ export function AIChatSidebar({
                     } ${chatMode === 'course' ? 'bg-[#2D2D2D]' : ''}`}
                   >
                     <BookOpen className="h-3 w-3 mr-2" />
-                    Khóa học
+                    Bài học
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

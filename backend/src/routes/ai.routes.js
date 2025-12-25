@@ -10,6 +10,7 @@ import {
     conversationIdValidator,
     messageIdValidator,
     searchValidator,
+    messagesQueryValidator,
 } from '../validators/ai.validator.js'
 import aiRecommendationRoutes from './ai-recommendation.routes.js'
 
@@ -107,11 +108,12 @@ router.patch(
  * @route   GET /api/v1/ai/conversations/:id/messages
  * @desc    Get messages in conversation
  * @access  Private
- * @query   page, limit
+ * @query   page, limit, order (asc|desc)
  */
 router.get(
     '/conversations/:id/messages',
     conversationIdValidator,
+    messagesQueryValidator,
     validatePagination,
     aiController.getMessages
 )

@@ -93,3 +93,15 @@ export const searchValidator = [
 
     validate,
 ]
+
+/**
+ * Validate messages list query params
+ * Supports optional order (asc|desc)
+ */
+export const messagesQueryValidator = [
+    query('order')
+        .optional()
+        .isIn(['asc', 'desc'])
+        .withMessage("order must be 'asc' or 'desc'"),
+    validate,
+]
