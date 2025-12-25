@@ -1206,6 +1206,39 @@ class AIChatService {
             throw error
         }
     }
+
+    /**
+     * Update conversation
+     */
+    async updateConversation(conversationId, userId, data) {
+        try {
+            const conversation = await prisma.conversation.findFirst({
+                where: {
+                    id: conversationId,
+                    userId,
+                },
+            })
+
+            if (!conversation) {
+                const error = new Error('Conversation not found or access denied')
+                error.statusCode = 404
+                throw error
+            }
+
+            const updated = await prisma.conversation.update({
+                where: { id: conversationId },
+                data: {
+                    title: data.title,
+                },
+            })
+
+            logger.info(`Updated conversation ${conversationId}`)
+            return updated
+        } catch (error) {
+            logger.error('Error updating conversation:', error)
+            throw error
+        }
+    }
 }
 
 export default new AIChatService()

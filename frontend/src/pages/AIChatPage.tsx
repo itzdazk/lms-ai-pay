@@ -13,6 +13,15 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
+import {
   Send,
   Bot,
   User,
@@ -24,9 +33,18 @@ import {
   ThumbsDown,
   Copy,
   MoreVertical,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '../components/ui/sheet';
+import { AI_CONVERSATIONS_CHANGED, AI_MESSAGES_CHANGED, notifyConversationsChanged, notifyMessagesChanged } from '../lib/events/aiChatEvents';
 
 interface Message {
   id: string;
@@ -60,8 +78,14 @@ export function AIChatPage() {
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [renamingConvId, setRenamingConvId] = useState<string | null>(null);
+  const [deletingConvId, setDeletingConvId] = useState<string | null>(null);
+  const [newConvTitle, setNewConvTitle] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   // Resolve user avatar URL and initials
   const getAvatarUrl = (avatarUrl?: string | null, avatar?: string | null) => {
@@ -122,6 +146,7 @@ export function AIChatPage() {
           messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
         }
       }, 50);
+      setIsHistoryOpen(false);
     } catch (err) {
       console.error('Failed to load messages for conversation', convId, err);
     }
@@ -136,6 +161,7 @@ export function AIChatPage() {
       const convId = String(createResp?.data?.data?.id);
       if (!convId) throw new Error('Không thể tạo conversation');
       setSelectedConversationId(convId);
+      notifyConversationsChanged(convId);
 
       // Load messages for the new conversation (will include AI greeting from backend)
       const msgsResp = await apiClient.get(`/ai/conversations/${convId}/messages`);
@@ -171,6 +197,78 @@ export function AIChatPage() {
       setConversations(mapped);
     } catch (err) {
       console.error('Failed to reload conversations', err);
+    }
+  };
+
+  // Rename conversation
+  const handleRenameConversation = async (convId: string) => {
+    const currentConv = conversations.find(c => c.id === convId);
+    if (!currentConv) return;
+
+    setRenamingConvId(convId);
+    setNewConvTitle(currentConv.title);
+    setIsRenameDialogOpen(true);
+  };
+
+  const submitRename = async () => {
+    if (!renamingConvId || !newConvTitle.trim()) return;
+
+    try {
+      await apiClient.patch(`/ai/conversations/${renamingConvId}`, {
+        title: newConvTitle.trim()
+      });
+
+      // Reload conversations list
+      await reloadConversations();
+      
+      // Notify other components
+      notifyConversationsChanged(renamingConvId);
+      
+      // Close dialog
+      setIsRenameDialogOpen(false);
+      setRenamingConvId(null);
+      setNewConvTitle('');
+    } catch (err) {
+      console.error('Failed to rename conversation', err);
+      alert('Không thể đổi tên cuộc trò chuyện. Vui lòng thử lại.');
+    }
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = async (convId: string) => {
+    setDeletingConvId(convId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingConvId) return;
+
+    try {
+      await apiClient.delete(`/ai/conversations/${deletingConvId}`);
+      
+      // If deleted conversation is currently selected, reset to greeting
+      if (String(selectedConversationId) === String(deletingConvId)) {
+        setSelectedConversationId(null);
+        setMessages([{
+          id: '1',
+          role: 'assistant',
+          content: 'Xin chào! Tôi là Gia sư AI của EduLearn. Tôi có thể giúp bạn giải đáp thắc mắc về các khóa học, hỗ trợ học tập, và tư vấn lộ trình. Bạn cần hỗ trợ gì không?',
+          timestamp: new Date()
+        }]);
+      }
+
+      // Reload conversations list
+      await reloadConversations();
+      
+      // Notify other components
+      notifyConversationsChanged();
+      
+      // Close dialog
+      setIsDeleteDialogOpen(false);
+      setDeletingConvId(null);
+    } catch (err) {
+      console.error('Failed to delete conversation', err);
+      alert('Không thể xóa cuộc trò chuyện. Vui lòng thử lại.');
     }
   };
 
@@ -228,6 +326,8 @@ export function AIChatPage() {
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, aiMessage]);
+        notifyMessagesChanged(String(convId));
+        notifyConversationsChanged(String(convId));
       } else {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
@@ -256,6 +356,109 @@ export function AIChatPage() {
     setInputMessage(question);
   };
 
+  // Auto-scroll to newest message (user or AI)
+  useEffect(() => {
+    const viewport = scrollViewportRef.current;
+    if (viewport) {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading]);
+
+  // Listen to external conversation/message changes
+  useEffect(() => {
+    const onConversationsChanged = async (e: any) => {
+      await reloadConversations();
+      const convId = e?.detail?.convId;
+      if (convId && String(selectedConversationId) === String(convId)) {
+        // Refresh messages of current conversation
+        await handleSelectConversation(String(convId));
+      }
+    };
+    const onMessagesChanged = onConversationsChanged;
+    window.addEventListener(AI_CONVERSATIONS_CHANGED, onConversationsChanged as any);
+    window.addEventListener(AI_MESSAGES_CHANGED, onMessagesChanged as any);
+    return () => {
+      window.removeEventListener(AI_CONVERSATIONS_CHANGED, onConversationsChanged as any);
+      window.removeEventListener(AI_MESSAGES_CHANGED, onMessagesChanged as any);
+    };
+  }, [selectedConversationId]);
+
+  const conversationListContent = (
+    <div className="space-y-2 w-full max-w-full overflow-hidden" style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      {conversations.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-8">Chưa có cuộc trò chuyện nào</p>
+      ) : (
+        conversations.map(conv => (
+          <div
+            key={conv.id}
+            onClick={() => {
+              handleSelectConversation(conv.id);
+              setIsHistoryOpen(false);
+            }}
+            className={`flex items-center gap-2 p-3 cursor-pointer transition-colors rounded-none w-full overflow-hidden ${selectedConversationId === conv.id ? 'bg-blue-600/20 border border-blue-600' : 'border border-transparent hover:bg-[#1F1F1F]'}`}
+          >
+            <div className="flex-shrink-0">
+              <div className="h-9 w-9 rounded-md flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800">
+                {conv.courseName ? <BookOpen className="h-4 w-4 text-white" /> : <MessageCircle className="h-4 w-4 text-white" />}
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium text-sm text-white truncate flex-1">{conv.title}</p>
+                <p className="text-xs text-gray-500 flex-shrink-0">{conv.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+
+              <div className="mt-1 overflow-hidden">
+                {conv.courseName && (
+                  <Badge variant="outline" className="text-[10px] px-1 py-0 mb-1 border-[#2D2D2D] text-gray-300 max-w-full truncate block">{conv.courseName}</Badge>
+                )}
+                <p className="text-xs text-gray-500 line-clamp-1">{conv.lastMessage || '—'}</p>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-7 w-7 text-gray-400 hover:text-white"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#1A1A1A] border-[#2D2D2D]">
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRenameConversation(conv.id);
+                    }}
+                    className="text-white hover:bg-[#2D2D2D] cursor-pointer"
+                  >
+                    Đổi tên
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteConversation(conv.id);
+                    }}
+                    className="text-red-400 hover:bg-red-500/10 cursor-pointer"
+                  >
+                    Xóa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        ))
+      )}
+      </div>
+  );
+
   // Auto-scroll removed intentionally
 
   // Copy message to clipboard
@@ -283,6 +486,44 @@ export function AIChatPage() {
   return (
     <div className="h-full bg-background flex flex-col">
       <div className="container mx-auto px-4 py-4 flex-1 min-h-0">
+        <div className="lg:hidden mb-3">
+          <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full bg-[#1A1A1A] border-[#2D2D2D] text-white hover:bg-[#1F1F1F]"
+                title="Mở lịch sử chat"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Lịch sử chat
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[320px] sm:w-[360px] bg-[#1A1A1A] border-[#2D2D2D] p-0">
+              <SheetHeader className="px-4 pt-4 pb-2 pr-12 border-b border-[#2D2D2D]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-white" />
+                    <SheetTitle className="text-base text-white">Lịch sử chat</SheetTitle>
+                  </div>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="text-white hover:bg-[#1F1F1F]"
+                    onClick={() => handleNewConversation().then(() => setIsHistoryOpen(false))}
+                    title="Tạo cuộc trò chuyện mới"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </SheetHeader>
+              <div className="p-4 pt-3 h-[calc(100vh-5rem)]">
+                <ScrollArea className="h-full pr-2">
+                  {conversationListContent}
+                </ScrollArea>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
         <div className="grid lg:grid-cols-4 gap-6 h-full">
         {/* Sidebar - Conversations History */}
         <div className="lg:col-span-1 hidden lg:block">
@@ -304,54 +545,10 @@ export function AIChatPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-4 pt-0">
-                <ScrollArea className="pr-4 h-[calc(100vh-13rem)]">
-                <div className="space-y-2">
-                  {conversations.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-8">Chưa có cuộc trò chuyện nào</p>
-                  ) : (
-                    conversations.map(conv => (
-                      <div
-                        key={conv.id}
-                        onClick={() => handleSelectConversation(conv.id)}
-                        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors border-b border-[#2D2D2D] ${selectedConversationId === conv.id ? 'bg-[#2D2D2D]' : 'hover:bg-[#1F1F1F]'}`}
-                      >
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-md flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800">
-                            {conv.courseName ? <BookOpen className="h-4 w-4 text-white" /> : <MessageCircle className="h-4 w-4 text-white" />}
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium text-sm text-white truncate">{conv.title}</p>
-                            <p className="text-xs text-gray-500 ml-2 whitespace-nowrap">{conv.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-
-                          <div className="mt-1">
-                            {conv.courseName && (
-                              <Badge variant="outline" className="text-xs mr-2 border-[#2D2D2D] text-gray-300">{conv.courseName}</Badge>
-                            )}
-                            <p className="text-xs text-gray-500 truncate line-clamp-2">{conv.lastMessage || '—'}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0">
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-6 w-6 text-gray-400 hover:text-white"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Add menu for conversation actions
-                            }}
-                          >
-                            <MoreVertical className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+            <CardContent className="flex-1 overflow-hidden p-4 pt-0 max-w-full">
+                <ScrollArea className="pr-4 h-[calc(100vh-13rem)] w-full">
+                  <div className="w-full overflow-hidden" style={{ minWidth: 'auto', display: 'block' }}>
+                    {conversationListContent}
                   </div>
                 </ScrollArea>
               </CardContent>
@@ -384,7 +581,7 @@ export function AIChatPage() {
 
             {/* Messages Area */}
             <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
-              <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-18rem)]">
+              <ScrollArea viewportRef={scrollViewportRef} className="h-[calc(100vh-18rem)]">
                 <div className="px-6 py-6 space-y-6 overflow-y-auto h-full">
                   {messages.map(message => (
                     <div
@@ -410,7 +607,7 @@ export function AIChatPage() {
                               : 'bg-[#1F1F1F] text-gray-200 border border-[#2D2D2D]'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap text-xs leading-snug">{message.content}</p>
+                          <p className="whitespace-pre-wrap text-sm leading-snug">{message.content}</p>
                           <p className={`text-[10px] mt-1 ${message.role === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
                             {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -563,6 +760,83 @@ export function AIChatPage() {
         </div>
         </div>
       </div>
+
+      {/* Rename Dialog */}
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
+          <DialogHeader>
+            <DialogTitle>Đổi tên cuộc trò chuyện</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Nhập tên mới cho cuộc trò chuyện của bạn
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="conv-title" className="text-white">
+                Tên cuộc trò chuyện
+              </Label>
+              <Input
+                id="conv-title"
+                value={newConvTitle}
+                onChange={(e) => setNewConvTitle(e.target.value)}
+                className="bg-[#0F0F0F] border-[#2D2D2D] text-white"
+                placeholder="Nhập tên..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    submitRename();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsRenameDialogOpen(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={submitRename}
+              disabled={!newConvTitle.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Bạn có chắc chắn muốn xóa cuộc trò chuyện này? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDeletingConvId(null);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

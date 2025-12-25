@@ -109,6 +109,28 @@ class AIController {
     })
 
     /**
+     * @route   PATCH /api/v1/ai/conversations/:id
+     * @desc    Update conversation title
+     * @access  Private
+     */
+    updateConversation = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const { title } = req.body
+
+        const conversation = await aiChatService.updateConversation(
+            parseInt(id),
+            req.user.id,
+            { title }
+        )
+
+        return ApiResponse.success(
+            res,
+            conversation,
+            'Conversation updated successfully'
+        )
+    })
+
+    /**
      * @route   PATCH /api/v1/ai/conversations/:id/archive
      * @desc    Archive conversation
      * @access  Private

@@ -340,6 +340,19 @@ html {
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
+/* ScrollArea - Force proper width constraints */
+[data-slot="scroll-area-viewport"] {
+    min-width: 0 !important;
+    display: block !important;
+    width: 100% !important;
+}
+
+[data-radix-scroll-area-viewport] > div {
+    min-width: 0 !important;
+    display: block !important;
+    width: 100% !important;
+}
+
 /* Slick Carousel - Prevent overflow */
 .slick-slide {
     min-width: 0;

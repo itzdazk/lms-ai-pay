@@ -56,6 +56,17 @@ router.get(
 )
 
 /**
+ * @route   PATCH /api/v1/ai/conversations/:id
+ * @desc    Update conversation
+ * @access  Private
+ */
+router.patch(
+    '/conversations/:id',
+    conversationIdValidator,
+    aiController.updateConversation
+)
+
+/**
  * @route   DELETE /api/v1/ai/conversations/:id
  * @desc    Delete conversation
  * @access  Private

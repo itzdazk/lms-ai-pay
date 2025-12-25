@@ -11,9 +11,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { X, Send, Bot, User, ThumbsUp, ThumbsDown, Copy, MessageCircle, BookOpen, ChevronDown } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { X, Send, Bot, User, ThumbsUp, ThumbsDown, Copy, MessageCircle, BookOpen, ChevronDown, Plus, MoreVertical, Trash2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { notifyConversationsChanged, notifyMessagesChanged, AI_CONVERSATIONS_CHANGED, AI_MESSAGES_CHANGED } from '../../lib/events/aiChatEvents';
+import { Badge } from '../ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet';
 
 interface Message {
   id: string;
@@ -48,6 +61,20 @@ export function AIChatSidebar({
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState<'general' | 'course'>('general');
   const [conversationId, setConversationId] = useState<number | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [renamingConvId, setRenamingConvId] = useState<string | null>(null);
+  const [deletingConvId, setDeletingConvId] = useState<string | null>(null);
+  const [newConvTitle, setNewConvTitle] = useState('');
+  const [conversations, setConversations] = useState<Array<{
+    id: string;
+    title: string;
+    lastMessage: string;
+    timestamp: Date;
+    courseId?: string;
+    courseName?: string;
+  }>>([]);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -57,8 +84,8 @@ export function AIChatSidebar({
     }
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const skipAutoScrollRef = useRef(false);
 
   // Helper function to get avatar URL
   const getAvatarUrl = (avatarUrl?: string | null, avatar?: string | null) => {
@@ -87,19 +114,107 @@ export function AIChatSidebar({
 
   // Scroll to bottom when new message arrives
   useEffect(() => {
-    if (skipAutoScrollRef.current) {
-      skipAutoScrollRef.current = false
-      return
+    const viewport = scrollViewportRef.current;
+    if (viewport) {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Load conversations when history opens
+  useEffect(() => {
+    if (!isHistoryOpen) return;
+    (async () => {
+      try {
+        const resp = await apiClient.get('/ai/conversations');
+        const convs = resp?.data?.data ?? [];
+        const mapped = convs.map((c: any) => ({
+          id: String(c.id),
+          title: c.title,
+          lastMessage: c.lastMessage || '',
+          timestamp: c.lastMessageAt ? new Date(c.lastMessageAt) : new Date(),
+          courseId: c.courseId ?? c.course?.id,
+          courseName: c.course?.title ?? c.course?.title,
+        }));
+        setConversations(mapped);
+      } catch (err) {
+        console.error('Failed to load conversations for sidebar history', err);
+      }
+    })();
+  }, [isHistoryOpen]);
+
+  // Load existing conversation and messages for this course/lesson when sidebar opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    (async () => {
+      try {
+        const convResp = await apiClient.get('/ai/conversations');
+        const convs = convResp?.data?.data ?? [];
+
+        let existing: any = null;
+        if (lessonId) {
+          existing = convs.find((c: any) => c.lessonId === lessonId || c.lesson?.id === lessonId);
+        }
+        if (!existing && courseId) {
+          existing = convs.find((c: any) => c.courseId === courseId || c.course?.id === courseId);
+        }
+
+        if (existing) {
+          setConversationId(existing.id);
+
+          const msgsResp = await apiClient.get(`/ai/conversations/${existing.id}/messages`);
+          const msgs = msgsResp?.data?.data ?? [];
+          const mapped: Message[] = msgs.map((m: any) => ({
+            id: String(m.id),
+            role: m.senderType === 'ai' ? 'assistant' : 'user',
+            content: m.message,
+            timestamp: new Date(m.createdAt),
+          }));
+
+          if (mapped.length > 0) setMessages(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load conversation/messages', err);
+      }
+    })();
+  }, [isOpen, courseId, lessonId]);
+
+  // Listen for external updates to conversations/messages to keep in sync
+  useEffect(() => {
+    const onConversationsChanged = (e: any) => {
+      const convId = e?.detail?.convId;
+      if (convId && String(conversationId) === String(convId)) {
+        // Reload messages of current conversation
+        (async () => {
+          try {
+            const msgsResp = await apiClient.get(`/ai/conversations/${convId}/messages`);
+            const msgs = msgsResp?.data?.data ?? [];
+            const mapped: Message[] = msgs.map((m: any) => ({
+              id: String(m.id),
+              role: m.senderType === 'ai' ? 'assistant' : 'user',
+              content: m.message,
+              timestamp: new Date(m.createdAt),
+            }));
+            if (mapped.length > 0) setMessages(mapped);
+          } catch (err) {
+            console.error('Failed to refresh messages after external change', err);
+          }
+        })();
+      }
+    };
+    const onMessagesChanged = onConversationsChanged;
+    window.addEventListener(AI_CONVERSATIONS_CHANGED, onConversationsChanged as any);
+    window.addEventListener(AI_MESSAGES_CHANGED, onMessagesChanged as any);
+    return () => {
+      window.removeEventListener(AI_CONVERSATIONS_CHANGED, onConversationsChanged as any);
+      window.removeEventListener(AI_MESSAGES_CHANGED, onMessagesChanged as any);
+    };
+  }, [conversationId]);
 
   const handleSendMessage = () => {
     if (!inputMessage.trim() || isLoading) return;
-
-    // Prevent auto-scroll while sending
-    skipAutoScrollRef.current = true;
 
     // Add user message
     const userMessage: Message = {
@@ -129,47 +244,10 @@ export function AIChatSidebar({
             lessonId,
             title: currentInput.slice(0, 120),
           });
-          // Load existing conversation/messages for this lesson/course when sidebar opens
-          useEffect(() => {
-            if (!isOpen) return;
-
-            (async () => {
-              try {
-                // Fetch user's conversations and try to find one for this course/lesson
-                const convResp = await apiClient.get('/ai/conversations');
-                const convs = convResp?.data?.data ?? [];
-
-                let existing = null;
-                if (lessonId) {
-                  existing = convs.find((c: any) => c.lessonId === lessonId || c.lesson?.id === lessonId);
-                }
-                if (!existing && courseId) {
-                  existing = convs.find((c: any) => c.courseId === courseId || c.course?.id === courseId);
-                }
-
-                if (existing) {
-                  setConversationId(existing.id);
-
-                  // Load messages for this conversation
-                  const msgsResp = await apiClient.get(`/ai/conversations/${existing.id}/messages`);
-                  const msgs = msgsResp?.data?.data ?? [];
-                  const mapped: Message[] = msgs.map((m: any) => ({
-                    id: String(m.id),
-                    role: m.senderType === 'ai' ? 'assistant' : 'user',
-                    content: m.message,
-                    timestamp: new Date(m.createdAt),
-                  }));
-
-                  if (mapped.length > 0) setMessages(mapped);
-                }
-              } catch (err) {
-                console.error('Failed to load conversation/messages', err);
-              }
-            })();
-          }, [isOpen, courseId, lessonId]);
           // createResp.data.data is the created conversation
           convId = createResp?.data?.data?.id ?? null;
           if (convId) setConversationId(convId);
+          if (convId) notifyConversationsChanged(convId);
         }
 
         if (!convId) {
@@ -194,6 +272,8 @@ export function AIChatSidebar({
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, aiMessageObj]);
+          notifyMessagesChanged(convId);
+          notifyConversationsChanged(convId);
         } else if (payload?.aiMessage?.message) {
           setMessages(prev => [...prev, {
             id: Date.now().toString(),
@@ -201,6 +281,8 @@ export function AIChatSidebar({
             content: payload.aiMessage.message,
             timestamp: new Date()
           }]);
+          notifyMessagesChanged(convId);
+          notifyConversationsChanged(convId);
         } else {
           // Fallback text
           setMessages(prev => [...prev, {
@@ -220,12 +302,143 @@ export function AIChatSidebar({
         }]);
       } finally {
         setIsLoading(false);
-        // Re-enable auto-scroll after send completes
-        skipAutoScrollRef.current = false;
       }
     })();
   };
 
+  // Sidebar history actions
+  const handleSelectConversation = async (convId: string) => {
+    try {
+      setConversationId(Number(convId));
+      const msgsResp = await apiClient.get(`/ai/conversations/${convId}/messages`);
+      const msgs = msgsResp?.data?.data ?? [];
+      const mapped: Message[] = msgs.map((m: any) => ({
+        id: String(m.id),
+        role: m.senderType === 'ai' ? 'assistant' : 'user',
+        content: m.message,
+        timestamp: new Date(m.createdAt),
+      }));
+      setMessages(mapped.length > 0 ? mapped : []);
+      setIsHistoryOpen(false);
+    } catch (err) {
+      console.error('Failed to load messages for selected conversation (sidebar)', err);
+    }
+  };
+
+  const handleNewConversation = async () => {
+    try {
+      const createResp = await apiClient.post('/ai/conversations', {
+        title: 'Trò chuyện chung',
+        courseId,
+        lessonId,
+      });
+      const convId = createResp?.data?.data?.id;
+      if (!convId) throw new Error('Không thể tạo conversation');
+      setConversationId(Number(convId));
+      notifyConversationsChanged(convId);
+
+      const msgsResp = await apiClient.get(`/ai/conversations/${convId}/messages`);
+      const msgs = msgsResp?.data?.data ?? [];
+      const mapped: Message[] = msgs.map((m: any) => ({
+        id: String(m.id),
+        role: m.senderType === 'ai' ? 'assistant' : 'user',
+        content: m.message,
+        timestamp: new Date(m.createdAt),
+      }));
+      setMessages(mapped);
+      setIsHistoryOpen(false);
+    } catch (err) {
+      console.error('Failed to create and load new conversation (sidebar)', err);
+    }
+  };
+
+  const handleRenameConversation = async (convId: string) => {
+    const currentConv = conversations.find(c => c.id === convId);
+    if (!currentConv) return;
+
+    setRenamingConvId(convId);
+    setNewConvTitle(currentConv.title);
+    setIsRenameDialogOpen(true);
+  };
+
+  const submitRename = async () => {
+    if (!renamingConvId || !newConvTitle.trim()) return;
+
+    try {
+      await apiClient.patch(`/ai/conversations/${renamingConvId}`, {
+        title: newConvTitle.trim()
+      });
+
+      // Refresh conversation list
+      const resp = await apiClient.get('/ai/conversations');
+      const convs = resp?.data?.data ?? [];
+      const mapped = convs.map((c: any) => ({
+        id: String(c.id),
+        title: c.title,
+        lastMessage: c.lastMessage || '',
+        timestamp: c.lastMessageAt ? new Date(c.lastMessageAt) : new Date(),
+        courseId: c.courseId ?? c.course?.id,
+        courseName: c.course?.title ?? c.course?.title,
+      }));
+      setConversations(mapped);
+      
+      // Notify other components
+      notifyConversationsChanged(renamingConvId);
+      
+      // Close dialog
+      setIsRenameDialogOpen(false);
+      setRenamingConvId(null);
+      setNewConvTitle('');
+    } catch (err) {
+      console.error('Failed to rename conversation', err);
+      alert('Không thể đổi tên cuộc trò chuyện. Vui lòng thử lại.');
+    }
+  };
+
+  const handleDeleteConversation = async (convId: string) => {
+    setDeletingConvId(convId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingConvId) return;
+
+    try {
+      await apiClient.delete(`/ai/conversations/${deletingConvId}`);
+      
+      // If deleting current conversation, clear messages and reset
+      if (String(conversationId) === String(deletingConvId)) {
+        setConversationId(null);
+        setMessages([{
+          id: '1',
+          role: 'assistant',
+          content: 'Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp thắc mắc về bài học này, hỗ trợ học tập, và tư vấn lộ trình. Bạn cần hỗ trợ gì không?',
+          timestamp: new Date()
+        }]);
+      }
+      
+      // Refresh conversation list
+      const resp = await apiClient.get('/ai/conversations');
+      const convs = resp?.data?.data ?? [];
+      const mapped = convs.map((c: any) => ({
+        id: String(c.id),
+        title: c.title,
+        lastMessage: c.lastMessage || '',
+        timestamp: c.lastMessageAt ? new Date(c.lastMessageAt) : new Date(),
+        courseId: c.courseId ?? c.course?.id,
+        courseName: c.course?.title ?? c.course?.title,
+      }));
+      setConversations(mapped);
+      notifyConversationsChanged();
+      
+      // Close dialog
+      setIsDeleteDialogOpen(false);
+      setDeletingConvId(null);
+    } catch (err) {
+      console.error('Failed to delete conversation', err);
+      alert('Không thể xóa cuộc trò chuyện. Vui lòng thử lại.');
+    }
+  };
 
   return (
     <div
@@ -250,21 +463,38 @@ export function AIChatSidebar({
             }`}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0">
-                <Bot className="h-4 w-4 text-white" />
+              <div className="relative h-8 w-8 flex-shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border border-[#1A1A1A]" />
               </div>
-              <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Gia sư AI
-              </h3>
+              <div className="min-w-0">
+                <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Gia sư AI
+                </h3>
+                <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Luôn sẵn sàng hỗ trợ</p>
+              </div>
             </div>
-            <DarkOutlineButton
-              size="icon"
-              onClick={onClose}
-              title="Đóng"
-              className="flex-shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </DarkOutlineButton>
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsHistoryOpen(true)}
+                title="Lịch sử chat"
+                className={isDark ? 'text-white hover:bg-[#1F1F1F]' : 'text-gray-700 hover:bg-gray-100'}
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+              <DarkOutlineButton
+                size="icon"
+                onClick={onClose}
+                title="Đóng"
+                className="flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </DarkOutlineButton>
+            </div>
           </div>
 
 
@@ -290,40 +520,25 @@ export function AIChatSidebar({
 
           {/* Messages Area */}
           <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
               <div className="px-4 py-4 space-y-4">
                 {messages.map(message => (
                   <div
                     key={message.id}
                     className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                   >
-                    <Avatar className="flex-shrink-0 h-6 w-6">
-                      {message.role === 'assistant' ? (
-                        <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-600">
-                          <Bot className="h-3 w-3 text-white" />
-                        </AvatarFallback>
-                      ) : (
-                        <>
-                          {userAvatarUrl && (
-                            <AvatarImage 
-                              src={userAvatarUrl} 
-                              alt={user?.fullName || user?.email || 'User'} 
-                            />
-                          )}
-                          <AvatarFallback className={isDark ? 'bg-blue-600' : 'bg-blue-500'}>
-                            {userInitials ? (
-                              <span className="text-[10px] text-white">
-                                {userInitials}
-                              </span>
-                            ) : (
-                              <User className="h-3 w-3 text-white" />
-                            )}
-                          </AvatarFallback>
-                        </>
-                      )}
-                    </Avatar>
-
                     <div className={`flex-1 ${message.role === 'user' ? 'flex justify-end' : ''}`}>
+                      {message.role === 'assistant' && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="relative h-6 w-6">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600">
+                              <Bot className="h-3 w-3 text-white" />
+                            </div>
+                            <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border border-[#1A1A1A]" />
+                          </div>
+                          <span className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Gia sư AI</span>
+                        </div>
+                      )}
                       <div
                         className={`inline-block max-w-[85%] rounded-2xl px-3 py-2 ${
                           message.role === 'user'
@@ -333,9 +548,9 @@ export function AIChatSidebar({
                             : 'bg-gray-100 text-gray-900 border border-gray-200'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap text-base">{message.content}</p>
+                        <p className="whitespace-pre-wrap text-xs leading-snug">{message.content}</p>
                         <p
-                          className={`text-xs mt-1 ${
+                          className={`text-[10px] mt-1 text-right ${
                             message.role === 'user' ? 'text-blue-100' : isDark ? 'text-gray-500' : 'text-gray-500'
                           }`}
                         >
@@ -525,7 +740,197 @@ export function AIChatSidebar({
             </div>
           </div>
         </div>
+
+        {/* History Sheet */}
+        <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+          <SheetContent hideClose side="right" className={`${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white'} w-[385px] p-0`}>
+            <SheetHeader className={`pl-4 pr-2 pt-4 pb-2 border-b ${isDark ? 'border-[#2D2D2D]' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className={`h-5 w-5 ${isDark ? 'text-white' : 'text-gray-900'}`} />
+                  <SheetTitle className={`text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>Lịch sử chat</SheetTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={isDark ? 'text-white hover:bg-[#1F1F1F]' : 'text-gray-700 hover:bg-gray-100'}
+                    onClick={handleNewConversation}
+                    title="Tạo cuộc trò chuyện mới"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <DarkOutlineButton
+                    size="icon"
+                    onClick={() => setIsHistoryOpen(false)}
+                    title="Đóng"
+                    className="flex-shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </DarkOutlineButton>
+                </div>
+              </div>
+            </SheetHeader>
+            <div className="p-4 pt-3 h-[calc(100vh-5rem)]">
+              <ScrollArea className="h-full pr-2">
+                <div className="space-y-2">
+                  {conversations.length === 0 ? (
+                    <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Chưa có cuộc trò chuyện nào</p>
+                  ) : (
+                    conversations.map((conv) => (
+                      <div
+                        key={conv.id}
+                        onClick={() => handleSelectConversation(conv.id)}
+                        className={`flex items-center gap-2 p-3 cursor-pointer transition-colors rounded-none w-full overflow-hidden ${
+                          String(conversationId) === String(conv.id)
+                            ? 'bg-blue-600/20 border border-blue-600'
+                            : isDark
+                              ? 'border border-transparent hover:bg-[#1F1F1F]'
+                              : 'bg-white border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex-shrink-0">
+                          <div className={`h-9 w-9 rounded-md flex items-center justify-center ${isDark ? 'bg-gradient-to-br from-gray-700 to-gray-800' : 'bg-gray-100'}`}>
+                            {conv.courseName ? (
+                              <BookOpen className={`h-4 w-4 ${isDark ? 'text-white' : 'text-gray-700'}`} />
+                            ) : (
+                              <MessageCircle className={`h-4 w-4 ${isDark ? 'text-white' : 'text-gray-700'}`} />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`font-medium text-sm truncate flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{conv.title}</p>
+                            <p className={`text-xs flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              {conv.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div className="mt-1 overflow-hidden">
+                            {conv.courseName && (
+                              <Badge variant="outline" className={`text-[10px] px-1 py-0 mb-1 max-w-full truncate block ${isDark ? 'border-[#2D2D2D] text-gray-300' : 'border-gray-200 text-gray-700'}`}>{conv.courseName}</Badge>
+                            )}
+                            <p className={`text-xs line-clamp-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{conv.lastMessage || '—'}</p>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 ml-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`h-7 w-7 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className={isDark ? 'bg-[#1A1A1A] border-[#2D2D2D]' : 'bg-white border-gray-200'}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRenameConversation(conv.id);
+                                }}
+                                className={isDark ? 'text-white hover:bg-[#2D2D2D] cursor-pointer' : 'text-gray-900 hover:bg-gray-100 cursor-pointer'}
+                              >
+                                Đổi tên
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteConversation(conv.id);
+                                }}
+                                className="text-red-400 hover:bg-red-500/10 cursor-pointer"
+                              >
+                                Xóa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Rename Dialog */}
+        <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+          <DialogContent className={isDark ? 'bg-[#1A1A1A] border-[#2D2D2D] text-white' : 'bg-white border-gray-200 text-gray-900'}>
+            <DialogHeader>
+              <DialogTitle className={isDark ? 'text-white' : 'text-gray-900'}>Đổi tên cuộc trò chuyện</DialogTitle>
+              <DialogDescription className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                Nhập tên mới cho cuộc trò chuyện của bạn
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="conv-title" className={isDark ? 'text-white' : 'text-gray-900'}>
+                  Tên cuộc trò chuyện
+                </Label>
+                <Input
+                  id="conv-title"
+                  value={newConvTitle}
+                  onChange={(e) => setNewConvTitle(e.target.value)}
+                  className={isDark ? 'bg-[#0F0F0F] border-[#2D2D2D] text-white' : 'bg-white border-gray-300 text-gray-900'}
+                  placeholder="Nhập tên..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      submitRename();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setIsRenameDialogOpen(false)}
+                className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={submitRename}
+                disabled={!newConvTitle.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Lưu
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className={isDark ? 'bg-[#1A1A1A] border-[#2D2D2D] text-white' : 'bg-white border-gray-200 text-gray-900'}>
+            <DialogHeader>
+              <DialogTitle className={isDark ? 'text-white' : 'text-gray-900'}>Xác nhận xóa</DialogTitle>
+              <DialogDescription className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                Bạn có chắc chắn muốn xóa cuộc trò chuyện này? Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setDeletingConvId(null);
+                }}
+                className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Xóa
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }
-
