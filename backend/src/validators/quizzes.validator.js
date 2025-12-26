@@ -103,48 +103,6 @@ const createLessonQuizValidator = [
     body('passingScore')
         .isInt({ min: 0, max: 100 })
         .withMessage('Passing score must be between 0 and 100'),
-    body('attemptsAllowed')
-        .optional({ nullable: true })
-        .isInt({ min: 0 })
-        .withMessage('Attempts allowed must be greater than or equal to 0'),
-    body('timeLimitMinutes')
-        .optional({ nullable: true })
-        .isInt({ min: 1 })
-        .withMessage('Time limit must be a positive integer (minutes)'),
-    body('isPublished')
-        .optional()
-        .isBoolean()
-        .withMessage('isPublished must be a boolean'),
-    validate,
-];
-
-const createCourseQuizValidator = [
-    param('courseId')
-        .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
-    body('title')
-        .isString()
-        .trim()
-        .notEmpty()
-        .withMessage('Title is required'),
-    body('description')
-        .optional({ nullable: true })
-        .isString()
-        .withMessage('Description must be a string'),
-    body('questions')
-        .isArray({ min: 1 })
-        .withMessage('Questions must be a non-empty array'),
-    body('passingScore')
-        .isInt({ min: 0, max: 100 })
-        .withMessage('Passing score must be between 0 and 100'),
-    body('attemptsAllowed')
-        .optional({ nullable: true })
-        .isInt({ min: 0 })
-        .withMessage('Attempts allowed must be greater than or equal to 0'),
-    body('timeLimitMinutes')
-        .optional({ nullable: true })
-        .isInt({ min: 1 })
-        .withMessage('Time limit must be a positive integer (minutes)'),
     body('isPublished')
         .optional()
         .isBoolean()
@@ -174,10 +132,6 @@ const updateQuizValidator = [
         .optional()
         .isInt({ min: 0, max: 100 })
         .withMessage('Passing score must be between 0 and 100'),
-    body('attemptsAllowed')
-        .optional()
-        .isInt({ min: 0 })
-        .withMessage('Attempts allowed must be greater than or equal to 0'),
     validate,
 ];
 
@@ -313,7 +267,6 @@ export {
     getQuizSubmissionDetailsValidator,
     getQuizAttemptsValidator,
     createLessonQuizValidator,
-    createCourseQuizValidator,
     updateQuizValidator,
     deleteQuizValidator,
     publishQuizValidator,
