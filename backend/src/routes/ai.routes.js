@@ -7,7 +7,6 @@ import { validatePagination } from '../middlewares/validate.middleware.js'
 import { concurrentLimit } from '../middlewares/concurrent-limit.middleware.js'
 import {
     createConversationValidator,
-    sendMessageValidator,
     sendMessageValidatorAdvisor,
     sendMessageValidatorTutor,
     feedbackMessageValidator,
