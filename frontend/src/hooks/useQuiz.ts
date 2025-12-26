@@ -302,11 +302,6 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
             const resultData = await quizzesApi.submitQuiz(String(quiz.id), submission as any)
             setResult(resultData)
             
-            if (resultData.passed) {
-                toast.success(`🎉 Chúc mừng! Bạn đã đạt ${resultData.score}%`)
-            } else {
-                toast.error(`Bạn đạt ${resultData.score}%. Điểm yêu cầu: ${quiz.passingScore}%`)
-            }
         } catch (err: any) {
             console.error('Submit quiz error:', err?.response?.data || err)
             const errorMessage = err.response?.data?.message || 'Không thể nộp bài'
