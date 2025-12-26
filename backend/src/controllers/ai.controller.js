@@ -4,6 +4,7 @@ import aiChatService from '../services/ai-chat.service.js'
 import knowledgeBaseService from '../services/knowledge-base.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
+import logger from '../config/logger.config.js'
 
 class AIController {
     /**
@@ -213,6 +214,25 @@ class AIController {
         const { stream } = req.query // Check if client wants streaming
         const userId = req.user?.id // Optional - undefined for advisor
 
+        // Usage monitoring - Log request details
+        const requestMetrics = {
+            userId: userId || 'anonymous',
+            conversationId: id,
+            messageLength: message.length,
+            mode,
+            hasLessonContext: !!lessonId,
+            timestamp: new Date().toISOString(),
+            endpoint: req.originalUrl,
+            ip: req.ip,
+        }
+
+        logger.info({
+            message: '[AI Usage] Message request received',
+            ...requestMetrics,
+        })
+
+        const startTime = Date.now()
+
         // If streaming requested, use streaming endpoint
         if (stream === 'true') {
             return this.sendMessageStream(req, res)
@@ -225,6 +245,15 @@ class AIController {
             mode,
             lessonId ? parseInt(lessonId) : null
         )
+
+        // Log response metrics
+        const responseTime = Date.now() - startTime
+        logger.info({
+            message: '[AI Usage] Message processed successfully',
+            ...requestMetrics,
+            responseTime,
+            responseLength: result?.aiMessage?.message?.length || 0,
+        })
 
         return ApiResponse.success(res, result, 'Message sent successfully')
     })

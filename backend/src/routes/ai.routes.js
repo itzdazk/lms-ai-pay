@@ -4,9 +4,12 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import aiController from '../controllers/ai.controller.js'
 import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { validatePagination } from '../middlewares/validate.middleware.js'
+import { concurrentLimit } from '../middlewares/concurrent-limit.middleware.js'
 import {
     createConversationValidator,
     sendMessageValidator,
+    sendMessageValidatorAdvisor,
+    sendMessageValidatorTutor,
     feedbackMessageValidator,
     conversationIdValidator,
     messageIdValidator,
@@ -19,10 +22,10 @@ const router = express.Router()
 
 router.use('/', aiRecommendationRoutes)
 
-// Rate limiter for Advisor (public) routes - 10 requests per hour per IP
+// Rate limiter for Advisor (public) routes - 100 requests per hour per IP
 const advisorLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 100, // limit each IP to 10 requests per windowMs
+    max: 100, // limit each IP to 100 requests per windowMs
     message: 'Quá nhiều yêu cầu từ địa chỉ IP này, vui lòng thử lại sau 1 giờ.',
     standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
     legacyHeaders: false, // Disable `X-RateLimit-*` headers
@@ -33,10 +36,10 @@ const advisorLimiter = rateLimit({
     },
 })
 
-// Rate limiter for authenticated users (more lenient)
+// Rate limiter for authenticated users (more lenient) - 500 requests per hour
 const authenticatedLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 500, // limit each user to 100 requests per hour
+    max: 500, // limit each user to 500 requests per hour
     message: 'Quá nhiều yêu cầu, vui lòng thử lại sau.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -49,6 +52,10 @@ const authenticatedLimiter = rateLimit({
         return req.method === 'OPTIONS'
     },
 })
+
+// Concurrent request limiter to prevent Ollama overload
+const advisorConcurrentLimit = concurrentLimit(3, 'advisor') // Max 3 concurrent requests per IP
+const tutorConcurrentLimit = concurrentLimit(5, 'tutor') // Max 5 concurrent requests per user
 
 /**
  * ========== ADVISOR ROUTES (Public - No Authentication) ==========
@@ -70,14 +77,15 @@ router.post(
 
 /**
  * @route   POST /api/v1/ai/advisor/conversations/:id/messages
- * @desc    Send message in advisor conversation (public)
+ * @desc    Send message in advisor conversation (public, max 2000 chars)
  * @access  Public
  * @body    { message, mode: 'advisor' }
  */
 router.post(
     '/advisor/conversations/:id/messages',
     advisorLimiter,
-    sendMessageValidator,
+    advisorConcurrentLimit,
+    sendMessageValidatorAdvisor,
     aiController.sendMessage
 )
 
@@ -112,14 +120,15 @@ router.post(
 
 /**
  * @route   POST /api/v1/ai/conversations/:id/messages
- * @desc    Send message in tutor conversation
+ * @desc    Send message in tutor conversation (authenticated, max 5000 chars)
  * @access  Private
  * @body    { message, mode: 'general' }
  */
 router.post(
     '/conversations/:id/messages',
     conversationIdValidator,
-    sendMessageValidator,
+    tutorConcurrentLimit,
+    sendMessageValidatorTutor,
     aiController.sendMessage
 )
 

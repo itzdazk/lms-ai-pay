@@ -42,9 +42,23 @@ export const createConversationValidator = [
 ]
 
 /**
- * Validate send message
+ * Validate send message for Advisor (public, stricter limit)
  */
-export const sendMessageValidator = [
+export const sendMessageValidatorAdvisor = [
+    body('message')
+        .trim()
+        .notEmpty()
+        .withMessage('Message is required')
+        .isLength({ min: 1, max: 2000 })
+        .withMessage('Message must be between 1 and 2000 characters'),
+
+    validate,
+]
+
+/**
+ * Validate send message for Tutor (authenticated, more lenient)
+ */
+export const sendMessageValidatorTutor = [
     body('message')
         .trim()
         .notEmpty()
@@ -54,6 +68,11 @@ export const sendMessageValidator = [
 
     validate,
 ]
+
+/**
+ * Legacy validator - defaults to Tutor limits for backward compatibility
+ */
+export const sendMessageValidator = sendMessageValidatorTutor
 
 /**
  * Validate feedback
