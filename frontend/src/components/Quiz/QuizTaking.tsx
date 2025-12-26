@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Clock, ChevronLeft, ChevronRight, Send, X } from 'lucide-react'
+import { Clock, XCircle, ChevronLeft, ChevronRight, Send, X, RotateCcw, CheckCircle2 } from 'lucide-react'
 import { QuestionCard } from './QuestionCard'
-import type { Quiz, QuizAnswer } from '@/lib/api/types'
+import type { Quiz, QuizAnswer, QuizResult } from '@/lib/api/types'
 import { useEffect, useState } from 'react'
 
 interface QuizTakingProps {
@@ -12,13 +12,16 @@ interface QuizTakingProps {
     currentQuestionIndex: number
     answers: QuizAnswer[]
     timeRemaining: number | null
-    onAnswerQuestion: (questionId: string, answer: string) => void
+    onAnswerChange: (questionId: string, answer: string) => void
     onPrevious: () => void
     onNext: () => void
     onGoToQuestion: (index: number) => void
     onSubmit: () => void
     onExit: () => void
+    onRetry?: () => void
     submitting?: boolean
+    showResult?: boolean
+    quizResult?: QuizResult | null
 }
 
 export const QuizTaking: React.FC<QuizTakingProps> = ({
@@ -26,23 +29,32 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
     currentQuestionIndex,
     answers,
     timeRemaining,
-    onAnswerQuestion,
+    onAnswerChange,
     onPrevious,
     onNext,
     onGoToQuestion,
     onSubmit,
     onExit,
-    submitting = false
+    onRetry,
+    submitting = false,
+    showResult = false,
+    quizResult = null
 }) => {
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
     
+    const resetDebugLog = () => {
+        if (typeof window === 'undefined') return
+        const anyWindow = window as any
+        const key = '__QUIZ_RESULT_DEBUG_IDS__'
+        if (anyWindow[key]) {
+            anyWindow[key] = new Set<string>()
+        }
+    }
+    
     const questions = quiz.questions || []
-    const currentQuestion = questions[currentQuestionIndex]
     const totalQuestions = questions.length
     const answeredCount = answers.filter(a => a.answer && a.answer.trim() !== '').length
     const progress = (answeredCount / totalQuestions) * 100
-
-    const currentAnswer = answers.find(a => a.questionId === currentQuestion?.id)?.answer || ''
 
     // Format time remaining
     const formatTime = (seconds: number | null) => {
@@ -68,10 +80,10 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                     <div className="flex items-center justify-between">
                         <div className="space-y-2 flex-1">
                             <CardTitle className="text-xl text-white">{quiz.title}</CardTitle>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm text-gray-400">
-                                        Câu {currentQuestionIndex + 1}/{totalQuestions}
+                                        Tổng số câu: {totalQuestions}
                                     </span>
                                     <Badge variant="outline" className="border-blue-500/30 text-blue-400">
                                         {answeredCount}/{totalQuestions} đã trả lời
@@ -102,63 +114,227 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                 </CardHeader>
             </Card>
 
-            {/* Current Question */}
-            {currentQuestion && (
-                <QuestionCard
-                    question={currentQuestion}
-                    questionNumber={currentQuestionIndex + 1}
-                    value={currentAnswer}
-                    onChange={(value) => onAnswerQuestion(currentQuestion.id, value)}
-                />
-            )}
-
-            {/* Question Navigation Grid */}
+            {/* Questions - Vertical Stack */}
             <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
                 <CardHeader>
                     <CardTitle className="text-sm text-gray-400">Danh sách câu hỏi</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-10 gap-2">
-                        {questions.map((q, index) => {
-                            const isAnswered = answers.find(a => a.questionId === q.id)?.answer?.trim()
-                            const isCurrent = index === currentQuestionIndex
-                            
-                            return (
-                                <button
-                                    key={q.id}
-                                    onClick={() => onGoToQuestion(index)}
-                                    className={`
-                                        h-10 rounded-lg font-medium transition-colors
-                                        ${isCurrent 
-                                            ? 'bg-blue-600 text-white' 
-                                            : isAnswered
-                                            ? 'bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30'
-                                            : 'bg-[#252525] text-gray-400 border border-[#2D2D2D] hover:bg-[#2D2D2D]'
-                                        }
-                                    `}
-                                >
-                                    {index + 1}
-                                </button>
-                            )
-                        })}
-                    </div>
+                <CardContent className="space-y-6">
+                    {questions.map((q, index) => {
+                        const qIdRaw = (q as any).id ?? (q as any).questionId
+                        if (qIdRaw === undefined || qIdRaw === null) {
+                            // Warn once per render for invalid question
+                            if (typeof window !== 'undefined') {
+                                // eslint-disable-next-line no-console
+                                console.warn('Quiz question thiếu ID, bỏ qua hiển thị:', q)
+                            }
+                            return null
+                        }
+                        const normalizedId = String(qIdRaw)
+                        const rawAnswerValue = answers.find(a => a.questionId === normalizedId)?.answer || ''
+
+                        // Normalize backend answer payload to QuestionCard expectation
+                        const rawAnswers = (quizResult as any)?.answers || (quizResult as any)?.submission?.answers || []
+                        let rawResult: any = undefined
+                        if (Array.isArray(rawAnswers)) {
+                            rawResult = rawAnswers.find((a: any) => String(a.questionId) === normalizedId)
+                        }
+
+                        const qType: 'multiple_choice' | 'true_false' | 'short_answer' = (q as any).questionType ?? (q as any).type ?? 'multiple_choice'
+                        const qOptions: string[] = (q as any).options || []
+
+                        const normalizeUserInput = (val: any): string => {
+                            if (qType !== 'true_false') return String(val ?? '')
+                            const lower = String(val ?? '').toLowerCase()
+                            if (lower === '1' || lower === '0') return lower
+                            if (lower === 'true') return '1'
+                            if (lower === 'false') return '0'
+                            return ''
+                        }
+
+                        const answerValue = normalizeUserInput(rawAnswerValue)
+
+                        const normalizeAnswerValue = (val: any): string => {
+                            if (val === null || val === undefined) return ''
+                            if (qType === 'true_false') {
+                                // Normalize to '1' (Đúng) or '0' (Sai)
+                                if (typeof val === 'number') return val === 1 ? '1' : '0'
+                                const lower = String(val).toLowerCase()
+                                if (lower === '1' || lower === '0') return lower
+                                if (lower === 'true') return '1'
+                                if (lower === 'false') return '0'
+                                return lower
+                            }
+                            return String(val)
+                        }
+
+                        // Resolve explanation from multiple possible shapes
+                        const resolveExplanation = (): string | undefined => {
+                            const rr = rawResult as any
+                            const qq = q as any
+                            const cand = rr?.explanation
+                                ?? rr?.explain
+                                ?? rr?.explanationText
+                                ?? rr?.reason
+                                ?? rr?.detail
+                                ?? qq?.explanation
+                                ?? qq?.explain
+                                ?? qq?.explanationText
+                                ?? qq?.reason
+                                ?? qq?.detail
+                            if (cand) return String(cand)
+                            const exps = qq?.explanations
+                            if (Array.isArray(exps)) {
+                                // Try to pick explanation by correct answer index or user answer index
+                                const rawIdx = rr?.correctAnswer ?? rr?.answer ?? rr?.userAnswer
+                                const idx = typeof rawIdx === 'number' ? rawIdx : parseInt(String(rawIdx ?? ''), 10)
+                                if (!Number.isNaN(idx) && exps[idx]) return String(exps[idx])
+                            } else if (exps && typeof exps === 'object') {
+                                // Object map: e.g., { true: '...', false: '...' }
+                                const key = String(rr?.correctAnswer ?? rr?.answer ?? rr?.userAnswer ?? '')
+                                if (exps[key]) return String(exps[key])
+                            }
+                            return undefined
+                        }
+
+                        const normalizedResult = rawResult
+                            ? (() => {
+                                  const rr: any = rawResult
+                                  const rawUser = rr.userAnswer ?? rr.providedAnswer ?? rr.answer
+                                  const hadBackendUserAnswer = !(rawUser === undefined || rawUser === null || String(rawUser) === '')
+                                  const normUser = normalizeAnswerValue(hadBackendUserAnswer ? rawUser : answerValue)
+                                  const normCorrect = normalizeAnswerValue(rr.correctAnswer)
+                                  let isCorrectVal: boolean | undefined
+                                  if (qType === 'short_answer') {
+                                      // If backend didn't return user answer, compute from local selection vs correct answer (case-insensitive)
+                                      if (!hadBackendUserAnswer) {
+                                          const localAns = String(answerValue ?? '').trim().toLowerCase()
+                                          const correctAns = String(rr.correctAnswer ?? '').trim().toLowerCase()
+                                          isCorrectVal = !!(localAns && correctAns && localAns === correctAns)
+                                      } else {
+                                          // Prefer backend isCorrect if user answer was provided
+                                          isCorrectVal = typeof rr.isCorrect === 'boolean' ? rr.isCorrect : false
+                                      }
+                                  } else {
+                                      // For objective types, if backend didn't include user answer, compute based on local selection
+                                      if (!hadBackendUserAnswer) {
+                                          isCorrectVal = !!(normUser && normCorrect && normUser === normCorrect)
+                                      } else {
+                                          // Prefer backend isCorrect if present, else compute
+                                          isCorrectVal = typeof rr.isCorrect === 'boolean'
+                                              ? rr.isCorrect
+                                              : !!(normUser && normCorrect && normUser === normCorrect)
+                                      }
+                                  }
+                                  return {
+                                      questionId: normalizedId,
+                                      questionText: (q as any).questionText ?? (q as any).question ?? '',
+                                      questionType: qType,
+                                      userAnswer: normUser,
+                                      correctAnswer: normCorrect,
+                                      isCorrect: Boolean(isCorrectVal),
+                                      options: qOptions,
+                                      explanation: resolveExplanation(),
+                                  }
+                              })()
+                            : undefined
+
+                        // Result-check log: show how frontend determined correctness
+                        if (showResult && typeof window !== 'undefined') {
+                            const globalKey = '__QUIZ_RESULT_DEBUG_IDS__'
+                            const anyWindow = window as any
+                            if (!anyWindow[globalKey]) anyWindow[globalKey] = new Set<string>()
+                            const loggedSet: Set<string> = anyWindow[globalKey]
+                            if (!loggedSet.has(normalizedId)) {
+                                const rr: any = rawResult
+                                const rawUser = rr?.userAnswer ?? rr?.providedAnswer ?? rr?.answer
+                                const usedSource = (rawUser === undefined || rawUser === null || String(rawUser) === '') ? 'local' : 'backend'
+                                // eslint-disable-next-line no-console
+                                console.log('Frontend result check', {
+                                    questionId: normalizedId,
+                                    backendQuestionId: rr?.questionId ?? null,
+                                    type: qType,
+                                    source: usedSource,
+                                    backendUserAnswer: rawUser ?? null,
+                                    localUserInput: answerValue,
+                                    userAnswerNormalized: (normalizedResult as any)?.userAnswer,
+                                    correctAnswerNormalized: (normalizedResult as any)?.correctAnswer,
+                                    finalIsCorrect: (normalizedResult as any)?.isCorrect,
+                                })
+                                loggedSet.add(normalizedId)
+                            }
+                        }
+
+                        return (
+                            <QuestionCard
+                                key={normalizedId}
+                                question={q}
+                                questionNumber={index + 1}
+                                value={answerValue}
+                                onChange={(value) => onAnswerChange(normalizedId, value)}
+                                showResult={showResult}
+                                result={normalizedResult as any}
+                                disabled={showResult}
+                            />
+                        )
+                    })}
                 </CardContent>
             </Card>
 
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between gap-4">
-                <Button
-                    variant="outline"
-                    onClick={onPrevious}
-                    disabled={currentQuestionIndex === 0}
-                    className="border-[#2D2D2D] hover:bg-[#252525]"
-                >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Câu trước
-                </Button>
+            {/* Result Summary when showing results */}
+            {showResult && quizResult && (
+                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+                    <CardHeader className="text-center">
+                        {(() => {
+                            const rawAnswers = (quizResult as any)?.answers || (quizResult as any)?.submission?.answers || []
+                            const isArray = Array.isArray(rawAnswers)
+                            const correctCount = isArray ? rawAnswers.filter((a: any) => Boolean(a.isCorrect)).length : (quizResult as any)?.correctAnswers ?? 0
+                            const totalCount = isArray ? rawAnswers.length : (quizResult as any)?.totalQuestions ?? (quiz.questions?.length || 0)
+                            const score = (quizResult as any)?.score ?? (totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0)
+                            const passed = (quizResult as any)?.passed ?? (score >= (quiz.passingScore ?? 0))
+                            return (
+                                <div>
+                                    <div className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full ${passed ? 'bg-green-600/20' : 'bg-red-600/20'}`}>
+                                        {passed ? (
+                                            <CheckCircle2 className="h-10 w-10 text-green-500" />
+                                        ) : (
+                                            <XCircle className="h-10 w-10 text-red-500" />
+                                        )}
+                                    </div>
+                                    <CardTitle className="text-3xl mb-2 text-white">
+                                        {passed ? 'Chúc mừng! 🎉' : 'Chưa đạt'}
+                                    </CardTitle>
+                                    <p className="text-lg text-gray-400">
+                                        {passed ? 'Bạn đã vượt qua bài quiz thành công!' : `Bạn cần ${quiz.passingScore}% để đạt. Hãy thử lại!`}
+                                    </p>
+                                    <div className="mt-6 text-center p-8 bg-[#1F1F1F] rounded-lg">
+                                        <p className="text-gray-400 mb-2">Điểm của bạn</p>
+                                        <p className={`text-6xl mb-2 ${passed ? 'text-green-500' : 'text-red-500'}`}>{score}%</p>
+                                        <p className="text-gray-400">{correctCount}/{totalCount} câu đúng</p>
+                                    </div>
+                                </div>
+                            )
+                        })()}
+                    </CardHeader>
+                </Card>
+            )}
 
+            {/* Bottom Buttons */}
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    {showResult && (
+                        <Button
+                            onClick={onExit}
+                            variant="outline"
+                            className="border-[#2D2D2D] hover:bg-[#252525]"
+                        >
+                            <X className="h-4 w-4 mr-2" />
+                            Thoát
+                        </Button>
+                    )}
+                </div>
                 <div className="flex gap-2">
-                    {currentQuestionIndex === totalQuestions - 1 ? (
+                    {!showResult && (
                         <Button
                             onClick={handleSubmit}
                             disabled={submitting}
@@ -167,14 +343,14 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                             <Send className="h-4 w-4 mr-2" />
                             {submitting ? 'Đang nộp bài...' : 'Nộp bài'}
                         </Button>
-                    ) : (
+                    )}
+                    {showResult && onRetry && (
                         <Button
-                            onClick={onNext}
-                            disabled={currentQuestionIndex === totalQuestions - 1}
+                            onClick={() => { resetDebugLog(); onRetry() }}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            Câu tiếp theo
-                            <ChevronRight className="h-4 w-4 ml-2" />
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Làm lại
                         </Button>
                     )}
                 </div>

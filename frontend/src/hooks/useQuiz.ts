@@ -109,14 +109,32 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
         setError(null)
         try {
             const quizData = await quizzesApi.getQuizById(quizId)
-            setQuiz(quizData)
-            
-            // Initialize answers array
-            if (quizData.questions) {
-                const initialAnswers = quizData.questions.map(q => ({
-                    questionId: q.id,
-                    answer: ''
-                }))
+            // Prefer questionItems (DB records with real ids) over legacy questions
+            const questions = Array.isArray((quizData as any).questionItems) && (quizData as any).questionItems.length > 0
+                ? (quizData as any).questionItems
+                : (quizData as any).questions || []
+
+            // Enforce: all questions must have real IDs
+            const invalid = (questions || []).filter((q: any) => (q?.id ?? q?.questionId) === undefined || (q?.id ?? q?.questionId) === null)
+            if (invalid.length > 0) {
+                const msg = `Quiz không hợp lệ: ${invalid.length} câu hỏi thiếu ID thực. Vui lòng liên hệ quản trị viên.`
+                setError(msg)
+                toast.error(msg)
+                // Still set quiz for visibility, but do not initialize answers
+                setQuiz({ ...quizData, questions } as any)
+                return
+            }
+
+            const processedQuiz = { ...quizData, questions }
+            setQuiz(processedQuiz as any)
+
+            // Initialize answers array with consistent ID handling
+            if (questions && Array.isArray(questions)) {
+                const initialAnswers = questions.map((q: any) => {
+                    const qId = q?.id ?? q?.questionId
+                    const normalizedId = String(qId)
+                    return { questionId: normalizedId, answer: '' }
+                })
                 setAnswers(initialAnswers)
             }
         } catch (err: any) {
@@ -149,12 +167,15 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
     }, [])
     
     // Start quiz
+    const [startedAt, setStartedAt] = useState<Date | null>(null)
+
     const startQuiz = useCallback(() => {
         if (!quiz) return
         
         setCurrentQuestionIndex(0)
         setIsTimeUp(false)
         setResult(null)
+        setStartedAt(new Date())
         
         // Initialize timer if quiz has time limit
         if (quiz.timeLimit) {
@@ -232,12 +253,53 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
         
         setSubmitting(true)
         try {
+            // Build payload compatible with backend validator (answers as array of { questionId: number, answer: value })
+            const questions = quiz.questions || []
+            const answersArray: Array<{ questionId: number, answer: number | string }> = []
+
+            // Validate IDs before building payload
+            const missingIds = (questions || []).filter((q: any) => (q as any).id === undefined && (q as any).questionId === undefined)
+            if (missingIds.length > 0) {
+                toast.error('Quiz không hợp lệ: thiếu ID câu hỏi, không thể nộp bài.')
+                setSubmitting(false)
+                return
+            }
+
+            questions.forEach((q) => {
+                const qType = (q as any).questionType ?? (q as any).type
+                const qOptions: string[] | undefined = (q as any).options
+                const qIdRaw = (q as any).id ?? (q as any).questionId
+                const qIdNum = Number(qIdRaw)
+                const lookupKey = String(qIdNum)
+                const userAnswer = answers.find(a => a.questionId === lookupKey)?.answer
+                
+                // Check if answer is empty (handle both string and non-string values)
+                const answerStr = String(userAnswer ?? '').trim()
+                if (!answerStr) return
+
+                if (qType === 'true_false') {
+                    // Send numeric 1 (Đúng) or 0 (Sai); accept legacy 'true'/'false'
+                    const ua = answerStr.toLowerCase()
+                    const numVal = ua === '1' || ua === 'true' ? 1 : 0
+                    answersArray.push({ questionId: qIdNum, answer: numVal })
+                } else if (qType === 'short_answer') {
+                    answersArray.push({ questionId: qIdNum, answer: userAnswer })
+                } else {
+                    // Multiple choice: radio value is string index -> convert to number
+                    const idx = parseInt(answerStr, 10)
+                    if (!Number.isNaN(idx)) {
+                        answersArray.push({ questionId: qIdNum, answer: idx })
+                    }
+                }
+            })
+
             const submission = {
                 quizId: quiz.id,
-                answers: answers.filter(a => a.answer && a.answer.trim() !== '')
+                answers: answersArray,
+                startedAt: startedAt ? startedAt.toISOString() : undefined,
             }
-            
-            const resultData = await quizzesApi.submitQuiz(quiz.id, submission)
+
+            const resultData = await quizzesApi.submitQuiz(String(quiz.id), submission as any)
             setResult(resultData)
             
             if (resultData.passed) {
@@ -246,12 +308,13 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
                 toast.error(`Bạn đạt ${resultData.score}%. Điểm yêu cầu: ${quiz.passingScore}%`)
             }
         } catch (err: any) {
+            console.error('Submit quiz error:', err?.response?.data || err)
             const errorMessage = err.response?.data?.message || 'Không thể nộp bài'
             toast.error(errorMessage)
         } finally {
             setSubmitting(false)
         }
-    }, [quiz, answers, submitting, isTimeUp])
+    }, [quiz, answers, submitting, isTimeUp, startedAt])
     
     // Reset quiz for retry
     const resetQuiz = useCallback(() => {
@@ -263,10 +326,17 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
         
         // Reset answers
         if (quiz.questions) {
-            const initialAnswers = quiz.questions.map(q => ({
-                questionId: q.id,
-                answer: ''
-            }))
+            const initialAnswers = quiz.questions.map((q, index) => {
+                const qId = (q as any).id
+                const fallbackIndex = index + 1
+                const normalizedId = qId !== undefined && qId !== null
+                    ? String(qId)
+                    : String(fallbackIndex)
+                return {
+                    questionId: normalizedId,
+                    answer: ''
+                }
+            })
             setAnswers(initialAnswers)
         }
         

@@ -32,7 +32,8 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
     question: '',
     type: 'multiple_choice' as QuestionType,
     options: [''] as string[],
-    correctAnswer: 0 as number | string | null,
+    // For true/false, we store 1 for "Đúng" and 0 for "Sai" to align with backend grading
+    correctAnswer: 1 as number | string | null,
     explanation: '' as string | null,
   })
 
@@ -143,7 +144,7 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
                   type="radio"
                   name="qtype"
                   checked={form.type === 'true_false'}
-                  onChange={() => setForm({ ...form, type: 'true_false', options: ['Đúng', 'Sai'], correctAnswer: 0 })}
+                  onChange={() => setForm({ ...form, type: 'true_false', options: ['Đúng', 'Sai'], correctAnswer: 1 })}
                 /> Đúng/Sai
               </label>
               <label className="flex items-center gap-2 text-sm">
@@ -184,13 +185,14 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
             <div>
               <Label>Đáp án đúng</Label>
               <div className="mt-2">
-                <RadioGroup value={String(form.correctAnswer ?? 0)} onValueChange={(v) => setForm({ ...form, correctAnswer: Number(v) })}>
+                {/* Store 1 for Đúng, 0 for Sai to avoid inverted grading */}
+                <RadioGroup value={String(form.correctAnswer ?? 1)} onValueChange={(v) => setForm({ ...form, correctAnswer: Number(v) })}>
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem id="tf-true" value="0" />
+                    <RadioGroupItem id="tf-true" value="1" />
                     <Label htmlFor="tf-true">Đúng</Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem id="tf-false" value="1" />
+                    <RadioGroupItem id="tf-false" value="0" />
                     <Label htmlFor="tf-false">Sai</Label>
                   </div>
                 </RadioGroup>

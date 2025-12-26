@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle, Lock, PlayCircle, Clock, BookOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle, Lock, PlayCircle, Clock, BookOpen, FileQuestion } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import {
@@ -9,7 +9,8 @@ import {
   AccordionTrigger,
 } from '../ui/accordion';
 import { useTheme } from '../../contexts/ThemeContext';
-import type { Lesson, Chapter } from '../../lib/api/types';
+import type { Lesson, Chapter, Quiz } from '../../lib/api/types';
+import { quizzesApi } from '../../lib/api/quizzes';
 
 interface LessonListProps {
   lessons: Lesson[];
@@ -24,6 +25,7 @@ interface LessonListProps {
   totalLessons?: number;
   courseId?: number;
   courseSlug?: string;
+  onQuizSelect?: (quiz: Quiz) => void;
 }
 
 export function LessonList({
@@ -39,10 +41,37 @@ export function LessonList({
   completedLessons: _completedLessons = 0,
   totalLessons: _totalLessons = 0,
   courseId: _courseId,
-  courseSlug: _courseSlug,
+  onQuizSelect,
 }: LessonListProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
+  const [loadingQuizzes, setLoadingQuizzes] = useState<Record<number, boolean>>({});
+
+  // Fetch quizzes for all lessons
+  useEffect(() => {
+    const fetchQuizzesForLessons = async () => {
+      const allLessonIds = lessons.map(l => l.id);
+      
+      for (const lessonId of allLessonIds) {
+        try {
+          setLoadingQuizzes(prev => ({ ...prev, [lessonId]: true }));
+          const quizzes = await quizzesApi.getQuizzesByLesson(lessonId.toString());
+          setLessonQuizzes(prev => ({ ...prev, [lessonId]: quizzes }));
+        } catch (error) {
+          console.error(`Error fetching quizzes for lesson ${lessonId}:`, error);
+          setLessonQuizzes(prev => ({ ...prev, [lessonId]: [] }));
+        } finally {
+          setLoadingQuizzes(prev => ({ ...prev, [lessonId]: false }));
+        }
+      }
+    };
+
+    if (lessons.length > 0) {
+      fetchQuizzesForLessons();
+    }
+  }, [lessons]);
+
   // Format duration from seconds to readable format
   const formatDuration = (seconds?: number): string => {
     if (!seconds) return '0 phút';
@@ -193,10 +222,12 @@ export function LessonList({
                           const isSelected = selectedLessonId === lesson.id;
                           const isCompleted = completedLessonIds.includes(lesson.id);
                           const isLocked = isLessonLocked(lesson, globalIndex, allLessons);
+                          const quizzes = lessonQuizzes[lesson.id] || [];
 
                           return (
+                            <div key={lesson.id} className="space-y-1">
+                              {/* Lesson Item */}
                             <div
-                              key={lesson.id}
                               onClick={() => {
                                 if (!isLocked) {
                                   onLessonSelect(lesson);
@@ -255,6 +286,39 @@ export function LessonList({
                                 </div>
                               </div>
                             </div>
+
+                              {/* Quiz Items */}
+                              {quizzes.length > 0 && onQuizSelect && (
+                                <div className="ml-7 space-y-1">
+                                  {quizzes.map((quiz) => (
+                                    <div
+                                      key={quiz.id}
+                                      onClick={() => onQuizSelect(quiz)}
+                                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors border-l-2 border-blue-500/30 ${
+                                        isDark
+                                          ? 'hover:bg-[#1F1F1F] bg-[#151515]'
+                                          : 'hover:bg-gray-50 bg-gray-50'
+                                      }`}
+                                    >
+                                      <FileQuestion className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className={`text-xs font-medium truncate ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                                          {quiz.title}
+                                        </p>
+                                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                                          {quiz.questionCount || quiz.questions?.length || 0} câu hỏi
+                                        </p>
+                                      </div>
+                                      {quiz.isPublished && (
+                                        <Badge variant="outline" className="text-xs border-green-500/30 text-green-400 px-1 py-0">
+                                          Câu hỏi ôn tập
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -270,10 +334,12 @@ export function LessonList({
                 const isSelected = selectedLessonId === lesson.id;
                 const isCompleted = completedLessonIds.includes(lesson.id);
                 const isLocked = isLessonLocked(lesson, index, allLessons);
+                const quizzes = lessonQuizzes[lesson.id] || [];
 
                 return (
+                  <div key={lesson.id} className="space-y-1">
+                    {/* Lesson Item */}
                   <div
-                    key={lesson.id}
                     onClick={() => {
                       if (!isLocked) {
                         onLessonSelect(lesson);
@@ -335,6 +401,39 @@ export function LessonList({
                     {/* Lock icon for locked lessons */}
                     {isLocked && (
                       <Lock className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                    )}
+                  </div>
+
+                    {/* Quiz Items */}
+                    {quizzes.length > 0 && onQuizSelect && (
+                      <div className="ml-9 space-y-1">
+                        {quizzes.map((quiz) => (
+                          <div
+                            key={quiz.id}
+                            onClick={() => onQuizSelect(quiz)}
+                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors border-l-2 border-blue-500/30 ${
+                              isDark
+                                ? 'hover:bg-[#1F1F1F] bg-[#151515]'
+                                : 'hover:bg-gray-50 bg-gray-50'
+                            }`}
+                          >
+                            <FileQuestion className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium truncate ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                                {quiz.title}
+                              </p>
+                              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                                {quiz.questionCount || quiz.questions?.length || 0} câu hỏi
+                              </p>
+                            </div>
+                            {quiz.isPublished && (
+                              <Badge variant="outline" className="text-xs border-green-500/30 text-green-400">
+                                Quiz
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );
