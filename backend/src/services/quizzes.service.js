@@ -736,14 +736,7 @@ class QuizzesService {
         
         const answersMap = this.buildAnswersMap(answersPayload);
 
-        // Log for debugging: what we received and what we're looking for
-        console.log(`[gradeQuiz] Received ${answersPayload.length} answers, mapped to ${answersMap.size} questions`);
-        console.log(`[gradeQuiz] Questions in quiz: ${questions.length}`);
-        console.log('[gradeQuiz] Answer map keys:', Array.from(answersMap.keys()));
-        
-        answersPayload.forEach(ans => {
-            console.log(`  - Answer: questionId=${ans.questionId}, answer=${ans.answer}`);
-        });
+        // Debug logs removed
 
         let correctCount = 0;
 
@@ -751,9 +744,6 @@ class QuizzesService {
             const questionKey = this.getQuestionKey(question, index);
             // Debug: show mapping attempt per question
             const hasEntry = answersMap.has(String(questionKey));
-            if (!hasEntry) {
-                console.log(`  ! No submitted answer mapped for questionKey=${questionKey}`);
-            }
             const correctAnswer =
                 question && typeof question === 'object'
                     ? question.correctAnswer ?? null
@@ -769,7 +759,7 @@ class QuizzesService {
                                 ? Math.max(0, Math.trunc(byIndex.timeSpent))
                                 : null,
                     };
-                    console.log(`  * Using index fallback for questionKey=${questionKey}: answer=${answerEntry.answer}`);
+                    // Index-based fallback used when ID mapping is missing
                 }
             }
             let providedAnswer =
@@ -793,7 +783,7 @@ class QuizzesService {
                 correctCount += 1;
             }
 
-            console.log(`  Q${questionKey}: provided=${providedAnswer}, correct=${correctAnswer}, isCorrect=${isCorrect}`);
+            // Per-question debug log removed
 
             return {
                 questionId: questionKey,
