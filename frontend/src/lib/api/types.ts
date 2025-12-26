@@ -899,6 +899,7 @@ export interface QuestionResult {
     correctAnswer: string
     isCorrect: boolean
     options?: string[]
+    explanation?: string // Explanation for the correct answer
 }
 
 export interface QuizResult {

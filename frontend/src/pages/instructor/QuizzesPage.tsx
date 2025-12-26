@@ -442,7 +442,28 @@ function QuizCard({
                                             <div className="text-white font-medium mb-2">
                                                 {idx + 1}. {q.question}
                                             </div>
-                                            {Array.isArray(q.options) && q.options.length > 0 && (
+                                            {q.type === 'true_false' ? (
+                                                <ul className="space-y-1">
+                                                    {[
+                                                        { label: 'Đúng', value: 1 },
+                                                        { label: 'Sai', value: 0 },
+                                                    ].map((item, optIdx) => {
+                                                        const isCorrect = Number(q.correctAnswer) === item.value
+                                                        return (
+                                                            <li key={item.label} className="flex items-center gap-2 text-sm">
+                                                                <span className={`${isCorrect ? 'bg-green-700 text-white' : 'bg-gray-700 text-gray-200'} px-2 py-1 rounded-md`}>
+                                                                    {String.fromCharCode(65 + optIdx)}
+                                                                </span>
+                                                                <span className="text-gray-200 flex-1">{item.label}</span>
+                                                                {isCorrect && (
+                                                                    <Badge className="ml-2 bg-green-600 text-white">Đáp án đúng</Badge>
+                                                                )}
+                                                            </li>
+                                                        )
+                                                    })}
+                                                </ul>
+                                            ) : null}
+                                            {q.type !== 'true_false' && Array.isArray(q.options) && q.options.length > 0 && (
                                                 <ul className="space-y-1">
                                                     {q.options.map((opt: string, optIdx: number) => {
                                                         const isCorrect = q.correctAnswer === optIdx;

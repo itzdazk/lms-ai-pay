@@ -29,7 +29,11 @@ import { Transcript } from '../components/Lesson/Transcript';
 import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
+import { QuizOverview } from '../components/Quiz/QuizOverview';
+import { QuizTaking } from '../components/Quiz/QuizTaking';
+import { QuizResults } from '../components/Quiz/QuizResults';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
+import { useQuizTaking } from '../hooks/useQuiz';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
@@ -45,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { User, Settings, LogOut, LayoutDashboard, GraduationCap, Shield } from 'lucide-react';
-import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
+import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter, Quiz } from '../lib/api/types';
 
 export function LessonPage() {
   const params = useParams<{ slug: string; lessonSlug?: string }>();
@@ -78,6 +82,14 @@ export function LessonPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
+  
+  // Quiz state
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
+  const [quizState, setQuizState] = useState<'overview' | 'taking' | 'results'>('overview');
+  
+  // Quiz hook
+  const quizHook = useQuizTaking();
   
   const progressSaveTimeoutRef = useRef<number | null>(null);
   const previousCourseSlugRef = useRef<string | null>(null);
@@ -388,11 +400,79 @@ export function LessonPage() {
   // Handle lesson selection
   const handleLessonSelect = (lesson: Lesson) => {
     setSelectedLesson(lesson);
+    setShowQuiz(false); // Hide quiz when selecting a lesson
     // Update URL without navigation (using slug)
     if (courseSlug && lesson.slug) {
       window.history.pushState({}, '', `/courses/${courseSlug}/lessons/${lesson.slug}`);
     }
   };
+
+  // Handle quiz selection
+  const handleQuizSelect = async (quiz: Quiz) => {
+    setCurrentQuiz(quiz);
+    setShowQuiz(true);
+
+    // If quiz has a lessonId, set selected lesson and update URL
+    try {
+      if (quiz.lessonId) {
+        const targetLesson = lessons.find((l) => String(l.id) === String(quiz.lessonId));
+        if (targetLesson) {
+          setSelectedLesson(targetLesson);
+          if (courseSlug && targetLesson.slug) {
+            const basePath = `/courses/${courseSlug}/lessons/${targetLesson.slug}`;
+            window.history.pushState({}, '', `${basePath}?quiz=${quiz.id}`);
+          }
+        } else if (courseSlug && selectedLesson?.slug) {
+          // Fallback: keep current lesson, still set quiz param
+          const basePath = `/courses/${courseSlug}/lessons/${selectedLesson.slug}`;
+          window.history.pushState({}, '', `${basePath}?quiz=${quiz.id}`);
+        }
+      } else if (courseSlug && selectedLesson?.slug) {
+        const basePath = `/courses/${courseSlug}/lessons/${selectedLesson.slug}`;
+        window.history.pushState({}, '', `${basePath}?quiz=${quiz.id}`);
+      }
+    } catch {}
+
+    // Fetch full quiz data and related info
+    await quizHook.fetchQuiz(quiz.id);
+    await quizHook.fetchAttempts(quiz.id);
+    await quizHook.fetchLatestResult(quiz.id);
+
+    // Auto-start quiz immediately without requiring a Start button
+    await quizHook.startQuiz();
+    setQuizState('taking');
+  };
+
+  // Handle quiz exit
+  const handleQuizExit = () => {
+    setShowQuiz(false);
+    setCurrentQuiz(null);
+    setQuizState('overview');
+    quizHook.resetQuiz();
+
+    // Remove quiz param from URL and return to lesson path
+    if (courseSlug && selectedLesson?.slug) {
+      const basePath = `/courses/${courseSlug}/lessons/${selectedLesson.slug}`;
+      window.history.pushState({}, '', basePath);
+    }
+  };
+
+  // On mount or when lesson changes, auto-open quiz from URL param if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qid = params.get('quiz');
+    if (qid) {
+      (async () => {
+        setShowQuiz(true);
+        setQuizState('taking');
+        await quizHook.fetchQuiz(qid);
+        await quizHook.fetchAttempts(qid);
+        await quizHook.fetchLatestResult(qid);
+        await quizHook.startQuiz();
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLesson?.id, courseSlug]);
 
   // Handle video time update (auto-save progress)
   const handleTimeUpdate = (currentTime: number, duration: number) => {
@@ -886,7 +966,7 @@ export function LessonPage() {
 
       <div className="container mx-auto flex-1 overflow-hidden">
         <div className={`grid gap-0 items-start transition-all duration-300 h-full ${showSidebar ? 'lg:grid-cols-4' : 'lg:grid-cols-1'}`}>
-          {/* Video Player Section */}
+          {/* Video Player / Quiz Section */}
           <div 
             className={`space-y-0 overflow-y-auto custom-scrollbar ${showSidebar ? 'lg:col-span-3' : 'lg:col-span-1'}`}
             style={{ 
@@ -894,75 +974,127 @@ export function LessonPage() {
               paddingBottom: selectedLesson ? '45px' : '0'
             }}
           >
-            {/* Video Player */}
-            <Card className="overflow-hidden bg-card border-none rounded-none shadow-none">
-              <VideoPlayer
-                key={selectedLesson?.id}
-                videoUrl={videoUrl}
-                subtitleUrl={subtitleUrl}
-                onTimeUpdate={handleTimeUpdate}
-                onEnded={handleVideoEnded}
-                initialTime={initialVideoTime}
-                seekTo={seekTo}
-                title={selectedLesson?.title}
-                showSidebar={showSidebar}
-              />
-            </Card>
+            {showQuiz && currentQuiz ? (
+              // Quiz Components
+              <div className="">
+                {/* Loading state when quiz data isn't ready */}
+                {!quizHook.quiz && (
+                  <Card className="bg-card border-border rounded-none mb-4">
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      Đang tải quiz...
+                    </CardContent>
+                  </Card>
+                )}
 
-            {/* Lesson Info and Navigation */}
-            {selectedLesson && (
-              <Card className="bg-card border-border rounded-none ">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-foreground">{selectedLesson.title}</CardTitle>
-                      {selectedLesson.description && (
-                    <p className="text-sm text-muted-foreground mt-2">{selectedLesson.description}</p>
-                  )}
-                </CardHeader>
-              </Card>
-            )}
+                {quizState === 'overview' && quizHook.quiz && (
+                  <QuizOverview
+                    quiz={quizHook.quiz}
+                    attempts={quizHook.attempts}
+                    latestResult={quizHook.latestResult}
+                    maxAttempts={currentQuiz.maxAttempts}
+                    onStart={async () => {
+                      await quizHook.startQuiz();
+                      setQuizState('taking');
+                    }}
+                    onExit={handleQuizExit}
+                  />
+                )}
 
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full !gap-0">
-              <DarkTabsList
-                className={`!rounded-none ${
-                  isDark ? '' : '!bg-white !text-gray-900 !border-gray-200'
-                }`}
-              >
-                <DarkTabsTrigger
-                  value="overview"
-                  variant="blue"
-                  className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
-                >
-                  Tổng quan
-                </DarkTabsTrigger>
-                <DarkTabsTrigger
-                  value="transcript"
-                  variant="blue"
-                  className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Transcript
-                </DarkTabsTrigger>
-              </DarkTabsList>
-
-              <TabsContent value="overview" className="" >
-                <Card className="bg-card border-border rounded-none">
-                  <CardContent className="pt-6">
-                    <div className="prose max-w-none">
-                      <h3 className="text-foreground">Trong bài học này bạn sẽ học:</h3>
-                      {selectedLesson?.content ? (
-                        <div className="text-muted-foreground whitespace-pre-wrap">{selectedLesson.content}</div>
-                      ) : (
-                        <ul className="text-muted-foreground">
-                          <li>Khái niệm cơ bản về {selectedLesson?.title}</li>
-                          <li>Cách triển khai và áp dụng vào dự án</li>
-                          <li>Best practices và tips</li>
-                          <li>Bài tập thực hành</li>
-                        </ul>
-                      )}
-                    </div>
-                  </CardContent>
+                {quizState === 'taking' && quizHook.quiz && (
+                  <QuizTaking
+                    quiz={quizHook.quiz}
+                    currentQuestionIndex={quizHook.currentQuestionIndex}
+                    answers={quizHook.answers}
+                    timeRemaining={quizHook.timeRemaining}
+                    onAnswerChange={quizHook.answerQuestion}
+                    onNext={quizHook.nextQuestion}
+                    onPrevious={quizHook.previousQuestion}
+                    onGoToQuestion={quizHook.goToQuestion}
+                    onSubmit={async () => {
+                      await quizHook.submitQuiz();
+                    }}
+                    onRetry={async () => {
+                      await quizHook.resetQuiz();
+                      await quizHook.startQuiz();
+                    }}
+                    onExit={handleQuizExit}
+                    showResult={!!quizHook.result}
+                    quizResult={quizHook.result}
+                  />
+                )}
+              </div>
+            ) : (
+              // Video Player and Tabs
+              <>
+                {/* Video Player */}
+                <Card className="overflow-hidden bg-card border-none rounded-none shadow-none">
+                  <VideoPlayer
+                    key={selectedLesson?.id}
+                    videoUrl={videoUrl}
+                    subtitleUrl={subtitleUrl}
+                    onTimeUpdate={handleTimeUpdate}
+                    onEnded={handleVideoEnded}
+                    initialTime={initialVideoTime}
+                    seekTo={seekTo}
+                    title={selectedLesson?.title}
+                    showSidebar={showSidebar}
+                  />
                 </Card>
+
+                {/* Lesson Info and Navigation */}
+                {selectedLesson && (
+                  <Card className="bg-card border-border rounded-none ">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-foreground">{selectedLesson.title}</CardTitle>
+                          {selectedLesson.description && (
+                        <p className="text-sm text-muted-foreground mt-2">{selectedLesson.description}</p>
+                      )}
+                    </CardHeader>
+                  </Card>
+                )}
+
+                {/* Tabs */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full !gap-0">
+                  <DarkTabsList
+                    className={`!rounded-none ${
+                      isDark ? '' : '!bg-white !text-gray-900 !border-gray-200'
+                    }`}
+                  >
+                    <DarkTabsTrigger
+                      value="overview"
+                      variant="blue"
+                      className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
+                    >
+                      Tổng quan
+                    </DarkTabsTrigger>
+                    <DarkTabsTrigger
+                      value="transcript"
+                      variant="blue"
+                      className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Transcript
+                    </DarkTabsTrigger>
+                  </DarkTabsList>
+
+                  <TabsContent value="overview" className="" >
+                    <Card className="bg-card border-border rounded-none">
+                      <CardContent className="pt-6">
+                        <div className="prose max-w-none">
+                          <h3 className="text-foreground">Trong bài học này bạn sẽ học:</h3>
+                          {selectedLesson?.content ? (
+                            <div className="text-muted-foreground whitespace-pre-wrap">{selectedLesson.content}</div>
+                          ) : (
+                            <ul className="text-muted-foreground">
+                              <li>Khái niệm cơ bản về {selectedLesson?.title}</li>
+                              <li>Cách triển khai và áp dụng vào dự án</li>
+                              <li>Best practices và tips</li>
+                              <li>Bài tập thực hành</li>
+                            </ul>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
               </TabsContent>
 
               <TabsContent value="transcript" className="">
@@ -976,6 +1108,8 @@ export function LessonPage() {
                 )}
               </TabsContent>
             </Tabs>
+              </>
+            )}
           </div>
 
           {/* Sidebar - Course Content */}
@@ -986,6 +1120,7 @@ export function LessonPage() {
                 chapters={chapters}
               selectedLessonId={selectedLesson?.id}
               onLessonSelect={handleLessonSelect}
+              onQuizSelect={handleQuizSelect}
               enrollmentProgress={enrollmentProgress}
               completedLessonIds={completedLessonIds}
               isEnrolled={isEnrolled}

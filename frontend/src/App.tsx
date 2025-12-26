@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ProtectedRoute } from './components/routes/ProtectedRoute'
 import { RoleRoute } from './components/routes/RoleRoute'

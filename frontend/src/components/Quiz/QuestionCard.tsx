@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
@@ -24,93 +25,136 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     result,
     disabled = false
 }) => {
+    // Support both new and legacy question shapes
+    const qId = (question as any).id?.toString() ?? `${questionNumber}`
+    const qText = (question as any).questionText ?? (question as any).question ?? ''
+    const qType: 'multiple_choice' | 'true_false' | 'short_answer' = (question as any).questionType ?? (question as any).type ?? 'multiple_choice'
+    const qOptions: string[] | undefined = (question as any).options
+    // Gather explanation from various possible backend shapes
+    const qRaw: any = question as any
+    const qExplanationDirect: string | undefined = qRaw.explanation ?? qRaw.explain ?? qRaw.explanationText ?? qRaw.reason ?? qRaw.detail
+    const qExplanations: any = qRaw.explanations
+    const pickExplanationFromVariants = (): string | undefined => {
+        if (qExplanationDirect) return String(qExplanationDirect)
+        if (Array.isArray(qExplanations)) {
+            // Prefer correct answer index if available, else user selection
+            const rawIdx = result?.correctAnswer ?? result?.userAnswer ?? value
+            const idx = typeof rawIdx === 'number' ? rawIdx : parseInt(String(rawIdx ?? ''), 10)
+            if (!Number.isNaN(idx) && qExplanations[idx]) return String(qExplanations[idx])
+        } else if (qExplanations && typeof qExplanations === 'object') {
+            // Map like { true: '...', false: '...' }
+            const key = String(result?.correctAnswer ?? result?.userAnswer ?? value ?? '')
+            if (qExplanations[key]) return String(qExplanations[key])
+        }
+        return undefined
+    }
+    const qExplanation: string | undefined = pickExplanationFromVariants()
+
     const renderQuestionContent = () => {
-        switch (question.questionType) {
+        switch (qType) {
             case 'multiple_choice':
                 return (
-                    <RadioGroup
-                        value={value}
-                        onValueChange={onChange}
-                        disabled={disabled}
-                        className="space-y-3"
-                    >
-                        {question.options?.map((option, index) => {
-                            const optionIndex = index.toString()
-                            const isUserAnswer = showResult && result && result.userAnswer === optionIndex
-                            const isCorrectAnswer = showResult && result && result.correctAnswer === optionIndex
-                            const isWrongAnswer = isUserAnswer && !result.isCorrect
-                            
-                            return (
-                                <div
-                                    key={index}
-                                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                                        isCorrectAnswer
-                                            ? 'bg-green-500/10 border-green-500/30'
-                                            : isWrongAnswer
-                                            ? 'bg-red-500/10 border-red-500/30'
-                                            : 'border-[#2D2D2D] hover:bg-[#252525]'
-                                    }`}
-                                >
-                                    <RadioGroupItem value={optionIndex} id={`option-${index}`} />
-                                    <Label
-                                        htmlFor={`option-${index}`}
-                                        className="flex-1 cursor-pointer text-white"
+                    <div className="space-y-3">
+                        <RadioGroup
+                            value={value}
+                            onValueChange={onChange}
+                            disabled={disabled}
+                            className="space-y-3"
+                        >
+                            {qOptions?.map((option, index) => {
+                                const optionIndex = index.toString()
+                                const isSelected = showResult && ((result && result.userAnswer === optionIndex) || value === optionIndex)
+                                const isSelectedCorrect = isSelected && Boolean(result?.isCorrect)
+                                const isSelectedWrong = isSelected && !isSelectedCorrect
+
+                                return (
+                                    <div
+                                        key={index}
+                                        className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                                            isSelectedCorrect
+                                                ? 'bg-green-500/10 border-green-500/30'
+                                                : isSelectedWrong
+                                                ? 'bg-red-500/10 border-red-500/30'
+                                                : 'border-[#2D2D2D] hover:bg-[#252525]'
+                                        }`}
                                     >
-                                        {option}
-                                    </Label>
-                                    {showResult && isCorrectAnswer && (
-                                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                    )}
-                                    {showResult && isWrongAnswer && (
-                                        <XCircle className="h-5 w-5 text-red-500" />
-                                    )}
+                                        <RadioGroupItem value={optionIndex} id={`q-${qId}-option-${index}`} />
+                                        <Label
+                                            htmlFor={`q-${qId}-option-${index}`}
+                                            className="flex-1 cursor-pointer text-white"
+                                        >
+                                            {option}
+                                        </Label>
+                                    </div>
+                                )
+                            })}
+                        </RadioGroup>
+
+                        {showResult && (result?.explanation || qExplanation) && (
+                            <div className="space-y-2 text-sm">
+                                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                    <div className="flex items-center gap-2 text-blue-400 mb-1">
+                                        <span className="font-medium">Giải thích:</span> 
+                                         <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
                                 </div>
-                            )
-                        })}
-                    </RadioGroup>
+                                    </div>
+                                   
+                            </div>
+                        )}
+                    </div>
                 )
 
             case 'true_false':
                 return (
-                    <RadioGroup
-                        value={value}
-                        onValueChange={onChange}
-                        disabled={disabled}
-                        className="space-y-3"
-                    >
-                        {['true', 'false'].map((option) => {
-                            const isUserAnswer = showResult && result && result.userAnswer === option
-                            const isCorrectAnswer = showResult && result && result.correctAnswer === option
-                            const isWrongAnswer = isUserAnswer && !result.isCorrect
-                            
-                            return (
-                                <div
-                                    key={option}
-                                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                                        isCorrectAnswer
-                                            ? 'bg-green-500/10 border-green-500/30'
-                                            : isWrongAnswer
-                                            ? 'bg-red-500/10 border-red-500/30'
-                                            : 'border-[#2D2D2D] hover:bg-[#252525]'
-                                    }`}
-                                >
-                                    <RadioGroupItem value={option} id={`tf-${option}`} />
-                                    <Label
-                                        htmlFor={`tf-${option}`}
-                                        className="flex-1 cursor-pointer text-white"
+                    <div className="space-y-3">
+                        <RadioGroup
+                            value={value}
+                            onValueChange={onChange}
+                            disabled={disabled}
+                            className="space-y-3"
+                        >
+                            {[
+                                { value: '1', label: 'Đúng' },
+                                { value: '0', label: 'Sai' },
+                            ].map((opt) => {
+                                const isSelected = showResult && ((result && result.userAnswer === opt.value) || value === opt.value)
+                                const isSelectedCorrect = isSelected && Boolean(result?.isCorrect)
+                                const isSelectedWrong = isSelected && !isSelectedCorrect
+
+                                return (
+                                    <div
+                                        key={opt.value}
+                                        className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                                            isSelectedCorrect
+                                                ? 'bg-green-500/10 border-green-500/30'
+                                                : isSelectedWrong
+                                                ? 'bg-red-500/10 border-red-500/30'
+                                                : 'border-[#2D2D2D] hover:bg-[#252525]'
+                                        }`}
                                     >
-                                        {option === 'true' ? 'Đúng' : 'Sai'}
-                                    </Label>
-                                    {showResult && isCorrectAnswer && (
-                                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                    )}
-                                    {showResult && isWrongAnswer && (
-                                        <XCircle className="h-5 w-5 text-red-500" />
-                                    )}
+                                        <RadioGroupItem value={opt.value} id={`q-${qId}-tf-${opt.value}`} />
+                                        <Label
+                                            htmlFor={`q-${qId}-tf-${opt.value}`}
+                                            className="flex-1 cursor-pointer text-white"
+                                        >
+                                            {opt.label}
+                                        </Label>
+                                    </div>
+                                )
+                            })}
+                        </RadioGroup>
+
+                        {showResult && (result?.explanation || qExplanation) && (
+                            <div className="space-y-2 text-sm">
+                                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                    <div className="flex items-center gap-2 text-blue-400 mb-1">
+                                        <span className="font-medium">Giải thích:</span> <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
+                                    </div>
+                                   
                                 </div>
-                            )
-                        })}
-                    </RadioGroup>
+                            </div>
+                        )}
+                    </div>
                 )
 
             case 'short_answer':
@@ -130,23 +174,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                     : ''
                             }`}
                         />
-                        {showResult && result && (
+                        {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
-                                {!result.isCorrect && (
-                                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                                        <div className="flex items-center gap-2 text-red-400 mb-1">
-                                            <XCircle className="h-4 w-4" />
-                                            <span className="font-medium">Câu trả lời của bạn:</span>
-                                        </div>
-                                        <p className="text-white ml-6">{result.userAnswer}</p>
+                                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                    <div className="flex items-center gap-2 text-blue-400 mb-1">
+                                        <span className="font-medium">Giải thích: </span> <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
                                     </div>
-                                )}
-                                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                                    <div className="flex items-center gap-2 text-green-400 mb-1">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                        <span className="font-medium">Đáp án đúng:</span>
-                                    </div>
-                                    <p className="text-white ml-6">{result.correctAnswer}</p>
+                                    
                                 </div>
                             </div>
                         )}
@@ -167,7 +201,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     </div>
                     <div className="flex-1">
                         <CardTitle className="text-lg text-white">
-                            {question.questionText}
+                            {qText}
                         </CardTitle>
                         {showResult && result && (
                             <div className="mt-2">
