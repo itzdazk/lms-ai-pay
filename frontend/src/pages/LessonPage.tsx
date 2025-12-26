@@ -29,7 +29,6 @@ import { Transcript } from '../components/Lesson/Transcript';
 import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
-import { QuizOverview } from '../components/Quiz/QuizOverview';
 import { QuizTaking } from '../components/Quiz/QuizTaking';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useQuizTaking } from '../hooks/useQuiz';
@@ -85,7 +84,7 @@ export function LessonPage() {
   // Quiz state
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
-  const [quizState, setQuizState] = useState<'overview' | 'taking' | 'results'>('overview');
+  const [quizState, setQuizState] = useState<'taking' | 'results'>('taking');
   
   // Quiz hook
   const quizHook = useQuizTaking();
@@ -985,19 +984,7 @@ export function LessonPage() {
                   </Card>
                 )}
 
-                {quizState === 'overview' && quizHook.quiz && (
-                  <QuizOverview
-                    quiz={quizHook.quiz}
-                    attempts={quizHook.attempts}
-                    latestResult={quizHook.latestResult}
-                    maxAttempts={currentQuiz.maxAttempts}
-                    onStart={async () => {
-                      await quizHook.startQuiz();
-                      setQuizState('taking');
-                    }}
-                    onExit={handleQuizExit}
-                  />
-                )}
+                {/* QuizOverview removed: quiz starts immediately on selection */}
 
                 {quizState === 'taking' && quizHook.quiz && (
                   <QuizTaking
