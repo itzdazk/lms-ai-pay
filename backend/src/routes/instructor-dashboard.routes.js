@@ -54,6 +54,28 @@ router.get(
 )
 
 /**
+ * @route   GET /api/v1/dashboard/instructor/orders
+ * @desc    Get instructor orders (orders for their courses)
+ * @access  Private (Instructor, Admin)
+ */
+router.get(
+    '/orders',
+    isInstructor,
+    instructorDashboardController.getInstructorOrders
+)
+
+/**
+ * @route   GET /api/v1/dashboard/instructor/enrollments
+ * @desc    Get instructor enrollments (enrollments for their courses)
+ * @access  Private (Instructor, Admin)
+ */
+router.get(
+    '/enrollments',
+    isInstructor,
+    instructorDashboardController.getInstructorEnrollments
+)
+
+/**
  * @route   GET /api/v1/dashboard/instructor/students
  * @desc    Get instructor students list
  * @access  Private (Instructor, Admin)
@@ -65,6 +87,3 @@ router.get(
 )
 
 export default router
-
-
-

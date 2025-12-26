@@ -1,728 +1,1287 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { DarkOutlineButton } from '../components/ui/buttons';
-import { Tabs, TabsContent } from '../components/ui/tabs';
-import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  DarkOutlineTable,
-  DarkOutlineTableHeader,
-  DarkOutlineTableBody,
-  DarkOutlineTableRow,
-  DarkOutlineTableHead,
-  DarkOutlineTableCell,
-} from '../components/ui/dark-outline-table';
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '../components/ui/card'
+import { Button } from '../components/ui/button'
+import { DarkOutlineButton } from '../components/ui/buttons'
+import { Tabs, TabsContent } from '../components/ui/tabs'
+import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs'
 import {
-  BookOpen,
-  Users,
-  DollarSign,
-  TrendingUp,
-  Star,
-  BarChart3,
-  Loader2,
-} from 'lucide-react';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../components/ui/select'
+import {
+    DarkOutlineTable,
+    DarkOutlineTableHeader,
+    DarkOutlineTableBody,
+    DarkOutlineTableRow,
+    DarkOutlineTableHead,
+    DarkOutlineTableCell,
+} from '../components/ui/dark-outline-table'
+import {
+    BookOpen,
+    Users,
+    DollarSign,
+    TrendingUp,
+    Star,
+    BarChart3,
+    Loader2,
+    ShoppingCart,
+} from 'lucide-react'
 import { instructorCoursesApi } from '../lib/api/instructor-courses'
-import { useAuth } from '../contexts/AuthContext';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
-import { toast } from 'sonner';
-import type { Course } from '../lib/api/types';
-import { CoursesPage } from './instructor/CoursesPage';
+import { useAuth } from '../contexts/AuthContext'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../components/ui/dialog'
+import { toast } from 'sonner'
+import type { Course } from '../lib/api/types'
+import { CoursesPage } from './instructor/CoursesPage'
+import { useInstructorOrders } from '../hooks/useInstructorOrders'
+import { OrderTable } from '../components/Payment/OrderTable'
+import {
+    OrderFilters,
+    type OrderFilters as OrderFiltersType,
+} from '../components/Payment/OrderFilters'
 
 function formatPrice(price: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(price);
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+    }).format(price)
 }
 
-
 export function InstructorDashboard() {
-  const { user: currentUser, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [stats, setStats] = useState({
-    totalCourses: 0,
-    publishedCourses: 0,
-    draftCourses: 0,
-    totalStudents: 0,
-    totalRevenue: 0,
-    avgRating: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  });
-  const [filters] = useState({
-    page: 1,
-    limit: 10,
-    search: '',
-    status: undefined as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined,
-    categoryId: undefined as string | undefined,
-    level: undefined as 'beginner' | 'intermediate' | 'advanced' | undefined,
-    sort: 'newest' as string,
-  });
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
-  const scrollPositionRef = useRef<number>(0);
-  const isPageChangingRef = useRef<boolean>(false);
-  const shouldRestoreScrollRef = useRef<boolean>(false);
-
-  // Check if user is instructor - early return to prevent API calls
-  useEffect(() => {
-    if (authLoading) return;
-    
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    
-    if (currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
-      // RoleRoute component already handles permission check and redirect
-      // Don't navigate here to avoid duplicate redirects
-      return;
-    }
-  }, [currentUser, authLoading, navigate]);
-
-  // Check if we need to restore scroll position on mount
-  useEffect(() => {
-    const savedScrollPosition = sessionStorage.getItem('instructorDashboardScroll');
-    if (savedScrollPosition) {
-      shouldRestoreScrollRef.current = true;
-      scrollPositionRef.current = parseInt(savedScrollPosition, 10);
-    }
-  }, []);
-
-  // Restore scroll position when courses are loaded and not loading
-  useEffect(() => {
-    if (shouldRestoreScrollRef.current && !loading && courses.length > 0) {
-      const restoreScroll = () => {
-        // Try multiple scroll containers
-        const scrollContainer = 
-          document.querySelector('main') || 
-          document.documentElement || 
-          document.body || 
-          window;
-        
-        if (scrollContainer === window || scrollContainer === document.documentElement || scrollContainer === document.body) {
-          window.scrollTo({
-            top: scrollPositionRef.current,
-            left: 0,
-            behavior: 'auto',
-          });
-        } else {
-          (scrollContainer as HTMLElement).scrollTop = scrollPositionRef.current;
-        }
-      };
-      
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        restoreScroll();
-        
-        // Try multiple times with increasing delays to ensure it works
-        setTimeout(() => {
-          requestAnimationFrame(restoreScroll);
-        }, 100);
-        
-        setTimeout(() => {
-          requestAnimationFrame(restoreScroll);
-        }, 300);
-        
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            restoreScroll();
-            shouldRestoreScrollRef.current = false;
-            sessionStorage.removeItem('instructorDashboardScroll');
-          });
-        }, 500);
-      });
-    }
-  }, [loading, courses.length]);
-
-  // Load courses when filters change
-  useEffect(() => {
-    // Only load if user is instructor/admin
-    if (currentUser && (currentUser.role === 'INSTRUCTOR' || currentUser.role === 'ADMIN')) {
-      loadCourses();
-    }
-  }, [filters.page, filters.limit, filters.search, filters.status, filters.categoryId, filters.level, filters.sort, currentUser]);
-
-  // Restore scroll position (only when page changes, not when courses update)
-  useEffect(() => {
-    if (isPageChangingRef.current && scrollPositionRef.current > 0) {
-      const restoreScroll = () => {
-        const scrollContainer = document.querySelector('main') || window;
-        if (scrollContainer === window) {
-          window.scrollTo({
-            top: scrollPositionRef.current,
-            behavior: 'auto',
-          });
-        } else {
-          (scrollContainer as HTMLElement).scrollTop = scrollPositionRef.current;
-        }
-      };
-      
-      restoreScroll();
-      setTimeout(restoreScroll, 0);
-      requestAnimationFrame(() => {
-        restoreScroll();
-        isPageChangingRef.current = false;
-      });
-    }
-  }, [pagination.page]); // Only trigger on page change, not on courses update
-
-  // Transform backend course data to frontend format
-  const transformCourse = (course: any): Course => {
-    return {
-      id: Number(course.id),
-      title: course.title || '',
-      slug: course.slug || '',
-      description: course.description || course.shortDescription || '',
-      thumbnailUrl: course.thumbnailUrl || '',
-      videoPreviewUrl: course.videoPreviewUrl || '',
-      instructorId: Number(course.instructorId || 0),
-      categoryId: Number(course.categoryId || course.category?.id || 0),
-      category: course.category ? {
-        id: Number(course.category.id),
-        name: course.category.name,
-        slug: course.category.slug,
-        sortOrder: course.category.sortOrder || 0,
-        isActive: course.category.isActive !== undefined ? course.category.isActive : true,
-        createdAt: course.category.createdAt || new Date().toISOString(),
-        updatedAt: course.category.updatedAt || new Date().toISOString(),
-      } : undefined,
-      level: (course.level || 'BEGINNER') as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED',
-      price: parseFloat(String(course.price || 0)) || 0,
-      discountPrice: course.discountPrice ? parseFloat(String(course.discountPrice)) : undefined,
-      isFree: parseFloat(String(course.price || 0)) === 0,
-      status: course.status ? (course.status.toUpperCase() as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') : 'DRAFT',
-      isFeatured: course.isFeatured || false,
-      viewsCount: course.viewsCount || 0,
-      enrolledCount: course.enrolledCount || 0,
-      ratingAvg: course.ratingAvg ? parseFloat(String(course.ratingAvg)) : 0,
-      ratingCount: course.ratingCount || 0,
-      totalLessons: course.totalLessons || course.lessonsCount || 0,
-      durationHours: course.durationHours || 0,
-      language: course.language || 'vi',
-      completionRate: course.completionRate || 0,
-      createdAt: course.createdAt || new Date().toISOString(),
-      updatedAt: course.updatedAt || new Date().toISOString(),
-    };
-  };
-
-  const loadCourses = async () => {
-    try {
-      setLoading(true);
-      const requestParams: any = {
-        page: filters.page,
-        limit: filters.limit,
-        ...(filters.search && filters.search.trim() ? { search: filters.search.trim() } : {}),
-        ...(filters.status ? { status: filters.status } : {}),
-        ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-        ...(filters.level ? { level: filters.level } : {}),
-        sort: filters.sort,
-      };
-      const coursesData = await instructorCoursesApi.getInstructorCourses(requestParams);
-      
-      // Transform courses data - preserve order from backend
-      const coursesArray: any[] = coursesData?.data || [];
-      const transformedCourses = coursesArray.map(transformCourse);
-      
-      // Create a deep copy to ensure new reference and prevent any mutation
-      const coursesToSet = JSON.parse(JSON.stringify(transformedCourses)) as Course[];
-      setCourses(coursesToSet);
-      
-      const paginationData = coursesData.pagination || {
+    const { user: currentUser, loading: authLoading } = useAuth()
+    const navigate = useNavigate()
+    const [courses, setCourses] = useState<Course[]>([])
+    const [stats, setStats] = useState({
+        totalCourses: 0,
+        publishedCourses: 0,
+        draftCourses: 0,
+        totalStudents: 0,
+        totalRevenue: 0,
+        avgRating: 0,
+    })
+    const [loading, setLoading] = useState(true)
+    const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
         total: 0,
         totalPages: 0,
-      };
-      setPagination(paginationData);
+    })
+    const [filters] = useState({
+        page: 1,
+        limit: 10,
+        search: '',
+        status: undefined as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined,
+        categoryId: undefined as string | undefined,
+        level: undefined as
+            | 'beginner'
+            | 'intermediate'
+            | 'advanced'
+            | undefined,
+        sort: 'newest' as string,
+    })
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+    const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+    const [actionLoading, setActionLoading] = useState(false)
+    const [newStatus, setNewStatus] = useState<
+        'draft' | 'published' | 'archived'
+    >('draft')
+    const scrollPositionRef = useRef<number>(0)
+    const isPageChangingRef = useRef<boolean>(false)
+    const shouldRestoreScrollRef = useRef<boolean>(false)
 
-      // Load stats separately (don't block courses display)
-      setTimeout(() => {
-        loadStats();
-      }, 100);
-    } catch (error: any) {
-      console.error('Error loading courses:', error);
-      // Error toast is already shown by API client interceptor
-      setCourses([]);
-    } finally {
-      setLoading(false);
+    // Check if user is instructor - early return to prevent API calls
+    useEffect(() => {
+        if (authLoading) return
+
+        if (!currentUser) {
+            navigate('/login')
+            return
+        }
+
+        if (currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
+            // RoleRoute component already handles permission check and redirect
+            // Don't navigate here to avoid duplicate redirects
+            return
+        }
+    }, [currentUser, authLoading, navigate])
+
+    // Check if we need to restore scroll position on mount
+    useEffect(() => {
+        const savedScrollPosition = sessionStorage.getItem(
+            'instructorDashboardScroll'
+        )
+        if (savedScrollPosition) {
+            shouldRestoreScrollRef.current = true
+            scrollPositionRef.current = parseInt(savedScrollPosition, 10)
+        }
+    }, [])
+
+    // Restore scroll position when courses are loaded and not loading
+    useEffect(() => {
+        if (shouldRestoreScrollRef.current && !loading && courses.length > 0) {
+            const restoreScroll = () => {
+                // Try multiple scroll containers
+                const scrollContainer =
+                    document.querySelector('main') ||
+                    document.documentElement ||
+                    document.body
+
+                if (
+                    !scrollContainer ||
+                    scrollContainer === document.documentElement ||
+                    scrollContainer === document.body
+                ) {
+                    window.scrollTo({
+                        top: scrollPositionRef.current,
+                        left: 0,
+                        behavior: 'auto',
+                    })
+                } else {
+                    ;(scrollContainer as HTMLElement).scrollTop =
+                        scrollPositionRef.current
+                }
+            }
+
+            // Use requestAnimationFrame to ensure DOM is ready
+            requestAnimationFrame(() => {
+                restoreScroll()
+
+                // Try multiple times with increasing delays to ensure it works
+                setTimeout(() => {
+                    requestAnimationFrame(restoreScroll)
+                }, 100)
+
+                setTimeout(() => {
+                    requestAnimationFrame(restoreScroll)
+                }, 300)
+
+                setTimeout(() => {
+                    requestAnimationFrame(() => {
+                        restoreScroll()
+                        shouldRestoreScrollRef.current = false
+                        sessionStorage.removeItem('instructorDashboardScroll')
+                    })
+                }, 500)
+            })
+        }
+    }, [loading, courses.length])
+
+    // Load courses when filters change
+    useEffect(() => {
+        // Only load if user is instructor/admin
+        if (
+            currentUser &&
+            (currentUser.role === 'INSTRUCTOR' || currentUser.role === 'ADMIN')
+        ) {
+            loadCourses()
+        }
+    }, [
+        filters.page,
+        filters.limit,
+        filters.search,
+        filters.status,
+        filters.categoryId,
+        filters.level,
+        filters.sort,
+        currentUser,
+    ])
+
+    // Restore scroll position (only when page changes, not when courses update)
+    useEffect(() => {
+        if (isPageChangingRef.current && scrollPositionRef.current > 0) {
+            const restoreScroll = () => {
+                const scrollContainer = document.querySelector('main')
+                if (!scrollContainer) {
+                    window.scrollTo({
+                        top: scrollPositionRef.current,
+                        behavior: 'auto',
+                    })
+                } else {
+                    ;(scrollContainer as HTMLElement).scrollTop =
+                        scrollPositionRef.current
+                }
+            }
+
+            restoreScroll()
+            setTimeout(restoreScroll, 0)
+            requestAnimationFrame(() => {
+                restoreScroll()
+                isPageChangingRef.current = false
+            })
+        }
+    }, [pagination.page]) // Only trigger on page change, not on courses update
+
+    // Transform backend course data to frontend format
+    const transformCourse = (course: any): Course => {
+        return {
+            id: Number(course.id),
+            title: course.title || '',
+            slug: course.slug || '',
+            description: course.description || course.shortDescription || '',
+            thumbnailUrl: course.thumbnailUrl || '',
+            videoPreviewUrl: course.videoPreviewUrl || '',
+            instructorId: Number(course.instructorId || 0),
+            categoryId: Number(course.categoryId || course.category?.id || 0),
+            category: course.category
+                ? {
+                      id: Number(course.category.id),
+                      name: course.category.name,
+                      slug: course.category.slug,
+                      sortOrder: course.category.sortOrder || 0,
+                      isActive:
+                          course.category.isActive !== undefined
+                              ? course.category.isActive
+                              : true,
+                      createdAt:
+                          course.category.createdAt || new Date().toISOString(),
+                      updatedAt:
+                          course.category.updatedAt || new Date().toISOString(),
+                  }
+                : undefined,
+            level: (course.level || 'BEGINNER') as
+                | 'BEGINNER'
+                | 'INTERMEDIATE'
+                | 'ADVANCED',
+            price: parseFloat(String(course.price || 0)) || 0,
+            discountPrice: course.discountPrice
+                ? parseFloat(String(course.discountPrice))
+                : undefined,
+            isFree: parseFloat(String(course.price || 0)) === 0,
+            status: course.status
+                ? (course.status.toUpperCase() as
+                      | 'DRAFT'
+                      | 'PUBLISHED'
+                      | 'ARCHIVED')
+                : 'DRAFT',
+            isFeatured: course.isFeatured || false,
+            viewsCount: course.viewsCount || 0,
+            enrolledCount: course.enrolledCount || 0,
+            ratingAvg: course.ratingAvg
+                ? parseFloat(String(course.ratingAvg))
+                : 0,
+            ratingCount: course.ratingCount || 0,
+            totalLessons: course.totalLessons || course.lessonsCount || 0,
+            durationHours: course.durationHours || 0,
+            language: course.language || 'vi',
+            completionRate: course.completionRate || 0,
+            createdAt: course.createdAt || new Date().toISOString(),
+            updatedAt: course.updatedAt || new Date().toISOString(),
+        }
     }
-  };
 
-  const loadStats = async () => {
-    try {
-      // Get stats from API
-      const statsData = await instructorCoursesApi.getInstructorCourseStatistics();
-      
-      // Get all courses with pagination (max limit is 100)
-      let allCourses: Course[] = [];
-      let page = 1;
-      let hasMore = true;
-      
-      while (hasMore) {
-        const coursesData = await instructorCoursesApi.getInstructorCourses({ 
-          page, 
-          limit: 100,
-          sort: 'newest' // Always use newest for stats calculation
-        });
-        const transformed = (coursesData.data || []).map(transformCourse);
-        allCourses = [...allCourses, ...transformed];
-        
-        // Check if there are more pages
-        hasMore = page < (coursesData.pagination?.totalPages || 0);
-        page++;
-        
-        // Safety limit: stop after 10 pages (1000 courses max)
-        if (page > 10) break;
-      }
-      
-      const totalCourses = allCourses.length;
-      const publishedCourses = allCourses.filter((c: Course) => c.status === 'PUBLISHED').length;
-      const draftCourses = allCourses.filter((c: Course) => c.status === 'DRAFT').length;
-      const totalStudents = allCourses.reduce((sum: number, c: Course) => sum + (c.enrolledCount || 0), 0);
-      const totalRevenue = statsData?.totalRevenue || 0;
-      const coursesWithRatings = allCourses.filter((c: Course) => (c.ratingCount || 0) > 0);
-      const avgRating = statsData?.averageRating || 
-        (coursesWithRatings.length > 0 
-          ? coursesWithRatings.reduce((sum: number, c: Course) => sum + (c.ratingAvg || 0), 0) / coursesWithRatings.length 
-          : 0);
-      
-      setStats({
-        totalCourses,
-        publishedCourses,
-        draftCourses,
-        totalStudents,
-        totalRevenue,
-        avgRating: avgRating || 0,
-      });
-    } catch (error: any) {
-      // If stats API fails, try to calculate from current courses
-      if (courses.length > 0) {
-        const totalCourses = courses.length;
-        const publishedCourses = courses.filter((c: Course) => c.status === 'PUBLISHED').length;
-        const draftCourses = courses.filter((c: Course) => c.status === 'DRAFT').length;
-        const totalStudents = courses.reduce((sum: number, c: Course) => sum + (c.enrolledCount || 0), 0);
-        const coursesWithRatings = courses.filter((c: Course) => (c.ratingCount || 0) > 0);
-        const avgRating = coursesWithRatings.length > 0 
-          ? coursesWithRatings.reduce((sum: number, c: Course) => sum + (c.ratingAvg || 0), 0) / coursesWithRatings.length 
-          : 0;
-        
-        setStats({
-          totalCourses,
-          publishedCourses,
-          draftCourses,
-          totalStudents,
-          totalRevenue: 0,
-          avgRating: avgRating || 0,
-        });
-      }
+    const loadCourses = async () => {
+        try {
+            setLoading(true)
+            const requestParams: any = {
+                page: filters.page,
+                limit: filters.limit,
+                ...(filters.search && filters.search.trim()
+                    ? { search: filters.search.trim() }
+                    : {}),
+                ...(filters.status ? { status: filters.status } : {}),
+                ...(filters.categoryId
+                    ? { categoryId: filters.categoryId }
+                    : {}),
+                ...(filters.level ? { level: filters.level } : {}),
+                sort: filters.sort,
+            }
+            const coursesData = await instructorCoursesApi.getInstructorCourses(
+                requestParams
+            )
+
+            // Transform courses data - preserve order from backend
+            const coursesArray: any[] = coursesData?.data || []
+            const transformedCourses = coursesArray.map(transformCourse)
+
+            // Create a deep copy to ensure new reference and prevent any mutation
+            const coursesToSet = JSON.parse(
+                JSON.stringify(transformedCourses)
+            ) as Course[]
+            setCourses(coursesToSet)
+
+            const paginationData = coursesData.pagination || {
+                page: 1,
+                limit: 10,
+                total: 0,
+                totalPages: 0,
+            }
+            setPagination(paginationData)
+
+            // Load stats separately (don't block courses display)
+            setTimeout(() => {
+                loadStats()
+            }, 100)
+        } catch (error: any) {
+            console.error('Error loading courses:', error)
+            // Error toast is already shown by API client interceptor
+            setCourses([])
+        } finally {
+            setLoading(false)
+        }
     }
-  };
 
+    const loadStats = async () => {
+        try {
+            // Get stats from API
+            const statsData =
+                await instructorCoursesApi.getInstructorCourseStatistics()
 
-  const handleDeleteCourse = async () => {
-    if (!selectedCourse) return;
-    
-    try {
-      setActionLoading(true);
-      await instructorCoursesApi.deleteInstructorCourse(String(selectedCourse.id));
-      toast.success('Xóa khóa học thành công');
-      setIsDeleteDialogOpen(false);
-      setSelectedCourse(null);
-      loadCourses();
-      loadStats();
-    } catch (error: any) {
-      console.error('Error deleting course:', error);
-      // Error toast is already shown by API client interceptor
-    } finally {
-      setActionLoading(false);
+            // Get all courses with pagination (max limit is 100)
+            let allCourses: Course[] = []
+            let page = 1
+            let hasMore = true
+
+            while (hasMore) {
+                const coursesData =
+                    await instructorCoursesApi.getInstructorCourses({
+                        page,
+                        limit: 100,
+                        sort: 'newest', // Always use newest for stats calculation
+                    })
+                const transformed = (coursesData.data || []).map(
+                    transformCourse
+                )
+                allCourses = [...allCourses, ...transformed]
+
+                // Check if there are more pages
+                hasMore = page < (coursesData.pagination?.totalPages || 0)
+                page++
+
+                // Safety limit: stop after 10 pages (1000 courses max)
+                if (page > 10) break
+            }
+
+            const totalCourses = allCourses.length
+            const publishedCourses = allCourses.filter(
+                (c: Course) => c.status === 'PUBLISHED'
+            ).length
+            const draftCourses = allCourses.filter(
+                (c: Course) => c.status === 'DRAFT'
+            ).length
+            const totalStudents = allCourses.reduce(
+                (sum: number, c: Course) => sum + (c.enrolledCount || 0),
+                0
+            )
+            const totalRevenue = statsData?.totalRevenue || 0
+            const coursesWithRatings = allCourses.filter(
+                (c: Course) => (c.ratingCount || 0) > 0
+            )
+            const avgRating =
+                statsData?.averageRating ||
+                (coursesWithRatings.length > 0
+                    ? coursesWithRatings.reduce(
+                          (sum: number, c: Course) => sum + (c.ratingAvg || 0),
+                          0
+                      ) / coursesWithRatings.length
+                    : 0)
+
+            setStats({
+                totalCourses,
+                publishedCourses,
+                draftCourses,
+                totalStudents,
+                totalRevenue,
+                avgRating: avgRating || 0,
+            })
+        } catch (error: any) {
+            // If stats API fails, try to calculate from current courses
+            if (courses.length > 0) {
+                const totalCourses = courses.length
+                const publishedCourses = courses.filter(
+                    (c: Course) => c.status === 'PUBLISHED'
+                ).length
+                const draftCourses = courses.filter(
+                    (c: Course) => c.status === 'DRAFT'
+                ).length
+                const totalStudents = courses.reduce(
+                    (sum: number, c: Course) => sum + (c.enrolledCount || 0),
+                    0
+                )
+                const coursesWithRatings = courses.filter(
+                    (c: Course) => (c.ratingCount || 0) > 0
+                )
+                const avgRating =
+                    coursesWithRatings.length > 0
+                        ? coursesWithRatings.reduce(
+                              (sum: number, c: Course) =>
+                                  sum + (c.ratingAvg || 0),
+                              0
+                          ) / coursesWithRatings.length
+                        : 0
+
+                setStats({
+                    totalCourses,
+                    publishedCourses,
+                    draftCourses,
+                    totalStudents,
+                    totalRevenue: 0,
+                    avgRating: avgRating || 0,
+                })
+            }
+        }
     }
-  };
 
-  const handleChangeStatus = async () => {
-    if (!selectedCourse) return;
-    
-    try {
-      setActionLoading(true);
-      await instructorCoursesApi.changeCourseStatus(String(selectedCourse.id), newStatus);
-      toast.success('Thay đổi trạng thái thành công');
-      setIsStatusDialogOpen(false);
-      setSelectedCourse(null);
-      loadCourses();
-      loadStats();
-    } catch (error: any) {
-      console.error('Error changing status:', error);
-      // Error toast is already shown by API client interceptor
-    } finally {
-      setActionLoading(false);
+    const handleDeleteCourse = async () => {
+        if (!selectedCourse) return
+
+        try {
+            setActionLoading(true)
+            await instructorCoursesApi.deleteInstructorCourse(
+                String(selectedCourse.id)
+            )
+            toast.success('Xóa khóa học thành công')
+            setIsDeleteDialogOpen(false)
+            setSelectedCourse(null)
+            loadCourses()
+            loadStats()
+        } catch (error: any) {
+            console.error('Error deleting course:', error)
+            // Error toast is already shown by API client interceptor
+        } finally {
+            setActionLoading(false)
+        }
     }
-  };
 
-  // Early return if user doesn't have permission (RoleRoute will handle redirect)
-  if (currentUser && currentUser.role !== 'INSTRUCTOR' && currentUser.role !== 'ADMIN') {
-    return null;
-  }
+    const handleChangeStatus = async () => {
+        if (!selectedCourse) return
 
-  // Early return if not authenticated (ProtectedRoute will handle redirect)
-  if (!currentUser) {
-    return null;
-  }
+        try {
+            setActionLoading(true)
+            await instructorCoursesApi.changeCourseStatus(
+                String(selectedCourse.id),
+                newStatus
+            )
+            toast.success('Thay đổi trạng thái thành công')
+            setIsStatusDialogOpen(false)
+            setSelectedCourse(null)
+            loadCourses()
+            loadStats()
+        } catch (error: any) {
+            console.error('Error changing status:', error)
+            // Error toast is already shown by API client interceptor
+        } finally {
+            setActionLoading(false)
+        }
+    }
 
-  return (
-    <div className="container mx-auto px-4 py-4 bg-background min-h-screen">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl mb-2 text-black dark:text-white">Dashboard Giảng viên</h1>
-          <p className="text-black-400 dark:text-gray-400">Xin chào, {currentUser?.fullName || 'Giảng viên'}! 👋</p>
-        </div>
-      </div>
+    // Early return if user doesn't have permission (RoleRoute will handle redirect)
+    if (
+        currentUser &&
+        currentUser.role !== 'INSTRUCTOR' &&
+        currentUser.role !== 'ADMIN'
+    ) {
+        return null
+    }
 
-      {/* Stats Cards */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm text-gray-400">Tổng khóa học</CardTitle>
-            <BookOpen className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl text-white">{stats.totalCourses}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.publishedCourses} đã xuất bản • {stats.draftCourses} bản nháp
-            </p>
-          </CardContent>
-        </Card>
+    // Early return if not authenticated (ProtectedRoute will handle redirect)
+    if (!currentUser) {
+        return null
+    }
 
-        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm text-gray-400">Tổng học viên</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl text-white">{stats.totalStudents.toLocaleString()}</div>
-            <p className="text-xs text-gray-500 mt-1">Đã đăng ký các khóa học</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm text-gray-400">Tổng doanh thu</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl text-white">{formatPrice(stats.totalRevenue)}</div>
-            <p className="text-xs text-gray-500 mt-1">Tổng thu nhập</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm text-gray-400">Đánh giá TB</CardTitle>
-            <Star className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl flex items-center gap-2 text-white">
-              {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '-'}
-              <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Từ học viên</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs defaultValue="courses" className="space-y-6">
-        <DarkTabsList>
-          <DarkTabsTrigger value="courses" variant="blue">
-            <BookOpen className="h-4 w-4 mr-2" />
-            Khóa học
-          </DarkTabsTrigger>
-          <DarkTabsTrigger value="analytics" variant="blue">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Phân tích
-          </DarkTabsTrigger>
-          <DarkTabsTrigger value="revenue" variant="blue">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Doanh thu
-          </DarkTabsTrigger>
-        </DarkTabsList>
-
-        {/* Courses Tab */}
-        <TabsContent value="courses" className="space-y-4">
-          <CoursesPage />
-        </TabsContent>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-            </div>
-          ) : (
-            <>
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-              <CardHeader>
-                <CardTitle className="text-white">Top khóa học</CardTitle>
-                <CardDescription className="text-gray-400">Theo số học viên đăng ký</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {courses
-                        .sort((a, b) => (b.enrolledCount || 0) - (a.enrolledCount || 0))
-                    .slice(0, 5)
-                    .map((course, index) => (
-                      <div key={course.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600/20 text-blue-500">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium line-clamp-1 text-gray-900 dark:text-white">{course.title}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{(course.enrolledCount || 0)} học viên</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                        </div>
-                      </div>
-                    ))}
+    return (
+        <div className='bg-white dark:bg-black min-h-screen'>
+            {/* Header Section */}
+            <div className='bg-[#1A1A1A] border-b border-[#2d2d2d]'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                    <div className='mb-2'>
+                        <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white'>
+                            Dashboard Giảng viên
+                        </h1>
+                        <p className='text-base text-gray-300 leading-relaxed'>
+                            Xin chào, {currentUser?.fullName || 'Giảng viên'}!
+                            👋
+                        </p>
+                    </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-              <CardHeader>
-                <CardTitle className="text-white">Đánh giá cao nhất</CardTitle>
-                <CardDescription className="text-gray-400">Theo rating trung bình</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {courses
-                        .sort((a, b) => (b.ratingAvg || 0) - (a.ratingAvg || 0))
-                    .slice(0, 5)
-                    .map((course, index) => (
-                      <div key={course.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-600/20 text-yellow-500">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium line-clamp-1 text-gray-900 dark:text-white">{course.title}</p>
-                            <div className="flex items-center gap-1 text-sm">
-                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-gray-600 dark:text-gray-300">
-                                    {course.ratingCount > 0 && course.ratingAvg ? course.ratingAvg.toFixed(1) : '-'}
-                                  </span>
-                                  <span className="text-gray-500">({course.ratingCount || 0})</span>
+            </div>
+            <div className='container mx-auto px-4 py-4 bg-background min-h-screen'>
+                {/* Stats Cards */}
+                <div className='grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                        <CardHeader className='flex flex-row items-center justify-between pb-2'>
+                            <CardTitle className='text-sm text-gray-400'>
+                                Tổng khóa học
+                            </CardTitle>
+                            <BookOpen className='h-4 w-4 text-gray-500' />
+                        </CardHeader>
+                        <CardContent>
+                            <div className='text-3xl text-white'>
+                                {stats.totalCourses}
                             </div>
-                          </div>
+                            <p className='text-xs text-gray-500 mt-1'>
+                                {stats.publishedCourses} đã xuất bản •{' '}
+                                {stats.draftCourses} bản nháp
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                        <CardHeader className='flex flex-row items-center justify-between pb-2'>
+                            <CardTitle className='text-sm text-gray-400'>
+                                Tổng học viên
+                            </CardTitle>
+                            <Users className='h-4 w-4 text-blue-500' />
+                        </CardHeader>
+                        <CardContent>
+                            <div className='text-3xl text-white'>
+                                {stats.totalStudents.toLocaleString()}
+                            </div>
+                            <p className='text-xs text-gray-500 mt-1'>
+                                Đã đăng ký các khóa học
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                        <CardHeader className='flex flex-row items-center justify-between pb-2'>
+                            <CardTitle className='text-sm text-gray-400'>
+                                Tổng doanh thu
+                            </CardTitle>
+                            <DollarSign className='h-4 w-4 text-green-500' />
+                        </CardHeader>
+                        <CardContent>
+                            <div className='text-3xl text-white'>
+                                {formatPrice(stats.totalRevenue)}
+                            </div>
+                            <p className='text-xs text-gray-500 mt-1'>
+                                Tổng thu nhập
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                        <CardHeader className='flex flex-row items-center justify-between pb-2'>
+                            <CardTitle className='text-sm text-gray-400'>
+                                Đánh giá TB
+                            </CardTitle>
+                            <Star className='h-4 w-4 text-yellow-500' />
+                        </CardHeader>
+                        <CardContent>
+                            <div className='text-3xl flex items-center gap-2 text-white'>
+                                {stats.avgRating > 0
+                                    ? stats.avgRating.toFixed(1)
+                                    : '-'}
+                                <Star className='h-5 w-5 fill-yellow-400 text-yellow-400' />
+                            </div>
+                            <p className='text-xs text-gray-500 mt-1'>
+                                Từ học viên
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Main Content */}
+                <Tabs defaultValue='courses' className='space-y-6'>
+                    <DarkTabsList>
+                        <DarkTabsTrigger value='courses' variant='blue'>
+                            <BookOpen className='h-4 w-4 mr-2' />
+                            Quản lí khóa học
+                        </DarkTabsTrigger>
+                        <DarkTabsTrigger value='orders' variant='blue'>
+                            <ShoppingCart className='h-4 w-4 mr-2' />
+                            Quản lí đơn hàng
+                        </DarkTabsTrigger>
+                        <DarkTabsTrigger value='analytics' variant='blue'>
+                            <BarChart3 className='h-4 w-4 mr-2' />
+                            Phân tích
+                        </DarkTabsTrigger>
+                        <DarkTabsTrigger value='revenue' variant='blue'>
+                            <DollarSign className='h-4 w-4 mr-2' />
+                            Doanh thu
+                        </DarkTabsTrigger>
+                    </DarkTabsList>
+                    {/* Courses Management Tab */}
+                    <TabsContent value='courses' className='space-y-4'>
+                        <CoursesPage />
+                    </TabsContent>
+
+                    {/* Orders Management Tab */}
+                    <TabsContent value='orders' className='space-y-4'>
+                        <InstructorOrdersTabContent />
+                    </TabsContent>
+                    {/* Analytics Tab */}
+                    <TabsContent value='analytics' className='space-y-4'>
+                        {loading ? (
+                            <div className='flex items-center justify-center py-12'>
+                                <Loader2 className='h-8 w-8 animate-spin text-gray-400' />
+                            </div>
+                        ) : (
+                            <>
+                                <div className='grid md:grid-cols-2 gap-6'>
+                                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                                        <CardHeader>
+                                            <CardTitle className='text-white'>
+                                                Top khóa học
+                                            </CardTitle>
+                                            <CardDescription className='text-gray-400'>
+                                                Theo số học viên đăng ký
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className='space-y-4'>
+                                                {courses
+                                                    .sort(
+                                                        (a, b) =>
+                                                            (b.enrolledCount ||
+                                                                0) -
+                                                            (a.enrolledCount ||
+                                                                0)
+                                                    )
+                                                    .slice(0, 5)
+                                                    .map((course, index) => (
+                                                        <div
+                                                            key={course.id}
+                                                            className='flex items-center justify-between'
+                                                        >
+                                                            <div className='flex items-center gap-3'>
+                                                                <div className='flex h-8 w-8 items-center justify-center rounded-full bg-blue-600/20 text-blue-500'>
+                                                                    {index + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <p className='font-medium line-clamp-1 text-gray-900 dark:text-white'>
+                                                                        {
+                                                                            course.title
+                                                                        }
+                                                                    </p>
+                                                                    <p className='text-sm text-gray-500 dark:text-gray-400'>
+                                                                        {course.enrolledCount ||
+                                                                            0}{' '}
+                                                                        học viên
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className='flex items-center gap-1'>
+                                                                <TrendingUp className='h-4 w-4 text-green-500' />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                                        <CardHeader>
+                                            <CardTitle className='text-white'>
+                                                Đánh giá cao nhất
+                                            </CardTitle>
+                                            <CardDescription className='text-gray-400'>
+                                                Theo rating trung bình
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className='space-y-4'>
+                                                {courses
+                                                    .sort(
+                                                        (a, b) =>
+                                                            (b.ratingAvg || 0) -
+                                                            (a.ratingAvg || 0)
+                                                    )
+                                                    .slice(0, 5)
+                                                    .map((course, index) => (
+                                                        <div
+                                                            key={course.id}
+                                                            className='flex items-center justify-between'
+                                                        >
+                                                            <div className='flex items-center gap-3'>
+                                                                <div className='flex h-8 w-8 items-center justify-center rounded-full bg-yellow-600/20 text-yellow-500'>
+                                                                    {index + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <p className='font-medium line-clamp-1 text-gray-900 dark:text-white'>
+                                                                        {
+                                                                            course.title
+                                                                        }
+                                                                    </p>
+                                                                    <div className='flex items-center gap-1 text-sm'>
+                                                                        <Star className='h-3 w-3 fill-yellow-400 text-yellow-400' />
+                                                                        <span className='text-gray-600 dark:text-gray-300'>
+                                                                            {course.ratingCount >
+                                                                                0 &&
+                                                                            course.ratingAvg
+                                                                                ? course.ratingAvg.toFixed(
+                                                                                      1
+                                                                                  )
+                                                                                : '-'}
+                                                                        </span>
+                                                                        <span className='text-gray-500'>
+                                                                            (
+                                                                            {course.ratingCount ||
+                                                                                0}
+                                                                            )
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                                    <CardHeader>
+                                        <CardTitle className='text-white'>
+                                            Thống kê tổng quan
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className='space-y-4'>
+                                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
+                                                <span className='text-gray-400'>
+                                                    Tổng lượt xem
+                                                </span>
+                                                <span className='text-2xl text-white'>
+                                                    {courses
+                                                        .reduce(
+                                                            (sum, c) =>
+                                                                sum +
+                                                                (c.viewsCount ||
+                                                                    0),
+                                                            0
+                                                        )
+                                                        .toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
+                                                <span className='text-gray-400'>
+                                                    Tỷ lệ hoàn thành trung bình
+                                                </span>
+                                                <span className='text-2xl text-white'>
+                                                    {courses.length > 0
+                                                        ? Math.round(
+                                                              courses.reduce(
+                                                                  (sum, c) =>
+                                                                      sum +
+                                                                      ((
+                                                                          c as any
+                                                                      )
+                                                                          .completionRate ||
+                                                                          0),
+                                                                  0
+                                                              ) / courses.length
+                                                          )
+                                                        : 0}
+                                                    %
+                                                </span>
+                                            </div>
+                                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
+                                                <span className='text-gray-400'>
+                                                    Tổng số bài học
+                                                </span>
+                                                <span className='text-2xl text-white'>
+                                                    {courses.reduce(
+                                                        (sum, c) =>
+                                                            sum +
+                                                            (c.lessonsCount ||
+                                                                0),
+                                                        0
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
+                    </TabsContent>
+
+                    {/* Revenue Tab */}
+                    <TabsContent value='revenue' className='space-y-4'>
+                        {loading ? (
+                            <div className='flex items-center justify-center py-12'>
+                                <Loader2 className='h-8 w-8 animate-spin text-gray-400' />
+                            </div>
+                        ) : (
+                            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                                <CardHeader>
+                                    <CardTitle className='text-white'>
+                                        Doanh thu theo khóa học
+                                    </CardTitle>
+                                    <CardDescription className='text-gray-400'>
+                                        Chi tiết doanh thu từng khóa học
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {courses.filter((c) => !c.isFree).length ===
+                                    0 ? (
+                                        <div className='text-center py-12'>
+                                            <DollarSign className='h-12 w-12 text-gray-400 mx-auto mb-4' />
+                                            <p className='text-gray-400'>
+                                                Chưa có khóa học có phí
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <DarkOutlineTable>
+                                            <DarkOutlineTableHeader>
+                                                <DarkOutlineTableRow>
+                                                    <DarkOutlineTableHead>
+                                                        Khóa học
+                                                    </DarkOutlineTableHead>
+                                                    <DarkOutlineTableHead>
+                                                        Giá bán
+                                                    </DarkOutlineTableHead>
+                                                    <DarkOutlineTableHead>
+                                                        Đã bán
+                                                    </DarkOutlineTableHead>
+                                                    <DarkOutlineTableHead className='text-right'>
+                                                        Doanh thu
+                                                    </DarkOutlineTableHead>
+                                                </DarkOutlineTableRow>
+                                            </DarkOutlineTableHeader>
+                                            <DarkOutlineTableBody>
+                                                {courses
+                                                    .filter((c) => !c.isFree)
+                                                    .sort((a, b) => {
+                                                        const priceA =
+                                                            a.discountPrice ||
+                                                            a.originalPrice ||
+                                                            0
+                                                        const priceB =
+                                                            b.discountPrice ||
+                                                            b.originalPrice ||
+                                                            0
+                                                        const revA =
+                                                            priceA *
+                                                            (a.enrolledCount ||
+                                                                0)
+                                                        const revB =
+                                                            priceB *
+                                                            (b.enrolledCount ||
+                                                                0)
+                                                        return revB - revA
+                                                    })
+                                                    .map((course) => {
+                                                        const price =
+                                                            course.discountPrice ||
+                                                            course.originalPrice ||
+                                                            0
+                                                        const revenue =
+                                                            price *
+                                                            (course.enrolledCount ||
+                                                                0)
+                                                        return (
+                                                            <DarkOutlineTableRow
+                                                                key={course.id}
+                                                            >
+                                                                <DarkOutlineTableCell>
+                                                                    <p className='font-medium text-gray-900 dark:text-white'>
+                                                                        {
+                                                                            course.title
+                                                                        }
+                                                                    </p>
+                                                                </DarkOutlineTableCell>
+                                                                <DarkOutlineTableCell>
+                                                                    {formatPrice(
+                                                                        price
+                                                                    )}
+                                                                </DarkOutlineTableCell>
+                                                                <DarkOutlineTableCell>
+                                                                    {course.enrolledCount ||
+                                                                        0}{' '}
+                                                                    khóa
+                                                                </DarkOutlineTableCell>
+                                                                <DarkOutlineTableCell className='text-right font-semibold text-green-500'>
+                                                                    {formatPrice(
+                                                                        revenue
+                                                                    )}
+                                                                </DarkOutlineTableCell>
+                                                            </DarkOutlineTableRow>
+                                                        )
+                                                    })}
+                                            </DarkOutlineTableBody>
+                                        </DarkOutlineTable>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+                </Tabs>
+
+                {/* Delete Course Dialog */}
+                <Dialog
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                >
+                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+                        <DialogHeader>
+                            <DialogTitle>Xác nhận xóa</DialogTitle>
+                            <DialogDescription className='text-gray-400'>
+                                Bạn có chắc muốn xóa khóa học "
+                                {selectedCourse?.title}"? Hành động này không
+                                thể hoàn tác.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DarkOutlineButton
+                                onClick={() => {
+                                    setIsDeleteDialogOpen(false)
+                                    setSelectedCourse(null)
+                                }}
+                                disabled={actionLoading}
+                            >
+                                Hủy
+                            </DarkOutlineButton>
+                            <Button
+                                onClick={handleDeleteCourse}
+                                disabled={actionLoading}
+                                className='bg-red-600 hover:bg-red-700 text-white'
+                            >
+                                {actionLoading ? (
+                                    <>
+                                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                        Đang xóa...
+                                    </>
+                                ) : (
+                                    'Xóa'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Status Change Dialog */}
+                <Dialog
+                    open={isStatusDialogOpen}
+                    onOpenChange={setIsStatusDialogOpen}
+                >
+                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+                        <DialogHeader>
+                            <DialogTitle>Thay đổi trạng thái</DialogTitle>
+                            <DialogDescription className='text-gray-400'>
+                                Chọn trạng thái mới cho khóa học "
+                                {selectedCourse?.title}"
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className='space-y-4'>
+                            <Select
+                                value={newStatus}
+                                onValueChange={(value: any) =>
+                                    setNewStatus(value)
+                                }
+                            >
+                                <SelectTrigger className='bg-[#1F1F1F] border-[#2D2D2D] text-white'>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                                    <SelectItem
+                                        value='draft'
+                                        className='text-white focus:bg-[#2D2D2D]'
+                                    >
+                                        Bản nháp
+                                    </SelectItem>
+                                    <SelectItem
+                                        value='published'
+                                        className='text-white focus:bg-[#2D2D2D]'
+                                    >
+                                        Đã xuất bản
+                                    </SelectItem>
+                                    <SelectItem
+                                        value='archived'
+                                        className='text-white focus:bg-[#2D2D2D]'
+                                    >
+                                        Đã lưu trữ
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-            <CardHeader>
-              <CardTitle className="text-white">Thống kê tổng quan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg">
-                  <span className="text-gray-400">Tổng lượt xem</span>
-                  <span className="text-2xl text-white">
-                        {courses.reduce((sum, c) => sum + (c.viewsCount || 0), 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg">
-                  <span className="text-gray-400">Tỷ lệ hoàn thành trung bình</span>
-                  <span className="text-2xl text-white">
-                        {courses.length > 0
-                          ? Math.round(courses.reduce((sum, c) => sum + ((c as any).completionRate || 0), 0) / courses.length)
-                          : 0}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg">
-                  <span className="text-gray-400">Tổng số bài học</span>
-                  <span className="text-2xl text-white">
-                        {courses.reduce((sum, c) => sum + (c.lessonsCount || 0), 0)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-            </>
-          )}
-        </TabsContent>
-
-        {/* Revenue Tab */}
-        <TabsContent value="revenue" className="space-y-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                        <DialogFooter>
+                            <DarkOutlineButton
+                                onClick={() => {
+                                    setIsStatusDialogOpen(false)
+                                    setSelectedCourse(null)
+                                }}
+                                disabled={actionLoading}
+                            >
+                                Hủy
+                            </DarkOutlineButton>
+                            <Button
+                                onClick={handleChangeStatus}
+                                disabled={actionLoading}
+                                className='bg-blue-600 hover:bg-blue-700 text-white'
+                            >
+                                {actionLoading ? (
+                                    <>
+                                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                        Đang cập nhật...
+                                    </>
+                                ) : (
+                                    'Cập nhật'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
-          ) : (
-          <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-            <CardHeader>
-              <CardTitle className="text-white">Doanh thu theo khóa học</CardTitle>
-              <CardDescription className="text-gray-400">Chi tiết doanh thu từng khóa học</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {courses.filter(c => !c.isFree).length === 0 ? (
-                  <div className="text-center py-12">
-                    <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-400">Chưa có khóa học có phí</p>
-                  </div>
-                ) : (
-                <DarkOutlineTable>
-                  <DarkOutlineTableHeader>
-                    <DarkOutlineTableRow>
-                      <DarkOutlineTableHead>Khóa học</DarkOutlineTableHead>
-                      <DarkOutlineTableHead>Giá bán</DarkOutlineTableHead>
-                      <DarkOutlineTableHead>Đã bán</DarkOutlineTableHead>
-                      <DarkOutlineTableHead className="text-right">Doanh thu</DarkOutlineTableHead>
-                    </DarkOutlineTableRow>
-                  </DarkOutlineTableHeader>
-                  <DarkOutlineTableBody>
-                    {courses
-                      .filter(c => !c.isFree)
-                      .sort((a, b) => {
-                        const priceA = a.discountPrice || a.originalPrice || 0;
-                        const priceB = b.discountPrice || b.originalPrice || 0;
-                        const revA = priceA * (a.enrolledCount || 0);
-                        const revB = priceB * (b.enrolledCount || 0);
-                        return revB - revA;
-                      })
-                      .map(course => {
-                        const price = course.discountPrice || course.originalPrice || 0;
-                        const revenue = price * (course.enrolledCount || 0);
+        </div>
+    )
+}
+
+// Component for Orders Management Tab
+function InstructorOrdersTabContent() {
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [courses, setCourses] = useState<Course[]>([])
+
+    // Filters state
+    const [filters, setFilters] = useState<
+        OrderFiltersType & { courseId?: number }
+    >({
+        page: parseInt(searchParams.get('page') || '1'),
+        limit: 10,
+        paymentStatus: (searchParams.get('paymentStatus') as any) || undefined,
+        paymentGateway:
+            (searchParams.get('paymentGateway') as any) || undefined,
+        courseId: (() => {
+            const courseIdParam = searchParams.get('courseId')
+            if (courseIdParam) {
+                const parsed = parseInt(courseIdParam)
+                return isNaN(parsed) ? undefined : parsed
+            }
+            return undefined
+        })(),
+        startDate: searchParams.get('startDate') || undefined,
+        endDate: searchParams.get('endDate') || undefined,
+        sort: (searchParams.get('sort') as any) || 'newest',
+        search: searchParams.get('search') || undefined,
+    })
+
+    // Fetch courses for filter
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                const data = await instructorCoursesApi.getInstructorCourses({
+                    page: 1,
+                    limit: 100,
+                })
+                setCourses(data.data || [])
+            } catch (error) {
+                console.error('Error fetching courses:', error)
+            }
+        }
+        fetchCourses()
+    }, [])
+
+    // Hooks
+    const { orders, pagination, isLoading } = useInstructorOrders(filters)
+
+    // Update URL when filters change
+    useEffect(() => {
+        const params = new URLSearchParams()
+        if (filters.page && filters.page > 1)
+            params.set('page', filters.page.toString())
+        if (filters.paymentStatus)
+            params.set('paymentStatus', filters.paymentStatus)
+        if (filters.paymentGateway)
+            params.set('paymentGateway', filters.paymentGateway)
+        if (filters.courseId)
+            params.set('courseId', filters.courseId.toString())
+        if (filters.startDate) params.set('startDate', filters.startDate)
+        if (filters.endDate) params.set('endDate', filters.endDate)
+        if (filters.sort && filters.sort !== 'newest')
+            params.set('sort', filters.sort)
+        if (filters.search) params.set('search', filters.search)
+
+        setSearchParams(params, { replace: true })
+    }, [filters, setSearchParams])
+
+    // Handle filter changes
+    const handleFilterChange = useCallback(
+        (key: keyof typeof filters, value: any) => {
+            setFilters((prev) => ({
+                ...prev,
+                [key]: value,
+                page: 1, // Reset to first page when filter changes
+            }))
+        },
+        []
+    )
+
+    // Handle pagination
+    const handlePageChange = useCallback((page: number) => {
+        setFilters((prev) => ({ ...prev, page }))
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, [])
+
+    // Clear filters
+    const clearFilters = useCallback(() => {
+        setFilters({
+            page: 1,
+            limit: 10,
+            sort: 'newest',
+        })
+    }, [])
+
+    // Render pagination
+    const renderPagination = () => {
+        const pages: (number | string)[] = []
+        const totalPages = pagination.totalPages
+        const currentPage = pagination.page
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i)
+            }
+        } else {
+            pages.push(1)
+            if (currentPage > 3) {
+                pages.push('...')
+            }
+            for (
+                let i = Math.max(2, currentPage - 1);
+                i <= Math.min(totalPages - 1, currentPage + 1);
+                i++
+            ) {
+                pages.push(i)
+            }
+            if (currentPage < totalPages - 2) {
+                pages.push('...')
+            }
+            pages.push(totalPages)
+        }
+
+        return (
+            <div className='flex items-center justify-center gap-2 flex-wrap mt-6'>
+                <DarkOutlineButton
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1 || isLoading}
+                    size='sm'
+                >
+                    &lt;&lt;
+                </DarkOutlineButton>
+                <DarkOutlineButton
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1 || isLoading}
+                    size='sm'
+                >
+                    &lt;
+                </DarkOutlineButton>
+                {pages.map((page, index) => {
+                    if (page === '...') {
                         return (
-                          <DarkOutlineTableRow key={course.id}>
-                            <DarkOutlineTableCell>
-                              <p className="font-medium text-gray-900 dark:text-white">{course.title}</p>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>{formatPrice(price)}</DarkOutlineTableCell>
-                            <DarkOutlineTableCell>{course.enrolledCount || 0} khóa</DarkOutlineTableCell>
-                            <DarkOutlineTableCell className="text-right font-semibold text-green-500">
-                              {formatPrice(revenue)}
-                            </DarkOutlineTableCell>
-                          </DarkOutlineTableRow>
-                        );
-                      })}
-                  </DarkOutlineTableBody>
-                </DarkOutlineTable>
-                )}
-            </CardContent>
-          </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+                            <span
+                                key={`ellipsis-${index}`}
+                                className='px-2 text-gray-400'
+                            >
+                                ...
+                            </span>
+                        )
+                    }
+                    const pageNum = page as number
+                    return (
+                        <DarkOutlineButton
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            disabled={isLoading}
+                            size='sm'
+                            className={
+                                currentPage === pageNum
+                                    ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
+                                    : ''
+                            }
+                        >
+                            {pageNum}
+                        </DarkOutlineButton>
+                    )
+                })}
+                <DarkOutlineButton
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || isLoading}
+                    size='sm'
+                >
+                    &gt;
+                </DarkOutlineButton>
+                <DarkOutlineButton
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages || isLoading}
+                    size='sm'
+                >
+                    &gt;&gt;
+                </DarkOutlineButton>
+            </div>
+        )
+    }
 
-      {/* Delete Course Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Bạn có chắc muốn xóa khóa học "{selectedCourse?.title}"? Hành động này không thể hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DarkOutlineButton
-              onClick={() => {
-                setIsDeleteDialogOpen(false);
-                setSelectedCourse(null);
-              }}
-              disabled={actionLoading}
-            >
-              Hủy
-            </DarkOutlineButton>
-            <Button
-              onClick={handleDeleteCourse}
-              disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang xóa...
-                </>
-              ) : (
-                'Xóa'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    return (
+        <div className='space-y-4'>
+            {/* Course Filter */}
+            <div className='mb-4'>
+                <div className='flex items-center gap-4'>
+                    <label className='text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap'>
+                        Lọc theo khóa học:
+                    </label>
+                    <Select
+                        value={
+                            filters.courseId
+                                ? filters.courseId.toString()
+                                : 'all'
+                        }
+                        onValueChange={(value) => {
+                            if (value === 'all') {
+                                handleFilterChange('courseId', undefined)
+                            } else {
+                                const parsed = parseInt(value)
+                                if (!isNaN(parsed)) {
+                                    handleFilterChange('courseId', parsed)
+                                }
+                            }
+                        }}
+                    >
+                        <SelectTrigger className='w-[300px] bg-[#1f1f1f] border-[#2d2d2d] text-white'>
+                            <SelectValue placeholder='Tất cả khóa học' />
+                        </SelectTrigger>
+                        <SelectContent className='bg-[#1f1f1f] border-[#2d2d2d]'>
+                            <SelectItem value='all' className='text-white'>
+                                Tất cả khóa học
+                            </SelectItem>
+                            {courses.map((course) => (
+                                <SelectItem
+                                    key={course.id}
+                                    value={course.id.toString()}
+                                    className='text-white'
+                                >
+                                    {course.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
 
-      {/* Status Change Dialog */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
-          <DialogHeader>
-            <DialogTitle>Thay đổi trạng thái</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Chọn trạng thái mới cho khóa học "{selectedCourse?.title}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Select value={newStatus} onValueChange={(value: any) => setNewStatus(value)}>
-              <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D]">
-                <SelectItem value="draft" className="text-white focus:bg-[#2D2D2D]">
-                  Bản nháp
-                </SelectItem>
-                <SelectItem value="published" className="text-white focus:bg-[#2D2D2D]">
-                  Đã xuất bản
-                </SelectItem>
-                <SelectItem value="archived" className="text-white focus:bg-[#2D2D2D]">
-                  Đã lưu trữ
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <DarkOutlineButton
-              onClick={() => {
-                setIsStatusDialogOpen(false);
-                setSelectedCourse(null);
-              }}
-              disabled={actionLoading}
-            >
-              Hủy
-            </DarkOutlineButton>
-            <Button
-              onClick={handleChangeStatus}
-              disabled={actionLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang cập nhật...
-                </>
-              ) : (
-                'Cập nhật'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+            {/* Filters */}
+            <OrderFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onClearFilters={clearFilters}
+                totalResults={pagination.total}
+            />
+
+            {/* Orders Table - No actions for instructor */}
+            <OrderTable
+                orders={orders}
+                loading={isLoading}
+                onCancel={undefined}
+                showActions={false}
+            />
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && renderPagination()}
+        </div>
+    )
 }

@@ -300,6 +300,14 @@ class OrdersService {
                 take: limit,
                 orderBy,
                 include: {
+                    user: {
+                        select: {
+                            id: true,
+                            userName: true,
+                            email: true,
+                            fullName: true,
+                        },
+                    },
                     course: {
                         select: {
                             id: true,

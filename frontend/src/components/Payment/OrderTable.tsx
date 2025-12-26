@@ -30,6 +30,7 @@ type OrderTableProps = {
     loading?: boolean
     onCancel?: (orderId: number) => void
     cancelLoading?: number | null
+    showActions?: boolean
 }
 
 function getStatusBadge(status: Order['paymentStatus']) {
@@ -89,6 +90,7 @@ export function OrderTable({
     loading,
     onCancel,
     cancelLoading,
+    showActions = true,
 }: OrderTableProps) {
     // Cancel order dialog state
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
@@ -131,6 +133,9 @@ export function OrderTable({
                                 Khóa học
                             </DarkOutlineTableHead>
                             <DarkOutlineTableHead>
+                                Học viên
+                            </DarkOutlineTableHead>
+                            <DarkOutlineTableHead>
                                 Trạng thái
                             </DarkOutlineTableHead>
                             <DarkOutlineTableHead>
@@ -142,9 +147,11 @@ export function OrderTable({
                             <DarkOutlineTableHead>
                                 Ngày tạo
                             </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
-                                Thao tác
-                            </DarkOutlineTableHead>
+                            {showActions && (
+                                <DarkOutlineTableHead>
+                                    Thao tác
+                                </DarkOutlineTableHead>
+                            )}
                         </DarkOutlineTableRow>
                     </DarkOutlineTableHeader>
                     <DarkOutlineTableBody>
@@ -152,6 +159,9 @@ export function OrderTable({
                             <DarkOutlineTableRow key={i}>
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-24' />
+                                </DarkOutlineTableCell>
+                                <DarkOutlineTableCell>
+                                    <Skeleton className='h-4 w-32' />
                                 </DarkOutlineTableCell>
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-32' />
@@ -168,9 +178,11 @@ export function OrderTable({
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-28' />
                                 </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
-                                    <Skeleton className='h-8 w-20' />
-                                </DarkOutlineTableCell>
+                                {showActions && (
+                                    <DarkOutlineTableCell>
+                                        <Skeleton className='h-8 w-20' />
+                                    </DarkOutlineTableCell>
+                                )}
                             </DarkOutlineTableRow>
                         ))}
                     </DarkOutlineTableBody>
@@ -197,11 +209,16 @@ export function OrderTable({
                     <DarkOutlineTableRow>
                         <DarkOutlineTableHead>Mã đơn</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Khóa học</DarkOutlineTableHead>
+                        <DarkOutlineTableHead>Học viên</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Phương thức</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Tổng tiền</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Ngày tạo</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Thao tác</DarkOutlineTableHead>
+                        {showActions && (
+                            <DarkOutlineTableHead>
+                                Thao tác
+                            </DarkOutlineTableHead>
+                        )}
                     </DarkOutlineTableRow>
                 </DarkOutlineTableHeader>
                 <DarkOutlineTableBody>
@@ -223,6 +240,26 @@ export function OrderTable({
                                 </div>
                             </DarkOutlineTableCell>
                             <DarkOutlineTableCell>
+                                <div className='max-w-xs'>
+                                    {order.user ? (
+                                        <>
+                                            <p className='text-white font-medium line-clamp-1'>
+                                                {order.user.fullName || 'N/A'}
+                                            </p>
+                                            {order.user.email && (
+                                                <p className='text-xs text-gray-400 mt-1 line-clamp-1'>
+                                                    {order.user.email}
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <span className='text-gray-400'>
+                                            N/A
+                                        </span>
+                                    )}
+                                </div>
+                            </DarkOutlineTableCell>
+                            <DarkOutlineTableCell>
                                 {getStatusBadge(order.paymentStatus)}
                             </DarkOutlineTableCell>
                             <DarkOutlineTableCell>
@@ -234,49 +271,53 @@ export function OrderTable({
                             <DarkOutlineTableCell className='text-sm text-gray-400'>
                                 {formatDateTime(order.createdAt)}
                             </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                                <div className='flex items-center gap-2'>
-                                    <DarkOutlineButton
-                                        size='sm'
-                                        asChild
-                                        className='h-8'
-                                    >
-                                        <Link to={`/orders/${order.id}`}>
-                                            <Eye className='h-3 w-3 mr-1' />
-                                            Xem
-                                        </Link>
-                                    </DarkOutlineButton>
-                                    {order.paymentStatus === 'PENDING' &&
-                                        onCancel && (
-                                            <Button
-                                                size='sm'
-                                                variant='outline'
-                                                className='h-8 border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300'
-                                                onClick={() =>
-                                                    handleCancelClick(
-                                                        order.id,
-                                                        order.orderCode
-                                                    )
-                                                }
-                                                disabled={
-                                                    cancelLoading === order.id
-                                                }
-                                            >
-                                                {cancelLoading === order.id ? (
-                                                    <>
-                                                        <div className='animate-spin rounded-full h-3 w-3 border-2 border-red-400 border-t-transparent mr-1' />
-                                                        Đang hủy...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <X className='h-3 w-3 mr-1' />
-                                                        Hủy
-                                                    </>
-                                                )}
-                                            </Button>
-                                        )}
-                                </div>
-                            </DarkOutlineTableCell>
+                            {showActions && (
+                                <DarkOutlineTableCell>
+                                    <div className='flex items-center gap-2'>
+                                        <DarkOutlineButton
+                                            size='sm'
+                                            asChild
+                                            className='h-8'
+                                        >
+                                            <Link to={`/orders/${order.id}`}>
+                                                <Eye className='h-3 w-3 mr-1' />
+                                                Xem
+                                            </Link>
+                                        </DarkOutlineButton>
+                                        {order.paymentStatus === 'PENDING' &&
+                                            onCancel && (
+                                                <Button
+                                                    size='sm'
+                                                    variant='outline'
+                                                    className='h-8 border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300'
+                                                    onClick={() =>
+                                                        handleCancelClick(
+                                                            order.id,
+                                                            order.orderCode
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        cancelLoading ===
+                                                        order.id
+                                                    }
+                                                >
+                                                    {cancelLoading ===
+                                                    order.id ? (
+                                                        <>
+                                                            <div className='animate-spin rounded-full h-3 w-3 border-2 border-red-400 border-t-transparent mr-1' />
+                                                            Đang hủy...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <X className='h-3 w-3 mr-1' />
+                                                            Hủy
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            )}
+                                    </div>
+                                </DarkOutlineTableCell>
+                            )}
                         </DarkOutlineTableRow>
                     ))}
                 </DarkOutlineTableBody>
