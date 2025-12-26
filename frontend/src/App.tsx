@@ -47,6 +47,9 @@ import { CourseLayout } from './pages/instructor/CourseLayout'
 import { CourseCreatePage } from './pages/instructor/CourseCreatePage'
 import { CourseEditPage } from './pages/instructor/CourseEditPage'
 import { CourseChaptersPage } from './pages/instructor/CourseChaptersPage'
+import { InstructorOrdersPage } from './pages/instructor/InstructorOrdersPage'
+import { InstructorEnrollmentsPage } from './pages/instructor/InstructorEnrollmentsPage'
+import { InstructorCoursesManagementPage } from './pages/instructor/InstructorCoursesManagementPage'
 
 // Admin Pages
 import { AdminDashboard } from './pages/AdminDashboard'
@@ -329,6 +332,21 @@ export default function App() {
                                             </ProtectedRoute>
                                         }
                                     />
+                                    <Route
+                                        path='/instructor/courses-management'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <InstructorCoursesManagementPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
                                     {/* Course Management Routes with Shared Layout */}
                                     <Route
                                         path='/instructor/courses'
@@ -358,6 +376,36 @@ export default function App() {
                                             element={<CourseChaptersPage />}
                                         />
                                     </Route>
+                                    <Route
+                                        path='/instructor/orders'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <InstructorOrdersPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/instructor/enrollments'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <InstructorEnrollmentsPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
                                 </Routes>
                             </PublicLayout>
                         }

@@ -19,9 +19,10 @@ class InstructorDashboardController {
                 ? parseInt(req.query.instructorId)
                 : instructorId
 
-        const dashboard = await instructorDashboardService.getInstructorDashboard(
-            targetInstructorId
-        )
+        const dashboard =
+            await instructorDashboardService.getInstructorDashboard(
+                targetInstructorId
+            )
 
         return ApiResponse.success(
             res,
@@ -44,9 +45,10 @@ class InstructorDashboardController {
                 ? parseInt(req.query.instructorId)
                 : instructorId
 
-        const stats = await instructorDashboardService.getInstructorStats(
-            targetInstructorId
-        )
+        const stats =
+            await instructorDashboardService.getInstructorStats(
+                targetInstructorId
+            )
 
         return ApiResponse.success(
             res,
@@ -96,14 +98,122 @@ class InstructorDashboardController {
                 ? parseInt(req.query.instructorId)
                 : instructorId
 
-        const analytics = await instructorDashboardService.getInstructorAnalytics(
-            targetInstructorId
-        )
+        const analytics =
+            await instructorDashboardService.getInstructorAnalytics(
+                targetInstructorId
+            )
 
         return ApiResponse.success(
             res,
             analytics,
             'Instructor analytics retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/dashboard/instructor/orders
+     * @desc    Get instructor orders (orders for their courses)
+     * @access  Private (Instructor, Admin)
+     */
+    getInstructorOrders = asyncHandler(async (req, res) => {
+        const instructorId = req.user.id
+        const {
+            page,
+            limit,
+            search,
+            paymentStatus,
+            paymentGateway,
+            courseId,
+            startDate,
+            endDate,
+            sort,
+        } = req.query
+
+        // Admin can view any instructor's orders by passing instructorId in query
+        const targetInstructorId =
+            req.user.role === USER_ROLES.ADMIN && req.query.instructorId
+                ? parseInt(req.query.instructorId)
+                : instructorId
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            search: search || undefined,
+            paymentStatus: paymentStatus || undefined,
+            paymentGateway: paymentGateway || undefined,
+            courseId: courseId || undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            sort: sort || 'newest',
+        }
+
+        const result = await instructorDashboardService.getInstructorOrders(
+            targetInstructorId,
+            filters
+        )
+
+        return ApiResponse.paginated(
+            res,
+            result.orders,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Instructor orders retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/dashboard/instructor/enrollments
+     * @desc    Get instructor enrollments (enrollments for their courses)
+     * @access  Private (Instructor, Admin)
+     */
+    getInstructorEnrollments = asyncHandler(async (req, res) => {
+        const instructorId = req.user.id
+        const {
+            page,
+            limit,
+            search,
+            courseId,
+            status,
+            startDate,
+            endDate,
+            sort,
+        } = req.query
+
+        // Admin can view any instructor's enrollments by passing instructorId in query
+        const targetInstructorId =
+            req.user.role === USER_ROLES.ADMIN && req.query.instructorId
+                ? parseInt(req.query.instructorId)
+                : instructorId
+
+        const filters = {
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 20,
+            search: search || undefined,
+            courseId: courseId || undefined,
+            status: status || undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            sort: sort || 'newest',
+        }
+
+        const result =
+            await instructorDashboardService.getInstructorEnrollments(
+                targetInstructorId,
+                filters
+            )
+
+        return ApiResponse.paginated(
+            res,
+            result.enrollments,
+            {
+                page: filters.page,
+                limit: filters.limit,
+                total: result.total,
+            },
+            'Instructor enrollments retrieved successfully'
         )
     })
 
@@ -138,6 +248,3 @@ class InstructorDashboardController {
 }
 
 export default new InstructorDashboardController()
-
-
-

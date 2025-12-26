@@ -1,6 +1,10 @@
 // src/services/instructor-dashboard.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, PAYMENT_STATUS, COURSE_STATUS } from '../config/constants.js'
+import {
+    ENROLLMENT_STATUS,
+    PAYMENT_STATUS,
+    COURSE_STATUS,
+} from '../config/constants.js'
 
 class InstructorDashboardService {
     /**
@@ -284,7 +288,9 @@ class InstructorDashboardService {
         // Calculate course-level analytics
         const courseAnalytics = courses.map((course) => {
             const totalLessons = course.lessons.length
-            const publishedLessons = course.lessons.filter((l) => l.isPublished).length
+            const publishedLessons = course.lessons.filter(
+                (l) => l.isPublished
+            ).length
             const totalEnrollments = course.enrollments.length
             const activeEnrollments = course.enrollments.filter(
                 (e) => e.status === ENROLLMENT_STATUS.ACTIVE
@@ -325,7 +331,10 @@ class InstructorDashboardService {
             (sum, c) => sum + c.enrollments.length,
             0
         )
-        const totalLessons = courses.reduce((sum, c) => sum + c.lessons.length, 0)
+        const totalLessons = courses.reduce(
+            (sum, c) => sum + c.lessons.length,
+            0
+        )
 
         // Enrollment trend (last 30 days)
         const thirtyDaysAgo = new Date()
@@ -368,6 +377,299 @@ class InstructorDashboardService {
             enrollmentTrend: Object.entries(enrollmentTrend)
                 .map(([date, count]) => ({ date, count }))
                 .sort((a, b) => a.date.localeCompare(b.date)),
+        }
+    }
+
+    /**
+     * Get instructor orders (orders for courses taught by instructor)
+     * @param {number} instructorId - Instructor ID
+     * @param {Object} options - Filters and pagination options
+     * @returns {Promise<Object>} Orders list with pagination
+     */
+    async getInstructorOrders(instructorId, options = {}) {
+        const {
+            page = 1,
+            limit = 20,
+            search,
+            paymentStatus,
+            paymentGateway,
+            courseId,
+            startDate,
+            endDate,
+            sort = 'newest',
+        } = options
+
+        const skip = (page - 1) * limit
+
+        // Build where clause - filter by instructor's courses
+        const where = {
+            course: {
+                instructorId,
+                // Filter by course ID if provided
+                ...(courseId && { id: parseInt(courseId) }),
+            },
+        }
+
+        // Filter by payment status
+        if (paymentStatus) {
+            where.paymentStatus = paymentStatus
+        }
+
+        // Filter by payment gateway
+        if (paymentGateway) {
+            where.paymentGateway = paymentGateway
+        }
+
+        // Filter by date range
+        if (startDate || endDate) {
+            where.createdAt = {}
+            if (startDate) {
+                where.createdAt.gte = new Date(startDate)
+            }
+            if (endDate) {
+                where.createdAt.lte = new Date(endDate)
+            }
+        }
+
+        // Filter by search (orderCode, course title, or student name/email)
+        if (search) {
+            where.OR = [
+                {
+                    orderCode: {
+                        contains: search,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    course: {
+                        title: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                },
+                {
+                    user: {
+                        OR: [
+                            {
+                                fullName: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                            {
+                                email: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                        ],
+                    },
+                },
+            ]
+        }
+
+        // Build orderBy clause
+        let orderBy = {}
+        switch (sort) {
+            case 'oldest':
+                orderBy = { createdAt: 'asc' }
+                break
+            case 'amount_asc':
+                orderBy = { finalPrice: 'asc' }
+                break
+            case 'amount_desc':
+                orderBy = { finalPrice: 'desc' }
+                break
+            case 'newest':
+            default:
+                orderBy = { createdAt: 'desc' }
+        }
+
+        // Execute query
+        const [orders, total] = await Promise.all([
+            prisma.order.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            userName: true,
+                            email: true,
+                            fullName: true,
+                            avatarUrl: true,
+                        },
+                    },
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            price: true,
+                            discountPrice: true,
+                        },
+                    },
+                    paymentTransactions: {
+                        select: {
+                            id: true,
+                            transactionId: true,
+                            status: true,
+                            amount: true,
+                            createdAt: true,
+                        },
+                        orderBy: {
+                            createdAt: 'desc',
+                        },
+                        take: 1, // Get latest transaction
+                    },
+                },
+            }),
+            prisma.order.count({ where }),
+        ])
+
+        return {
+            orders,
+            total,
+        }
+    }
+
+    /**
+     * Get instructor enrollments (enrollments for courses taught by instructor)
+     * @param {number} instructorId - Instructor ID
+     * @param {Object} options - Filters and pagination options
+     * @returns {Promise<Object>} Enrollments list with pagination
+     */
+    async getInstructorEnrollments(instructorId, options = {}) {
+        const {
+            page = 1,
+            limit = 20,
+            search,
+            courseId,
+            status,
+            startDate,
+            endDate,
+            sort = 'newest',
+        } = options
+
+        const skip = (page - 1) * limit
+
+        // Build where clause - filter by instructor's courses
+        const where = {
+            course: {
+                instructorId,
+                // Filter by course ID if provided
+                ...(courseId && { id: parseInt(courseId) }),
+            },
+        }
+
+        // Filter by enrollment status
+        if (status) {
+            where.status = status
+        }
+
+        // Filter by date range
+        if (startDate || endDate) {
+            where.enrolledAt = {}
+            if (startDate) {
+                where.enrolledAt.gte = new Date(startDate)
+            }
+            if (endDate) {
+                where.enrolledAt.lte = new Date(endDate)
+            }
+        }
+
+        // Filter by search (student name/email or course title)
+        if (search) {
+            where.OR = [
+                {
+                    user: {
+                        OR: [
+                            {
+                                fullName: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                            {
+                                email: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                            {
+                                userName: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                        ],
+                    },
+                },
+                {
+                    course: {
+                        title: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                },
+            ]
+        }
+
+        // Build orderBy clause
+        let orderBy = {}
+        switch (sort) {
+            case 'oldest':
+                orderBy = { enrolledAt: 'asc' }
+                break
+            case 'progress_asc':
+                orderBy = { progressPercentage: 'asc' }
+                break
+            case 'progress_desc':
+                orderBy = { progressPercentage: 'desc' }
+                break
+            case 'newest':
+            default:
+                orderBy = { enrolledAt: 'desc' }
+        }
+
+        // Execute query
+        const [enrollments, total] = await Promise.all([
+            prisma.enrollment.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            userName: true,
+                            email: true,
+                            fullName: true,
+                            avatarUrl: true,
+                        },
+                    },
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                        },
+                    },
+                },
+            }),
+            prisma.enrollment.count({ where }),
+        ])
+
+        return {
+            enrollments,
+            total,
         }
     }
 
@@ -482,6 +784,3 @@ class InstructorDashboardService {
 }
 
 export default new InstructorDashboardService()
-
-
-
