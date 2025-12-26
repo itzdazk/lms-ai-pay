@@ -31,7 +31,6 @@ import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
 import { QuizOverview } from '../components/Quiz/QuizOverview';
 import { QuizTaking } from '../components/Quiz/QuizTaking';
-import { QuizResults } from '../components/Quiz/QuizResults';
 import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
 import { useQuizTaking } from '../hooks/useQuiz';
 import { useAuth } from '../contexts/AuthContext';
