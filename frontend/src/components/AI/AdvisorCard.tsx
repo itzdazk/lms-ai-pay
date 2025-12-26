@@ -30,8 +30,10 @@ export function AdvisorCard() {
       )}
 
       {/* Floating Window - Bottom Right */}
-      {isOpen && !isMinimized && (
-        <div className="fixed bottom-6 right-6 z-50 w-96 h-[600px] rounded-xl shadow-2xl overflow-hidden flex flex-col border border-blue-500/30">
+      {isOpen && (
+        <div className={`fixed bottom-6 right-6 z-50 w-96 h-[600px] rounded-xl shadow-2xl overflow-hidden flex flex-col border border-blue-500/30 transition-all duration-300 ${
+          isMinimized ? 'opacity-0 pointer-events-none scale-0' : 'opacity-100 scale-100'
+        }`}>
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 flex items-center justify-between flex-shrink-0 shadow-lg">
             <div className="flex items-center gap-2">

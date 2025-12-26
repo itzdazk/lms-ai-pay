@@ -22,7 +22,7 @@ router.use('/', aiRecommendationRoutes)
 // Rate limiter for Advisor (public) routes - 10 requests per hour per IP
 const advisorLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // limit each IP to 10 requests per windowMs
+    max: 100, // limit each IP to 10 requests per windowMs
     message: 'Quá nhiều yêu cầu từ địa chỉ IP này, vui lòng thử lại sau 1 giờ.',
     standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
     legacyHeaders: false, // Disable `X-RateLimit-*` headers
@@ -36,7 +36,7 @@ const advisorLimiter = rateLimit({
 // Rate limiter for authenticated users (more lenient)
 const authenticatedLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 100, // limit each user to 100 requests per hour
+    max: 500, // limit each user to 100 requests per hour
     message: 'Quá nhiều yêu cầu, vui lòng thử lại sau.',
     standardHeaders: true,
     legacyHeaders: false,
