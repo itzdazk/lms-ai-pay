@@ -381,8 +381,6 @@ model Quiz {
   description      String?  @db.Text
   questions        Json
   passingScore     Int      @default(70) @map("passing_score")
-  attemptsAllowed  Int      @default(1) @map("attempts_allowed")
-  timeLimitMinutes Int?     @map("time_limit_minutes")
   isPublished      Boolean  @default(true) @map("is_published")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz

@@ -30,28 +30,6 @@ class InstructorQuizzesController {
     });
 
     /**
-     * POST /api/v1/instructor/courses/:courseId/quizzes
-     */
-    createCourseQuiz = asyncHandler(async (req, res) => {
-        const courseId = parseInt(req.params.courseId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
-
-        const quiz = await instructorQuizzesService.createQuizForCourse({
-            courseId,
-            userId,
-            userRole,
-            payload: req.body,
-        });
-
-        return ApiResponse.created(
-            res,
-            quiz,
-            'Quiz created successfully for course'
-        );
-    });
-
-    /**
      * PUT /api/v1/instructor/quizzes/:id
      */
     updateQuiz = asyncHandler(async (req, res) => {

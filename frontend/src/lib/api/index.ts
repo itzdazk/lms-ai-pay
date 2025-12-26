@@ -20,7 +20,9 @@ export type {
     CreateEnrollmentResponse,
 } from './enrollments'
 export { lessonsApi } from './lessons'
+export { instructorLessonsApi } from './instructor-lessons'
 export { lessonNotesApi } from './lesson-notes'
+export { instructorQuizzesApi } from './instructor-quizzes'
 export { categoriesApi, getCategoryPath } from './categories'
 export type {
     LessonNote,

@@ -4,9 +4,7 @@ import rateLimit from 'express-rate-limit';
 import instructorQuizzesController from '../controllers/instructor-quizzes.controller.js';
 import { authenticate } from '../middlewares/authenticate.middleware.js';
 import { isInstructor } from '../middlewares/role.middleware.js';
-import { isCourseInstructorOrAdmin } from '../middlewares/role.middleware.js';
 import {
-    createCourseQuizValidator,
     createLessonQuizValidator,
     deleteQuizValidator,
     getInstructorQuizSubmissionsValidator,
@@ -43,20 +41,6 @@ router.post(
     isInstructor,
     createLessonQuizValidator,
     instructorQuizzesController.createLessonQuiz
-);
-
-/**
- * @route   POST /api/v1/instructor/courses/:courseId/quizzes
- * @desc    Create quiz for course
- * @access  Private (Instructor/Admin)
- */
-router.post(
-    '/courses/:courseId/quizzes',
-    authenticate,
-    isInstructor,
-    isCourseInstructorOrAdmin,
-    createCourseQuizValidator,
-    instructorQuizzesController.createCourseQuiz
 );
 
 /**

@@ -58,49 +58,6 @@ class InstructorQuizzesService extends QuizzesService {
     }
 
     /**
-     * Create quiz for a course (instructor)
-     */
-    async createQuizForCourse({ courseId, userId, userRole, payload }) {
-        const course = await this.fetchCourseSummary(courseId);
-
-        if (!course) {
-            throw this.buildNotFoundError('Course not found');
-        }
-
-        this.ensureInstructorOwnership(course.instructorId, userId, userRole);
-
-        const quizData = this.buildQuizDataFromPayload(payload);
-        quizData.courseId = course.id;
-
-        if (!quizData.title) {
-            throw this.buildBadRequestError('Quiz title is required');
-        }
-
-        if (
-            !Array.isArray(quizData.questions) ||
-            quizData.questions.length === 0
-        ) {
-            throw this.buildBadRequestError(
-                'Quiz must include at least one question'
-            );
-        }
-
-        const created = await prisma.quiz.create({
-            data: quizData,
-        });
-
-        logger.info(
-            `Instructor ${userId} created quiz ${created.id} for course ${course.id}`
-        );
-
-        const quiz = await this.fetchQuizWithContext(created.id);
-
-        return this.sanitizeQuiz(quiz, {
-            includeCorrectAnswers: true,
-        });
-    }
-
-    /**
      * Update quiz details (instructor)
      */
     async updateQuiz({ quizId, userId, userRole, payload }) {

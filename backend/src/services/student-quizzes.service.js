@@ -216,8 +216,8 @@ class StudentQuizzesService extends QuizzesService {
         this.assertQuizVisibility(quiz);
         await this.ensureQuizAccess(quiz, userId, userRole);
 
-        const attemptsAllowed = quiz.attemptsAllowed ?? 0;
-        const unlimitedAttempts = attemptsAllowed <= 0;
+        const attemptsAllowed = null; // unlimited by design
+        const unlimitedAttempts = true;
 
         const attemptsCount = await prisma.quizSubmission.count({
             where: {
@@ -225,25 +225,6 @@ class StudentQuizzesService extends QuizzesService {
                 userId,
             },
         });
-
-        if (!unlimitedAttempts && attemptsCount >= attemptsAllowed) {
-            throw this.buildForbiddenError(
-                'You have reached the maximum number of attempts for this quiz'
-            );
-        }
-
-        // Validate time limit if quiz has time limit and startedAt is provided
-        if (quiz.timeLimitMinutes && startedAt) {
-            const startTime = new Date(startedAt);
-            const now = new Date();
-            const timeElapsedMinutes = (now - startTime) / 1000 / 60;
-
-            if (timeElapsedMinutes > quiz.timeLimitMinutes) {
-                throw this.buildForbiddenError(
-                    `Time limit exceeded. Quiz time limit is ${quiz.timeLimitMinutes} minutes.`
-                );
-            }
-        }
 
         const grading = this.gradeQuiz(quiz, answers);
         const isPassed = grading.score >= quiz.passingScore;
@@ -274,9 +255,7 @@ class StudentQuizzesService extends QuizzesService {
         );
 
         const attemptsUsed = attemptsCount + 1;
-        const attemptsRemaining = unlimitedAttempts
-            ? null
-            : Math.max(attemptsAllowed - attemptsUsed, 0);
+        const attemptsRemaining = null;
 
         return {
             submission: this.buildSubmissionResponse(submission, {
@@ -289,11 +268,10 @@ class StudentQuizzesService extends QuizzesService {
                 score: grading.score,
                 passingScore: quiz.passingScore,
                 isPassed,
-                attemptsAllowed: unlimitedAttempts ? null : attemptsAllowed,
+                attemptsAllowed: null,
                 attemptsUsed,
                 attemptsRemaining,
-                hasRemainingAttempts:
-                    unlimitedAttempts || attemptsRemaining > 0,
+                hasRemainingAttempts: true,
             },
             quiz: this.sanitizeQuiz(quiz, {
                 includeCorrectAnswers: false,
@@ -444,15 +422,13 @@ class StudentQuizzesService extends QuizzesService {
             }),
         ]);
 
-        const attemptsAllowed = quiz.attemptsAllowed ?? 0;
-        const unlimitedAttempts = attemptsAllowed <= 0;
-        const attemptsRemaining = unlimitedAttempts
-            ? null
-            : Math.max(attemptsAllowed - attemptsCount, 0);
+        const attemptsAllowed = null;
+        const unlimitedAttempts = true;
+        const attemptsRemaining = null;
 
         return {
             quizId,
-            attemptsAllowed: unlimitedAttempts ? null : attemptsAllowed,
+            attemptsAllowed: null,
             attemptsUsed: attemptsCount,
             attemptsRemaining,
             hasRemainingAttempts:

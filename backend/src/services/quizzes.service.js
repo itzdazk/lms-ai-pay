@@ -62,8 +62,6 @@ class QuizzesService {
             lessonId: quiz.lessonId,
             courseId: quiz.courseId,
             passingScore: quiz.passingScore,
-            attemptsAllowed: quiz.attemptsAllowed,
-            timeLimitMinutes: quiz.timeLimitMinutes ?? null,
             isPublished: quiz.isPublished,
             createdAt: quiz.createdAt,
             updatedAt: quiz.updatedAt,
@@ -330,20 +328,6 @@ class QuizzesService {
         if (!isUpdate || 'passingScore' in payload) {
             if (payload.passingScore !== undefined) {
                 data.passingScore = Number(payload.passingScore);
-            }
-        }
-
-        if (!isUpdate || 'attemptsAllowed' in payload) {
-            if (payload.attemptsAllowed !== undefined) {
-                data.attemptsAllowed = Number(payload.attemptsAllowed);
-            }
-        }
-
-        if ('timeLimitMinutes' in payload) {
-            if (payload.timeLimitMinutes === null || payload.timeLimitMinutes === undefined) {
-                data.timeLimitMinutes = null;
-            } else {
-                data.timeLimitMinutes = Number(payload.timeLimitMinutes);
             }
         }
 

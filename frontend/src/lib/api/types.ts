@@ -526,8 +526,6 @@ export interface Quiz {
     description?: string
     questions: QuizQuestion[] | Record<string, any> // JSON field
     passingScore: number
-    attemptsAllowed: number
-    timeLimitMinutes?: number
     isPublished: boolean
     createdAt: string
     updatedAt: string
@@ -541,8 +539,6 @@ export interface CreateQuizRequest {
     description?: string
     questions: QuizQuestion[]
     passingScore?: number
-    attemptsAllowed?: number
-    timeLimitMinutes?: number
     isPublished?: boolean
 }
 
