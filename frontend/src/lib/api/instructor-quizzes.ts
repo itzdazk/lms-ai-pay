@@ -17,7 +17,7 @@ export const instructorQuizzesApi = {
      */
     async getQuizzes(lessonId: number): Promise<Quiz[]> {
         const response = await apiClient.get<ApiResponse<Quiz[]>>(
-            `/lessons/${lessonId}/quizzes`
+            `/instructor/lessons/${lessonId}/quizzes`
         )
         return response.data.data || []
     },
@@ -112,6 +112,71 @@ export const instructorQuizzesApi = {
     async getAnalytics(quizId: number): Promise<any> {
         const response = await apiClient.get<ApiResponse<any>>(
             `/instructor/quizzes/${quizId}/analytics`
+        )
+        return response.data.data
+    },
+
+    /**
+     * Create a single question in quiz
+     */
+    async createQuestion(
+        quizId: number,
+        data: {
+            question: string
+            type?: 'multiple_choice' | 'true_false' | 'short_answer'
+            options?: string[] | Record<string, string>
+            correctAnswer?: string | number | null
+            explanation?: string | null
+            questionOrder?: number
+        }
+    ): Promise<any> {
+        const response = await apiClient.post<ApiResponse<any>>(
+            `/instructor/quizzes/${quizId}/questions`,
+            data
+        )
+        return response.data.data
+    },
+
+    /**
+     * Update a single question in quiz
+     */
+    async updateQuestion(
+        quizId: number,
+        questionId: number,
+        data: Partial<{
+            question: string
+            type: 'multiple_choice' | 'true_false' | 'short_answer'
+            options: string[] | Record<string, string>
+            correctAnswer: string | number | null
+            explanation: string | null
+        }>
+    ): Promise<any> {
+        const response = await apiClient.put<ApiResponse<any>>(
+            `/instructor/quizzes/${quizId}/questions/${questionId}`,
+            data
+        )
+        return response.data.data
+    },
+
+    /**
+     * Delete a single question in quiz
+     */
+    async deleteQuestion(quizId: number, questionId: number): Promise<void> {
+        await apiClient.delete<ApiResponse<void>>(
+            `/instructor/quizzes/${quizId}/questions/${questionId}`
+        )
+    },
+
+    /**
+     * Reorder multiple questions
+     */
+    async reorderQuestions(
+        quizId: number,
+        orders: Array<{ questionId: number; order: number }>
+    ): Promise<any> {
+        const response = await apiClient.patch<ApiResponse<any>>(
+            `/instructor/quizzes/${quizId}/questions/reorder`,
+            { orders }
         )
         return response.data.data
     },

@@ -4,7 +4,7 @@ import { AlertCircle, BookOpen, ChevronRight, Loader2, PlayCircle } from 'lucide
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { chaptersApi } from '../../lib/api/chapters'
 import type { Chapter, Course, Lesson } from '../../lib/api/types'
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent, CardHeader } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 
@@ -86,8 +86,8 @@ export function CourseQuizzesPage() {
 
     if (state.loading) {
         return (
-            <div className="flex h-full items-center justify-center p-8 text-gray-200">
-                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Đang tải dữ liệu...
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
             </div>
         )
     }
@@ -106,15 +106,15 @@ export function CourseQuizzesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto space-y-6">
-                <div className="flex flex-col gap-2 text-white">
-                    <p className="text-sm uppercase tracking-wide text-gray-400">Khóa học</p>
-                    <h1 className="text-3xl font-bold">{state.course?.title || 'Quizzes theo khóa học'}</h1>
-                    <p className="text-gray-400">Xem cấu trúc chương và bài học, chọn bài để quản lý quiz.</p>
+        <Card className="bg-[#1A1A1A] border-[#2D2D2D] py-4">
+            <CardHeader>
+                <div>
+                    <h1 className="text-white text-2xl mb-2">{state.course?.title || 'Quản lý Quiz'}</h1>
+                    <p className="text-gray-400">Xem cấu trúc chương và bài học, chọn bài để quản lý câu hỏi.</p>
                 </div>
-
-                <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between mb-6">
                     <div className="flex gap-2">
                         <Button
                             variant={state.filter === 'all' ? 'default' : 'outline'}
@@ -185,7 +185,7 @@ export function CourseQuizzesPage() {
                                             className="bg-blue-600 text-white hover:bg-blue-500"
                                             onClick={() => handleOpenLessonQuizzes(lesson)}
                                         >
-                                            Quản lý quiz <ChevronRight className="h-4 w-4 ml-1" />
+                                            Quản lý câu hỏi <ChevronRight className="h-4 w-4 ml-1" />
                                         </Button>
                                     </div>
                                 ))}
@@ -193,7 +193,7 @@ export function CourseQuizzesPage() {
                         </Card>
                     ))}
                 </div>
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     )
 }

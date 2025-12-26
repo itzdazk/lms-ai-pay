@@ -377,7 +377,16 @@ export default function App() {
                                             path=':id/chapters'
                                             element={<CourseChaptersPage />}
                                         />
+                                        <Route
+                                            path=':id/quizzes'
+                                            element={<CourseQuizzesPage />}
+                                        />
+                                        <Route
+                                            path=':id/quizzes/lessons/:lessonId'
+                                            element={<QuizzesPage />}
+                                        />
                                     </Route>
+<<<<<<< HEAD
                                     <Route
                                         path='/instructor/orders'
                                         element={

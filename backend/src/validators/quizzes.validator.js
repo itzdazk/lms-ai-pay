@@ -175,6 +175,97 @@ const getQuizAnalyticsValidator = [
     validate,
 ];
 
+// Question-level validators
+const createQuestionValidator = [
+    param('quizId')
+        .isInt({ min: 1 })
+        .withMessage('Quiz ID must be a positive integer'),
+    body('question')
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Question text is required'),
+    body('type')
+        .optional()
+        .isIn(['multiple_choice', 'true_false', 'short_answer'])
+        .withMessage('Invalid question type'),
+    body('options')
+        .optional()
+        .custom((value) => Array.isArray(value) || typeof value === 'object')
+        .withMessage('Options must be an array or object'),
+    body('correctAnswer')
+        .optional({ nullable: true })
+        .custom((v) => typeof v === 'string' || typeof v === 'number' || v === null)
+        .withMessage('correctAnswer must be a string, number, or null'),
+    body('explanation')
+        .optional({ nullable: true })
+        .isString()
+        .withMessage('Explanation must be a string'),
+    body('questionOrder')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('questionOrder must be a non-negative integer'),
+    validate,
+];
+
+const updateQuestionValidator = [
+    param('quizId')
+        .isInt({ min: 1 })
+        .withMessage('Quiz ID must be a positive integer'),
+    param('questionId')
+        .isInt({ min: 1 })
+        .withMessage('Question ID must be a positive integer'),
+    body('question')
+        .optional()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Question must be a non-empty string'),
+    body('type')
+        .optional()
+        .isIn(['multiple_choice', 'true_false', 'short_answer'])
+        .withMessage('Invalid question type'),
+    body('options')
+        .optional()
+        .custom((value) => Array.isArray(value) || typeof value === 'object')
+        .withMessage('Options must be an array or object'),
+    body('correctAnswer')
+        .optional({ nullable: true })
+        .custom((v) => typeof v === 'string' || typeof v === 'number' || v === null)
+        .withMessage('correctAnswer must be a string, number, or null'),
+    body('explanation')
+        .optional({ nullable: true })
+        .isString()
+        .withMessage('Explanation must be a string'),
+    validate,
+];
+
+const deleteQuestionValidator = [
+    param('quizId')
+        .isInt({ min: 1 })
+        .withMessage('Quiz ID must be a positive integer'),
+    param('questionId')
+        .isInt({ min: 1 })
+        .withMessage('Question ID must be a positive integer'),
+    validate,
+];
+
+const reorderQuestionsValidator = [
+    param('quizId')
+        .isInt({ min: 1 })
+        .withMessage('Quiz ID must be a positive integer'),
+    body('orders')
+        .isArray({ min: 1 })
+        .withMessage('orders must be a non-empty array'),
+    body('orders.*.questionId')
+        .isInt({ min: 1 })
+        .withMessage('Each order entry must include a valid questionId'),
+    body('orders.*.order')
+        .isInt({ min: 0 })
+        .withMessage('Each order entry must include a non-negative order value'),
+    validate,
+];
+
 const getAdminQuizzesValidator = [
     ...paginationQueryValidator,
     query('courseId')
@@ -272,6 +363,10 @@ export {
     publishQuizValidator,
     getInstructorQuizSubmissionsValidator,
     getQuizAnalyticsValidator,
+    createQuestionValidator,
+    updateQuestionValidator,
+    deleteQuestionValidator,
+    reorderQuestionsValidator,
     getAdminQuizzesValidator,
     getAdminQuizSubmissionsValidator,
     generateQuizFromLessonValidator,

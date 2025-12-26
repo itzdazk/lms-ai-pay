@@ -79,6 +79,9 @@ class StudentQuizzesService extends QuizzesService {
             },
             orderBy: { createdAt: 'asc' },
             include: {
+                questionItems: {
+                    orderBy: { questionOrder: 'asc' },
+                },
                 lesson: {
                     select: {
                         id: true,
@@ -173,6 +176,9 @@ class StudentQuizzesService extends QuizzesService {
             },
             orderBy: { createdAt: 'asc' },
             include: {
+                questionItems: {
+                    orderBy: { questionOrder: 'asc' },
+                },
                 lesson: {
                     select: {
                         id: true,
