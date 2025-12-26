@@ -7,6 +7,65 @@ import QuizzesService from './quizzes.service.js';
 
 class InstructorQuizzesService extends QuizzesService {
     /**
+     * List quizzes for a lesson (instructor/admin) - include drafts
+     */
+    async getLessonQuizzes({ lessonId, userId, userRole }) {
+        const lesson = await this.fetchLessonWithCourse(lessonId);
+
+        if (!lesson) {
+            throw this.buildNotFoundError('Lesson not found');
+        }
+
+        const course =
+            lesson.course ??
+            (lesson.courseId
+                ? await this.fetchCourseSummary(lesson.courseId)
+                : null);
+
+        const instructorId = course?.instructorId ?? null;
+        this.ensureInstructorOwnership(instructorId, userId, userRole);
+
+        const quizzes = await prisma.quiz.findMany({
+            where: { lessonId },
+            orderBy: { createdAt: 'asc' },
+            include: {
+                questionItems: {
+                    orderBy: { questionOrder: 'asc' },
+                },
+                lesson: {
+                    select: {
+                        id: true,
+                        title: true,
+                        isPublished: true,
+                        courseId: true,
+                        course: {
+                            select: {
+                                id: true,
+                                title: true,
+                                slug: true,
+                                status: true,
+                                instructorId: true,
+                            },
+                        },
+                    },
+                },
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        status: true,
+                        instructorId: true,
+                    },
+                },
+            },
+        });
+
+        return quizzes.map((quiz) =>
+            this.sanitizeQuiz(quiz, { includeCorrectAnswers: true })
+        );
+    }
+    /**
      * Create quiz for a lesson (instructor)
      */
     async createQuizForLesson({ lessonId, userId, userRole, payload }) {
@@ -25,6 +84,15 @@ class InstructorQuizzesService extends QuizzesService {
         const instructorId = course?.instructorId ?? null;
         this.ensureInstructorOwnership(instructorId, userId, userRole);
 
+        // Enforce: at most one quiz per lesson
+        const existingQuiz = await prisma.quiz.findFirst({
+            where: { lessonId: lesson.id },
+            select: { id: true },
+        });
+        if (existingQuiz) {
+            throw this.buildConflictError('Lesson already has a quiz');
+        }
+
         const quizData = this.buildQuizDataFromPayload(payload);
         quizData.lessonId = lesson.id;
         quizData.courseId = lesson.courseId ?? null;
@@ -34,17 +102,26 @@ class InstructorQuizzesService extends QuizzesService {
         }
 
         if (
-            !Array.isArray(quizData.questions) ||
-            quizData.questions.length === 0
+            !Array.isArray(payload.questions) ||
+            payload.questions.length === 0
         ) {
             throw this.buildBadRequestError(
                 'Quiz must include at least one question'
             );
         }
 
+        // Create quiz without questions, they will be created separately
         const created = await prisma.quiz.create({
             data: quizData,
         });
+
+        // Create questions in Question table
+        const questionsData = this.buildQuestionsDataFromPayload(payload.questions, created.id);
+        if (questionsData.length > 0) {
+            await prisma.question.createMany({
+                data: questionsData,
+            });
+        }
 
         logger.info(
             `Instructor ${userId} created quiz ${created.id} for lesson ${lesson.id}`
@@ -70,6 +147,11 @@ class InstructorQuizzesService extends QuizzesService {
         });
 
         if (Object.keys(updateData).length === 0) {
+            // Check if only questions are being updated
+            if (!payload.questions) {
+                throw this.buildBadRequestError('No updates provided');
+            }
+        } else if (Object.keys(updateData).length > 0) {
             throw this.buildBadRequestError('No updates provided');
         }
 
@@ -77,6 +159,22 @@ class InstructorQuizzesService extends QuizzesService {
             where: { id: quizId },
             data: updateData,
         });
+
+        // Handle questions update if provided
+        if (payload.questions && Array.isArray(payload.questions)) {
+            // Delete old questions
+            await prisma.question.deleteMany({
+                where: { quizId },
+            });
+
+            // Create new questions
+            const questionsData = this.buildQuestionsDataFromPayload(payload.questions, quizId);
+            if (questionsData.length > 0) {
+                await prisma.question.createMany({
+                    data: questionsData,
+                });
+            }
+        }
 
         logger.info(`Instructor ${userId} updated quiz ${quizId}`);
 
@@ -383,6 +481,150 @@ class InstructorQuizzesService extends QuizzesService {
                 : null,
             attempts: attemptsSummary,
         };
+    }
+
+    /**
+     * Create a single question for a quiz (instructor)
+     */
+    async createQuestion({ quizId, userId, userRole, payload }) {
+        const quiz = await this.fetchQuizWithContext(quizId);
+        this.ensureInstructorQuizAccess(quiz, userId, userRole);
+
+        // Determine next order
+        const last = await prisma.question.findFirst({
+            where: { quizId },
+            orderBy: { questionOrder: 'desc' },
+            select: { questionOrder: true },
+        });
+        const nextOrder = (last?.questionOrder ?? -1) + 1;
+
+        const options = Array.isArray(payload.options) || typeof payload.options === 'object'
+            ? payload.options
+            : [];
+
+        const data = {
+            quizId,
+            question: typeof payload.question === 'string' ? payload.question.trim() : '',
+            type: payload.type || 'multiple_choice',
+            options,
+            correctAnswer:
+                payload.correctAnswer === null || payload.correctAnswer === undefined
+                    ? null
+                    : String(payload.correctAnswer),
+            explanation: payload.explanation ?? null,
+            questionOrder: Number.isInteger(payload.questionOrder) ? payload.questionOrder : nextOrder,
+        };
+
+        const created = await prisma.question.create({ data });
+        logger.info(`Instructor ${userId} created question ${created.id} in quiz ${quizId}`);
+
+        // Return sanitized question
+        const sanitized = this.sanitizeQuestions([
+            { ...created }
+        ], true)[0];
+        return sanitized;
+    }
+
+    /**
+     * Update a single question in a quiz (instructor)
+     */
+    async updateQuestion({ quizId, questionId, userId, userRole, payload }) {
+        const quiz = await this.fetchQuizWithContext(quizId);
+        this.ensureInstructorQuizAccess(quiz, userId, userRole);
+
+        const question = await prisma.question.findUnique({
+            where: { id: questionId },
+            select: { id: true, quizId: true },
+        });
+        if (!question || question.quizId !== quizId) {
+            throw this.buildNotFoundError('Question not found in this quiz');
+        }
+
+        const updateData = {};
+        if ('question' in payload) {
+            updateData.question = typeof payload.question === 'string' ? payload.question.trim() : '';
+        }
+        if ('type' in payload) {
+            updateData.type = payload.type || 'multiple_choice';
+        }
+        if ('options' in payload) {
+            updateData.options = Array.isArray(payload.options) || typeof payload.options === 'object'
+                ? payload.options
+                : [];
+        }
+        if ('correctAnswer' in payload) {
+            updateData.correctAnswer = payload.correctAnswer === null || payload.correctAnswer === undefined
+                ? null
+                : String(payload.correctAnswer);
+        }
+        if ('explanation' in payload) {
+            updateData.explanation = payload.explanation ?? null;
+        }
+
+        const updated = await prisma.question.update({ where: { id: questionId }, data: updateData });
+        logger.info(`Instructor ${userId} updated question ${questionId} in quiz ${quizId}`);
+
+        const sanitized = this.sanitizeQuestions([
+            { ...updated }
+        ], true)[0];
+        return sanitized;
+    }
+
+    /**
+     * Delete a single question in a quiz (instructor)
+     */
+    async deleteQuestion({ quizId, questionId, userId, userRole }) {
+        const quiz = await this.fetchQuizWithContext(quizId);
+        this.ensureInstructorQuizAccess(quiz, userId, userRole);
+
+        const question = await prisma.question.findUnique({
+            where: { id: questionId },
+            select: { id: true, quizId: true },
+        });
+        if (!question || question.quizId !== quizId) {
+            throw this.buildNotFoundError('Question not found in this quiz');
+        }
+
+        await prisma.question.delete({ where: { id: questionId } });
+        logger.info(`Instructor ${userId} deleted question ${questionId} in quiz ${quizId}`);
+    }
+
+    /**
+     * Reorder questions by array of { questionId, order }
+     */
+    async reorderQuestions({ quizId, userId, userRole, orders = [] }) {
+        const quiz = await this.fetchQuizWithContext(quizId);
+        this.ensureInstructorQuizAccess(quiz, userId, userRole);
+
+        if (!Array.isArray(orders) || orders.length === 0) {
+            throw this.buildBadRequestError('Orders must be a non-empty array');
+        }
+
+        const ids = orders.map((o) => o.questionId);
+        const existing = await prisma.question.findMany({
+            where: { id: { in: ids }, quizId },
+            select: { id: true },
+        });
+        const existingIds = new Set(existing.map((q) => q.id));
+        for (const { questionId } of orders) {
+            if (!existingIds.has(questionId)) {
+                throw this.buildNotFoundError(`Question ${questionId} not found in this quiz`);
+            }
+        }
+
+        await prisma.$transaction(
+            orders.map(({ questionId, order }) =>
+                prisma.question.update({
+                    where: { id: questionId },
+                    data: { questionOrder: Number(order) },
+                })
+            )
+        );
+
+        logger.info(`Instructor ${userId} reordered questions in quiz ${quizId}`);
+
+        const refreshed = await this.fetchQuizWithContext(quizId);
+        return this.sanitizeQuiz(refreshed, { includeCorrectAnswers: true });
     }
 }
 

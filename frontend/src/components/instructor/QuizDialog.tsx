@@ -37,11 +37,11 @@ export function QuizDialog({ open, quiz, lessonId, onClose, onSaved }: QuizDialo
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{quiz ? 'Chỉnh sửa Quiz' : 'Tạo Quiz mới'}</DialogTitle>
         </DialogHeader>
-        <div className="mt-4">
+        <div className="flex-1 overflow-y-auto px-1">
           <QuizForm
             quiz={quiz || null}
             courseId={0}
@@ -51,7 +51,7 @@ export function QuizDialog({ open, quiz, lessonId, onClose, onSaved }: QuizDialo
             loading={saving}
           />
         </div>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex justify-end gap-2 border-t pt-4">
           <Button variant="outline" onClick={onClose} disabled={saving}>Hủy</Button>
         </div>
       </DialogContent>

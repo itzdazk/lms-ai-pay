@@ -359,31 +359,15 @@ export default function App() {
                                             path=':id/chapters'
                                             element={<CourseChaptersPage />}
                                         />
+                                        <Route
+                                            path=':id/quizzes'
+                                            element={<CourseQuizzesPage />}
+                                        />
+                                        <Route
+                                            path=':id/quizzes/lessons/:lessonId'
+                                            element={<QuizzesPage />}
+                                        />
                                     </Route>
-                                    <Route
-                                        path='/instructor/courses/:courseId/quizzes'
-                                        element={
-                                            <ProtectedRoute>
-                                                <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
-                                                >
-                                                    <CourseQuizzesPage />
-                                                </RoleRoute>
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path='/instructor/courses/:courseId/quizzes/lessons/:lessonId'
-                                        element={
-                                            <ProtectedRoute>
-                                                <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
-                                                >
-                                                    <QuizzesPage />
-                                                </RoleRoute>
-                                            </ProtectedRoute>
-                                        }
-                                    />
                                     {/* Lesson-level quizzes management */}
                                     <Route
                                         path='/instructor/lessons/:lessonId/quizzes'

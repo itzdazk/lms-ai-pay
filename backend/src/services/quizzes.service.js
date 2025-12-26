@@ -17,28 +17,96 @@ import logger from '../config/logger.config.js';
 class QuizzesService {
     /**
      * Sanitize quiz questions for public consumption
+     * Questions come from Question table via quiz.questionItems
      * Removes correct answers unless explicitly allowed
      */
-    sanitizeQuestions(questions = [], includeCorrectAnswers = false) {
-        if (!Array.isArray(questions)) {
+    sanitizeQuestions(questionItems = [], includeCorrectAnswers = false) {
+        if (!Array.isArray(questionItems)) {
             return [];
         }
 
-        return questions.map((question) => {
+        const normalizeOptions = (opts) => {
+            if (Array.isArray(opts)) {
+                return opts;
+            }
+            if (opts && typeof opts === 'object') {
+                const keys = Object.keys(opts).sort();
+                return keys.map((k) => opts[k]);
+            }
+            return [];
+        };
+
+        const toIndex = (answer, opts, type) => {
+            const options = normalizeOptions(opts);
+            if (!includeCorrectAnswers) return null;
+
+            if (typeof answer === 'number' && Number.isFinite(answer)) {
+                return answer;
+            }
+
+            if (typeof answer === 'string') {
+                // Try parse numeric index encoded as string
+                const n = Number.parseInt(answer, 10);
+                if (!Number.isNaN(n)) {
+                    return n;
+                }
+
+                // Map letter (A, B, C, ...) to index
+                const upper = answer.trim().toUpperCase();
+                if (upper.length === 1 && upper >= 'A' && upper <= 'Z') {
+                    return upper.charCodeAt(0) - 'A'.charCodeAt(0);
+                }
+
+                // Match by option text (case-insensitive)
+                const idxByText = options.findIndex((opt) =>
+                    String(opt ?? '')
+                        .trim()
+                        .toLowerCase() === upper.toLowerCase()
+                );
+                if (idxByText !== -1) {
+                    return idxByText;
+                }
+
+                // True/False mapping
+                if (type === 'true_false') {
+                    const tf = upper === 'TRUE' || upper === 'T' ? 'true' : upper === 'FALSE' || upper === 'F' ? 'false' : upper;
+                    if (tf === 'true') return 0;
+                    if (tf === 'false') return 1;
+                }
+            }
+
+            return null;
+        };
+
+        return questionItems.map((question) => {
             if (typeof question !== 'object' || question === null) {
                 return question;
             }
 
-            const { correctAnswer, ...rest } = question;
+            const { correctAnswer, id, quizId, createdAt, updatedAt, options, type, ...rest } = question;
+
+            const normalizedOptions = normalizeOptions(options);
 
             if (includeCorrectAnswers) {
+                const mappedCorrect =
+                    type === 'short_answer'
+                        ? (typeof correctAnswer === 'string'
+                              ? correctAnswer
+                              : correctAnswer !== undefined && correctAnswer !== null
+                              ? String(correctAnswer)
+                              : '')
+                        : toIndex(correctAnswer, options, type);
+
                 return {
+                    id, // include id for instructor edit operations
                     ...rest,
-                    correctAnswer,
+                    type,
+                    options: normalizedOptions,
+                    correctAnswer: mappedCorrect,
                 };
             }
 
-            return rest;
+            return { ...rest, type, options: normalizedOptions };
         });
     }
 
@@ -68,8 +136,13 @@ class QuizzesService {
         };
 
         if (includeQuestions) {
+            // Use questionItems from relation if available, otherwise fallback to questions JSON
+            const questionsToUse = quiz.questionItems && Array.isArray(quiz.questionItems) 
+                ? quiz.questionItems 
+                : (Array.isArray(quiz.questions) ? quiz.questions : []);
+            
             sanitizedQuiz.questions = this.sanitizeQuestions(
-                quiz.questions,
+                questionsToUse,
                 includeCorrectAnswers
             );
         }
@@ -133,6 +206,16 @@ class QuizzesService {
     }
 
     /**
+     * Helper to build conflict error
+     */
+    buildConflictError(message) {
+        const error = new Error(message);
+        error.statusCode = HTTP_STATUS.CONFLICT;
+        error.code = ERROR_CODES.DUPLICATE_ENTRY;
+        return error;
+    }
+
+    /**
      * Resolve course ID associated with a quiz
      */
     resolveCourseId(quiz) {
@@ -166,6 +249,9 @@ class QuizzesService {
         return prisma.quiz.findUnique({
             where: { id: quizId },
             include: {
+                questionItems: {
+                    orderBy: { questionOrder: 'asc' },
+                },
                 lesson: {
                     select: {
                         id: true,
@@ -319,11 +405,9 @@ class QuizzesService {
                     : String(payload.description ?? '');
         }
 
-        if (!isUpdate || 'questions' in payload) {
-            data.questions = Array.isArray(payload.questions)
-                ? payload.questions
-                : payload.questions ?? [];
-        }
+        // Note: questions are now managed separately in the Question table
+        // They are not included in quiz.questions anymore (kept for backward compatibility only)
+        // Use buildQuestionsDataFromPayload() to handle question data
 
         if (!isUpdate || 'passingScore' in payload) {
             if (payload.passingScore !== undefined) {
@@ -338,6 +422,26 @@ class QuizzesService {
         }
 
         return data;
+    }
+
+    /**
+     * Build questions data from payload
+     * Returns array of question objects to be created/updated in Question table
+     */
+    buildQuestionsDataFromPayload(questions = [], quizId) {
+        if (!Array.isArray(questions)) {
+            return [];
+        }
+
+        return questions.map((q, index) => ({
+            quizId,
+            question: typeof q.question === 'string' ? q.question.trim() : '',
+            type: q.type || 'multiple_choice',
+            options: q.options || [],
+            correctAnswer: q.correctAnswer || null,
+            explanation: q.explanation || null,
+            questionOrder: index,
+        }));
     }
 
     /**
@@ -629,9 +733,14 @@ class QuizzesService {
      * Grade quiz answers
      */
     gradeQuiz(quiz, answersPayload = []) {
-        const questions = Array.isArray(quiz?.questions)
-            ? quiz.questions
-            : [];
+        // Use questionItems from Question table if available, fallback to legacy questions JSON
+        let questions = [];
+        if (quiz?.questionItems && Array.isArray(quiz.questionItems)) {
+            questions = quiz.questionItems;
+        } else if (Array.isArray(quiz?.questions)) {
+            questions = quiz.questions;
+        }
+        
         const answersMap = this.buildAnswersMap(answersPayload);
 
         let correctCount = 0;

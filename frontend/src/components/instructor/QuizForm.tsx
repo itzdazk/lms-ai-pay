@@ -50,6 +50,18 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
           <Label htmlFor="description">Mô tả</Label>
           <Textarea id="description" value={formData.description} onChange={(e) => updateField('description', e.target.value)} placeholder="Mô tả ngắn về quiz" />
         </div>
+        <div>
+          <Label htmlFor="passingScore">Điểm đạt (%)</Label>
+          <Input
+            id="passingScore"
+            type="number"
+            min={0}
+            max={100}
+            value={formData.passingScore}
+            onChange={(e) => updateField('passingScore', Number(e.target.value))}
+            placeholder="VD: 70"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <Checkbox checked={!!formData.isPublished} onCheckedChange={(v) => updateField('isPublished', Boolean(v))} />
           <Label>Xuất bản</Label>

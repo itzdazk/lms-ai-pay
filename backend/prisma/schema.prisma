@@ -379,18 +379,41 @@ model Quiz {
   course           Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title            String   @db.VarChar(200)
   description      String?  @db.Text
-  questions        Json
+  questions        Json     @default("[]") // Deprecated - kept for backward compatibility, will be migrated to Question model
   passingScore     Int      @default(70) @map("passing_score")
   isPublished      Boolean  @default(true) @map("is_published")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   submissions QuizSubmission[]
+  questionItems Question[] @relation("QuizQuestions")
 
+  @@unique([lessonId])
   @@index([lessonId])
   @@index([courseId])
   @@index([isPublished])
   @@map("quizzes")
+}
+
+// =====================================================
+// 11.0.5. QUIZ QUESTIONS (normalized)
+// =====================================================
+model Question {
+  id              Int      @id @default(autoincrement())
+  quizId          Int      @map("quiz_id")
+  quiz            Quiz     @relation("QuizQuestions", fields: [quizId], references: [id], onDelete: Cascade)
+  question        String   @db.Text
+  type            String   @default("multiple_choice") @db.VarChar(50) // multiple_choice, true_false, short_answer, etc.
+  options         Json?    @default("[]") // For multiple choice: ["A", "B", "C", "D"] or {"A": "Option A", "B": "Option B", ...}
+  correctAnswer   String?  @map("correct_answer") @db.VarChar(255) // The correct answer (could be "A", "true", or text)
+  explanation     String?  @db.Text
+  questionOrder   Int      @default(0) @map("question_order") // Order of question in quiz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([quizId])
+  @@index([questionOrder])
+  @@map("questions")
 }
 
 // =====================================================
