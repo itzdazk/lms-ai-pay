@@ -42,14 +42,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
 }) => {
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
     
-    const resetDebugLog = () => {
-        if (typeof window === 'undefined') return
-        const anyWindow = window as any
-        const key = '__QUIZ_RESULT_DEBUG_IDS__'
-        if (anyWindow[key]) {
-            anyWindow[key] = new Set<string>()
-        }
-    }
+    // Removed debug log reset helper
     
     const questions = quiz.questions || []
     const totalQuestions = questions.length
@@ -123,11 +116,6 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                     {questions.map((q, index) => {
                         const qIdRaw = (q as any).id ?? (q as any).questionId
                         if (qIdRaw === undefined || qIdRaw === null) {
-                            // Warn once per render for invalid question
-                            if (typeof window !== 'undefined') {
-                                // eslint-disable-next-line no-console
-                                console.warn('Quiz question thiếu ID, bỏ qua hiển thị:', q)
-                            }
                             return null
                         }
                         const normalizedId = String(qIdRaw)
@@ -239,31 +227,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                               })()
                             : undefined
 
-                        // Result-check log: show how frontend determined correctness
-                        if (showResult && typeof window !== 'undefined') {
-                            const globalKey = '__QUIZ_RESULT_DEBUG_IDS__'
-                            const anyWindow = window as any
-                            if (!anyWindow[globalKey]) anyWindow[globalKey] = new Set<string>()
-                            const loggedSet: Set<string> = anyWindow[globalKey]
-                            if (!loggedSet.has(normalizedId)) {
-                                const rr: any = rawResult
-                                const rawUser = rr?.userAnswer ?? rr?.providedAnswer ?? rr?.answer
-                                const usedSource = (rawUser === undefined || rawUser === null || String(rawUser) === '') ? 'local' : 'backend'
-                                // eslint-disable-next-line no-console
-                                console.log('Frontend result check', {
-                                    questionId: normalizedId,
-                                    backendQuestionId: rr?.questionId ?? null,
-                                    type: qType,
-                                    source: usedSource,
-                                    backendUserAnswer: rawUser ?? null,
-                                    localUserInput: answerValue,
-                                    userAnswerNormalized: (normalizedResult as any)?.userAnswer,
-                                    correctAnswerNormalized: (normalizedResult as any)?.correctAnswer,
-                                    finalIsCorrect: (normalizedResult as any)?.isCorrect,
-                                })
-                                loggedSet.add(normalizedId)
-                            }
-                        }
+                        // Remove debug result-check logging
 
                         return (
                             <QuestionCard
@@ -346,7 +310,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                     )}
                     {showResult && onRetry && (
                         <Button
-                            onClick={() => { resetDebugLog(); onRetry() }}
+                            onClick={() => { if (onRetry) onRetry() }}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             <RotateCcw className="h-4 w-4 mr-2" />
