@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTheme } from '@/contexts/ThemeContext'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     disabled = false
 }) => {
     // Support both new and legacy question shapes
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const qId = (question as any).id?.toString() ?? `${questionNumber}`
     const qText = (question as any).questionText ?? (question as any).question ?? ''
     const qType: 'multiple_choice' | 'true_false' | 'short_answer' = (question as any).questionType ?? (question as any).type ?? 'multiple_choice'
@@ -53,38 +56,50 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         switch (qType) {
             case 'multiple_choice':
                 return (
-                    <div className="space-y-3">
+                    <div className="space-y-3 ">
                         <RadioGroup
                             value={value}
                             onValueChange={onChange}
                             disabled={disabled}
-                            className="space-y-3"
+                            className="space-y-2 "
                         >
                             {qOptions?.map((option, index) => {
                                 const optionIndex = index.toString()
                                 const isSelected = showResult && ((result && result.userAnswer === optionIndex) || value === optionIndex)
                                 const isSelectedCorrect = isSelected && Boolean(result?.isCorrect)
                                 const isSelectedWrong = isSelected && !isSelectedCorrect
-
+                                const isCurrent = !showResult && value === optionIndex;
+                                const base = isCurrent
+                                    ? (isDark
+                                        ? 'border-blue-500 bg-[#1A1A1A] text-blue-400'
+                                        : 'border-blue-500 bg-blue-50 text-blue-600')
+                                    : (isDark
+                                        ? 'border-blue-500/40 hover:bg-[#252525] text-white'
+                                        : 'border-blue-400/60 hover:bg-blue-100 text-black');
+                                const correct = isDark
+                                    ? 'bg-green-500/10 border-green-500/30 text-green-600'
+                                    : 'bg-green-100 border-green-400 text-green-700';
+                                const wrong = isDark
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                                    : 'bg-red-100 border-red-400 text-red-700';
                                 return (
-                                    <div
+                                    <Label
                                         key={index}
-                                        className={`flex items-center space-x-3 p-3 border transition-colors ${
+                                        htmlFor={`q-${qId}-option-${index}`}
+                                        tabIndex={0}
+                                        className={`flex items-center space-x-3 p-3 border transition-colors rounded-none cursor-pointer select-none ${
                                             isSelectedCorrect
-                                                ? 'bg-green-500/10 border-green-500/30'
+                                                ? correct
                                                 : isSelectedWrong
-                                                ? 'bg-red-500/10 border-red-500/30'
-                                                : 'border-[#2D2D2D] hover:bg-[#252525]'
-                                        }`}
+                                                ? wrong
+                                                : base
+                                        } ${!isSelectedCorrect && !isSelectedWrong ? (isDark ? 'hover:bg-blue-900/10' : 'hover:bg-blue-100') : ''}`}
+                                        onClick={() => !disabled && onChange(optionIndex)}
+                                        onKeyDown={e => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) onChange(optionIndex); }}
                                     >
                                         <RadioGroupItem value={optionIndex} id={`q-${qId}-option-${index}`} />
-                                        <Label
-                                            htmlFor={`q-${qId}-option-${index}`}
-                                            className="flex-1 cursor-pointer text-white"
-                                        >
-                                            {option}
-                                        </Label>
-                                    </div>
+                                        <span className={`flex-1 ${isDark ? 'text-white' : 'text-black'}`}>{option}</span>
+                                    </Label>
                                 )
                             })}
                         </RadioGroup>
@@ -92,12 +107,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
                                 <div className="p-3 bg-blue-500/10 border border-blue-500/30">
-                                    <div className="flex items-center gap-2 text-blue-400 mb-1">
-                                        <span className="font-medium">Giải thích:</span> 
-                                         <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
-                                </div>
+                                    <div className={`flex items-center gap-2 mb-1 ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                                        <span className="font-medium">Giải thích:</span>
+                                        <strong className={`ml-6 ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>{result?.explanation ?? qExplanation}</strong>
                                     </div>
-                                   
+                                </div>
                             </div>
                         )}
                     </div>
@@ -119,26 +133,38 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                 const isSelected = showResult && ((result && result.userAnswer === opt.value) || value === opt.value)
                                 const isSelectedCorrect = isSelected && Boolean(result?.isCorrect)
                                 const isSelectedWrong = isSelected && !isSelectedCorrect
-
+                                const isCurrent = !showResult && value === opt.value;
+                                const base = isCurrent
+                                    ? (isDark
+                                        ? 'border-blue-500 bg-[#1A1A1A] text-blue-400'
+                                        : 'border-blue-500 bg-blue-50 text-blue-600')
+                                    : (isDark
+                                        ? 'border-blue-500/40 hover:bg-[#252525] text-white'
+                                        : 'border-blue-400/60 hover:bg-blue-100 text-black');
+                                const correct = isDark
+                                    ? 'bg-green-500/10 border-green-500/30 text-green-600'
+                                    : 'bg-green-100 border-green-400 text-green-700';
+                                const wrong = isDark
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                                    : 'bg-red-100 border-red-400 text-red-700';
                                 return (
-                                    <div
+                                    <Label
                                         key={opt.value}
-                                        className={`flex items-center space-x-3 p-3 border transition-colors ${
+                                        htmlFor={`q-${qId}-tf-${opt.value}`}
+                                        tabIndex={0}
+                                        className={`flex items-center space-x-3 p-3 border transition-colors rounded-none cursor-pointer select-none ${
                                             isSelectedCorrect
-                                                ? 'bg-green-500/10 border-green-500/30'
+                                                ? correct
                                                 : isSelectedWrong
-                                                ? 'bg-red-500/10 border-red-500/30'
-                                                : 'border-[#2D2D2D] hover:bg-[#252525]'
-                                        }`}
+                                                ? wrong
+                                                : base
+                                        } ${!isSelectedCorrect && !isSelectedWrong ? (isDark ? 'hover:bg-blue-900/10' : 'hover:bg-blue-100') : ''}`}
+                                        onClick={() => !disabled && onChange(opt.value)}
+                                        onKeyDown={e => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) onChange(opt.value); }}
                                     >
                                         <RadioGroupItem value={opt.value} id={`q-${qId}-tf-${opt.value}`} />
-                                        <Label
-                                            htmlFor={`q-${qId}-tf-${opt.value}`}
-                                            className="flex-1 cursor-pointer text-white"
-                                        >
-                                            {opt.label}
-                                        </Label>
-                                    </div>
+                                        <span className={`flex-1 ${isDark ? 'text-white' : 'text-black'}`}>{opt.label}</span>
+                                    </Label>
                                 )
                             })}
                         </RadioGroup>
@@ -146,10 +172,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
                                 <div className="p-3 bg-blue-500/10 border border-blue-500/30">
-                                    <div className="flex items-center gap-2 text-blue-400 mb-1">
-                                        <span className="font-medium">Giải thích:</span> <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
+                                    <div className={`flex items-center gap-2 mb-1 ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                                        <span className="font-medium">Giải thích:</span>
+                                        <strong className={`ml-6 ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>{result?.explanation ?? qExplanation}</strong>
                                     </div>
-                                   
                                 </div>
                             </div>
                         )}
@@ -165,21 +191,22 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                             onChange={(e) => onChange(e.target.value)}
                             disabled={disabled}
                             placeholder="Nhập câu trả lời của bạn..."
-                            className={`bg-[#1A1A1A] border-[#2D2D2D] text-white ${
+                            className={`${isDark ? 'bg-[#1A1A1A] text-white border-blue-500/40' : 'bg-white text-black border-blue-400/60'} h-14 px-4 py-3 text-base rounded-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                                 showResult && result
                                     ? result.isCorrect
                                         ? 'border-green-500/30'
                                         : 'border-red-500/30'
                                     : ''
                             }`}
+                            style={{ minHeight: 48, borderRadius: 0 }}
                         />
                         {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
                                 <div className="p-3 bg-blue-500/10 border border-blue-500/30">
-                                    <div className="flex items-center gap-2 text-blue-400 mb-1">
-                                        <span className="font-medium">Giải thích: </span> <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
+                                    <div className={`flex items-center gap-2 mb-1 ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                                        <span className="font-medium">Giải thích: </span>
+                                        <strong className={`ml-6 ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>{result?.explanation ?? qExplanation}</strong>
                                     </div>
-                                    
                                 </div>
                             </div>
                         )}
@@ -192,16 +219,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
 
     return (
-        <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+        <Card className={`${isDark ? 'bg-[#1A1A1A] border-2 border-blue-900 text-white rounded-none' : 'bg-white border-2 border-blue-400 text-black rounded-none'}`}>
+             
             <CardHeader>
                 <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 flex items-center justify-center text-white font-semibold">
+                    <div className={`flex-shrink-0 w-8 h-8 bg-blue-600 flex items-center justify-center font-semibold ${isDark ? 'text-white' : 'text-white'}`}> {/* Giữ số thứ tự màu trắng */}
                         {questionNumber}
                     </div>
                     <div className="flex-1">
-                        <CardTitle className="text-lg text-white">
-                            {qText}
-                        </CardTitle>
+                        <CardTitle className={`text-lg ${isDark ? 'text-white' : 'text-black'}`}>{qText}</CardTitle>
                         {showResult && result && (
                             <div className="mt-2">
                                 {result.isCorrect ? (

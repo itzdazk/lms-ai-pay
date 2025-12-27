@@ -332,7 +332,7 @@ export function LessonList({
                                       <div
                                         key={quiz.id}
                                         onClick={isCompleted ? () => onQuizSelect(quiz) : undefined}
-                                        className={`flex items-center gap-2 p-2 rounded-lg transition-colors border border-blue-500/30 ${
+                                        className={`flex items-center gap-2 p-2 transition-colors border border-blue-500/30 ${
                                           !isCompleted
                                             ? 'opacity-50 cursor-not-allowed'
                                             : isQuizActive
@@ -346,7 +346,7 @@ export function LessonList({
                                         <div className="flex-shrink-0">
                                           {!isCompleted ? (
                                             <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
-                                              <FileQuestion className="h-2.5 w-2.5 text-gray-500" />
+                                              <Lock className="h-2.5 w-2.5 text-gray-500" />
                                             </div>
                                           ) : (
                                             <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center">
@@ -423,7 +423,7 @@ export function LessonList({
                       <div className="flex-shrink-0">
                         {isLocked ? (
                           <div className="w-6 h-6 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
-                            <Lock className="h-3 w-3 text-gray-500" />
+                            <Lock className="h-3 w-3 text-gray-500" /> 
                           </div>
                         ) : isCompleted ? (
                           <div className="w-6 h-6 rounded-full bg-green-600/20 flex items-center justify-center">
