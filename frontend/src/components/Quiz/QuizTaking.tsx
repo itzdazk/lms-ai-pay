@@ -6,6 +6,7 @@ import { Clock, XCircle, ChevronLeft, ChevronRight, Send, X, RotateCcw, CheckCir
 import { QuestionCard } from './QuestionCard'
 import type { Quiz, QuizAnswer, QuizResult } from '@/lib/api/types'
 import { useEffect, useState } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface QuizTakingProps {
     quiz: Quiz
@@ -65,66 +66,114 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
         }
     }
 
-    return (
+    // Đủ đáp án cho tất cả câu hỏi?
+    const allAnswered = answeredCount === totalQuestions && totalQuestions > 0;
 
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    return (
         <div className="">
-            {/* Header */}
-            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-2 flex-1">
-                            <CardTitle className="text-xl text-white">{quiz.title}</CardTitle>
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2">
+            {/* Sticky Header Wrapper */}
+            <div className="sticky top-0 z-40" style={{background: isDark ? '#1A1A1Aee' : '#ffffffcc', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)'}}>
+                <Card
+                    className={
+                        `${isDark ? 'bg-[#1A1A1A] text-white' : 'bg-white text-black'} rounded-none !border-0 !border-b-0 shadow-none`
+                    }
+                >
+                    <CardHeader className="!bg-transparent !backdrop-blur-md px-4 pt-2 pb-1">
+                        <div className="flex items-center justify-between gap-4">
+                            {/* Title */}
+                            <div className="flex flex-col flex-1 min-w-0">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <CardTitle className={`text-xl truncate ${isDark ? 'text-white' : 'text-black'}`}>{quiz.title}</CardTitle>
+                                    {/* Result summary inline */}
+                                    {showResult && quizResult && (() => {
+                                        const rawAnswers = (quizResult as any)?.answers || (quizResult as any)?.submission?.answers || [];
+                                        const isArray = Array.isArray(rawAnswers);
+                                        const correctCount = isArray ? rawAnswers.filter((a: any) => Boolean(a.isCorrect)).length : (quizResult as any)?.correctAnswers ?? 0;
+                                        const totalCount = isArray ? rawAnswers.length : (quizResult as any)?.totalQuestions ?? (quiz.questions?.length || 0);
+                                        const score = (quizResult as any)?.score ?? (totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0);
+                                        const passed = (quizResult as any)?.passed ?? (score >= (quiz.passingScore ?? 0));
+                                        return (
+                                            <div
+                                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs ${
+                                                    isDark
+                                                        ? 'bg-[#1F1F1F]/70 border-blue-500/30'
+                                                        : 'bg-blue-50 border-blue-400/60'
+                                                }`}
+                                                style={{ minWidth: 0, minHeight: 0 }}
+                                            >
+                                                {passed ? (
+                                                    <>
+                                                        <span className="text-lg">🎉</span>
+                                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                                    </>
+                                                ) : (
+                                                    <XCircle className="h-4 w-4 text-red-500" />
+                                                )}
+                                                <span className={`font-semibold ${passed ? 'text-green-500' : 'text-red-500'}`}>{score}%</span>
+                                                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>({correctCount}/{totalCount} đúng)</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
                                     <span className="text-sm text-gray-400">
                                         Tổng số câu: {totalQuestions}
                                     </span>
                                     <Badge variant="outline" className="border-blue-500/30 text-blue-400">
                                         {answeredCount}/{totalQuestions} đã trả lời
                                     </Badge>
+                                    {timeRemaining !== null && (
+                                        <div className="flex items-center gap-2">
+                                            <Clock className={`h-4 w-4 ${timeRemaining < 60 ? 'text-red-400' : 'text-orange-400'}`} />
+                                            <span className={`text-sm font-mono ${timeRemaining < 60 ? 'text-red-400' : 'text-orange-400'}`}>
+                                                {formatTime(timeRemaining)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                                {timeRemaining !== null && (
-                                    <div className="flex items-center gap-2">
-                                        <Clock className={`h-4 w-4 ${timeRemaining < 60 ? 'text-red-400' : 'text-orange-400'}`} />
-                                        <span className={`text-sm font-mono ${timeRemaining < 60 ? 'text-red-400' : 'text-orange-400'}`}>
-                                            {formatTime(timeRemaining)}
-                                        </span>
-                                    </div>
+                            </div>
+                            {/* Nộp bài & Làm lại button */}
+                            <div className="flex-shrink-0 flex items-center gap-2">
+                                {!showResult && (
+                                    <Button
+                                        onClick={handleSubmit}
+                                        disabled={submitting || !allAnswered}
+                                        className="blue"
+                                        title={!allAnswered ? 'Vui lòng trả lời tất cả câu hỏi trước khi nộp bài' : undefined}
+                                    >
+                                        <Send className="h-4 w-4 mr-2" />
+                                        {submitting ? 'Đang nộp bài...' : 'Nộp bài'}
+                                    </Button>
+                                )}
+                                {showResult && onRetry && (
+                                    <Button
+                                        onClick={() => { if (onRetry) onRetry() }}
+                                        className="blue"
+                                    >
+                                        <RotateCcw className="h-4 w-4 mr-2" />
+                                        Làm lại
+                                    </Button>
                                 )}
                             </div>
                         </div>
-                        {/* Nộp bài button moved to header */}
-                        {/* Nộp bài & Làm lại button */}
-                        {!showResult && (
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                                <Send className="h-4 w-4 mr-2" />
-                                {submitting ? 'Đang nộp bài...' : 'Nộp bài'}
-                            </Button>
-                        )}
-                        {showResult && onRetry && (
-                            <Button
-                                onClick={() => { if (onRetry) onRetry() }}
-                                className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
-                            >
-                                <RotateCcw className="h-4 w-4 mr-2" />
-                                Làm lại
-                            </Button>
-                        )}
-                    </div>
-                    <div className="mt-4">
-                        <Progress value={progress} className="h-2" />
-                    </div>
-                </CardHeader>
-            </Card>
+                        <div className="my-2">
+                            <Progress value={progress} className="h-2" />
+                        </div>
+                    </CardHeader>
+                </Card>
+            </div>
 
             {/* Questions - Vertical Stack */}
-            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+            <Card
+                className={
+                    `${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D] text-white' : 'bg-white border-gray-200 text-black'} rounded-none`
+                }
+            >
                 <CardHeader>
-                    <CardTitle className="text-sm text-gray-400">Danh sách câu hỏi</CardTitle>
+                    <CardTitle className={`text-sm ${isDark ? 'text-gray-400' : 'text-black'}`}>Danh sách câu hỏi</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {questions.map((q, index) => {
@@ -259,59 +308,9 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                 </CardContent>
             </Card>
 
-            {/* Result Summary when showing results */}
-            {showResult && quizResult && (
-                <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
-                    <CardHeader className="text-center">
-                        {(() => {
-                            const rawAnswers = (quizResult as any)?.answers || (quizResult as any)?.submission?.answers || []
-                            const isArray = Array.isArray(rawAnswers)
-                            const correctCount = isArray ? rawAnswers.filter((a: any) => Boolean(a.isCorrect)).length : (quizResult as any)?.correctAnswers ?? 0
-                            const totalCount = isArray ? rawAnswers.length : (quizResult as any)?.totalQuestions ?? (quiz.questions?.length || 0)
-                            const score = (quizResult as any)?.score ?? (totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0)
-                            const passed = (quizResult as any)?.passed ?? (score >= (quiz.passingScore ?? 0))
-                            return (
-                                <div>
-                                    <div className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center ${passed ? 'bg-green-600/20' : 'bg-red-600/20'}`}>
-                                        {passed ? (
-                                            <CheckCircle2 className="h-10 w-10 text-green-500" />
-                                        ) : (
-                                            <XCircle className="h-10 w-10 text-red-500" />
-                                        )}
-                                    </div>
-                                    <CardTitle className="text-3xl mb-2 text-white">
-                                        {passed ? 'Chúc mừng! 🎉' : 'Chưa đạt'}
-                                    </CardTitle>
-                                    <p className="text-lg text-gray-400">
-                                        {passed ? 'Bạn đã vượt qua bài quiz thành công!' : `Bạn cần ${quiz.passingScore}% để đạt. Hãy thử lại!`}
-                                    </p>
-                                    <div className="mt-6 text-center p-8 bg-[#1F1F1F]">
-                                        <p className="text-gray-400 mb-2">Điểm của bạn</p>
-                                        <p className={`text-6xl mb-2 ${passed ? 'text-green-500' : 'text-red-500'}`}>{score}%</p>
-                                        <p className="text-gray-400">{correctCount}/{totalCount} câu đúng</p>
-                                    </div>
-                                </div>
-                            )
-                        })()}
-                    </CardHeader>
-                </Card>
-            )}
+            {/* Result summary now shown inline in header */}
 
-            {/* Bottom Buttons */}
-            <div className="flex items-center justify-between gap-4">
-                <div>
-                    {showResult && (
-                        <Button
-                            onClick={onExit}
-                            variant="outline"
-                            className="border-[#2D2D2D] hover:bg-[#252525]"
-                        >
-                            <X className="h-4 w-4 mr-2" />
-                            Thoát
-                        </Button>
-                    )}
-                </div>
-            </div>
+            {/* Bottom Buttons (removed 'Thoát' after submit) */}
 
             {/* Submit Confirmation Dialog */}
             {showSubmitConfirm && (

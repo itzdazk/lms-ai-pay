@@ -172,7 +172,8 @@ export function LessonPage() {
           setQuizState('taking');
           await quizHook.fetchQuiz(quizParam);
           await quizHook.fetchAttempts(quizParam);
-          await quizHook.fetchLatestResult(quizParam);
+          // KHÔNG fetchLatestResult ở đây để không set kết quả cũ vào state
+          await quizHook.resetQuiz();
           await quizHook.startQuiz();
 
           // If quiz has lessonId, select that lesson
@@ -453,7 +454,8 @@ export function LessonPage() {
         setQuizState('taking');
         await quizHook.fetchQuiz(qid);
         await quizHook.fetchAttempts(qid);
-        await quizHook.fetchLatestResult(qid);
+        // KHÔNG fetchLatestResult ở đây để không set kết quả cũ vào state
+        await quizHook.resetQuiz();
         await quizHook.startQuiz();
       })();
     }
@@ -969,8 +971,6 @@ export function LessonPage() {
                     </CardContent>
                   </Card>
                 )}
-
-                {/* QuizOverview removed: quiz starts immediately on selection */}
 
                 {quizState === 'taking' && quizHook.quiz && (
                   <QuizTaking
