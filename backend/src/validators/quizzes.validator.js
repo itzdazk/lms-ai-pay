@@ -37,10 +37,6 @@ const submitQuizValidator = [
         .not()
         .isEmpty()
         .withMessage('Each answer must include a non-empty answer value'),
-    body('answers.*.timeSpent')
-        .optional()
-        .isInt({ min: 0 })
-        .withMessage('timeSpent must be a non-negative integer when provided'),
     body('startedAt')
         .optional()
         .isISO8601()

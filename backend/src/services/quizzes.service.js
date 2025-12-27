@@ -641,10 +641,6 @@ class QuizzesService {
                     answer.selectedOption ??
                     answer.selectedAnswer ??
                     null,
-                timeSpent:
-                    typeof answer.timeSpent === 'number'
-                        ? Math.max(0, Math.trunc(answer.timeSpent))
-                        : null,
             });
         });
 
@@ -742,7 +738,6 @@ class QuizzesService {
 
         const gradedAnswers = questions.map((question, index) => {
             const questionKey = this.getQuestionKey(question, index);
-            // Debug: show mapping attempt per question
             const hasEntry = answersMap.has(String(questionKey));
             const correctAnswer =
                 question && typeof question === 'object'
@@ -754,21 +749,12 @@ class QuizzesService {
                 if (byIndex && (byIndex.answer !== undefined)) {
                     answerEntry = {
                         answer: byIndex.answer ?? null,
-                        timeSpent:
-                            typeof byIndex.timeSpent === 'number'
-                                ? Math.max(0, Math.trunc(byIndex.timeSpent))
-                                : null,
                     };
-                    // Index-based fallback used when ID mapping is missing
                 }
             }
             let providedAnswer =
                 answerEntry && 'answer' in answerEntry
                     ? answerEntry.answer
-                    : null;
-            const timeSpent =
-                answerEntry && 'timeSpent' in answerEntry
-                    ? answerEntry.timeSpent
                     : null;
 
             // Ensure providedAnswer is not undefined
@@ -783,14 +769,11 @@ class QuizzesService {
                 correctCount += 1;
             }
 
-            // Per-question debug log removed
-
             return {
                 questionId: questionKey,
                 providedAnswer,
                 correctAnswer,
                 isCorrect,
-                timeSpent,
             };
         });
 
