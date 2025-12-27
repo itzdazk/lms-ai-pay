@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
@@ -70,7 +69,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                 return (
                                     <div
                                         key={index}
-                                        className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                                        className={`flex items-center space-x-3 p-3 border transition-colors ${
                                             isSelectedCorrect
                                                 ? 'bg-green-500/10 border-green-500/30'
                                                 : isSelectedWrong
@@ -92,7 +91,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
                         {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
-                                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                <div className="p-3 bg-blue-500/10 border border-blue-500/30">
                                     <div className="flex items-center gap-2 text-blue-400 mb-1">
                                         <span className="font-medium">Giải thích:</span> 
                                          <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
@@ -124,7 +123,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                 return (
                                     <div
                                         key={opt.value}
-                                        className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                                        className={`flex items-center space-x-3 p-3 border transition-colors ${
                                             isSelectedCorrect
                                                 ? 'bg-green-500/10 border-green-500/30'
                                                 : isSelectedWrong
@@ -146,7 +145,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
                         {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
-                                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                <div className="p-3 bg-blue-500/10 border border-blue-500/30">
                                     <div className="flex items-center gap-2 text-blue-400 mb-1">
                                         <span className="font-medium">Giải thích:</span> <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
                                     </div>
@@ -176,7 +175,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         />
                         {showResult && (result?.explanation || qExplanation) && (
                             <div className="space-y-2 text-sm">
-                                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                <div className="p-3 bg-blue-500/10 border border-blue-500/30">
                                     <div className="flex items-center gap-2 text-blue-400 mb-1">
                                         <span className="font-medium">Giải thích: </span> <strong className="text-gray-300 ml-6">{result?.explanation ?? qExplanation}</strong>
                                     </div>
@@ -196,7 +195,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
             <CardHeader>
                 <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 flex items-center justify-center text-white font-semibold">
                         {questionNumber}
                     </div>
                     <div className="flex-1">

@@ -6,23 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent } from '../components/ui/tabs';
 import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  MessageCircle,
-  BookOpen,
-  Loader2,
-  ArrowLeft,
-  ArrowRight,
-  Sun,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PenTool,
-  Bell,
-  Bot,
-} from 'lucide-react';
+import { ChevronLeft, FileText, BookOpen, Loader2, ArrowLeft, ArrowRight, Sun, Moon, PanelLeftClose, PanelLeftOpen, PenTool, Bell, Bot } from 'lucide-react';
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
@@ -47,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { User, Settings, LogOut, LayoutDashboard, GraduationCap, Shield } from 'lucide-react';
-import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter, Quiz } from '../lib/api/types';
+import type { Course, Lesson, Enrollment, Chapter, Quiz } from '../lib/api/types';
 
 export function LessonPage() {
   const params = useParams<{ slug: string; lessonSlug?: string }>();
@@ -72,19 +56,19 @@ export function LessonPage() {
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [lessonNotes, setLessonNotes] = useState<string>('');
-  const [notesLoading, setNotesLoading] = useState(false);
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  const [videoLoading, setVideoLoading] = useState(false);
   const [lessonNotFound, setLessonNotFound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
   
   // Quiz state
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
-  const [quizState, setQuizState] = useState<'taking' | 'results'>('taking');
+    const [showQuiz, setShowQuiz] = useState(false);
+    const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
+    const [quizState, setQuizState] = useState<'taking' | 'results'>('taking');
+
+    // Remove all border-radius (rounded-*) classes from quiz UI in this file if present (Card, etc.)
   
   // Quiz hook
   const quizHook = useQuizTaking();
@@ -151,28 +135,23 @@ export function LessonPage() {
     }
   }, [courseSlug]);
 
-  // Load course and lessons
+  // Load course, lessons, and handle quiz param
   useEffect(() => {
     const loadData = async () => {
       if (!courseSlug) return;
 
       try {
         setLoading(true);
-        
-        // Load course by slug first (public pages use slug)
+        const params = new URLSearchParams(window.location.search);
+        const quizParam = params.get('quiz');
+
+        // Load course by slug first
         const courseData = await coursesApi.getCourseBySlug(courseSlug);
         const loadedCourseId = courseData.id;
         setCourseId(loadedCourseId);
-        
-        // Load chapters with lessons
         const chaptersData = await chaptersApi.getChaptersByCourse(loadedCourseId, true);
         setChapters(chaptersData || []);
-
-
-        
-        // Then load lessons using courseId (fallback)
         const lessonsData = await lessonsApi.getCourseLessons(loadedCourseId);
-
         setCourse(courseData);
         setLessons(lessonsData.lessons || []);
 
@@ -184,14 +163,31 @@ export function LessonPage() {
           );
           setEnrollment(userEnrollment || null);
         } catch (error) {
-          // User might not be enrolled, that's okay
           setEnrollment(null);
         }
 
-        // Select initial lesson by slug only
+        // If quiz param is present, always show quiz (even if lessonSlug is invalid)
+        if (quizParam) {
+          setShowQuiz(true);
+          setQuizState('taking');
+          await quizHook.fetchQuiz(quizParam);
+          await quizHook.fetchAttempts(quizParam);
+          await quizHook.fetchLatestResult(quizParam);
+          await quizHook.startQuiz();
+
+          // If quiz has lessonId, select that lesson
+          const quizData = quizHook.quiz;
+          if (quizData && quizData.lessonId) {
+            const lesson = lessonsData.lessons.find((l) => String(l.id) === String(quizData.lessonId));
+            if (lesson) setSelectedLesson(lesson);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // If no quiz param, proceed as normal
         let initialLesson: Lesson | null = null;
         if (lessonSlug) {
-          // Search in chapters first by slug
           for (const chapter of chaptersData) {
             const lesson = chapter.lessons?.find((l) => l.slug === lessonSlug);
             if (lesson) {
@@ -199,11 +195,9 @@ export function LessonPage() {
               break;
             }
           }
-          // Fallback to lessons array by slug
           if (!initialLesson) {
             initialLesson = lessonsData.lessons.find((l) => l.slug === lessonSlug) || null;
           }
-          // If still not found, try to load from API
           if (!initialLesson) {
             try {
               initialLesson = await lessonsApi.getLessonBySlug(courseSlug, lessonSlug);
@@ -213,27 +207,22 @@ export function LessonPage() {
               return;
             }
           }
-          
-          // If lesson not found by slug, show error page
           if (!initialLesson) {
             setLessonNotFound(true);
             setLoading(false);
             return;
           }
         } else {
-          // If no lessonSlug provided, get first available lesson
           if (chaptersData.length > 0 && chaptersData[0].lessons && chaptersData[0].lessons.length > 0) {
             initialLesson = chaptersData[0].lessons[0];
           } else if (lessonsData.lessons.length > 0) {
             initialLesson = lessonsData.lessons[0];
           }
         }
-        
         if (initialLesson) {
           setSelectedLesson(initialLesson);
         }
       } catch (error: any) {
-        // Don't show toast if lesson not found (already handled above)
         if (!lessonNotFound) {
           toast.error('Không thể tải thông tin khóa học');
         }
@@ -241,7 +230,6 @@ export function LessonPage() {
         setLoading(false);
       }
     };
-
     loadData();
   }, [courseSlug, lessonSlug, user?.id]);
 
@@ -270,7 +258,7 @@ export function LessonPage() {
       previousLessonIdRef.current = selectedLesson.id;
 
       try {
-        setVideoLoading(true);
+        // setVideoLoading(true); // removed unused
         setVideoUrl('');
         setInitialVideoTime(0);
 
@@ -373,14 +361,14 @@ export function LessonPage() {
         // Load notes for this lesson
         if (enrollment && user) {
           try {
-            setNotesLoading(true);
+            // setNotesLoading(true); // removed unused
             const noteData = await lessonNotesApi.getLessonNote(selectedLesson.id);
             setLessonNotes(noteData.note?.content || '');
           } catch (error: any) {
             // If note doesn't exist (404), that's okay - just set empty
             setLessonNotes('');
           } finally {
-            setNotesLoading(false);
+            // setNotesLoading(false); // removed unused
           }
         } else {
           setLessonNotes('');
@@ -388,7 +376,7 @@ export function LessonPage() {
       } catch (error: any) {
         toast.error('Không thể tải video bài học');
       } finally {
-        setVideoLoading(false);
+        // setVideoLoading(false); // removed unused
       }
     };
 
@@ -432,9 +420,9 @@ export function LessonPage() {
     } catch {}
 
     // Fetch full quiz data and related info
-    await quizHook.fetchQuiz(quiz.id);
-    await quizHook.fetchAttempts(quiz.id);
-    await quizHook.fetchLatestResult(quiz.id);
+    await quizHook.fetchQuiz(String(quiz.id));
+    await quizHook.fetchAttempts(String(quiz.id));
+    await quizHook.fetchLatestResult(String(quiz.id));
 
     // Auto-start quiz immediately without requiring a Start button
     await quizHook.startQuiz();
@@ -445,7 +433,7 @@ export function LessonPage() {
   const handleQuizExit = () => {
     setShowQuiz(false);
     setCurrentQuiz(null);
-    setQuizState('overview');
+    setQuizState('taking');
     quizHook.resetQuiz();
 
     // Remove quiz param from URL and return to lesson path
@@ -473,14 +461,12 @@ export function LessonPage() {
   }, [selectedLesson?.id, courseSlug]);
 
   // Handle video time update (auto-save progress)
-  const handleTimeUpdate = (currentTime: number, duration: number) => {
+  const handleTimeUpdate = (currentTime: number) => {
     setCurrentTime(currentTime);
-    
     // Auto-save progress every 10 seconds
     if (progressSaveTimeoutRef.current) {
       clearTimeout(progressSaveTimeoutRef.current);
     }
-    
     progressSaveTimeoutRef.current = setTimeout(() => {
       if (selectedLesson && enrollment) {
         // TODO: Save progress to API
@@ -972,7 +958,7 @@ export function LessonPage() {
               paddingBottom: selectedLesson ? '45px' : '0'
             }}
           >
-            {showQuiz && currentQuiz ? (
+            {showQuiz ? (
               // Quiz Components
               <div className="">
                 {/* Loading state when quiz data isn't ready */}
@@ -1103,7 +1089,7 @@ export function LessonPage() {
             <div className="lg:col-span-1 h-full overflow-y-auto custom-scrollbar">
             <LessonList
               lessons={lessons}
-                chapters={chapters}
+              chapters={chapters}
               selectedLessonId={selectedLesson?.id}
               onLessonSelect={handleLessonSelect}
               onQuizSelect={handleQuizSelect}
@@ -1111,11 +1097,12 @@ export function LessonPage() {
               completedLessonIds={completedLessonIds}
               isEnrolled={isEnrolled}
               courseTitle={course.title}
-                completedLessons={completedLessons}
-                totalLessons={totalLessons}
+              completedLessons={completedLessons}
+              totalLessons={totalLessons}
               courseId={courseId || undefined}
               courseSlug={courseSlug}
-              />
+              activeQuizId={showQuiz && quizHook.quiz ? quizHook.quiz.id : undefined}
+            />
             </div>
               )}
             </div>

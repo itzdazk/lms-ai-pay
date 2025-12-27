@@ -26,6 +26,7 @@ interface LessonListProps {
   courseId?: number;
   courseSlug?: string;
   onQuizSelect?: (quiz: Quiz) => void;
+  activeQuizId?: string;
 }
 
 export function LessonList({
@@ -38,6 +39,7 @@ export function LessonList({
   isEnrolled = false,
   // unused props retained for compatibility (can be removed if not needed elsewhere)
   courseTitle: _courseTitle,
+  activeQuizId,
   completedLessons: _completedLessons = 0,
   totalLessons: _totalLessons = 0,
   courseId: _courseId,
@@ -137,8 +139,38 @@ export function LessonList({
       )
     : visibleLessonsFlat.length;
 
-  // Find chapter containing selected lesson and set default open chapters
-  const [openChapters, setOpenChapters] = useState<string[]>([]);
+  // Find chapter containing selected lesson or active quiz and set default open chapters
+  const getDefaultOpenChapters = () => {
+    if (!selectedLessonId && !activeQuizId) return [];
+    const open: string[] = [];
+    visibleChapters.forEach((chapter) => {
+      const chapterLessons = (chapter.lessons || []).filter((lesson) => lesson.isPublished !== false);
+      // Expand if selected lesson in chapter
+      if (selectedLessonId && chapterLessons.some((lesson) => lesson.id === selectedLessonId)) {
+        open.push(`chapter-${chapter.id}`);
+        return;
+      }
+      // Expand if active quiz in chapter
+      if (activeQuizId) {
+        for (const lesson of chapterLessons) {
+          const quizzes = lessonQuizzes[lesson.id] || [];
+          if (quizzes.some((quiz) => quiz.id === activeQuizId)) {
+            open.push(`chapter-${chapter.id}`);
+            return;
+          }
+        }
+      }
+    });
+    return open;
+  };
+
+  const [openChapters, setOpenChapters] = useState<string[]>(getDefaultOpenChapters());
+
+  // Update openChapters when selectedLessonId or activeQuizId changes
+  useEffect(() => {
+    setOpenChapters(getDefaultOpenChapters());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLessonId, activeQuizId, JSON.stringify(lessonQuizzes)]);
 
   
    
@@ -224,6 +256,7 @@ export function LessonList({
                           const isLocked = isLessonLocked(lesson, globalIndex, allLessons);
                           const quizzes = lessonQuizzes[lesson.id] || [];
 
+                          const hasActiveQuiz = quizzes.some((quiz) => activeQuizId && quiz.id === activeQuizId);
                           return (
                             <div key={lesson.id} className="space-y-1">
                               {/* Lesson Item */}
@@ -233,14 +266,16 @@ export function LessonList({
                                   onLessonSelect(lesson);
                                 }
                               }}
-                            className={`flex items-center justify-between p-2 rounded-none transition-colors ${
-                                isSelected
-                                  ? 'bg-blue-600/20 border border-blue-600'
-                                : isLocked
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : isDark
-                                    ? 'border border-transparent hover:bg-[#1F1F1F] cursor-pointer'
-                                    : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
+                            className={`flex items-center justify-between p-2 border border-blue-500/30 rounded-none transition-colors ${
+                                hasActiveQuiz
+                                  ? ''
+                                  : isSelected
+                                    ? 'bg-blue-600/20 border border-blue-600 '
+                                    : isLocked
+                                      ? 'opacity-50 cursor-not-allowed'
+                                      : isDark
+                                        ? 'border border-transparent hover:bg-[#1F1F1F] cursor-pointer'
+                                        : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                               }`}
                             >
                               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -289,33 +324,61 @@ export function LessonList({
 
                               {/* Quiz Items */}
                               {quizzes.length > 0 && onQuizSelect && (
-                                <div className="ml-7 space-y-1">
-                                  {quizzes.map((quiz) => (
-                                    <div
-                                      key={quiz.id}
-                                      onClick={() => onQuizSelect(quiz)}
-                                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors border-l-2 border-blue-500/30 ${
-                                        isDark
-                                          ? 'hover:bg-[#1F1F1F] bg-[#151515]'
-                                          : 'hover:bg-gray-50 bg-gray-50'
-                                      }`}
-                                    >
-                                      <FileQuestion className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <p className={`text-xs font-medium truncate ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                                          {quiz.title}
-                                        </p>
-                                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                                          {quiz.questionCount || quiz.questions?.length || 0} câu hỏi
-                                        </p>
+                                <div className=" space-y-1 ">
+                                  {quizzes.map((quiz) => {
+                                    const isQuizActive = activeQuizId && quiz.id === activeQuizId;
+                                    // Quiz chỉ mở khi lesson đã hoàn thành
+                                    return (
+                                      <div
+                                        key={quiz.id}
+                                        onClick={isCompleted ? () => onQuizSelect(quiz) : undefined}
+                                        className={`flex items-center gap-2 p-2 rounded-lg transition-colors border border-blue-500/30 ${
+                                          !isCompleted
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : isQuizActive
+                                              ? 'bg-blue-600/20 border border-blue-600 cursor-pointer'
+                                              : isDark
+                                                ? 'hover:bg-[#1F1F1F] bg-[#151515] cursor-pointer'
+                                                : 'hover:bg-gray-50 bg-gray-50 cursor-pointer'
+                                        }`}
+                                      >
+                                        {/* Status icon cho quiz giống lesson */}
+                                        <div className="flex-shrink-0">
+                                          {!isCompleted ? (
+                                            <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
+                                              <FileQuestion className="h-2.5 w-2.5 text-gray-500" />
+                                            </div>
+                                          ) : (
+                                            <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center">
+                                              <CheckCircle className="h-3 w-3 text-blue-500" />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p
+                                            className={`text-xs font-medium truncate ${
+                                              isQuizActive
+                                                ? 'text-blue-500 dark:text-blue-400'
+                                                : isDark
+                                                  ? 'text-white'
+                                                  : 'text-gray-900'
+                                            }`}
+                                          >
+                                            {quiz.title}
+                                          </p>
+                                          <p className={`flex items-center gap-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                                            <FileQuestion className="h-2.5 w-2.5" />
+                                            <span>{quiz.questionCount || quiz.questions?.length || 0} câu hỏi</span>
+                                          </p>
+                                        </div>
+                                        {quiz.isPublished && (
+                                          <Badge variant="outline" className="text-xs border-green-500/30 text-green-400 px-1 py-0">
+                                            Câu hỏi ôn tập
+                                          </Badge>
+                                        )}
                                       </div>
-                                      {quiz.isPublished && (
-                                        <Badge variant="outline" className="text-xs border-green-500/30 text-green-400 px-1 py-0">
-                                          Câu hỏi ôn tập
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
@@ -407,32 +470,37 @@ export function LessonList({
                     {/* Quiz Items */}
                     {quizzes.length > 0 && onQuizSelect && (
                       <div className="ml-9 space-y-1">
-                        {quizzes.map((quiz) => (
-                          <div
-                            key={quiz.id}
-                            onClick={() => onQuizSelect(quiz)}
-                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors border-l-2 border-blue-500/30 ${
-                              isDark
-                                ? 'hover:bg-[#1F1F1F] bg-[#151515]'
-                                : 'hover:bg-gray-50 bg-gray-50'
-                            }`}
-                          >
-                            <FileQuestion className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium truncate ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                                {quiz.title}
-                              </p>
-                              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                                {quiz.questionCount || quiz.questions?.length || 0} câu hỏi
-                              </p>
+                        {quizzes.map((quiz) => {
+                          // Quiz chỉ mở khi lesson đã hoàn thành
+                          return (
+                            <div
+                              key={quiz.id}
+                              onClick={isCompleted ? () => onQuizSelect(quiz) : undefined}
+                              className={`flex items-center gap-2 p-2 rounded-lg transition-colors border-l-2 border-blue-500/30 ${
+                                !isCompleted
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : isDark
+                                    ? 'hover:bg-[#1F1F1F] bg-[#151515] cursor-pointer'
+                                    : 'hover:bg-gray-50 bg-gray-50 cursor-pointer'
+                              }`}
+                            >
+                              <FileQuestion className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium truncate ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                                  {quiz.title}
+                                </p>
+                                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                                  {quiz.questionCount || quiz.questions?.length || 0} câu hỏi
+                                </p>
+                              </div>
+                              {quiz.isPublished && (
+                                <Badge variant="outline" className="text-xs border-green-500/30 text-green-400">
+                                  Quiz
+                                </Badge>
+                              )}
                             </div>
-                            {quiz.isPublished && (
-                              <Badge variant="outline" className="text-xs border-green-500/30 text-green-400">
-                                Quiz
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

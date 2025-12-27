@@ -66,7 +66,8 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
     }
 
     return (
-        <div className="space-y-4">
+
+        <div className="">
             {/* Header */}
             <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
                 <CardHeader>
@@ -92,14 +93,27 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                                 )}
                             </div>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={onExit}
-                            className="text-gray-400 hover:text-white"
-                        >
-                            <X className="h-5 w-5" />
-                        </Button>
+                        {/* Nộp bài button moved to header */}
+                        {/* Nộp bài & Làm lại button */}
+                        {!showResult && (
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                <Send className="h-4 w-4 mr-2" />
+                                {submitting ? 'Đang nộp bài...' : 'Nộp bài'}
+                            </Button>
+                        )}
+                        {showResult && onRetry && (
+                            <Button
+                                onClick={() => { if (onRetry) onRetry() }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
+                            >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Làm lại
+                            </Button>
+                        )}
                     </div>
                     <div className="mt-4">
                         <Progress value={progress} className="h-2" />
@@ -258,7 +272,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                             const passed = (quizResult as any)?.passed ?? (score >= (quiz.passingScore ?? 0))
                             return (
                                 <div>
-                                    <div className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full ${passed ? 'bg-green-600/20' : 'bg-red-600/20'}`}>
+                                    <div className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center ${passed ? 'bg-green-600/20' : 'bg-red-600/20'}`}>
                                         {passed ? (
                                             <CheckCircle2 className="h-10 w-10 text-green-500" />
                                         ) : (
@@ -271,7 +285,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                                     <p className="text-lg text-gray-400">
                                         {passed ? 'Bạn đã vượt qua bài quiz thành công!' : `Bạn cần ${quiz.passingScore}% để đạt. Hãy thử lại!`}
                                     </p>
-                                    <div className="mt-6 text-center p-8 bg-[#1F1F1F] rounded-lg">
+                                    <div className="mt-6 text-center p-8 bg-[#1F1F1F]">
                                         <p className="text-gray-400 mb-2">Điểm của bạn</p>
                                         <p className={`text-6xl mb-2 ${passed ? 'text-green-500' : 'text-red-500'}`}>{score}%</p>
                                         <p className="text-gray-400">{correctCount}/{totalCount} câu đúng</p>
@@ -294,27 +308,6 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                         >
                             <X className="h-4 w-4 mr-2" />
                             Thoát
-                        </Button>
-                    )}
-                </div>
-                <div className="flex gap-2">
-                    {!showResult && (
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={submitting}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            {submitting ? 'Đang nộp bài...' : 'Nộp bài'}
-                        </Button>
-                    )}
-                    {showResult && onRetry && (
-                        <Button
-                            onClick={() => { if (onRetry) onRetry() }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Làm lại
                         </Button>
                     )}
                 </div>

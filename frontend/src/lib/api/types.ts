@@ -911,7 +911,7 @@ export interface QuizResult {
     totalQuestions: number
     correctAnswers: number
     answers: QuestionResult[]
-    timeSpent?: number // in seconds
+
     attemptNumber: number
     submittedAt: string
 }
