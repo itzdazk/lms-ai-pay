@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { QuizzesPage } from './QuizzesPage'
+import { DarkOutlineInput } from '../../components/ui/dark-outline-input'
 
 
 export function CourseQuizzesPage() {
@@ -162,25 +163,11 @@ export function CourseQuizzesPage() {
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between mb-6">
-                    <div className="flex gap-2">
-                        <Button
-                            variant={state.filter === 'all' ? 'default' : 'outline'}
-                            onClick={() => setState((s) => ({ ...s, filter: 'all' }))}
-                        >
-                            Tất cả bài học
-                        </Button>
-                        <Button
-                            variant={state.filter === 'published' ? 'default' : 'outline'}
-                            onClick={() => setState((s) => ({ ...s, filter: 'published' }))}
-                        >
-                            Đã publish
-                        </Button>
-                    </div>
-                    <input
+                    <DarkOutlineInput
                         value={state.search}
                         onChange={(e) => setState((s) => ({ ...s, search: e.target.value }))}
                         placeholder="Tìm theo chương hoặc bài học..."
-                        className="w-full md:w-80 px-3 py-2 rounded-md bg-gray-700 text-white placeholder:text-gray-400 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                        className="w-full"
                     />
                 </div>
 
