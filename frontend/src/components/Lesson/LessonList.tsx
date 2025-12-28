@@ -132,22 +132,27 @@ export function LessonList({
   const isLessonLocked = (lesson: Lesson, lessonIndex: number, allLessonsArray: Lesson[]): boolean => {
     // Preview lessons are always unlocked
     if (lesson.isPreview) return false;
-    
+
     // If not enrolled, all non-preview lessons are locked
     if (!isEnrolled) return true;
-    
+
     // First lesson is always unlocked if enrolled
     if (lessonIndex === 0) return false;
-    
-    // Check if previous lesson is completed
+
+    // Check if previous lesson is completed AND quizCompleted
     const previousLesson = allLessonsArray[lessonIndex - 1];
     if (!previousLesson) return false;
-    
+
     // If previous lesson is preview, current lesson is unlocked
     if (previousLesson.isPreview) return false;
-    
-    // If previous lesson is completed, current lesson is unlocked
-    return !completedLessonIds.includes(previousLesson.id);
+
+    // Use lessonQuizProgress to check both isCompleted and quizCompleted
+    const prevProgress = lessonQuizProgress[previousLesson.id];
+    if (prevProgress) {
+      return !(prevProgress.isCompleted && prevProgress.quizCompleted);
+    }
+    // Fallback: if no progress, keep locked
+    return true;
   };
 
   // Group lessons by sections (if needed in future)
@@ -280,7 +285,7 @@ export function LessonList({
                           // Lấy trạng thái hoàn thành bài học và quiz từ lessonQuizProgress
                           const progress = lessonQuizProgress[lesson.id];
                           const isCompleted = progress ? progress.isCompleted : false;
-                          const quizCompleted = progress ? progress.quizCompleted : false;
+                          const quizCompleted = progress ? progress.quizCompleted : false; // luôn định nghĩa để dùng cho icon
                           const hasActiveQuiz = quizzes.some((quiz) => activeQuizId && quiz.id === activeQuizId);
                           return (
                             <div key={lesson.id} className="space-y-1">
@@ -310,16 +315,14 @@ export function LessonList({
                                     <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
                                       <Lock className="h-2.5 w-2.5 text-gray-500" />
                                     </div>
-                                  ) : (isCompleted && quizCompleted) ? (
+                                  ) : isCompleted ? (
                                     <div className="w-5 h-5 rounded-full bg-green-600/20 flex items-center justify-center">
                                       <CheckCircle className="h-3 w-3 text-green-500" />
                                     </div>
-                                  ) : lesson.isPreview ? (
+                                  ) : (
                                     <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center">
                                       <PlayCircle className="h-3 w-3 text-blue-500" />
                                     </div>
-                                  ) : (
-                                    <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D]" />
                                   )}
                                 </div>
 
@@ -352,13 +355,13 @@ export function LessonList({
                                 <div className=" space-y-1 ">
                                   {quizzes.map((quiz) => {
                                     const isQuizActive = activeQuizId && quiz.id === activeQuizId;
-                                    // Quiz chỉ mở khi lesson đã hoàn thành và quizCompleted
+                                    // Quiz mở khi lesson đã hoàn thành (isCompleted)
                                     return (
                                       <div
                                         key={quiz.id}
-                                        onClick={isCompleted && quizCompleted ? () => onQuizSelect(quiz) : undefined}
+                                        onClick={isCompleted ? () => onQuizSelect(quiz) : undefined}
                                         className={`flex items-center gap-2 p-2 transition-colors border border-blue-500/30 ${
-                                          !(isCompleted && quizCompleted)
+                                          !isCompleted
                                             ? 'opacity-50 cursor-not-allowed'
                                             : isQuizActive
                                               ? 'bg-blue-600/20 border border-blue-600 cursor-pointer'
@@ -369,13 +372,17 @@ export function LessonList({
                                       >
                                         {/* Status icon cho quiz giống lesson */}
                                         <div className="flex-shrink-0">
-                                          {!(isCompleted && quizCompleted) ? (
+                                          {!isCompleted ? (
                                             <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
                                               <Lock className="h-2.5 w-2.5 text-gray-500" />
                                             </div>
-                                          ) : (
+                                          ) : !quizCompleted ? (
                                             <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center">
-                                              <CheckCircle className="h-3 w-3 text-blue-500" />
+                                              <PlayCircle className="h-3 w-3 text-blue-500" />
+                                            </div>
+                                          ) : (
+                                            <div className="w-5 h-5 rounded-full bg-green-600/20 flex items-center justify-center">
+                                              <CheckCircle className="h-3 w-3 text-green-500" />
                                             </div>
                                           )}
                                         </div>

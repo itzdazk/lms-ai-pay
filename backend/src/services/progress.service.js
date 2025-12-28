@@ -10,10 +10,10 @@ class ProgressService {
          * Returns: [{ lessonId, isCompleted, quizCompleted }]
          */
         async getCourseLessonProgressList(userId, courseId) {
-            // Lấy tất cả lesson thuộc course
+            // Lấy tất cả lesson thuộc course, có lessonOrder
             const lessons = await prisma.lesson.findMany({
                 where: { courseId, isPublished: true },
-                select: { id: true },
+                select: { id: true, lessonOrder: true },
                 orderBy: { lessonOrder: 'asc' },
             });
 
@@ -27,11 +27,12 @@ class ProgressService {
             });
             const progressMap = new Map(progresses.map(p => [p.lessonId, p]));
 
-            // Kết hợp lesson và progress
+            // Kết hợp lesson và progress, trả về lessonOrder và sort sẵn
             return lessons.map(lesson => {
                 const p = progressMap.get(lesson.id);
                 return {
                     lessonId: lesson.id,
+                    lessonOrder: lesson.lessonOrder,
                     isCompleted: p ? p.isCompleted : false,
                     quizCompleted: p ? (p.quizCompleted ?? false) : false,
                 };
