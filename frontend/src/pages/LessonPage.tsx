@@ -495,7 +495,7 @@ export function LessonPage() {
           }
         } catch (err) {}
       }
-    }, 10000);
+    }, 30000);
   }, [selectedLesson, enrollment, currentTime]);
 
   const handlePause = useCallback(() => {
@@ -504,7 +504,25 @@ export function LessonPage() {
       clearInterval(progressSaveIntervalRef.current);
       progressSaveIntervalRef.current = null;
     }
-  }, []);
+    // Gửi progress ngay khi pause
+    if (selectedLesson && enrollment) {
+      (async () => {
+        try {
+          const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
+          const payload: any = { position };
+          console.log('[Progress] Gửi updateLessonProgress (pause):', {
+            lessonId: selectedLesson.id,
+            ...payload,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+          const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+          if (typeof updatedProgress?.watchDuration === 'number') {
+            setWatchedDuration(updatedProgress.watchDuration);
+          }
+        } catch (err) {}
+      })();
+    }
+  }, [selectedLesson, enrollment, currentTime]);
 
   // Handle video ended
   const handleVideoEnded = useCallback(async () => {

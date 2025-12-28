@@ -316,12 +316,24 @@ class ProgressService {
         });
 
         const updateData = {};
+        let newWatchDuration = currentProgress?.watchDuration ?? 0;
         if (position !== undefined) {
             updateData.lastPosition = position;
             // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
             if (currentProgress === null || position > (currentProgress.watchDuration ?? 0)) {
                 updateData.watchDuration = position;
+                newWatchDuration = position;
             }
+        }
+
+        // Tự động completed nếu watchDuration >= 70% videoDuration
+        const videoDuration = lesson.videoDuration || 0;
+        if (
+            videoDuration > 0 &&
+            newWatchDuration >= Math.floor(videoDuration * 0.7)
+        ) {
+            updateData.isCompleted = true;
+            updateData.completedAt = new Date();
         }
 
         const progress = await prisma.progress.upsert({
@@ -399,6 +411,24 @@ class ProgressService {
         if (!enrollment) {
             const error = new Error('You are not enrolled in this course');
             error.statusCode = HTTP_STATUS.FORBIDDEN;
+            throw error;
+        }
+
+
+        // Lấy progress hiện tại
+        const currentProgress = await prisma.progress.findUnique({
+            where: {
+                userId_lessonId: {
+                    userId,
+                    lessonId,
+                },
+            },
+        });
+        const watchDuration = currentProgress?.watchDuration ?? 0;
+        const videoDuration = lesson.videoDuration || 0;
+        if (videoDuration > 0 && watchDuration < Math.floor(videoDuration * 0.7)) {
+            const error = new Error('Bạn cần xem ít nhất 70% thời lượng video để hoàn thành bài học này.');
+            error.statusCode = 400;
             throw error;
         }
 
