@@ -1,8 +1,16 @@
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Edit, Trash2, Plus, Clock } from 'lucide-react'
+import { GripVertical, ChevronDown, ChevronRight, Eye, EyeOff, Edit, Trash2, Plus, Clock, MoreVertical } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '../ui/dropdown-menu'
 import { ChapterLessonsList } from './ChapterLessonsList'
 import type { Chapter, Lesson } from '../../lib/api/types'
+import { useState } from 'react'
+import { PublishChapterDialog } from './PublishChapterDialog'
 
 interface ChapterItemProps {
     chapter: Chapter
@@ -80,6 +88,27 @@ export function ChapterItem({
 
     const lessons = chapter.lessons || []
 
+    // Dialog state for publish/unpublish
+    const [showPublishDialog, setShowPublishDialog] = useState(false)
+    const [publishing, setPublishing] = useState(false)
+    const [toPublished, setToPublished] = useState(true)
+
+    // Handler for dropdown click
+    const handlePublishClick = (nextPublished: boolean) => {
+        setToPublished(nextPublished)
+        setShowPublishDialog(true)
+    }
+
+    const handleConfirmPublish = async () => {
+        setPublishing(true)
+        try {
+            await onPublish(toPublished)
+            setShowPublishDialog(false)
+        } finally {
+            setPublishing(false)
+        }
+    }
+
     return (
         <div
             data-chapter-id={chapter.id}
@@ -114,74 +143,64 @@ export function ChapterItem({
                     )}
                     <span className="text-blue-500 font-semibold text-sm mr-2">#{chapter.chapterOrder}</span>
                     <span className="text-white font-medium">{chapter.title}</span>
-                    <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-blue-400 border-blue-400/50">
-                            {chapter.lessonsCount || lessons.length} bài
-                        </Badge>
-                        <Badge variant="outline" className="text-green-400 border-green-400/50">
-                            {(lessons.filter(l => l.isPublished).length)} hiện
-                        </Badge>
-                        <Badge variant="outline" className="text-gray-400">
-                            {(lessons.filter(l => !l.isPublished).length)} ẩn
-                        </Badge>
-                    </div>
+                                        <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-blue-400 border-blue-400/50">
+                                                        {chapter.lessonsCount || lessons.length} bài
+                                                </Badge>
+                                                <Badge variant="outline" className="text-green-400 border-green-400/50">
+                                                        {(lessons.filter(l => l.isPublished).length)} hiện
+                                                </Badge>
+                                                <Badge variant="outline" className="text-gray-400">
+                                                        {(lessons.filter(l => !l.isPublished).length)} ẩn
+                                                </Badge>
+                                        </div>
                 </button>
-                <div className="flex items-center gap-1">
-                    <Badge variant="outline" className="text-xs text-blue-300 border-blue-300/50 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(chapterDurationSeconds)}
-                    </Badge>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPublish(!chapter.isPublished)}
-                        className={`ml-2 h-6 px-2 text-xs ${
-                            chapter.isPublished
-                                ? 'text-green-400 hover:text-green-500 hover:bg-green-500/10'
-                                : 'text-gray-500 hover:text-gray-400 hover:bg-gray-500/10'
-                        }`}
-                        title={chapter.isPublished ? 'Click để ẩn chương' : 'Click để xuất bản chương'}
-                    >
-                        {chapter.isPublished ? (
-                            <>
-                                <Eye className="h-3 w-3 mr-1" />
-                                Xuất bản
-                            </>
-                        ) : (
-                            <>
-                                <EyeOff className="h-3 w-3 mr-1" />
-                                Ẩn
-                            </>
-                        )}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="default"
-                        onClick={onEdit}
-                        className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                        title="Chỉnh sửa chương"
-                    >
-                        <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="default"
-                        onClick={onDelete}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                        title="Xóa chương"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="default"
-                        onClick={onCreateLesson}
-                        className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
-                        title="Tạo bài học mới"
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </div>
+                                                                <div className="flex items-center gap-1">
+                                                                        <Badge variant="outline" className="text-xs text-blue-300 border-blue-300/50 flex items-center gap-1">
+                                                                                <Clock className="h-3 w-3" />
+                                                                                {formatDuration(chapterDurationSeconds)}
+                                                                        </Badge>
+                                                                        {/* Status badge for chapter publish state */}
+                                                                        {chapter.isPublished ? (
+                                                                            <Badge className="bg-green-600 text-white flex items-center gap-1 text-xs ml-2" title="Chương đã xuất bản">
+                                                                                <Eye className="h-3 w-3" /> Xuất bản
+                                                                            </Badge>
+                                                                        ) : (
+                                                                            <Badge className="bg-gray-500 text-white flex items-center gap-1 text-xs ml-2" title="Chương đang ẩn">
+                                                                                <EyeOff className="h-3 w-3" /> Ẩn
+                                                                            </Badge>
+                                                                        )}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="ml-1 h-8 w-8 text-gray-400 hover:text-blue-500">
+                                                <MoreVertical className="h-5 w-5" />
+                                                <span className="sr-only">Thao tác chương</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-[#181818] text-white border-[#222]">
+                                            <DropdownMenuItem onClick={onCreateLesson}>
+                                                <Plus className="h-4 w-4 mr-2 text-green-500" />Tạo bài học mới
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={onEdit}>
+                                                <Edit className="h-4 w-4 mr-2 text-blue-500" />Chỉnh sửa chương
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handlePublishClick(!chapter.isPublished)}>
+                                                {chapter.isPublished ? (
+                                                    <>
+                                                        <Eye className="h-4 w-4 mr-2 text-green-400" />Ẩn chương
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <EyeOff className="h-4 w-4 mr-2 text-gray-400" />Xuất bản chương
+                                                    </>
+                                                )}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={onDelete} className="text-red-500">
+                                                <Trash2 className="h-4 w-4 mr-2" />Xóa chương
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
             </div>
 
             {isExpanded && (
@@ -209,6 +228,16 @@ export function ChapterItem({
                     onClearDragStates={onClearDragStates}
                 />
             )}
+            {/* Publish/Unpublish confirmation dialog */}
+            <PublishChapterDialog
+                open={showPublishDialog}
+                onOpenChange={setShowPublishDialog}
+                chapter={chapter}
+                publishing={publishing}
+                toPublished={toPublished}
+                onSubmit={handleConfirmPublish}
+                onCancel={() => setShowPublishDialog(false)}
+            />
         </div>
     )
 }
