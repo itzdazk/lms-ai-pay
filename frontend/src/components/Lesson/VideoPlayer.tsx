@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import {
   Play,
   Pause,
@@ -26,20 +26,26 @@ import {
 import { toast } from 'sonner';
 import { SubtitleSettingsDialog, type SubtitleSettings, DEFAULT_SETTINGS } from './SubtitleSettingsDialog';
 import { PlaybackRateDialog } from './PlaybackRateDialog';
+import { progressApi } from '../../lib/api/progress';
 
 interface VideoPlayerProps {
+    watchedDuration?: number;
   videoUrl?: string;
   subtitleUrl?: string; // WebVTT subtitle URL
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  getCurrentTime?: (fn: () => number) => void;
   onEnded?: () => void;
   initialTime?: number;
   seekTo?: number; // Seek to this time when it changes
   className?: string;
   title?: string; // Lesson title
   showSidebar?: boolean; // Whether sidebar is visible
+  onPlay?: () => void;
+  onPause?: () => void;
 }
 
-export function VideoPlayer({
+let renderCount = 0;
+const VideoPlayerComponent = ({
   videoUrl,
   subtitleUrl,
   onTimeUpdate,
@@ -49,8 +55,25 @@ export function VideoPlayer({
   className = '',
   title,
   showSidebar = true,
-}: VideoPlayerProps) {
+  onPlay,
+  onPause,
+  getCurrentTime,
+  watchedDuration = 0,
+}: VideoPlayerProps) => {
+  renderCount++;
+  // eslint-disable-next-line no-console
+  console.log(`[VideoPlayer] render #${renderCount}, watchedDuration prop:`, watchedDuration);
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Hàm lấy currentTime trực tiếp từ video element
+  const getCurrentTimeFn = () => videoRef.current?.currentTime ?? currentTime;
+
+  // Truyền hàm getCurrentTimeFn ra ngoài qua prop getCurrentTime (chỉ khi mount)
+  useEffect(() => {
+    if (getCurrentTime) {
+      getCurrentTime(getCurrentTimeFn);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getCurrentTime]);
   const containerRef = useRef<HTMLDivElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -94,6 +117,8 @@ export function VideoPlayer({
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
   const [isVideoFocused, setIsVideoFocused] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  // Đã loại bỏ toàn bộ logic viewedSegments
+  const lessonIdRef = useRef<number | string | undefined>(undefined); // Truyền lessonId từ props nếu cần
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -150,12 +175,16 @@ export function VideoPlayer({
     }
   };
 
-  // Handle seek
+  // Handle seek (anti-skip)
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (videoRef.current && duration > 0 && progressBarRef.current) {
       const rect = progressBarRef.current.getBoundingClientRect();
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const newTime = pos * duration;
+      let newTime = pos * duration;
+      if (watchedDuration !== undefined && newTime > watchedDuration) {
+        newTime = watchedDuration;
+        toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+      }
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
@@ -186,7 +215,12 @@ export function VideoPlayer({
 
       const seekBy = (delta: number) => {
         if (!videoRef.current) return;
-        const newTime = Math.min(Math.max(0, videoRef.current.currentTime + delta), duration);
+        let newTime = videoRef.current.currentTime + delta;
+        if (watchedDuration !== undefined && newTime > watchedDuration) {
+          newTime = watchedDuration;
+          toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+        }
+        newTime = Math.min(Math.max(0, newTime), duration);
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
       };
@@ -401,8 +435,14 @@ export function VideoPlayer({
     const handlePlay = () => {
       setIsPlaying(true);
       setShowInitialPlayButton(false);
+      console.log('[VideoPlayer] Sự kiện play được gọi', new Date().toLocaleTimeString());
+      if (onPlay) onPlay();
     };
-    const handlePause = () => setIsPlaying(false);
+    const handlePause = () => {
+      setIsPlaying(false);
+      console.log('[VideoPlayer] Sự kiện pause được gọi', new Date().toLocaleTimeString());
+      if (onPause) onPause();
+    };
 
     const handleFullscreenChange = () => {
       const isFullscreenNow = !!document.fullscreenElement;
@@ -868,6 +908,11 @@ export function VideoPlayer({
     }
   };
 
+  // Ghi đè lessonId từ props nếu cần
+  // useEffect(() => {
+  //   lessonIdRef.current = props.lessonId;
+  // }, [props.lessonId]);
+
   if (!videoUrl) {
     return (
       <div className={`relative bg-black aspect-video flex items-center justify-center ${className}`}>
@@ -1055,6 +1100,21 @@ export function VideoPlayer({
               className="h-full bg-blue-600 transition-all group-hover/progress:bg-blue-500"
               style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
             />
+            {/* WatchedDuration marker */}
+            {watchedDuration > 0 && duration > 0 && watchedDuration < duration && (
+              <div
+                className="absolute top-0 bottom-0 w-1.5"
+                style={{
+                  left: `calc(${(watchedDuration / duration) * 100}% - 3px)`,
+                  background: '#FFD600', // vàng nổi bật
+                  borderRadius: '2px',
+                  zIndex: 2,
+                  boxShadow: '0 0 4px 1px #FFD600',
+                  pointerEvents: 'none',
+                }}
+                title="Cột mốc đã xem"
+              />
+            )}
             {/* Progress thumb */}
             <div
               className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full transition-opacity shadow-lg cursor-grab active:cursor-grabbing ${
@@ -1272,4 +1332,6 @@ export function VideoPlayer({
     </div>
   );
 }
+
+export const VideoPlayer = memo(VideoPlayerComponent);
 

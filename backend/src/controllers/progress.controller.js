@@ -72,7 +72,29 @@ class ProgressController {
     updateProgress = asyncHandler(async (req, res) => {
         const { lessonId } = req.params;
         const userId = req.user.id;
-        const { position, watchDuration } = req.body;
+        let { position, watchDuration } = req.body;
+
+        // Ensure position and watchDuration are non-negative integers
+        if (position !== undefined) {
+            if (typeof position !== 'number' || position < 0) {
+                return ApiResponse.error(res, {
+                    success: false,
+                    message: 'Validation failed',
+                    errors: [{ field: 'position', message: 'Position must be a non-negative integer', value: position }]
+                });
+            }
+            position = Math.floor(position);
+        }
+        if (watchDuration !== undefined) {
+            if (typeof watchDuration !== 'number' || watchDuration < 0) {
+                return ApiResponse.error(res, {
+                    success: false,
+                    message: 'Validation failed',
+                    errors: [{ field: 'watchDuration', message: 'Watch duration must be a non-negative integer', value: watchDuration }]
+                });
+            }
+            watchDuration = Math.floor(watchDuration);
+        }
 
         const result = await progressService.updateProgress(
             userId,

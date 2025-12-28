@@ -276,7 +276,7 @@ class ProgressService {
      * Update lesson progress (video position, watch duration)
      */
     async updateProgress(userId, lessonId, data) {
-        const { position, watchDuration } = data;
+        const { position } = data;
 
         // Get lesson
         const lesson = await prisma.lesson.findUnique({
@@ -305,13 +305,23 @@ class ProgressService {
             throw error;
         }
 
-        // Update or create progress record
+        // Lấy progress hiện tại (nếu có)
+        const currentProgress = await prisma.progress.findUnique({
+            where: {
+                userId_lessonId: {
+                    userId,
+                    lessonId,
+                },
+            },
+        });
+
         const updateData = {};
         if (position !== undefined) {
             updateData.lastPosition = position;
-        }
-        if (watchDuration !== undefined) {
-            updateData.watchDuration = watchDuration;
+            // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
+            if (currentProgress === null || position > (currentProgress.watchDuration ?? 0)) {
+                updateData.watchDuration = position;
+            }
         }
 
         const progress = await prisma.progress.upsert({
@@ -326,7 +336,8 @@ class ProgressService {
                 lessonId,
                 courseId: lesson.courseId,
                 lastPosition: position || 0,
-                watchDuration: watchDuration || 0,
+                watchDuration: position || 0,
+                isCompleted: false,
             },
             update: updateData,
         });
@@ -651,6 +662,42 @@ class ProgressService {
                 updatedAt: p.updatedAt,
             },
         }));
+    }
+
+    /**
+     * Merge viewed segments, calculate total watched time, and check completion
+     * @param {Array<{start:number,end:number}>} segments
+     * @param {number} videoDuration
+     * @param {number} [threshold=0.75] - percent required to complete (default 75%)
+     * @returns {{mergedSegments: Array<{start:number,end:number}>, totalWatched: number, isCompleted: boolean}}
+     */
+    calculateLessonCompletion(segments, videoDuration, threshold = 0.75) {
+        if (!Array.isArray(segments) || segments.length === 0 || !videoDuration) {
+            return { mergedSegments: [], totalWatched: 0, isCompleted: false };
+        }
+        // Sort segments by start
+        segments = segments
+            .filter(s => typeof s.start === 'number' && typeof s.end === 'number' && s.end > s.start)
+            .sort((a, b) => a.start - b.start);
+        const merged = [];
+        for (const seg of segments) {
+            if (merged.length === 0) {
+                merged.push({ ...seg });
+            } else {
+                const last = merged[merged.length - 1];
+                if (seg.start <= last.end) {
+                    // Overlap or adjacent: merge
+                    last.end = Math.max(last.end, seg.end);
+                } else {
+                    merged.push({ ...seg });
+                }
+            }
+        }
+        // Calculate total watched time
+        const totalWatched = merged.reduce((sum, seg) => sum + (seg.end - seg.start), 0);
+        // Completion: watched >= threshold * videoDuration
+        const isCompleted = totalWatched >= videoDuration * threshold;
+        return { mergedSegments: merged, totalWatched, isCompleted };
     }
 }
 
