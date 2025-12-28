@@ -11,9 +11,7 @@ import {
     Edit,
     Trash2,
     Eye,
-    Copy,
     AlertCircle,
-    CheckCircle,
     ChevronUp,
     ChevronDown,
     EyeOff,
@@ -23,7 +21,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
@@ -120,20 +117,6 @@ export function QuizzesPage({ lessonId: propLessonId, lessonTitle }: { lessonId?
         const ok = window.confirm('Bạn có chắc muốn xóa quiz này?')
         if (!ok) return
         await handleDeleteQuiz(quizId)
-    }
-
-    const handleDuplicateQuiz = async () => {
-        try {
-            // TODO: Implement duplicate logic if backend supports it
-            toast.info('Tính năng này sẽ được cập nhật')
-        } catch (error) {
-            toast.error('Lỗi nhân bản quiz')
-        }
-    }
-
-    const handleViewAnalytics = (quiz: Quiz) => {
-        // TODO: Navigate to analytics page or open modal
-        navigate(`/instructor/lessons/${lessonId}/quizzes/${quiz.id}/analytics`)
     }
 
     const handleAddQuestion = (quiz: Quiz) => {
@@ -276,7 +259,7 @@ export function QuizzesPage({ lessonId: propLessonId, lessonTitle }: { lessonId?
                     <div className="mb-6">
                         <DarkOutlineInput
                             type="text"
-                            placeholder="Tìm kiếm quiz..."
+                            placeholder="Tìm kiếm câu hỏi..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full px-4 py-2 rounded-lg"
@@ -336,8 +319,6 @@ export function QuizzesPage({ lessonId: propLessonId, lessonTitle }: { lessonId?
                                     onEdit={() => handleEditQuiz(quiz)}
                                     onDelete={() => handleDeleteClick(quiz.id)}
                                     onPublishToggle={() => handlePublishToggle(quiz)}
-                                    onDuplicate={() => handleDuplicateQuiz()}
-                                    onViewAnalytics={() => handleViewAnalytics(quiz)}
                                     onAddQuestion={() => handleAddQuestion(quiz)}
                                     onEditQuestion={(q) => handleEditQuestion(quiz, q)}
                                     onDeleteQuestion={(q) => handleDeleteQuestion(quiz, q)}
@@ -418,8 +399,6 @@ function QuizCard({
     onEdit,
     onDelete,
     onPublishToggle,
-    onDuplicate,
-    onViewAnalytics,
     onAddQuestion,
     onEditQuestion,
     onDeleteQuestion,
@@ -611,13 +590,6 @@ function QuizCard({
                                 )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                onClick={onDuplicate}
-                                className="hover:bg-[#222]"
-                            >
-                                <Copy className="h-4 w-4 mr-2 text-yellow-400" />
-                                Nhân bản
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
                                 onClick={onDelete}
                                 className="text-red-500 hover:bg-[#222] focus:bg-[#222] focus:text-red-500"
                             >
@@ -627,25 +599,6 @@ function QuizCard({
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-            </CardContent>
-        </Card>
-    )
-}
-
-/**
- * Stats Card Component
- */
-interface StatsCardProps {
-    label: string
-    value: string
-}
-
-function StatsCard({ label, value }: StatsCardProps) {
-    return (
-        <Card className="border-gray-700 bg-gray-800">
-            <CardContent className="pt-6">
-                <p className="text-gray-400 text-sm mb-2">{label}</p>
-                <p className="text-3xl font-bold text-white">{value}</p>
             </CardContent>
         </Card>
     )

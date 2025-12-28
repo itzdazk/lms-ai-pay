@@ -57,11 +57,11 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
       <div className="grid grid-cols-1 gap-4">
         <div>
           <Label htmlFor="title">Tiêu đề</Label>
-          <Input id="title" value={formData.title} onChange={(e) => updateField('title', e.target.value)} placeholder="Nhập tiêu đề quiz" />
+          <Input id="title" value={formData.title} onChange={(e) => updateField('title', e.target.value)} placeholder="Nhập tiêu câu hỏi ôn tập" />
         </div>
         <div>
           <Label htmlFor="description">Mô tả</Label>
-          <Textarea id="description" value={formData.description} onChange={(e) => updateField('description', e.target.value)} placeholder="Mô tả ngắn về quiz" />
+          <Textarea id="description" value={formData.description} onChange={(e) => updateField('description', e.target.value)} placeholder="Mô tả ngắn về câu hỏi ôn tập" />
         </div>
         <div>
           <Label htmlFor="passingScore">Điểm đạt (%)</Label>
