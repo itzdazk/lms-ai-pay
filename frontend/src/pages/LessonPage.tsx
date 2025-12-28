@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
@@ -469,12 +469,12 @@ export function LessonPage() {
   // Handle video time update (auto-save progress)
   // Đã loại bỏ toàn bộ logic viewedSegments
   const videoCurrentTimeRef = useRef<(() => number) | null>(null);
-  const handleTimeUpdate = useCallback((time: number, _duration?: number) => {
+  const handleTimeUpdate = (time: number, _duration?: number) => {
     setCurrentTime(time);
-  }, []);
+  };
 
   // Thêm các hàm xử lý play/pause
-  const handlePlay = useCallback(() => {
+  const handlePlay = () => {
     isPlayingRef.current = true;
     if (progressSaveIntervalRef.current) clearInterval(progressSaveIntervalRef.current);
     progressSaveIntervalRef.current = setInterval(async () => {
@@ -496,49 +496,31 @@ export function LessonPage() {
         } catch (err) {}
       }
     }, 30000);
-  }, [selectedLesson, enrollment, currentTime]);
+  };
 
-  const handlePause = useCallback(() => {
+  const handlePause = () => {
     isPlayingRef.current = false;
     if (progressSaveIntervalRef.current) {
       clearInterval(progressSaveIntervalRef.current);
       progressSaveIntervalRef.current = null;
     }
-    // Gửi progress ngay khi pause
-    if (selectedLesson && enrollment) {
-      (async () => {
-        try {
-          const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
-          const payload: any = { position };
-          console.log('[Progress] Gửi updateLessonProgress (pause):', {
-            lessonId: selectedLesson.id,
-            ...payload,
-            timestamp: new Date().toLocaleTimeString(),
-          });
-          const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
-          if (typeof updatedProgress?.watchDuration === 'number') {
-            setWatchedDuration(updatedProgress.watchDuration);
-          }
-        } catch (err) {}
-      })();
-    }
-  }, [selectedLesson, enrollment, currentTime]);
+  };
 
   // Handle video ended
-  const handleVideoEnded = useCallback(async () => {
+  const handleVideoEnded = async () => {
     if (selectedLesson && enrollment) {
       try {
         await progressApi.completeLesson(selectedLesson.id);
       } catch (err) {}
       if (!completedLessonIds.includes(selectedLesson.id)) {
-        setCompletedLessonIds((prev) => [...prev, selectedLesson.id]);
+        setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
       }
     }
     if (progressSaveIntervalRef.current) {
       clearInterval(progressSaveIntervalRef.current);
       progressSaveIntervalRef.current = null;
     }
-  }, [selectedLesson, enrollment, completedLessonIds]);
+  };
 
   // Handle transcript time click
   const handleTranscriptTimeClick = (time: number) => {

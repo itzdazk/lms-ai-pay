@@ -334,6 +334,7 @@ model Progress {
   watchDuration Int       @default(0) @map("watch_duration")
   lastPosition  Int       @default(0) @map("last_position")
   attemptsCount Int       @default(0) @map("attempts_count")
+  quizCompleted Boolean   @default(false) @map("quiz_completed")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

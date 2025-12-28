@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -44,8 +44,7 @@ interface VideoPlayerProps {
   onPause?: () => void;
 }
 
-let renderCount = 0;
-const VideoPlayerComponent = ({
+export function VideoPlayer({
   videoUrl,
   subtitleUrl,
   onTimeUpdate,
@@ -59,10 +58,10 @@ const VideoPlayerComponent = ({
   onPause,
   getCurrentTime,
   watchedDuration = 0,
-}: VideoPlayerProps) => {
-  renderCount++;
+}: VideoPlayerProps) {
+  // Log mỗi lần watchedDuration prop thay đổi
   // eslint-disable-next-line no-console
-  console.log(`[VideoPlayer] render #${renderCount}, watchedDuration prop:`, watchedDuration);
+  console.log('[VideoPlayer] watchedDuration prop:', watchedDuration);
   const videoRef = useRef<HTMLVideoElement>(null);
   // Hàm lấy currentTime trực tiếp từ video element
   const getCurrentTimeFn = () => videoRef.current?.currentTime ?? currentTime;
@@ -1332,6 +1331,4 @@ const VideoPlayerComponent = ({
     </div>
   );
 }
-
-export const VideoPlayer = memo(VideoPlayerComponent);
 
