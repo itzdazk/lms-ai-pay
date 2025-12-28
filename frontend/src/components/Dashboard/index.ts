@@ -1,0 +1,8 @@
+export { RecentActivities } from './RecentActivities'
+export { QuizPerformanceSummary } from './QuizPerformanceSummary'
+export { StudyTimeChart } from './StudyTimeChart'
+export { RecommendedCourses } from './RecommendedCourses'
+export { LearningStreakCard } from './LearningStreakCard'
+export { CalendarHeatmap } from './CalendarHeatmap'
+export { BookmarksList } from './BookmarksList'
+export { NotesSummaryCard } from './NotesSummaryCard'

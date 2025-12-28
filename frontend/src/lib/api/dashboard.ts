@@ -8,12 +8,80 @@ import type {
     Enrollment,
     PaginatedApiResponse,
 } from './types'
+import type { Activity } from '../dashboardUtils'
 
 export const dashboardApi = {
+    // Get student dashboard overview (all-in-one)
+    async getStudentDashboard(): Promise<{
+        stats: any
+        enrolledCourses: any[]
+        continueWatching: any[]
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student'
+        )
+        return response.data.data
+    },
+
     // Get student dashboard stats
-    async getStudentStats(): Promise<DashboardStats> {
-        const response = await apiClient.get<ApiResponse<DashboardStats>>(
-            '/dashboard/stats'
+    async getStudentStats(): Promise<{
+        totalEnrollments: number
+        activeEnrollments: number
+        completedEnrollments: number
+        coursesInProgress: number
+        totalLessonsCompleted: number
+        totalStudyTime: number
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/stats'
+        )
+        return response.data.data
+    },
+
+    // Get enrolled courses
+    async getStudentEnrolledCourses(limit?: number): Promise<
+        Array<{
+            id: number
+            courseId: number
+            enrolledAt: string
+            lastAccessedAt: string | null
+            completedAt: string | null
+            status: string
+            progressPercentage: number
+            completedLessons: number
+            totalLessons: number
+            course: Course
+        }>
+    > {
+        const params = limit ? `?limit=${limit}` : ''
+        const response = await apiClient.get<ApiResponse<any>>(
+            `/dashboard/student/enrolled-courses${params}`
+        )
+        return response.data.data
+    },
+
+    // Get continue watching
+    async getStudentContinueWatching(limit?: number): Promise<
+        Array<{
+            id: number
+            title: string
+            slug: string
+            videoUrl: string
+            videoDuration: number | null
+            watchDuration: number
+            position: number
+            course: {
+                id: number
+                title: string
+                slug: string
+                thumbnailUrl: string | null
+            }
+            lastWatchedAt: string
+        }>
+    > {
+        const params = limit ? `?limit=${limit}` : ''
+        const response = await apiClient.get<ApiResponse<any>>(
+            `/dashboard/student/continue-watching${params}`
         )
         return response.data.data
     },
@@ -38,6 +106,100 @@ export const dashboardApi = {
     async getRecommendedCourses(): Promise<Course[]> {
         const response = await apiClient.get<ApiResponse<Course[]>>(
             '/dashboard/recommendations'
+        )
+        return response.data.data
+    },
+
+    // Student Dashboard Phase 1 APIs
+    async getRecentActivities(options?: {
+        limit?: number
+        type?: 'ENROLLMENT' | 'LESSON_COMPLETED' | 'QUIZ_SUBMITTED'
+        dateFrom?: string
+    }): Promise<{ activities: Activity[]; meta: any }> {
+        const params = new URLSearchParams()
+        if (options?.limit) params.append('limit', options.limit.toString())
+        if (options?.type) params.append('type', options.type)
+        if (options?.dateFrom) params.append('dateFrom', options.dateFrom)
+
+        const response = await apiClient.get<ApiResponse<Activity[]>>(
+            `/dashboard/student/recent-activities?${params.toString()}`
+        )
+        return {
+            activities: response.data.data,
+            meta: response.data.meta || {},
+        }
+    },
+
+    async getQuizPerformance(): Promise<{
+        overall: {
+            totalQuizzes: number
+            averageScore: number
+            passRate: number
+            perfectScores: number
+            totalAttempts: number
+        }
+        recentQuizzes: Array<{
+            id: number
+            quizTitle: string
+            courseTitle: string
+            score: number
+            passingScore: number
+            isPassed: boolean
+            submittedAt: string
+        }>
+        performanceTrend: Array<{
+            date: string
+            averageScore: number
+        }>
+        weakTopics: Array<{
+            topic: string
+            quizCount: number
+            averageScore: number
+        }>
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/quiz-performance'
+        )
+        return response.data.data
+    },
+
+    async getStudyTimeAnalytics(): Promise<{
+        totals: {
+            today: number
+            thisWeek: number
+            thisMonth: number
+            allTime: number
+        }
+        formatted: {
+            today: string
+            thisWeek: string
+            thisMonth: string
+            allTime: string
+        }
+        dailyAverage: number
+        byCourse: Array<{
+            courseId: number
+            courseTitle: string
+            studyTime: number
+            formatted: string
+            percentage: number
+        }>
+        trend: Array<{
+            date: string
+            studyTime: number
+            formatted: string
+        }>
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/study-time'
+        )
+        return response.data.data
+    },
+
+    async getStudentRecommendations(limit?: number): Promise<Course[]> {
+        const params = limit ? `?limit=${limit}` : ''
+        const response = await apiClient.get<ApiResponse<Course[]>>(
+            `/dashboard/student/recommendations${params}`
         )
         return response.data.data
     },
@@ -187,5 +349,264 @@ export const dashboardApi = {
             enrollments: response.data.data,
             pagination: response.data.pagination,
         }
+    },
+
+    // Phase 2: Student Dashboard Advanced Features
+    async getLearningStreak(): Promise<{
+        currentStreak: number
+        longestStreak: number
+        lastLearningDate: string | null
+        streakMaintained: boolean
+        daysUntilStreakBreak: number
+        weeklyPattern: {
+            monday: boolean
+            tuesday: boolean
+            wednesday: boolean
+            thursday: boolean
+            friday: boolean
+            saturday: boolean
+            sunday: boolean
+        }
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/learning-streak'
+        )
+        return response.data.data
+    },
+
+    async getCalendarHeatmap(
+        year?: number,
+        month?: number
+    ): Promise<{
+        year: number
+        month: number
+        days: Array<{
+            date: string
+            lessonCount: number
+            studyMinutes: number
+            level: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'
+        }>
+        summary: {
+            totalDays: number
+            activeDays: number
+            totalLessons: number
+            totalStudyMinutes: number
+        }
+    }> {
+        const params = new URLSearchParams()
+        if (year) params.append('year', year.toString())
+        if (month) params.append('month', month.toString())
+
+        const response = await apiClient.get<ApiResponse<any>>(
+            `/dashboard/student/calendar-heatmap?${params.toString()}`
+        )
+        return response.data.data
+    },
+
+    async getCertificates(): Promise<
+        Array<{
+            id: number
+            courseId: number
+            courseTitle: string
+            courseSlug: string
+            instructorName: string
+            completedAt: string
+            certificateUrl: string
+            certificateCode: string
+            thumbnailUrl: string | null
+        }>
+    > {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/certificates'
+        )
+        return response.data.data
+    },
+
+    async getLearningGoals(): Promise<
+        Array<{
+            id: number
+            type: string
+            targetValue: number
+            currentValue: number
+            percentage: number
+            status: string
+            deadline: string | null
+            course: {
+                id: number
+                title: string
+                slug: string
+            } | null
+            createdAt: string
+        }>
+    > {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/goals'
+        )
+        return response.data.data
+    },
+
+    async createLearningGoal(data: {
+        type: string
+        targetValue: number
+        courseId?: number
+        deadline?: string
+    }): Promise<any> {
+        const response = await apiClient.post<ApiResponse<any>>(
+            '/dashboard/student/goals',
+            data
+        )
+        return response.data.data
+    },
+
+    async updateLearningGoal(
+        id: number,
+        data: {
+            type?: string
+            targetValue?: number
+            courseId?: number
+            deadline?: string
+            status?: string
+        }
+    ): Promise<any> {
+        const response = await apiClient.put<ApiResponse<any>>(
+            `/dashboard/student/goals/${id}`,
+            data
+        )
+        return response.data.data
+    },
+
+    async deleteLearningGoal(id: number): Promise<void> {
+        await apiClient.delete(`/dashboard/student/goals/${id}`)
+    },
+
+    async getBookmarks(): Promise<
+        Array<{
+            id: number
+            type: 'COURSE' | 'LESSON'
+            course: {
+                id: number
+                title: string
+                slug: string
+                thumbnailUrl?: string
+            } | null
+            lesson: {
+                id: number
+                title: string
+                slug: string
+                course: {
+                    id: number
+                    title: string
+                    slug: string
+                }
+            } | null
+            note: string | null
+            createdAt: string
+        }>
+    > {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/bookmarks'
+        )
+        return response.data.data
+    },
+
+    async createBookmark(data: {
+        type: 'COURSE' | 'LESSON'
+        courseId?: number
+        lessonId?: number
+        note?: string
+    }): Promise<any> {
+        const response = await apiClient.post<ApiResponse<any>>(
+            '/dashboard/student/bookmarks',
+            data
+        )
+        return response.data.data
+    },
+
+    async deleteBookmark(id: number): Promise<void> {
+        await apiClient.delete(`/dashboard/student/bookmarks/${id}`)
+    },
+
+    async getNotesSummary(): Promise<{
+        totalNotes: number
+        recentNotes: Array<{
+            id: number
+            lessonId: number
+            lessonTitle: string
+            courseId: number
+            courseTitle: string
+            content: string
+            contentPreview: string
+            createdAt: string
+            updatedAt: string
+        }>
+        byCourse: Array<{
+            courseId: number
+            courseTitle: string
+            noteCount: number
+        }>
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            '/dashboard/student/notes-summary'
+        )
+        return response.data.data
+    },
+
+    async getCourseProgressDetail(courseId: number): Promise<{
+        course: {
+            id: number
+            title: string
+            slug: string
+            thumbnailUrl: string | null
+            totalLessons: number
+            completedLessons: number
+            progressPercentage: number
+        }
+        enrollment: {
+            enrolledAt: string
+            lastAccessedAt: string | null
+            status: string
+        }
+        chapters: Array<{
+            id: number
+            title: string
+            chapterOrder: number
+            lessons: Array<{
+                id: number
+                title: string
+                slug: string
+                lessonOrder: number
+                isCompleted: boolean
+                completedAt: string | null
+                watchDuration: number
+                videoDuration: number | null
+                progressPercentage: number
+                quizScore: number | null
+            }>
+            completedLessons: number
+            totalLessons: number
+            progressPercentage: number
+        }>
+        orphanLessons?: Array<{
+            id: number
+            title: string
+            slug: string
+            lessonOrder: number
+            isCompleted: boolean
+            completedAt: string | null
+            watchDuration: number
+            videoDuration: number | null
+            progressPercentage: number
+            quizScore: number | null
+        }>
+        statistics: {
+            totalStudyTime: number
+            averageQuizScore: number | null
+            estimatedTimeRemaining: number
+        }
+    }> {
+        const response = await apiClient.get<ApiResponse<any>>(
+            `/dashboard/student/courses/${courseId}/progress-detail`
+        )
+        return response.data.data
     },
 }
