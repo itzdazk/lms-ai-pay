@@ -41,11 +41,13 @@ interface QuizzesPageState {
     selectedQuestion: any | null
 }
 
-export function QuizzesPage() {
+
+export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
     const { user } = useAuth()
     const navigate = useNavigate()
-    const { lessonId } = useParams<{ lessonId: string }>()
-    const numLessonId = lessonId ? parseInt(lessonId) : null
+    const params = useParams<{ lessonId: string }>()
+    // Use prop if provided, else fallback to URL param
+    const numLessonId = typeof propLessonId === 'number' ? propLessonId : (params.lessonId ? parseInt(params.lessonId) : null)
 
     // State
     const [pageState, setPageState] = useState<QuizzesPageState>({
