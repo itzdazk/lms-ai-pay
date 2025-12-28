@@ -34,7 +34,6 @@ import {
     Shield,
     GraduationCap,
     ReceiptText,
-    UsersRoundIcon,
     UserRoundCog,
     LibraryBig,
 } from 'lucide-react'
@@ -116,37 +115,16 @@ export function Navbar() {
             case 'INSTRUCTOR':
                 return (
                     <>
-                        {/* Bảng điều khiển - Disabled */}
-                        <DropdownMenuLabel className='text-white px-2 py-1.5'>
-                            <div className='flex items-center'>
-                                <LayoutDashboard className='mr-2 h-4 w-4' />
-                                <span className='font-medium'>
-                                    Bảng điều khiển
-                                </span>
-                            </div>
-                        </DropdownMenuLabel>
                         <DropdownMenuItem
                             asChild
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link
                                 to='/instructor/dashboard'
-                                className='flex items-center pl-6'
+                                className='flex items-center'
                             >
-                                <GraduationCap className='mr-2 h-4 w-4' />
-                                Giảng viên
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            asChild
-                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                        >
-                            <Link
-                                to='/instructor/enrollments'
-                                className='flex items-center pl-6'
-                            >
-                                <UsersRoundIcon className='mr-2 h-4 w-4' />
-                                Học viên
+                                <LayoutDashboard className='mr-2 h-4 w-4' />
+                                Bảng điều khiển
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -170,7 +148,6 @@ export function Navbar() {
                                 Đơn hàng của tôi
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
                     </>
                 )
             case 'ADMIN':
@@ -306,16 +283,6 @@ export function Navbar() {
                         >
                             <GraduationCap className='h-5 w-5' />
                             Giảng viên
-                        </Link>
-
-                        {/* Quản lí học viên */}
-                        <Link
-                            to='/instructor/enrollments'
-                            className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            <UsersRoundIcon className='h-5 w-5' />
-                            Học viên
                         </Link>
 
                         {/* Khóa học của tôi */}

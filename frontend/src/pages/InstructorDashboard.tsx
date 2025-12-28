@@ -19,24 +19,15 @@ import {
     SelectValue,
 } from '../components/ui/select'
 import {
-    DarkOutlineTable,
-    DarkOutlineTableHeader,
-    DarkOutlineTableBody,
-    DarkOutlineTableRow,
-    DarkOutlineTableHead,
-    DarkOutlineTableCell,
-} from '../components/ui/dark-outline-table'
-import {
     BookOpen,
     Users,
     DollarSign,
-    TrendingUp,
     Star,
     BarChart3,
     Loader2,
     ShoppingCart,
+    GraduationCap,
 } from 'lucide-react'
-import { instructorCoursesApi } from '../lib/api/instructor-courses'
 import { useAuth } from '../contexts/AuthContext'
 import {
     Dialog,
@@ -55,6 +46,12 @@ import {
     OrderFilters,
     type OrderFilters as OrderFiltersType,
 } from '../components/Payment/OrderFilters'
+import { useInstructorStats } from '../hooks/useInstructorStats'
+import { RevenueChart } from '../components/Dashboard/RevenueChart'
+import { EnrollmentTrendChart } from '../components/Dashboard/EnrollmentTrendChart'
+import { CoursePerformanceTable } from '../components/Dashboard/CoursePerformanceTable'
+import { EnrollmentsList } from '../components/Dashboard/EnrollmentsList'
+import { instructorCoursesApi } from '../lib/api/instructor-courses'
 
 function formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -67,13 +64,8 @@ export function InstructorDashboard() {
     const { user: currentUser, loading: authLoading } = useAuth()
     const navigate = useNavigate()
     const [courses, setCourses] = useState<Course[]>([])
-    const [stats, setStats] = useState({
-        totalCourses: 0,
-        publishedCourses: 0,
-        draftCourses: 0,
-        totalStudents: 0,
-        totalRevenue: 0,
-        avgRating: 0,
+    const { stats: apiStats, isLoading: statsLoading } = useInstructorStats({
+        autoRefresh: true,
     })
     const [loading, setLoading] = useState(true)
     const [pagination, setPagination] = useState({
@@ -324,10 +316,7 @@ export function InstructorDashboard() {
             }
             setPagination(paginationData)
 
-            // Load stats separately (don't block courses display)
-            setTimeout(() => {
-                loadStats()
-            }, 100)
+            // Stats are loaded via useInstructorStats hook
         } catch (error: any) {
             console.error('Error loading courses:', error)
             // Error toast is already shown by API client interceptor
@@ -337,105 +326,16 @@ export function InstructorDashboard() {
         }
     }
 
-    const loadStats = async () => {
-        try {
-            // Get stats from API
-            const statsData =
-                await instructorCoursesApi.getInstructorCourseStatistics()
-
-            // Get all courses with pagination (max limit is 100)
-            let allCourses: Course[] = []
-            let page = 1
-            let hasMore = true
-
-            while (hasMore) {
-                const coursesData =
-                    await instructorCoursesApi.getInstructorCourses({
-                        page,
-                        limit: 100,
-                        sort: 'newest', // Always use newest for stats calculation
-                    })
-                const transformed = (coursesData.data || []).map(
-                    transformCourse
-                )
-                allCourses = [...allCourses, ...transformed]
-
-                // Check if there are more pages
-                hasMore = page < (coursesData.pagination?.totalPages || 0)
-                page++
-
-                // Safety limit: stop after 10 pages (1000 courses max)
-                if (page > 10) break
-            }
-
-            const totalCourses = allCourses.length
-            const publishedCourses = allCourses.filter(
-                (c: Course) => c.status === 'PUBLISHED'
-            ).length
-            const draftCourses = allCourses.filter(
-                (c: Course) => c.status === 'DRAFT'
-            ).length
-            const totalStudents = allCourses.reduce(
-                (sum: number, c: Course) => sum + (c.enrolledCount || 0),
-                0
-            )
-            const totalRevenue = statsData?.totalRevenue || 0
-            const coursesWithRatings = allCourses.filter(
-                (c: Course) => (c.ratingCount || 0) > 0
-            )
-            const avgRating =
-                statsData?.averageRating ||
-                (coursesWithRatings.length > 0
-                    ? coursesWithRatings.reduce(
-                          (sum: number, c: Course) => sum + (c.ratingAvg || 0),
-                          0
-                      ) / coursesWithRatings.length
-                    : 0)
-
-            setStats({
-                totalCourses,
-                publishedCourses,
-                draftCourses,
-                totalStudents,
-                totalRevenue,
-                avgRating: avgRating || 0,
-            })
-        } catch (error: any) {
-            // If stats API fails, try to calculate from current courses
-            if (courses.length > 0) {
-                const totalCourses = courses.length
-                const publishedCourses = courses.filter(
-                    (c: Course) => c.status === 'PUBLISHED'
-                ).length
-                const draftCourses = courses.filter(
-                    (c: Course) => c.status === 'DRAFT'
-                ).length
-                const totalStudents = courses.reduce(
-                    (sum: number, c: Course) => sum + (c.enrolledCount || 0),
-                    0
-                )
-                const coursesWithRatings = courses.filter(
-                    (c: Course) => (c.ratingCount || 0) > 0
-                )
-                const avgRating =
-                    coursesWithRatings.length > 0
-                        ? coursesWithRatings.reduce(
-                              (sum: number, c: Course) =>
-                                  sum + (c.ratingAvg || 0),
-                              0
-                          ) / coursesWithRatings.length
-                        : 0
-
-                setStats({
-                    totalCourses,
-                    publishedCourses,
-                    draftCourses,
-                    totalStudents,
-                    totalRevenue: 0,
-                    avgRating: avgRating || 0,
-                })
-            }
-        }
+    // Stats are now loaded via useInstructorStats hook
+    const stats = apiStats || {
+        totalCourses: 0,
+        publishedCourses: 0,
+        draftCourses: 0,
+        totalEnrollments: 0,
+        activeEnrollments: 0,
+        totalStudents: 0,
+        totalRevenue: 0,
+        averageRating: 0,
     }
 
     const handleDeleteCourse = async () => {
@@ -450,7 +350,6 @@ export function InstructorDashboard() {
             setIsDeleteDialogOpen(false)
             setSelectedCourse(null)
             loadCourses()
-            loadStats()
         } catch (error: any) {
             console.error('Error deleting course:', error)
             // Error toast is already shown by API client interceptor
@@ -472,7 +371,6 @@ export function InstructorDashboard() {
             setIsStatusDialogOpen(false)
             setSelectedCourse(null)
             loadCourses()
-            loadStats()
         } catch (error: any) {
             console.error('Error changing status:', error)
             // Error toast is already shown by API client interceptor
@@ -523,7 +421,11 @@ export function InstructorDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className='text-3xl text-white'>
-                                {stats.totalCourses}
+                                {statsLoading ? (
+                                    <Loader2 className='h-6 w-6 animate-spin' />
+                                ) : (
+                                    stats.totalCourses
+                                )}
                             </div>
                             <p className='text-xs text-gray-500 mt-1'>
                                 {stats.publishedCourses} đã xuất bản •{' '}
@@ -541,7 +443,11 @@ export function InstructorDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className='text-3xl text-white'>
-                                {stats.totalStudents.toLocaleString()}
+                                {statsLoading ? (
+                                    <Loader2 className='h-6 w-6 animate-spin' />
+                                ) : (
+                                    stats.totalStudents.toLocaleString()
+                                )}
                             </div>
                             <p className='text-xs text-gray-500 mt-1'>
                                 Đã đăng ký các khóa học
@@ -558,7 +464,11 @@ export function InstructorDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className='text-3xl text-white'>
-                                {formatPrice(stats.totalRevenue)}
+                                {statsLoading ? (
+                                    <Loader2 className='h-6 w-6 animate-spin' />
+                                ) : (
+                                    formatPrice(stats.totalRevenue)
+                                )}
                             </div>
                             <p className='text-xs text-gray-500 mt-1'>
                                 Tổng thu nhập
@@ -575,10 +485,16 @@ export function InstructorDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className='text-3xl flex items-center gap-2 text-white'>
-                                {stats.avgRating > 0
-                                    ? stats.avgRating.toFixed(1)
-                                    : '-'}
-                                <Star className='h-5 w-5 fill-yellow-400 text-yellow-400' />
+                                {statsLoading ? (
+                                    <Loader2 className='h-6 w-6 animate-spin' />
+                                ) : stats.averageRating > 0 ? (
+                                    <>
+                                        {stats.averageRating.toFixed(1)}
+                                        <Star className='h-5 w-5 fill-yellow-400 text-yellow-400' />
+                                    </>
+                                ) : (
+                                    '-'
+                                )}
                             </div>
                             <p className='text-xs text-gray-500 mt-1'>
                                 Từ học viên
@@ -598,6 +514,10 @@ export function InstructorDashboard() {
                             <ShoppingCart className='h-4 w-4 mr-2' />
                             Quản lí đơn hàng
                         </DarkTabsTrigger>
+                        <DarkTabsTrigger value='enrollments' variant='blue'>
+                            <Users className='h-4 w-4 mr-2' />
+                            Quản lí học viên
+                        </DarkTabsTrigger>
                         <DarkTabsTrigger value='analytics' variant='blue'>
                             <BarChart3 className='h-4 w-4 mr-2' />
                             Phân tích
@@ -616,302 +536,21 @@ export function InstructorDashboard() {
                     <TabsContent value='orders' className='space-y-4'>
                         <InstructorOrdersTabContent />
                     </TabsContent>
+
+                    {/* Enrollments Management Tab */}
+                    <TabsContent value='enrollments' className='space-y-4'>
+                        <EnrollmentsList />
+                    </TabsContent>
+
                     {/* Analytics Tab */}
                     <TabsContent value='analytics' className='space-y-4'>
-                        {loading ? (
-                            <div className='flex items-center justify-center py-12'>
-                                <Loader2 className='h-8 w-8 animate-spin text-gray-400' />
-                            </div>
-                        ) : (
-                            <>
-                                <div className='grid md:grid-cols-2 gap-6'>
-                                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                                        <CardHeader>
-                                            <CardTitle className='text-white'>
-                                                Top khóa học
-                                            </CardTitle>
-                                            <CardDescription className='text-gray-400'>
-                                                Theo số học viên đăng ký
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className='space-y-4'>
-                                                {courses
-                                                    .sort(
-                                                        (a, b) =>
-                                                            (b.enrolledCount ||
-                                                                0) -
-                                                            (a.enrolledCount ||
-                                                                0)
-                                                    )
-                                                    .slice(0, 5)
-                                                    .map((course, index) => (
-                                                        <div
-                                                            key={course.id}
-                                                            className='flex items-center justify-between'
-                                                        >
-                                                            <div className='flex items-center gap-3'>
-                                                                <div className='flex h-8 w-8 items-center justify-center rounded-full bg-blue-600/20 text-blue-500'>
-                                                                    {index + 1}
-                                                                </div>
-                                                                <div>
-                                                                    <p className='font-medium line-clamp-1 text-gray-900 dark:text-white'>
-                                                                        {
-                                                                            course.title
-                                                                        }
-                                                                    </p>
-                                                                    <p className='text-sm text-gray-500 dark:text-gray-400'>
-                                                                        {course.enrolledCount ||
-                                                                            0}{' '}
-                                                                        học viên
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                            <div className='flex items-center gap-1'>
-                                                                <TrendingUp className='h-4 w-4 text-green-500' />
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                                        <CardHeader>
-                                            <CardTitle className='text-white'>
-                                                Đánh giá cao nhất
-                                            </CardTitle>
-                                            <CardDescription className='text-gray-400'>
-                                                Theo rating trung bình
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className='space-y-4'>
-                                                {courses
-                                                    .sort(
-                                                        (a, b) =>
-                                                            (b.ratingAvg || 0) -
-                                                            (a.ratingAvg || 0)
-                                                    )
-                                                    .slice(0, 5)
-                                                    .map((course, index) => (
-                                                        <div
-                                                            key={course.id}
-                                                            className='flex items-center justify-between'
-                                                        >
-                                                            <div className='flex items-center gap-3'>
-                                                                <div className='flex h-8 w-8 items-center justify-center rounded-full bg-yellow-600/20 text-yellow-500'>
-                                                                    {index + 1}
-                                                                </div>
-                                                                <div>
-                                                                    <p className='font-medium line-clamp-1 text-gray-900 dark:text-white'>
-                                                                        {
-                                                                            course.title
-                                                                        }
-                                                                    </p>
-                                                                    <div className='flex items-center gap-1 text-sm'>
-                                                                        <Star className='h-3 w-3 fill-yellow-400 text-yellow-400' />
-                                                                        <span className='text-gray-600 dark:text-gray-300'>
-                                                                            {course.ratingCount >
-                                                                                0 &&
-                                                                            course.ratingAvg
-                                                                                ? course.ratingAvg.toFixed(
-                                                                                      1
-                                                                                  )
-                                                                                : '-'}
-                                                                        </span>
-                                                                        <span className='text-gray-500'>
-                                                                            (
-                                                                            {course.ratingCount ||
-                                                                                0}
-                                                                            )
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                                    <CardHeader>
-                                        <CardTitle className='text-white'>
-                                            Thống kê tổng quan
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className='space-y-4'>
-                                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                                <span className='text-gray-400'>
-                                                    Tổng lượt xem
-                                                </span>
-                                                <span className='text-2xl text-white'>
-                                                    {courses
-                                                        .reduce(
-                                                            (sum, c) =>
-                                                                sum +
-                                                                (c.viewsCount ||
-                                                                    0),
-                                                            0
-                                                        )
-                                                        .toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                                <span className='text-gray-400'>
-                                                    Tỷ lệ hoàn thành trung bình
-                                                </span>
-                                                <span className='text-2xl text-white'>
-                                                    {courses.length > 0
-                                                        ? Math.round(
-                                                              courses.reduce(
-                                                                  (sum, c) =>
-                                                                      sum +
-                                                                      ((
-                                                                          c as any
-                                                                      )
-                                                                          .completionRate ||
-                                                                          0),
-                                                                  0
-                                                              ) / courses.length
-                                                          )
-                                                        : 0}
-                                                    %
-                                                </span>
-                                            </div>
-                                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                                <span className='text-gray-400'>
-                                                    Tổng số bài học
-                                                </span>
-                                                <span className='text-2xl text-white'>
-                                                    {courses.reduce(
-                                                        (sum, c) =>
-                                                            sum +
-                                                            (c.lessonsCount ||
-                                                                0),
-                                                        0
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </>
-                        )}
+                        <EnrollmentTrendChart />
+                        <CoursePerformanceTable />
                     </TabsContent>
 
                     {/* Revenue Tab */}
                     <TabsContent value='revenue' className='space-y-4'>
-                        {loading ? (
-                            <div className='flex items-center justify-center py-12'>
-                                <Loader2 className='h-8 w-8 animate-spin text-gray-400' />
-                            </div>
-                        ) : (
-                            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                                <CardHeader>
-                                    <CardTitle className='text-white'>
-                                        Doanh thu theo khóa học
-                                    </CardTitle>
-                                    <CardDescription className='text-gray-400'>
-                                        Chi tiết doanh thu từng khóa học
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {courses.filter((c) => !c.isFree).length ===
-                                    0 ? (
-                                        <div className='text-center py-12'>
-                                            <DollarSign className='h-12 w-12 text-gray-400 mx-auto mb-4' />
-                                            <p className='text-gray-400'>
-                                                Chưa có khóa học có phí
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <DarkOutlineTable>
-                                            <DarkOutlineTableHeader>
-                                                <DarkOutlineTableRow>
-                                                    <DarkOutlineTableHead>
-                                                        Khóa học
-                                                    </DarkOutlineTableHead>
-                                                    <DarkOutlineTableHead>
-                                                        Giá bán
-                                                    </DarkOutlineTableHead>
-                                                    <DarkOutlineTableHead>
-                                                        Đã bán
-                                                    </DarkOutlineTableHead>
-                                                    <DarkOutlineTableHead className='text-right'>
-                                                        Doanh thu
-                                                    </DarkOutlineTableHead>
-                                                </DarkOutlineTableRow>
-                                            </DarkOutlineTableHeader>
-                                            <DarkOutlineTableBody>
-                                                {courses
-                                                    .filter((c) => !c.isFree)
-                                                    .sort((a, b) => {
-                                                        const priceA =
-                                                            a.discountPrice ||
-                                                            a.originalPrice ||
-                                                            0
-                                                        const priceB =
-                                                            b.discountPrice ||
-                                                            b.originalPrice ||
-                                                            0
-                                                        const revA =
-                                                            priceA *
-                                                            (a.enrolledCount ||
-                                                                0)
-                                                        const revB =
-                                                            priceB *
-                                                            (b.enrolledCount ||
-                                                                0)
-                                                        return revB - revA
-                                                    })
-                                                    .map((course) => {
-                                                        const price =
-                                                            course.discountPrice ||
-                                                            course.originalPrice ||
-                                                            0
-                                                        const revenue =
-                                                            price *
-                                                            (course.enrolledCount ||
-                                                                0)
-                                                        return (
-                                                            <DarkOutlineTableRow
-                                                                key={course.id}
-                                                            >
-                                                                <DarkOutlineTableCell>
-                                                                    <p className='font-medium text-gray-900 dark:text-white'>
-                                                                        {
-                                                                            course.title
-                                                                        }
-                                                                    </p>
-                                                                </DarkOutlineTableCell>
-                                                                <DarkOutlineTableCell>
-                                                                    {formatPrice(
-                                                                        price
-                                                                    )}
-                                                                </DarkOutlineTableCell>
-                                                                <DarkOutlineTableCell>
-                                                                    {course.enrolledCount ||
-                                                                        0}{' '}
-                                                                    khóa
-                                                                </DarkOutlineTableCell>
-                                                                <DarkOutlineTableCell className='text-right font-semibold text-green-500'>
-                                                                    {formatPrice(
-                                                                        revenue
-                                                                    )}
-                                                                </DarkOutlineTableCell>
-                                                            </DarkOutlineTableRow>
-                                                        )
-                                                    })}
-                                            </DarkOutlineTableBody>
-                                        </DarkOutlineTable>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                        <RevenueChart />
                     </TabsContent>
                 </Tabs>
 
