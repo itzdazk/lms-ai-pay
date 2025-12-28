@@ -101,26 +101,27 @@ class InstructorQuizzesService extends QuizzesService {
             throw this.buildBadRequestError('Quiz title is required');
         }
 
-        if (
-            !Array.isArray(payload.questions) ||
-            payload.questions.length === 0
-        ) {
-            throw this.buildBadRequestError(
-                'Quiz must include at least one question'
-            );
+        // If questions are provided, validate as array, but not required
+        if (payload.questions && !Array.isArray(payload.questions)) {
+            throw this.buildBadRequestError('Questions must be an array');
         }
 
-        // Create quiz without questions, they will be created separately
+        // Always set isPublished to false by default on creation
+        quizData.isPublished = false;
+
+        // Create quiz
         const created = await prisma.quiz.create({
             data: quizData,
         });
 
-        // Create questions in Question table
-        const questionsData = this.buildQuestionsDataFromPayload(payload.questions, created.id);
-        if (questionsData.length > 0) {
-            await prisma.question.createMany({
-                data: questionsData,
-            });
+        // If questions are provided, create them
+        if (payload.questions && Array.isArray(payload.questions) && payload.questions.length > 0) {
+            const questionsData = this.buildQuestionsDataFromPayload(payload.questions, created.id);
+            if (questionsData.length > 0) {
+                await prisma.question.createMany({
+                    data: questionsData,
+                });
+            }
         }
 
         logger.info(
@@ -146,12 +147,8 @@ class InstructorQuizzesService extends QuizzesService {
             isUpdate: true,
         });
 
-        if (Object.keys(updateData).length === 0) {
-            // Check if only questions are being updated
-            if (!payload.questions) {
-                throw this.buildBadRequestError('No updates provided');
-            }
-        } else if (Object.keys(updateData).length > 0) {
+        // Only throw if both updateData and questions are empty
+        if (Object.keys(updateData).length === 0 && !payload.questions) {
             throw this.buildBadRequestError('No updates provided');
         }
 
@@ -207,6 +204,21 @@ class InstructorQuizzesService extends QuizzesService {
         const quiz = await this.fetchQuizWithContext(quizId);
 
         this.ensureInstructorQuizAccess(quiz, userId, userRole);
+
+        // Prevent publishing if quiz has no questions
+        if (isPublished) {
+            // quiz.questionItems may be undefined if not included, so fetch with questions if needed
+            let questionCount = 0;
+            if (quiz.questionItems && Array.isArray(quiz.questionItems)) {
+                questionCount = quiz.questionItems.length;
+            } else {
+                // fallback: count questions from DB
+                questionCount = await prisma.question.count({ where: { quizId } });
+            }
+            if (questionCount === 0) {
+                throw this.buildBadRequestError('Quiz must have at least one question to be published');
+            }
+        }
 
         const updated = await prisma.quiz.update({
             where: { id: quizId },
@@ -576,6 +588,14 @@ class InstructorQuizzesService extends QuizzesService {
     async deleteQuestion({ quizId, questionId, userId, userRole }) {
         const quiz = await this.fetchQuizWithContext(quizId);
         this.ensureInstructorQuizAccess(quiz, userId, userRole);
+
+        // Count questions in the quiz
+        const questionCount = await prisma.question.count({ where: { quizId } });
+
+        // Prevent deleting the last question if quiz is public
+        if (quiz.isPublished && questionCount === 1) {
+            throw this.buildBadRequestError('Không thể xóa câu hỏi cuối cùng khi câu hỏi ôn tập đang ở trạng thái công khai. Vui lòng ẩn trước khi xóa.');
+        }
 
         const question = await prisma.question.findUnique({
             where: { id: questionId },

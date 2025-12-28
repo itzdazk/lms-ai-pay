@@ -37,9 +37,9 @@ export function QuizDialog({ open, quiz, lessonId, onClose, onSaved }: QuizDialo
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-[#1A1A1A]">
         <DialogHeader>
-          <DialogTitle>{quiz ? 'Chỉnh sửa Quiz' : 'Tạo Quiz mới'}</DialogTitle>
+          <DialogTitle>{quiz ? 'Chỉnh sửa câu hỏi ôn tập' : 'Tạo câu hỏi ôn tập mới'}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-1">
           <QuizForm

@@ -245,13 +245,15 @@ export function useQuizForm(initialQuiz?: Quiz | null) {
             return (
                 formData.title.trim() !== '' ||
                 formData.description.trim() !== '' ||
-                formData.questions.length > 0
+                formData.passingScore !== 70
             )
         }
 
-        // Edit mode - check if any field changed
+        // Edit mode - chỉ so sánh các trường chỉnh sửa được trên form
         return (
-            JSON.stringify(formData) !== JSON.stringify(initialFormData)
+            formData.title !== initialFormData.title ||
+            formData.description !== initialFormData.description ||
+            formData.passingScore !== initialFormData.passingScore
         )
     }, [formData, initialFormData])
 

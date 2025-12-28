@@ -1,4 +1,6 @@
 import { Input } from '../ui/input'
+import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../ui/dark-outline-select-trigger'
+import { Select, SelectValue } from '../ui/select'
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
@@ -20,23 +22,34 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
   const {
     formData,
     updateField,
-    addQuestion,
-    updateQuestion,
-    deleteQuestion,
-    reorderQuestions,
     validate,
     getSubmitData,
+    hasChanges,
   } = useQuizForm(quiz)
 
   const handleSubmit = () => {
-    const errs = validate()
-    const messages = Object.values(errs).filter(Boolean) as string[]
-    if (messages.length) {
-      // basic alert to avoid extra UI deps
-      window.alert(messages.join('\n'))
+    if (!formData.title.trim()) {
+      window.alert('Tiêu đề không được để trống')
       return
     }
-    onSubmit(getSubmitData() as CreateQuizRequest)
+    if (quiz) {
+      // Update mode: chỉ gửi các trường thay đổi cơ bản
+      const updateData: Partial<UpdateQuizRequest> = {};
+      if (formData.title !== quiz.title) updateData.title = formData.title;
+      if (formData.description !== quiz.description) updateData.description = formData.description;
+      if (formData.passingScore !== quiz.passingScore) updateData.passingScore = formData.passingScore;
+      // Nếu có logic sửa câu hỏi, mới gửi questions
+      // if (có sửa câu hỏi) updateData.questions = ...
+      onSubmit(updateData as UpdateQuizRequest);
+    } else {
+      // Create mode: gửi đủ trường
+      const submitData = {
+        ...getSubmitData(),
+        isPublished: false,
+        questions: [],
+      };
+      onSubmit(submitData as CreateQuizRequest);
+    }
   }
 
   return (
@@ -52,41 +65,29 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
         </div>
         <div>
           <Label htmlFor="passingScore">Điểm đạt (%)</Label>
-          <Input
-            id="passingScore"
-            type="number"
-            min={0}
-            max={100}
-            value={formData.passingScore}
-            onChange={(e) => updateField('passingScore', Number(e.target.value))}
-            placeholder="VD: 70"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Checkbox checked={!!formData.isPublished} onCheckedChange={(v) => updateField('isPublished', Boolean(v))} />
-          <Label>Xuất bản</Label>
+          <Select
+            value={String(formData.passingScore)}
+            onValueChange={val => updateField('passingScore', Number(val))}
+          >
+            <DarkOutlineSelectTrigger id="passingScore">
+              <SelectValue placeholder="Chọn điểm đạt" />
+            </DarkOutlineSelectTrigger>
+            <DarkOutlineSelectContent>
+              {[...Array(10)].map((_, i) => {
+                const val = (i + 1) * 10;
+                return (
+                  <DarkOutlineSelectItem key={val} value={String(val)}>
+                    {val}
+                  </DarkOutlineSelectItem>
+                );
+              })}
+            </DarkOutlineSelectContent>
+          </Select>
         </div>
       </div>
-
-      <QuestionsManager
-        questions={formData.questions as QuizQuestion[]}
-        onAdd={addQuestion}
-        onUpdate={(index, patch) => {
-          updateQuestion(index, patch as QuizQuestion)
-        }}
-        onDelete={deleteQuestion}
-        onMove={(from, to) => {
-          if (from === to) return
-          const arr = [...(formData.questions as QuizQuestion[])]
-          const [moved] = arr.splice(from, 1)
-          arr.splice(to, 0, moved)
-          reorderQuestions(arr)
-        }}
-      />
-
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel} disabled={loading}>Hủy</Button>
-        <Button onClick={handleSubmit} disabled={loading}>{quiz ? 'Lưu thay đổi' : 'Tạo Quiz'}</Button>
+        <Button onClick={handleSubmit} disabled={loading || (quiz ? !hasChanges() : false)}>{quiz ? 'Lưu thay đổi' : 'Tạo Quiz'}</Button>
       </div>
     </div>
   )

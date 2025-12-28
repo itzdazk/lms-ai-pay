@@ -302,7 +302,7 @@ export function CourseQuizzesPage() {
                                                     {openLessonQuiz === lesson.id && (
                                                         <div className="w-full mt-4">
                                                             {/* Inline quiz management UI for this lesson */}
-                                                            <QuizzesPage key={lesson.id} lessonId={lesson.id} />
+                                                            <QuizzesPage key={lesson.id} lessonId={lesson.id} lessonTitle={lesson.title} />
                                                         </div>
                                                     )}
                                                 </div>
