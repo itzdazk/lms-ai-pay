@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
+import { DarkOutlineInput } from '../../components/ui/dark-outline-input'
 import {
     Plus,
     Loader2,
@@ -15,6 +16,7 @@ import {
     CheckCircle,
     ChevronUp,
     ChevronDown,
+    EyeOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -31,6 +33,7 @@ import { instructorQuizzesApi } from '../../lib/api/instructor-quizzes'
 import type { Quiz } from '../../lib/api/types'
 import { QuizDialog } from '../../components/instructor/QuizDialog'
 import { QuestionDialog } from '../../components/instructor/QuestionDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 
 interface QuizzesPageState {
     showCreateDialog: boolean
@@ -39,10 +42,12 @@ interface QuizzesPageState {
     showQuestionDialog: boolean
     targetQuizId: number | null
     selectedQuestion: any | null
-}
+    showDeleteQuestionDialog: boolean
+    questionToDelete: { quiz: Quiz, question: any } | null
+};
 
 
-export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
+export function QuizzesPage({ lessonId: propLessonId, lessonTitle }: { lessonId?: number, lessonTitle?: string }) {
     const { user } = useAuth()
     const navigate = useNavigate()
     const params = useParams<{ lessonId: string }>()
@@ -57,6 +62,8 @@ export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
         showQuestionDialog: false,
         targetQuizId: null,
         selectedQuestion: null,
+        showDeleteQuestionDialog: false,
+        questionToDelete: null,
     })
     const [searchQuery, setSearchQuery] = useState('')
     // no local deleting state needed
@@ -90,7 +97,7 @@ export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
             await instructorQuizzesApi.publishQuiz(quiz.id, !quiz.isPublished)
             await refetch()
             toast.success(
-                quiz.isPublished ? 'Quiz đã được ẩn' : 'Quiz đã được công khai'
+                quiz.isPublished ? 'Câu hỏi ôn tập đã được ẩn' : 'Câu hỏi ôn tập đã được xuất bản'
             )
         } catch (error) {
             toast.error('Lỗi cập nhật trạng thái quiz')
@@ -102,9 +109,9 @@ export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
         try {
             await instructorQuizzesApi.deleteQuiz(quizId)
             await refetch()
-            toast.success('Quiz đã được xóa')
+            toast.success('Câu hỏi ôn tập đã được xóa')
         } catch (error) {
-            toast.error('Lỗi xóa quiz')
+            toast.error('Lỗi xóa câu hỏi ôn tập')
             console.error('Error deleting quiz:', error)
         }
     }
@@ -147,22 +154,32 @@ export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
         }))
     }
 
-    const handleDeleteQuestion = async (quiz: Quiz, question: any) => {
-        const ok = window.confirm('Bạn có chắc muốn xóa câu hỏi này?')
-        if (!ok) return
-        const questionId = question?.id ?? question?.questionId
-        if (!questionId) {
-            toast.error('Không xác định được ID câu hỏi — cần lưu câu hỏi trước khi xóa')
-            return
+    const handleDeleteQuestion = (quiz: Quiz, question: any) => {
+        setPageState((prev) => ({
+            ...prev,
+            showDeleteQuestionDialog: true,
+            questionToDelete: { quiz, question },
+        }))
+    }
+
+    const confirmDeleteQuestion = async () => {
+        const { quiz, question } = pageState.questionToDelete || {};
+        const questionId = question?.id ?? question?.questionId;
+        if (!quiz || !questionId) {
+            toast.error('Không xác định được ID câu hỏi — cần lưu câu hỏi trước khi xóa');
+            setPageState((prev) => ({ ...prev, showDeleteQuestionDialog: false, questionToDelete: null }));
+            return;
         }
         try {
-            await instructorQuizzesApi.deleteQuestion(quiz.id, Number(questionId))
-            await refetch()
-            toast.success('Đã xóa câu hỏi')
+            await instructorQuizzesApi.deleteQuestion(quiz.id, Number(questionId));
+            await refetch();
+            toast.success('Đã xóa câu hỏi');
         } catch (e: any) {
-            const message = e?.response?.data?.message || 'Xóa câu hỏi thất bại'
-            toast.error(message)
-            console.error('Delete question failed', e)
+            const message = e?.response?.data?.message || 'Xóa câu hỏi thất bại';
+            toast.error(message);
+            console.error('Delete question failed', e);
+        } finally {
+            setPageState((prev) => ({ ...prev, showDeleteQuestionDialog: false, questionToDelete: null }));
         }
     }
 
@@ -251,18 +268,18 @@ export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
                 <CardHeader>
                     <div>
                         <CardTitle className="text-white text-2xl mb-2">Quản lý câu hỏi</CardTitle>
-                        <p className="text-gray-400">Quản lý câu hỏi cho bài học của bạn</p>
+                        <p className="text-gray-400">Quản lý câu hỏi cho bài học: <span className="font-semibold text-blue-400">{lessonTitle || '...'}</span></p>
                     </div>
                 </CardHeader>
                 <CardContent>
                     {/* Search */}
                     <div className="mb-6">
-                        <input
+                        <DarkOutlineInput
                             type="text"
                             placeholder="Tìm kiếm quiz..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-4 py-2 rounded-lg bg-gray-700 text-white placeholder-gray-400 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                            className="w-full px-4 py-2 rounded-lg"
                         />
                     </div>
 
@@ -353,6 +370,28 @@ export function QuizzesPage({ lessonId: propLessonId }: { lessonId?: number }) {
                     setPageState((p) => ({ ...p, showQuestionDialog: false, targetQuizId: null, selectedQuestion: null }))
                 }}
             />
+            <Dialog open={pageState.showDeleteQuestionDialog} onOpenChange={(open) => !open && setPageState((prev) => ({ ...prev, showDeleteQuestionDialog: false, questionToDelete: null }))}>
+                <DialogContent className="bg-[#1A1A1A]">
+                    <DialogHeader>
+                        <DialogTitle className="text-white">Xác nhận xóa câu hỏi</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-2 text-gray-300">Bạn có chắc chắn muốn xóa câu hỏi này? Thao tác này không thể hoàn tác.</div>
+                    <div className="flex gap-3 mt-4">
+                        <button
+                            className="flex-1 py-2 rounded bg-gray-700 text-white hover:bg-gray-600"
+                            onClick={() => setPageState((prev) => ({ ...prev, showDeleteQuestionDialog: false, questionToDelete: null }))}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            className="flex-1 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                            onClick={confirmDeleteQuestion}
+                        >
+                            Xóa câu hỏi
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
@@ -388,7 +427,7 @@ function QuizCard({
     onMoveQuestionDown,
 }: QuizCardProps) {
     return (
-        <Card className="border-gray-700 bg-gray-800 hover:bg-gray-750 transition-colors">
+        <Card className="border-gray-700 bg-[#1A1A1A] transition-colors">
             <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                     {/* Quiz Info */}
@@ -399,12 +438,13 @@ function QuizCard({
                             </h3>
                             {quiz.isPublished ? (
                                 <Badge className="bg-green-600 text-white">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Công khai
+                                    <Eye className="h-3 w-3 mr-1 text-white" />
+                                    Xuất bản
                                 </Badge>
                             ) : (
-                                <Badge className="bg-yellow-600 text-white">
-                                    Nháp
+                                <Badge className="bg-gray-500 text-white">
+                                    <EyeOff className="h-3 w-3 mr-1 text-white" />
+                                    Ẩn
                                 </Badge>
                             )}
                         </div>
@@ -436,7 +476,10 @@ function QuizCard({
                             <div className="mt-4 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <p className="text-sm text-gray-300 font-semibold">Câu hỏi & đáp án</p>
-                                    <Button size="sm" variant="secondary" onClick={onAddQuestion}>Thêm câu hỏi</Button>
+                                    <Button variant="blue" onClick={onAddQuestion}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Thêm câu hỏi
+                                        </Button>
                                 </div>
                                 <div className="space-y-2">
                                     {quiz.questions.map((q: any, idx: number) => (
@@ -488,11 +531,11 @@ function QuizCard({
                                                     Đáp án: <span className="font-semibold text-white">{q.correctAnswer}</span>
                                                 </div>
                                             )}
-                                            <div className="mt-2 flex items-center justify-between">
+                                            <div className="mt-2">
                                                 {q.explanation ? (
-                                                    <div className="text-xs text-gray-400">Giải thích: {q.explanation}</div>
-                                                ) : <div />}
-                                                <div className="flex items-center gap-2">
+                                                    <div className="text-base text-blue-300 font-semibold bg-[#232b3b] rounded px-3 py-2 mb-2">Giải thích: {q.explanation}</div>
+                                                ) : null}
+                                                <div className="flex items-center gap-2 justify-end">
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
@@ -509,11 +552,11 @@ function QuizCard({
                                                     >
                                                         <ChevronDown className="h-4 w-4" />
                                                     </Button>
+                                                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onEditQuestion(q)}>
+                                                        <Edit className="h-4 w-4 mr-1" /> Chỉnh sửa
+                                                    </Button>
                                                     <Button size="sm" variant="destructive" onClick={() => onDeleteQuestion(q)}>
                                                         <Trash2 className="h-4 w-4 mr-1" /> Xóa
-                                                    </Button>
-                                                    <Button size="sm" variant="outline" onClick={() => onEditQuestion(q)}>
-                                                        <Edit className="h-4 w-4 mr-1" /> Chỉnh sửa
                                                     </Button>
                                                 </div>
                                             </div>
@@ -523,8 +566,11 @@ function QuizCard({
                             </div>
                         )}
                         {(!Array.isArray(quiz.questions) || quiz.questions.length === 0) && (
-                            <div className="mt-4">
-                                <Button size="sm" variant="secondary" onClick={onAddQuestion}>Thêm câu hỏi</Button>
+                            <div className="mt-4 flex justify-center">
+                                <Button variant="blue" onClick={onAddQuestion}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Thêm câu hỏi
+                                </Button>
                             </div>
                         )}
                     </div>
@@ -540,42 +586,40 @@ function QuizCard({
                                 <MoreVertical className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-gray-700 border-gray-600">
-                            <DropdownMenuLabel className="text-gray-400">
-                                Hành động
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-gray-600" />
+                        <DropdownMenuContent className="bg-[#181818] text-white border-[#222]">
+                            <DropdownMenuSeparator className="bg-[#222]" />
                             <DropdownMenuItem
                                 onClick={onEdit}
-                                className="text-gray-100 cursor-pointer hover:bg-gray-600"
+                                className="hover:bg-[#222]"
                             >
-                                <Edit className="h-4 w-4 mr-2" />
+                                <Edit className="h-4 w-4 mr-2 text-blue-500" />
                                 Chỉnh sửa
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={onViewAnalytics}
-                                className="text-gray-100 cursor-pointer hover:bg-gray-600"
-                            >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Xem analytics
-                            </DropdownMenuItem>
+                            
                             <DropdownMenuItem
                                 onClick={onPublishToggle}
-                                className="text-gray-100 cursor-pointer hover:bg-gray-600"
+                                className="hover:bg-[#222]"
                             >
-                                {quiz.isPublished ? 'Ẩn' : 'Công khai'}
+                                {quiz.isPublished ? (
+                                    <>
+                                        <Eye className="h-4 w-4 mr-2 text-green-400" />Ẩn
+                                    </>
+                                ) : (
+                                    <>
+                                        <EyeOff className="h-4 w-4 mr-2 text-gray-400" />Xuất bản
+                                    </>
+                                )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={onDuplicate}
-                                className="text-gray-100 cursor-pointer hover:bg-gray-600"
+                                className="hover:bg-[#222]"
                             >
-                                <Copy className="h-4 w-4 mr-2" />
+                                <Copy className="h-4 w-4 mr-2 text-yellow-400" />
                                 Nhân bản
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-gray-600" />
                             <DropdownMenuItem
                                 onClick={onDelete}
-                                className="text-red-400 cursor-pointer hover:bg-gray-600 focus:bg-gray-600 focus:text-red-400"
+                                className="text-red-500 hover:bg-[#222] focus:bg-[#222] focus:text-red-500"
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Xóa

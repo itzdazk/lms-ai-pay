@@ -108,7 +108,7 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-[#1A1A1A]">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi'}</DialogTitle>
         </DialogHeader>

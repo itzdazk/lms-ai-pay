@@ -94,8 +94,9 @@ const createLessonQuizValidator = [
         .isString()
         .withMessage('Description must be a string'),
     body('questions')
-        .isArray({ min: 1 })
-        .withMessage('Questions must be a non-empty array'),
+        .optional()
+        .isArray()
+        .withMessage('Questions must be an array'),
     body('passingScore')
         .isInt({ min: 0, max: 100 })
         .withMessage('Passing score must be between 0 and 100'),

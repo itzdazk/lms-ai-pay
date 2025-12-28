@@ -121,11 +121,6 @@ export function LessonItem({
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-[#181818] text-white border-[#222]">
-                                    
-                                        <DropdownMenuItem onClick={onManageQuiz}>
-                                            <FileQuestion className="h-4 w-4 mr-2 text-blue-400" />Quản lý câu hỏi ôn tập
-                                        </DropdownMenuItem>
-                               
                                     <DropdownMenuItem onClick={onEdit}>
                                         <Edit className="h-4 w-4 mr-2 text-blue-500" />Chỉnh sửa bài học
                                     </DropdownMenuItem>
