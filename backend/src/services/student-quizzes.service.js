@@ -256,6 +256,21 @@ class StudentQuizzesService extends QuizzesService {
             },
         });
 
+        // Nếu đạt điểm qua, cập nhật progress.quizCompleted=true
+        if (isPassed && quiz.lessonId) {
+            await prisma.progress.updateMany({
+                where: {
+                    userId,
+                    lessonId: quiz.lessonId,
+                    isCompleted: true,
+                    quizCompleted: false,
+                },
+                data: {
+                    quizCompleted: true,
+                },
+            });
+        }
+
         logger.info(
             `User ${userId} submitted quiz ${quizId} (score: ${grading.score})`
         );

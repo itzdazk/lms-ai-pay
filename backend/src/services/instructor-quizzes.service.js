@@ -190,11 +190,26 @@ class InstructorQuizzesService extends QuizzesService {
 
         this.ensureInstructorQuizAccess(quiz, userId, userRole);
 
+        // Lấy lessonId trước khi xóa quiz
+        const lessonId = quiz.lessonId;
+
         await prisma.quiz.delete({
             where: { id: quizId },
         });
 
-        logger.info(`Instructor ${userId} deleted quiz ${quizId}`);
+        // Sau khi xóa quiz, cập nhật progress: nếu isCompleted=true thì set quizCompleted=true
+        await prisma.progress.updateMany({
+            where: {
+                lessonId,
+                isCompleted: true,
+                quizCompleted: false,
+            },
+            data: {
+                quizCompleted: true,
+            },
+        });
+
+        logger.info(`Instructor ${userId} deleted quiz ${quizId} and updated related progress records`);
     }
 
     /**
@@ -227,9 +242,23 @@ class InstructorQuizzesService extends QuizzesService {
             },
         });
 
-        logger.info(
-            `Instructor ${userId} set quiz ${quizId} publish status to ${isPublished}`
-        );
+        // Nếu chuyển sang ẩn (isPublished=false), cập nhật progress: nếu isCompleted=true thì set quizCompleted=true
+        if (!isPublished) {
+            const lessonId = quiz.lessonId;
+            await prisma.progress.updateMany({
+                where: {
+                    lessonId,
+                    isCompleted: true,
+                    quizCompleted: false,
+                },
+                data: {
+                    quizCompleted: true,
+                },
+            });
+            logger.info(`Instructor ${userId} unpublished quiz ${quizId} and updated related progress records`);
+        } else {
+            logger.info(`Instructor ${userId} set quiz ${quizId} publish status to ${isPublished}`);
+        }
 
         const refreshed = await this.fetchQuizWithContext(updated.id);
 

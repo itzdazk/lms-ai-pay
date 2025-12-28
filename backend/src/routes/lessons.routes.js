@@ -8,6 +8,7 @@ import {
 } from '../validators/lessons.validator.js'
 import { authenticate } from '../middlewares/authenticate.middleware.js'
 import { isEnrolledOrInstructorOrAdmin } from '../middlewares/role.middleware.js'
+import { restrictLessonAccess } from '../middlewares/lesson.middleware.js'
 
 const router = express.Router()
 
@@ -23,6 +24,7 @@ router.get(
     '/:id',
     getLessonByIdValidator,
     isEnrolledOrInstructorOrAdmin('id'),
+    restrictLessonAccess,
     lessonsController.getLessonById
 )
 
@@ -35,6 +37,7 @@ router.get(
     '/:id/video',
     getLessonVideoValidator,
     isEnrolledOrInstructorOrAdmin('id'),
+    restrictLessonAccess,
     lessonsController.getLessonVideo
 )
 
@@ -47,6 +50,7 @@ router.get(
     '/:id/transcript',
     getLessonTranscriptValidator,
     isEnrolledOrInstructorOrAdmin('id'),
+    restrictLessonAccess,
     lessonsController.getLessonTranscript
 )
 

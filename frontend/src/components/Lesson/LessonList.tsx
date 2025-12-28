@@ -11,6 +11,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import type { Lesson, Chapter, Quiz } from '../../lib/api/types';
 import { quizzesApi } from '../../lib/api/quizzes';
+import { progressApi, LessonQuizProgress } from '../../lib/api/progress';
 
 interface LessonListProps {
   lessons: Lesson[];
@@ -49,7 +50,10 @@ export function LessonList({
   const isDark = theme === 'dark';
   const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
   const [loadingQuizzes, setLoadingQuizzes] = useState<Record<number, boolean>>({});
+  const [lessonQuizCompleted, setLessonQuizCompleted] = useState<Record<number, boolean>>({});
+  const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, LessonQuizProgress>>({});
 
+  // ...existing code...
   // Fetch quizzes for all lessons
   useEffect(() => {
     const fetchQuizzesForLessons = async () => {
@@ -73,6 +77,25 @@ export function LessonList({
       fetchQuizzesForLessons();
     }
   }, [lessons]);
+
+  // Fetch lesson/quiz progress for LessonList UI
+  useEffect(() => {
+    async function fetchLessonQuizProgress() {
+      if (!_courseId) return;
+      try {
+        const progressList = await progressApi.getCourseLessonProgressList(_courseId);
+        const progressMap: Record<number, LessonQuizProgress> = {};
+        progressList.forEach((p) => {
+          progressMap[p.lessonId] = p;
+        });
+        setLessonQuizProgress(progressMap);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch lesson/quiz progress:', err);
+      }
+    }
+    fetchLessonQuizProgress();
+  }, [_courseId]);
 
   // Format duration from seconds to readable format
   const formatDuration = (seconds?: number): string => {
@@ -252,10 +275,12 @@ export function LessonList({
                           const globalIndex = getLessonGlobalIndex(lesson);
                           const lessonNumber = globalIndex + 1;
                           const isSelected = selectedLessonId === lesson.id;
-                          const isCompleted = completedLessonIds.includes(lesson.id);
                           const isLocked = isLessonLocked(lesson, globalIndex, allLessons);
                           const quizzes = lessonQuizzes[lesson.id] || [];
-
+                          // Lấy trạng thái hoàn thành bài học và quiz từ lessonQuizProgress
+                          const progress = lessonQuizProgress[lesson.id];
+                          const isCompleted = progress ? progress.isCompleted : false;
+                          const quizCompleted = progress ? progress.quizCompleted : false;
                           const hasActiveQuiz = quizzes.some((quiz) => activeQuizId && quiz.id === activeQuizId);
                           return (
                             <div key={lesson.id} className="space-y-1">
@@ -285,7 +310,7 @@ export function LessonList({
                                     <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
                                       <Lock className="h-2.5 w-2.5 text-gray-500" />
                                     </div>
-                                  ) : isCompleted ? (
+                                  ) : (isCompleted && quizCompleted) ? (
                                     <div className="w-5 h-5 rounded-full bg-green-600/20 flex items-center justify-center">
                                       <CheckCircle className="h-3 w-3 text-green-500" />
                                     </div>
@@ -327,13 +352,13 @@ export function LessonList({
                                 <div className=" space-y-1 ">
                                   {quizzes.map((quiz) => {
                                     const isQuizActive = activeQuizId && quiz.id === activeQuizId;
-                                    // Quiz chỉ mở khi lesson đã hoàn thành
+                                    // Quiz chỉ mở khi lesson đã hoàn thành và quizCompleted
                                     return (
                                       <div
                                         key={quiz.id}
-                                        onClick={isCompleted ? () => onQuizSelect(quiz) : undefined}
+                                        onClick={isCompleted && quizCompleted ? () => onQuizSelect(quiz) : undefined}
                                         className={`flex items-center gap-2 p-2 transition-colors border border-blue-500/30 ${
-                                          !isCompleted
+                                          !(isCompleted && quizCompleted)
                                             ? 'opacity-50 cursor-not-allowed'
                                             : isQuizActive
                                               ? 'bg-blue-600/20 border border-blue-600 cursor-pointer'
@@ -344,7 +369,7 @@ export function LessonList({
                                       >
                                         {/* Status icon cho quiz giống lesson */}
                                         <div className="flex-shrink-0">
-                                          {!isCompleted ? (
+                                          {!(isCompleted && quizCompleted) ? (
                                             <div className="w-5 h-5 rounded-full border-2 border-[#2D2D2D] flex items-center justify-center">
                                               <Lock className="h-2.5 w-2.5 text-gray-500" />
                                             </div>

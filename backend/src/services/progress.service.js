@@ -5,6 +5,38 @@ import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js';
 import notificationsService from './notifications.service.js';
 
 class ProgressService {
+        /**
+         * Get progress status for all lessons in a course (for LessonList UI)
+         * Returns: [{ lessonId, isCompleted, quizCompleted }]
+         */
+        async getCourseLessonProgressList(userId, courseId) {
+            // Lấy tất cả lesson thuộc course
+            const lessons = await prisma.lesson.findMany({
+                where: { courseId, isPublished: true },
+                select: { id: true },
+                orderBy: { lessonOrder: 'asc' },
+            });
+
+            // Lấy progress của user cho các lesson này
+            const progresses = await prisma.progress.findMany({
+                where: {
+                    userId,
+                    lessonId: { in: lessons.map(l => l.id) },
+                },
+                select: { lessonId: true, isCompleted: true, quizCompleted: true },
+            });
+            const progressMap = new Map(progresses.map(p => [p.lessonId, p]));
+
+            // Kết hợp lesson và progress
+            return lessons.map(lesson => {
+                const p = progressMap.get(lesson.id);
+                return {
+                    lessonId: lesson.id,
+                    isCompleted: p ? p.isCompleted : false,
+                    quizCompleted: p ? (p.quizCompleted ?? false) : false,
+                };
+            });
+        }
     /**
      * Get course progress for a user
      * Auto-calculates progress percentage based on completed lessons
@@ -81,13 +113,23 @@ class ProgressService {
                 ...lesson,
                 progress: progress
                     ? {
+                          lessonId: lesson.id,
                           isCompleted: progress.isCompleted,
+                          quizCompleted: progress.quizCompleted ?? false,
                           completedAt: progress.completedAt,
                           watchDuration: progress.watchDuration,
                           lastPosition: progress.lastPosition,
                           attemptsCount: progress.attemptsCount,
                       }
-                    : null,
+                    : {
+                          lessonId: lesson.id,
+                          isCompleted: false,
+                          quizCompleted: false,
+                          completedAt: null,
+                          watchDuration: 0,
+                          lastPosition: 0,
+                          attemptsCount: 0,
+                      },
             };
         });
 
@@ -316,24 +358,28 @@ class ProgressService {
         });
 
         const updateData = {};
-        let newWatchDuration = currentProgress?.watchDuration ?? 0;
         if (position !== undefined) {
             updateData.lastPosition = position;
             // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
+            let newWatchDuration = currentProgress === null || position > (currentProgress.watchDuration ?? 0)
+                ? position
+                : currentProgress.watchDuration;
             if (currentProgress === null || position > (currentProgress.watchDuration ?? 0)) {
                 updateData.watchDuration = position;
-                newWatchDuration = position;
             }
-        }
+                        // Tự động đánh dấu completed nếu đã xem >= 70% video
+                        if (lesson.videoDuration && newWatchDuration >= lesson.videoDuration * 0.7) {
+                                updateData.isCompleted = true;
+                                updateData.completedAt = new Date();
 
-        // Tự động completed nếu watchDuration >= 70% videoDuration
-        const videoDuration = lesson.videoDuration || 0;
-        if (
-            videoDuration > 0 &&
-            newWatchDuration >= Math.floor(videoDuration * 0.7)
-        ) {
-            updateData.isCompleted = true;
-            updateData.completedAt = new Date();
+                                // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
+                                const quiz = await prisma.quiz.findUnique({
+                                    where: { lessonId: lesson.id },
+                                });
+                                if (!quiz || quiz.isPublished === false) {
+                                    updateData.quizCompleted = true;
+                                }
+                        }
         }
 
         const progress = await prisma.progress.upsert({
@@ -414,9 +460,8 @@ class ProgressService {
             throw error;
         }
 
-
-        // Lấy progress hiện tại
-        const currentProgress = await prisma.progress.findUnique({
+        // Kiểm tra watchDuration đã đủ 70% videoDuration chưa
+        const progressRecord = await prisma.progress.findUnique({
             where: {
                 userId_lessonId: {
                     userId,
@@ -424,14 +469,19 @@ class ProgressService {
                 },
             },
         });
-        const watchDuration = currentProgress?.watchDuration ?? 0;
         const videoDuration = lesson.videoDuration || 0;
-        if (videoDuration > 0 && watchDuration < Math.floor(videoDuration * 0.7)) {
-            const error = new Error('Bạn cần xem ít nhất 70% thời lượng video để hoàn thành bài học này.');
-            error.statusCode = 400;
+        const watched = progressRecord?.watchDuration || 0;
+        if (!videoDuration || watched < videoDuration * 0.7) {
+            const error = new Error('Bạn cần xem ít nhất 70% video để hoàn thành bài học này.');
+            error.statusCode = HTTP_STATUS.FORBIDDEN;
             throw error;
         }
-
+        // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
+        let quizCompleted = false;
+        const quiz = await prisma.quiz.findUnique({ where: { lessonId: lesson.id } });
+        if (!quiz || quiz.isPublished === false) {
+            quizCompleted = true;
+        }
         // Update or create progress record as completed
         const progress = await prisma.progress.upsert({
             where: {
@@ -446,10 +496,12 @@ class ProgressService {
                 courseId: lesson.courseId,
                 isCompleted: true,
                 completedAt: new Date(),
+                quizCompleted,
             },
             update: {
                 isCompleted: true,
                 completedAt: new Date(),
+                quizCompleted,
             },
         });
 

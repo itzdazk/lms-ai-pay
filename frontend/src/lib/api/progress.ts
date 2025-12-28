@@ -14,6 +14,12 @@ export interface LessonProgress {
     attemptsCount: number
 }
 
+export interface LessonQuizProgress {
+    lessonId: number;
+    isCompleted: boolean;
+    quizCompleted: boolean;
+}
+
 export const progressApi = {
     // Lấy tiến độ bài học
     async getLessonProgress(lessonId: string | number): Promise<LessonProgress> {
@@ -42,4 +48,10 @@ export const progressApi = {
         const response = await apiClient.post<ApiResponse<LessonProgress>>(`/progress/lessons/${lessonId}/complete`)
         return response.data.data
     },
+
+    // Lấy trạng thái lesson/quiz cho LessonList UI
+    async getCourseLessonProgressList(courseId: string | number): Promise<LessonQuizProgress[]> {
+        const response = await apiClient.get<ApiResponse<LessonQuizProgress[]>>(`/progress/courses/${courseId}/lesson-progress`);
+        return response.data.data;
+    }
 }

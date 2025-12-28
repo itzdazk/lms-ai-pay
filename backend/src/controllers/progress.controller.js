@@ -5,6 +5,17 @@ import progressService from '../services/progress.service.js';
 import { ENROLLMENT_STATUS } from '../config/constants.js';
 
 class ProgressController {
+
+        /**
+         * Get progress status for all lessons in a course (for LessonList UI)
+         * GET /api/v1/progress/courses/:courseId/lesson-progress
+         */
+        getCourseLessonProgressList = asyncHandler(async (req, res) => {
+            const { courseId } = req.params;
+            const userId = req.user.id;
+            const result = await progressService.getCourseLessonProgressList(userId, parseInt(courseId));
+            return ApiResponse.success(res, result, 'Course lesson progress list retrieved successfully');
+        });
     /**
      * Get course progress
      * GET /api/v1/progress/courses/:courseId
