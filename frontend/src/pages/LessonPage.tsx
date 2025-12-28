@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { DarkOutlineButton } from '../components/ui/buttons';
@@ -14,7 +14,7 @@ import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
 import { QuizTaking } from '../components/Quiz/QuizTaking';
-import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
+import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi, progressApi } from '../lib/api';
 import { useQuizTaking } from '../hooks/useQuiz';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -62,6 +62,7 @@ export function LessonPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
+  const [watchedDuration, setWatchedDuration] = useState(0); // tổng thời lượng đã xem lấy từ backend
   
   // Quiz state
     const [showQuiz, setShowQuiz] = useState(false);
@@ -73,7 +74,8 @@ export function LessonPage() {
   // Quiz hook
   const quizHook = useQuizTaking();
   
-  const progressSaveTimeoutRef = useRef<number | null>(null);
+  const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isPlayingRef = useRef(false);
   const previousCourseSlugRef = useRef<string | null>(null);
   const subtitleBlobUrlRef = useRef<string | null>(null);
   const { currentChapter, currentChapterLessonIds } = useMemo(() => {
@@ -350,10 +352,12 @@ export function LessonPage() {
         // Load progress for this lesson (if enrolled)
         if (enrollment) {
           try {
-            // TODO: Load lesson progress from progress API
-            // For now, we'll use enrollment progress
-            // const progress = await progressApi.getLessonProgress(selectedLesson.id);
-            // setInitialVideoTime(progress.lastPosition || 0);
+            const progress = await progressApi.getLessonProgress(selectedLesson.id);
+            setInitialVideoTime(progress.lastPosition || 0);
+            setWatchedDuration(progress.watchDuration || 0);
+            // Log watchedDuration từ backend
+            // eslint-disable-next-line no-console
+            console.log('[LessonPage] watchedDuration từ backend:', progress.watchDuration);
           } catch (error) {
             // Ignore progress errors
           }
@@ -463,34 +467,60 @@ export function LessonPage() {
   }, [selectedLesson?.id, courseSlug]);
 
   // Handle video time update (auto-save progress)
-  const handleTimeUpdate = (currentTime: number) => {
-    setCurrentTime(currentTime);
-    // Auto-save progress every 10 seconds
-    if (progressSaveTimeoutRef.current) {
-      clearTimeout(progressSaveTimeoutRef.current);
-    }
-    progressSaveTimeoutRef.current = setTimeout(() => {
+  // Đã loại bỏ toàn bộ logic viewedSegments
+  const videoCurrentTimeRef = useRef<(() => number) | null>(null);
+  const handleTimeUpdate = useCallback((time: number, _duration?: number) => {
+    setCurrentTime(time);
+  }, []);
+
+  // Thêm các hàm xử lý play/pause
+  const handlePlay = useCallback(() => {
+    isPlayingRef.current = true;
+    if (progressSaveIntervalRef.current) clearInterval(progressSaveIntervalRef.current);
+    progressSaveIntervalRef.current = setInterval(async () => {
       if (selectedLesson && enrollment) {
-        // TODO: Save progress to API
-        // await progressApi.updateLessonProgress(selectedLesson.id, {
-        //   position: currentTime,
-        //   watchDuration: currentTime,
-        // });
+        try {
+          const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
+          const payload: any = {
+            position,
+          };
+          console.log('[Progress] Gửi updateLessonProgress:', {
+            lessonId: selectedLesson.id,
+            ...payload,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+          const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+          if (typeof updatedProgress?.watchDuration === 'number') {
+            setWatchedDuration(updatedProgress.watchDuration);
+          }
+        } catch (err) {}
       }
     }, 10000);
-  };
+  }, [selectedLesson, enrollment, currentTime]);
+
+  const handlePause = useCallback(() => {
+    isPlayingRef.current = false;
+    if (progressSaveIntervalRef.current) {
+      clearInterval(progressSaveIntervalRef.current);
+      progressSaveIntervalRef.current = null;
+    }
+  }, []);
 
   // Handle video ended
-  const handleVideoEnded = () => {
+  const handleVideoEnded = useCallback(async () => {
     if (selectedLesson && enrollment) {
-      // TODO: Mark lesson as completed
-      // await progressApi.completeLesson(selectedLesson.id);
+      try {
+        await progressApi.completeLesson(selectedLesson.id);
+      } catch (err) {}
       if (!completedLessonIds.includes(selectedLesson.id)) {
-        setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+        setCompletedLessonIds((prev) => [...prev, selectedLesson.id]);
       }
     }
-  };
-
+    if (progressSaveIntervalRef.current) {
+      clearInterval(progressSaveIntervalRef.current);
+      progressSaveIntervalRef.current = null;
+    }
+  }, [selectedLesson, enrollment, completedLessonIds]);
 
   // Handle transcript time click
   const handleTranscriptTimeClick = (time: number) => {
@@ -695,7 +725,7 @@ export function LessonPage() {
       {/* Top Bar */}
       <div className="bg-black border-b border-[#2D2D2D] flex-shrink-0 z-50">
         <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between gap-1 sm:gap-2">
+          <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-3">
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 min-w-0">
               <DarkOutlineButton
                 size="icon"
@@ -1005,11 +1035,16 @@ export function LessonPage() {
                     videoUrl={videoUrl}
                     subtitleUrl={subtitleUrl}
                     onTimeUpdate={handleTimeUpdate}
+                    getCurrentTime={(fn) => { videoCurrentTimeRef.current = fn; }}
                     onEnded={handleVideoEnded}
                     initialTime={initialVideoTime}
                     seekTo={seekTo}
+                    className="lesson-video-player"
                     title={selectedLesson?.title}
                     showSidebar={showSidebar}
+                    onPlay={handlePlay}
+                    onPause={handlePause}
+                    watchedDuration={watchedDuration}
                   />
                 </Card>
 

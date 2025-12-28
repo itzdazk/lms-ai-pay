@@ -44,3 +44,4 @@ export type {
     PlatformAnalytics,
 } from './admin-courses'
 export type { CategoryFilters, CategoryCoursesFilters } from './categories'
+export { progressApi } from './progress'
