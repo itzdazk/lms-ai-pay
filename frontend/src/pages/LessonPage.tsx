@@ -1,3 +1,17 @@
+// Debounce helper
+function debounceAsync(fn, delay) {
+  let timeoutId;
+  let lastPromise = Promise.resolve();
+  return (...args) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    let resolveOuter;
+    const outerPromise = new Promise((resolve) => (resolveOuter = resolve));
+    timeoutId = setTimeout(() => {
+      lastPromise = Promise.resolve(fn(...args)).then(resolveOuter);
+    }, delay);
+    return outerPromise;
+  };
+}
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -34,6 +48,10 @@ import { User, Settings, LogOut, LayoutDashboard, GraduationCap, Shield } from '
 import type { Course, Lesson, Enrollment, Chapter, Quiz } from '../lib/api/types';
 
 export function LessonPage() {
+    // Debounced update progress khi seekbar (VideoPlayer)
+    const handleSeek = (time: number) => {
+      debouncedUpdateProgressOnSeek(time);
+    };
   const params = useParams<{ slug: string; lessonSlug?: string }>();
   const courseSlug = params.slug;
   const lessonSlug = params.lessonSlug;
@@ -483,6 +501,7 @@ export function LessonPage() {
           const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
           const payload: any = {
             position,
+            actionType: 'auto',
           };
           console.log('[Progress] Gửi updateLessonProgress:', {
             lessonId: selectedLesson.id,
@@ -498,12 +517,36 @@ export function LessonPage() {
     }, 30000);
   };
 
-  const handlePause = () => {
+  // Debounced update progress khi pause
+  const debouncedUpdateProgress = debounceAsync(async () => {
+    if (selectedLesson && enrollment) {
+      try {
+        const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
+        const payload: any = { position, actionType: 'pause' };
+        console.log('[Progress] Gửi updateLessonProgress (pause):', {
+          lessonId: selectedLesson.id,
+          ...payload,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+        if (typeof updatedProgress?.watchDuration === 'number') {
+          setWatchedDuration(updatedProgress.watchDuration);
+        }
+      } catch (err: any) {
+        if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
+          toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
+        }
+      }
+    }
+  }, 1500);
+
+  const handlePause = async () => {
     isPlayingRef.current = false;
     if (progressSaveIntervalRef.current) {
       clearInterval(progressSaveIntervalRef.current);
       progressSaveIntervalRef.current = null;
     }
+    debouncedUpdateProgress();
   };
 
   // Handle video ended
@@ -523,8 +566,32 @@ export function LessonPage() {
   };
 
   // Handle transcript time click
+
+  // Debounced update progress khi seek
+  const debouncedUpdateProgressOnSeek = debounceAsync(async (seekTime: number) => {
+    if (selectedLesson && enrollment) {
+      try {
+        const payload: any = { position: seekTime, actionType: 'seek' };
+        console.log('[Progress] Gửi updateLessonProgress (seek):', {
+          lessonId: selectedLesson.id,
+          ...payload,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+        if (typeof updatedProgress?.watchDuration === 'number') {
+          setWatchedDuration(updatedProgress.watchDuration);
+        }
+      } catch (err: any) {
+        if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
+          toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
+        }
+      }
+    }
+  }, 1500);
+
   const handleTranscriptTimeClick = (time: number) => {
     setSeekTo(time);
+    debouncedUpdateProgressOnSeek(time);
     // Reset seekTo after a short delay to allow seeking to the same time again if needed
     setTimeout(() => {
       setSeekTo(undefined);
@@ -1045,6 +1112,7 @@ export function LessonPage() {
                     onPlay={handlePlay}
                     onPause={handlePause}
                     watchedDuration={watchedDuration}
+                    onSeek={handleSeek}
                   />
                 </Card>
 
@@ -1092,12 +1160,9 @@ export function LessonPage() {
                           {selectedLesson?.content ? (
                             <div className="text-muted-foreground whitespace-pre-wrap">{selectedLesson.content}</div>
                           ) : (
-                            <ul className="text-muted-foreground">
-                              <li>Khái niệm cơ bản về {selectedLesson?.title}</li>
-                              <li>Cách triển khai và áp dụng vào dự án</li>
-                              <li>Best practices và tips</li>
-                              <li>Bài tập thực hành</li>
-                            </ul>
+                          
+                              <p>{selectedLesson?.description}</p>
+                  
                           )}
                         </div>
                       </CardContent>

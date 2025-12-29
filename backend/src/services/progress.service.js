@@ -372,6 +372,8 @@ class ProgressService {
                         if (lesson.videoDuration && newWatchDuration >= lesson.videoDuration * 0.7) {
                                 updateData.isCompleted = true;
                                 updateData.completedAt = new Date();
+                                // Đảm bảo watchedDuration = videoDuration khi hoàn thành
+                                updateData.watchDuration = lesson.videoDuration;
 
                                 // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
                                 const quiz = await prisma.quiz.findUnique({
@@ -461,22 +463,7 @@ class ProgressService {
             throw error;
         }
 
-        // Kiểm tra watchDuration đã đủ 70% videoDuration chưa
-        const progressRecord = await prisma.progress.findUnique({
-            where: {
-                userId_lessonId: {
-                    userId,
-                    lessonId,
-                },
-            },
-        });
-        const videoDuration = lesson.videoDuration || 0;
-        const watched = progressRecord?.watchDuration || 0;
-        if (!videoDuration || watched < videoDuration * 0.7) {
-            const error = new Error('Bạn cần xem ít nhất 70% video để hoàn thành bài học này.');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
-        }
+        // Bỏ kiểm tra điều kiện xem >= 70% video khi đánh dấu hoàn thành bài học
         // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
         let quizCompleted = false;
         const quiz = await prisma.quiz.findUnique({ where: { lessonId: lesson.id } });
@@ -484,6 +471,7 @@ class ProgressService {
             quizCompleted = true;
         }
         // Update or create progress record as completed
+        // Nếu lesson có videoDuration thì set luôn watchDuration = videoDuration khi hoàn thành
         const progress = await prisma.progress.upsert({
             where: {
                 userId_lessonId: {
@@ -498,11 +486,13 @@ class ProgressService {
                 isCompleted: true,
                 completedAt: new Date(),
                 quizCompleted,
+                watchDuration: lesson.videoDuration || undefined,
             },
             update: {
                 isCompleted: true,
                 completedAt: new Date(),
                 quizCompleted,
+                ...(lesson.videoDuration ? { watchDuration: lesson.videoDuration } : {}),
             },
         });
 
