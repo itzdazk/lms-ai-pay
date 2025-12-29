@@ -75,7 +75,7 @@ export function LessonPage() {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [lessonNotes, setLessonNotes] = useState<string>('');
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
-  const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, { isCompleted: boolean; quizCompleted: boolean }>>({});
+  const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }>>({});
   const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
     // Fetch lesson/quiz progress for all lessons in course
     useEffect(() => {
@@ -83,9 +83,9 @@ export function LessonPage() {
         if (!courseId) return;
         try {
           const progressList = await progressApi.getCourseLessonProgressList(courseId);
-          const progressMap: Record<number, { isCompleted: boolean; quizCompleted: boolean }> = {};
+          const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
           progressList.forEach((p) => {
-            progressMap[p.lessonId] = { isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+            progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
           });
           setLessonQuizProgress(progressMap);
         } catch (err) {
@@ -309,6 +309,7 @@ export function LessonPage() {
 
   // Track previous lesson ID to prevent unnecessary reloads
   const previousLessonIdRef = useRef<number | null>(null);
+  const previousShowQuizRef = useRef<boolean>(false);
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -324,8 +325,20 @@ export function LessonPage() {
   useEffect(() => {
     const loadLessonData = async () => {
       if (!selectedLesson) return;
+      
+      // Skip if showing quiz (video will be loaded when quiz is closed)
+      if (showQuiz) {
+        previousShowQuizRef.current = true;
+        return;
+      }
 
-      // Prevent reload if same lesson ID
+      // Reset previousLessonIdRef when coming back from quiz to force reload
+      if (previousShowQuizRef.current && !showQuiz) {
+        previousLessonIdRef.current = null;
+        previousShowQuizRef.current = false;
+      }
+
+      // Prevent reload if same lesson ID (and not coming back from quiz)
       if (previousLessonIdRef.current === selectedLesson.id) {
         return;
       }
@@ -468,12 +481,16 @@ export function LessonPage() {
     };
 
     loadLessonData();
-  }, [selectedLesson?.id, enrollment]);
+  }, [selectedLesson?.id, enrollment, showQuiz]);
 
   // Handle lesson selection
   const handleLessonSelect = (lesson: Lesson) => {
     setSelectedLesson(lesson);
     setShowQuiz(false); // Hide quiz when selecting a lesson
+    // Reset previousLessonIdRef to force reload when coming back from quiz
+    if (previousLessonIdRef.current === lesson.id) {
+      previousLessonIdRef.current = null;
+    }
     // Update URL without navigation (using slug)
     if (courseSlug && lesson.slug) {
       window.history.pushState({}, '', `/courses/${courseSlug}/lessons/${lesson.slug}`);
@@ -522,6 +539,11 @@ export function LessonPage() {
     setCurrentQuiz(null);
     setQuizState('taking');
     quizHook.resetQuiz();
+    
+    // Reset previousLessonIdRef to force reload video when coming back from quiz
+    if (selectedLesson) {
+      previousLessonIdRef.current = null;
+    }
 
     // Remove quiz param from URL and return to lesson path
     if (courseSlug && selectedLesson?.slug) {
@@ -619,6 +641,15 @@ export function LessonPage() {
     if (selectedLesson && enrollment) {
       try {
         await progressApi.completeLesson(selectedLesson.id);
+        // Refresh lesson/quiz progress to update unlock status
+        if (courseId) {
+          const progressList = await progressApi.getCourseLessonProgressList(courseId);
+          const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
+          progressList.forEach((p) => {
+            progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+          });
+          setLessonQuizProgress(progressMap);
+        }
       } catch (err) {}
       if (!completedLessonIds.includes(selectedLesson.id)) {
         setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
@@ -1217,6 +1248,20 @@ export function LessonPage() {
                     onGoToQuestion={quizHook.goToQuestion}
                     onSubmit={async () => {
                       await quizHook.submitQuiz();
+                      // Refresh lesson/quiz progress after quiz submission to update unlock status
+                      if (courseId) {
+                        try {
+                          const progressList = await progressApi.getCourseLessonProgressList(courseId);
+                          const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
+                          progressList.forEach((p) => {
+                            progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+                          });
+                          setLessonQuizProgress(progressMap);
+                        } catch (err) {
+                          // eslint-disable-next-line no-console
+                          console.error('Failed to refresh progress after quiz submission:', err);
+                        }
+                      }
                     }}
                     onRetry={async () => {
                       await quizHook.resetQuiz();
@@ -1338,6 +1383,7 @@ export function LessonPage() {
               courseId={courseId || undefined}
               courseSlug={courseSlug}
               activeQuizId={showQuiz && quizHook.quiz ? String(quizHook.quiz.id) : undefined}
+              lessonQuizProgress={lessonQuizProgress}
             />
             </div>
               )}
@@ -1413,7 +1459,7 @@ export function LessonPage() {
                   >
                     <ArrowLeft className="h-4 w-4 md:mr-2" />
                     <span className="hidden md:inline">
-                      {prevItem?.type === 'quiz' ? 'Quiz trước' : 'Bài trước'}
+                      {prevItem?.type === 'quiz' ? 'Bài trước' : 'Bài trước'}
                     </span>
                   </DarkOutlineButton>
                   <Button
@@ -1423,7 +1469,7 @@ export function LessonPage() {
                     disabled={!isNextAccessible}
                   >
                     <span className="hidden md:inline">
-                      {nextItem?.type === 'quiz' ? 'Quiz tiếp theo' : 'Bài tiếp theo'}
+                      {nextItem?.type === 'quiz' ? 'Bài tiếp theo' : 'Bài tiếp theo'}
                     </span>
                     <ArrowRight className="h-4 w-4 md:ml-2" />
                   </Button>
