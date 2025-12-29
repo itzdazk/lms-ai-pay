@@ -79,18 +79,19 @@ const restrictLessonAccess = async (req, res, next) => {
             ],
         })
         if (!prevLesson) return next() // First lesson, allow
-        // Check progress of previous lesson
+        // Check progress of previous lesson (phải hoàn thành cả bài học và quiz nếu có)
         const progress = await prisma.progress.findFirst({
             where: {
                 userId,
                 lessonId: prevLesson.id,
                 isCompleted: true,
+                quizCompleted: true,
             },
         })
         if (!progress) {
             return ApiResponse.error(
                 res,
-                'Bạn cần hoàn thành bài học trước để truy cập bài học này.',
+                'Bạn cần hoàn thành bài học và câu hỏi trước để truy cập bài học này.',
                 HTTP_STATUS.FORBIDDEN
             )
         }

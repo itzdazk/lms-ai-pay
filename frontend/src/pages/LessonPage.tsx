@@ -284,14 +284,25 @@ export function LessonPage() {
         setInitialVideoTime(0);
 
         // Load video URL and lesson details (to get both transcriptUrl and transcriptJsonUrl) in parallel
-        const [videoData, lessonDetails] = await Promise.all([
-          lessonsApi.getLessonVideo(selectedLesson.id).catch(() => ({ videoUrl: selectedLesson.videoUrl || '' })),
+        let videoData = { videoUrl: '' };
+        let videoError = false;
+        const [videoResult, lessonDetails] = await Promise.all([
+          lessonsApi.getLessonVideo(selectedLesson.id).catch((err) => {
+            videoError = true;
+            return { videoUrl: '' };
+          }),
           lessonsApi.getLessonById(selectedLesson.id).catch(() => {
             return null;
           }),
         ]);
-
-        setVideoUrl(videoData.videoUrl || selectedLesson.videoUrl || '');
+        videoData = videoResult;
+        if (videoError) {
+          setVideoUrl('');
+          toast.error('Bạn cần hoàn thành bài học trước đó để tiếp tục này.');
+          navigate(-1); // Quay lại trang trước nếu bài học bị khóa
+        } else {
+          setVideoUrl(videoData.videoUrl || '');
+        }
         
         // Update selectedLesson with transcriptJsonUrl only if it's different
         if (lessonDetails) {
