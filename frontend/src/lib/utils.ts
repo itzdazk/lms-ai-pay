@@ -22,3 +22,11 @@ export function formatDateTime(date: string | Date): string {
   });
 }
 
+export function formatPrice(price: number): string {
+  if (price === 0) return 'Miễn phí';
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(price);
+}
+

@@ -300,18 +300,19 @@ class AdminOrderService {
         const now = new Date()
 
         for (let i = 29; i >= 0; i--) {
-            const date = new Date(now)
-            date.setDate(date.getDate() - i)
-            date.setHours(0, 0, 0, 0)
+            // Create date in UTC to match database Timestamptz
+            const targetDate = new Date(now)
+            targetDate.setUTCDate(targetDate.getUTCDate() - i)
+            targetDate.setUTCHours(0, 0, 0, 0)
 
-            const nextDate = new Date(date)
-            nextDate.setDate(nextDate.getDate() + 1)
+            const nextDate = new Date(targetDate)
+            nextDate.setUTCDate(nextDate.getUTCDate() + 1)
 
             const dayData = await prisma.order.aggregate({
                 where: {
                     paymentStatus: PAYMENT_STATUS.PAID,
                     paidAt: {
-                        gte: date,
+                        gte: targetDate,
                         lt: nextDate,
                     },
                 },
@@ -320,7 +321,7 @@ class AdminOrderService {
             })
 
             trend.push({
-                date: date.toISOString().split('T')[0],
+                date: targetDate.toISOString().split('T')[0],
                 revenue: parseFloat(dayData._sum.finalPrice || 0),
                 orders: dayData._count,
             })
