@@ -386,7 +386,6 @@ export default function App() {
                                             element={<QuizzesPage />}
                                         />
                                     </Route>
-<<<<<<< HEAD
                                     <Route
                                         path='/instructor/orders'
                                         element={
