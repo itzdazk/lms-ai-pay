@@ -1,3 +1,4 @@
+
 // src/routes/progress.routes.js
 import express from 'express'
 import progressController from '../controllers/progress.controller.js'
@@ -83,6 +84,17 @@ router.get(
     authenticate,
     getResumePositionValidator,
     progressController.getResumePosition
+)
+
+/**
+ * @route   GET /api/v1/progress/courses/:courseId/lesson-progress
+ * @desc    Get progress status for all lessons in a course (for LessonList UI)
+ * @access  Private
+ */
+router.get(
+    '/courses/:courseId/lesson-progress',
+    authenticate,
+    progressController.getCourseLessonProgressList
 )
 
 export default router
