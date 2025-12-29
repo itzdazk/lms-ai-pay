@@ -28,7 +28,7 @@ import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
 import { QuizTaking } from '../components/Quiz/QuizTaking';
-import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi, progressApi } from '../lib/api';
+import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi, progressApi, quizzesApi } from '../lib/api';
 import { useQuizTaking } from '../hooks/useQuiz';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -76,6 +76,7 @@ export function LessonPage() {
   const [lessonNotes, setLessonNotes] = useState<string>('');
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
   const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, { isCompleted: boolean; quizCompleted: boolean }>>({});
+  const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
     // Fetch lesson/quiz progress for all lessons in course
     useEffect(() => {
       async function fetchLessonQuizProgress() {
@@ -94,6 +95,39 @@ export function LessonPage() {
       }
       fetchLessonQuizProgress();
     }, [courseId]);
+
+  // Fetch quizzes for all lessons
+  useEffect(() => {
+    const fetchQuizzesForLessons = async () => {
+      const allLessons: Lesson[] = [];
+      if (chapters.length > 0) {
+        chapters.forEach((chapter) => {
+          if (chapter.lessons) {
+            allLessons.push(...chapter.lessons);
+          }
+        });
+      } else {
+        allLessons.push(...lessons);
+      }
+
+      if (allLessons.length === 0) return;
+
+      for (const lesson of allLessons) {
+        try {
+          const quizzes = await quizzesApi.getQuizzesByLesson(lesson.id.toString());
+          setLessonQuizzes(prev => ({ ...prev, [lesson.id]: quizzes }));
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`Error fetching quizzes for lesson ${lesson.id}:`, error);
+          setLessonQuizzes(prev => ({ ...prev, [lesson.id]: [] }));
+        }
+      }
+    };
+
+    if (lessons.length > 0 || chapters.length > 0) {
+      fetchQuizzesForLessons();
+    }
+  }, [lessons, chapters]);
   const [loading, setLoading] = useState(true);
   const [lessonNotFound, setLessonNotFound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -111,7 +145,7 @@ export function LessonPage() {
   // Quiz hook
   const quizHook = useQuizTaking();
   
-  const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isPlayingRef = useRef(false);
   const previousCourseSlugRef = useRef<string | null>(null);
   const subtitleBlobUrlRef = useRef<string | null>(null);
@@ -629,10 +663,15 @@ export function LessonPage() {
     }, 100);
   };
 
-  // Navigate to next/previous lesson using slug
-  const navigateToLesson = (direction: 'next' | 'prev') => {
-    if (!selectedLesson) return;
+  // Navigation item type
+  type NavigationItem = 
+    | { type: 'lesson'; lesson: Lesson }
+    | { type: 'quiz'; quiz: Quiz; lesson: Lesson };
 
+  // Build navigation items list (lessons + unlocked quizzes)
+  const buildNavigationItems = useMemo((): NavigationItem[] => {
+    const items: NavigationItem[] = [];
+    
     // Flatten all lessons from chapters
     const allLessons: Lesson[] = [];
     if (chapters.length > 0) {
@@ -645,15 +684,81 @@ export function LessonPage() {
       allLessons.push(...lessons);
     }
 
-    if (allLessons.length === 0) return;
+    // Build navigation items
+    allLessons.forEach((lesson) => {
+      // Add lesson
+      items.push({ type: 'lesson', lesson });
 
-    const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+      // Add quiz if lesson is completed and quiz exists
+      const progress = lessonQuizProgress[lesson.id];
+      const quizzes = lessonQuizzes[lesson.id] || [];
+      
+      if (progress?.isCompleted && quizzes.length > 0) {
+        // Add all quizzes for this lesson (usually just one)
+        quizzes.forEach((quiz) => {
+          items.push({ type: 'quiz', quiz, lesson });
+        });
+      }
+    });
+
+    return items;
+  }, [chapters, lessons, lessonQuizProgress, lessonQuizzes]);
+
+  // Navigate to next/previous item (lesson or quiz)
+  const navigateToItem = (direction: 'next' | 'prev') => {
+    const items = buildNavigationItems;
+    if (items.length === 0) return;
+
+    // Find current item index
+    let currentIndex = -1;
+    
+    if (showQuiz && currentQuiz) {
+      // Currently viewing a quiz
+      currentIndex = items.findIndex(
+        (item) => item.type === 'quiz' && item.quiz.id === currentQuiz.id
+      );
+    } else if (selectedLesson) {
+      // Currently viewing a lesson
+      currentIndex = items.findIndex(
+        (item) => item.type === 'lesson' && item.lesson.id === selectedLesson.id
+      );
+    }
+
     if (currentIndex === -1) return;
 
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (newIndex >= 0 && newIndex < allLessons.length) {
-      handleLessonSelect(allLessons[newIndex]);
+    if (newIndex < 0 || newIndex >= items.length) return;
+
+    const nextItem = items[newIndex];
+    
+    if (nextItem.type === 'lesson') {
+      handleLessonSelect(nextItem.lesson);
+    } else if (nextItem.type === 'quiz') {
+      handleQuizSelect(nextItem.quiz);
     }
+  };
+
+  // Get current navigation item info
+  const getCurrentNavigationInfo = () => {
+    const items = buildNavigationItems;
+    if (items.length === 0) return { currentIndex: -1, totalItems: 0, currentType: null as 'lesson' | 'quiz' | null };
+
+    let currentIndex = -1;
+    let currentType: 'lesson' | 'quiz' | null = null;
+
+    if (showQuiz && currentQuiz) {
+      currentIndex = items.findIndex(
+        (item) => item.type === 'quiz' && item.quiz.id === currentQuiz.id
+      );
+      currentType = 'quiz';
+    } else if (selectedLesson) {
+      currentIndex = items.findIndex(
+        (item) => item.type === 'lesson' && item.lesson.id === selectedLesson.id
+      );
+      currentType = 'lesson';
+    }
+
+    return { currentIndex, totalItems: items.length, currentType };
   };
 
   // Helper function to render menu items based on role
@@ -1232,7 +1337,7 @@ export function LessonPage() {
               totalLessons={totalLessons}
               courseId={courseId || undefined}
               courseSlug={courseSlug}
-              activeQuizId={showQuiz && quizHook.quiz ? quizHook.quiz.id : undefined}
+              activeQuizId={showQuiz && quizHook.quiz ? String(quizHook.quiz.id) : undefined}
             />
             </div>
               )}
@@ -1240,109 +1345,126 @@ export function LessonPage() {
           </div>
 
       {/* Bottom Bar - Navigation */}
-      {selectedLesson && (
-        <div className="bg-black border-t border-[#2D2D2D] fixed bottom-0 left-0 right-0 z-50">
-          <div className="container mx-auto px-4 py-2">
-            <div className="flex items-center justify-between">
-              {/* Notes Button - Left */}
-              <DarkOutlineButton
-                size="sm"
-                onClick={() => setShowNotesDrawer(true)}
-                title="Mở ghi chú"
-              >
-                <PenTool className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline" spellCheck={false}>Thêm ghi chú</span>
-              </DarkOutlineButton>
-              <div className="flex items-center justify-center gap-4 flex-1">
-              <DarkOutlineButton
-                size="sm"
-                onClick={() => navigateToLesson('prev')}
-                disabled={(() => {
-                  const allLessons: Lesson[] = [];
-                  if (chapters.length > 0) {
-                    chapters.forEach((chapter) => {
-                      if (chapter.lessons) {
-                        allLessons.push(...chapter.lessons);
-                      }
-                    });
-                  } else {
-                    allLessons.push(...lessons);
-                  }
-                  const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                  return currentIndex === -1 || currentIndex === 0;
-                })()}
-              >
-                <ArrowLeft className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Bài trước</span>
-              </DarkOutlineButton>
-              <Button
-                variant="blue"
-                size="sm"
-                onClick={() => navigateToLesson('next')}
-                disabled={(() => {
-                  const allLessons: Lesson[] = [];
-                  if (chapters.length > 0) {
-                    chapters.forEach((chapter) => {
-                      if (chapter.lessons) {
-                        allLessons.push(...chapter.lessons);
-                      }
-                    });
-                  } else {
-                    allLessons.push(...lessons);
-                  }
-                  const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                  if (currentIndex === -1 || currentIndex === allLessons.length - 1) return true;
-                  // Kiểm tra trạng thái unlock của bài tiếp theo
-                  const nextLesson = allLessons[currentIndex + 1];
-                  // Nếu là preview thì luôn unlock
-                  if (nextLesson.isPreview) return false;
-                  // Kiểm tra bài hiện tại đã hoàn thành và quizCompleted chưa
-                  const progress = lessonQuizProgress[selectedLesson.id];
-                  if (!progress) return true;
-                  return !(progress.isCompleted && progress.quizCompleted);
-                })()}
-              >
-                <span className="hidden md:inline">Bài tiếp theo</span>
-                <ArrowRight className="h-4 w-4 md:ml-2" />
-              </Button>
-              </div>
-              {/* Toggle Sidebar Button - Right */}
-              {selectedLesson && (() => {
-                const allLessons: Lesson[] = [];
-                if (chapters.length > 0) {
-                  chapters.forEach((chapter) => {
-                    if (chapter.lessons) {
-                      allLessons.push(...chapter.lessons);
-                    }
-                  });
-                } else {
-                  allLessons.push(...lessons);
-                }
-                const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                const lessonNumber = currentIndex !== -1 ? currentIndex + 1 : 0;
-                
-                return (
+      {(selectedLesson || (showQuiz && currentQuiz)) && (() => {
+        const navInfo = getCurrentNavigationInfo();
+        const items = buildNavigationItems;
+        const prevItem = navInfo.currentIndex > 0 ? items[navInfo.currentIndex - 1] : null;
+        const nextItem = navInfo.currentIndex < items.length - 1 ? items[navInfo.currentIndex + 1] : null;
+        
+        // Check if next item is accessible
+        const isNextAccessible = (() => {
+          if (!nextItem) return false;
+          
+          // Get current item
+          const currentItem = navInfo.currentIndex >= 0 ? items[navInfo.currentIndex] : null;
+          
+          if (nextItem.type === 'lesson') {
+            const lesson = nextItem.lesson;
+            // Preview lessons are always accessible
+            if (lesson.isPreview) return true;
+            
+            // If current item is preview lesson, next item is always accessible
+            if (currentItem?.type === 'lesson' && currentItem.lesson.isPreview) return true;
+            
+            // If at first lesson (index 0), next lesson is accessible (first lesson is usually preview or always unlocked)
+            if (navInfo.currentIndex === 0) return true;
+            
+            // Check if previous item (current) is completed + quizCompleted
+            if (currentItem) {
+              if (currentItem.type === 'lesson') {
+                const progress = lessonQuizProgress[currentItem.lesson.id];
+                return progress ? (progress.isCompleted && progress.quizCompleted) : false;
+              } else if (currentItem.type === 'quiz') {
+                // If current is quiz, the lesson should be completed
+                const progress = lessonQuizProgress[currentItem.lesson.id];
+                return progress ? progress.isCompleted : false;
+              }
+            }
+            return false;
+          } else if (nextItem.type === 'quiz') {
+            // Quiz is accessible if its lesson is completed
+            const progress = lessonQuizProgress[nextItem.lesson.id];
+            return progress ? progress.isCompleted : false;
+          }
+          return false;
+        })();
+
+        return (
+          <div className="bg-black border-t border-[#2D2D2D] fixed bottom-0 left-0 right-0 z-50">
+            <div className="container mx-auto px-4 py-2">
+              <div className="flex items-center justify-between">
+                {/* Notes Button - Left */}
+                {selectedLesson && (
                   <DarkOutlineButton
                     size="sm"
-                    onClick={() => setShowSidebar(!showSidebar)}
-                    title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
-                    className="flex items-center gap-2"
+                    onClick={() => setShowNotesDrawer(true)}
+                    title="Mở ghi chú"
                   >
-                    <span className="hidden md:inline text-xs text-foreground font-medium max-w-[200px] truncate">
-                      Bài {lessonNumber}: {selectedLesson.title}
-                    </span>
-                    {showSidebar ? (
-                      <PanelLeftClose className="h-4 w-4" />
-                    ) : (
-                      <PanelLeftOpen className="h-4 w-4" />
-                    )}
+                    <PenTool className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline" spellCheck={false}>Thêm ghi chú</span>
                   </DarkOutlineButton>
-                );
-              })()}
-        </div>
-      </div>
-        </div>
-      )}
+                )}
+                {!selectedLesson && <div />}
+                <div className="flex items-center justify-center gap-4 flex-1">
+                  <DarkOutlineButton
+                    size="sm"
+                    onClick={() => navigateToItem('prev')}
+                    disabled={!prevItem}
+                  >
+                    <ArrowLeft className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline">
+                      {prevItem?.type === 'quiz' ? 'Quiz trước' : 'Bài trước'}
+                    </span>
+                  </DarkOutlineButton>
+                  <Button
+                    variant="blue"
+                    size="sm"
+                    onClick={() => navigateToItem('next')}
+                    disabled={!isNextAccessible}
+                  >
+                    <span className="hidden md:inline">
+                      {nextItem?.type === 'quiz' ? 'Quiz tiếp theo' : 'Bài tiếp theo'}
+                    </span>
+                    <ArrowRight className="h-4 w-4 md:ml-2" />
+                  </Button>
+                </div>
+                {/* Toggle Sidebar Button - Right */}
+                {(() => {
+                  let displayText = '';
+                  if (showQuiz && currentQuiz) {
+                    displayText = `Quiz: ${currentQuiz.title}`;
+                  } else if (selectedLesson) {
+                    // Find lesson number in navigation items
+                    const lessonIndex = items.findIndex(
+                      (item) => item.type === 'lesson' && item.lesson.id === selectedLesson.id
+                    );
+                    const lessonNumber = lessonIndex !== -1 ? lessonIndex + 1 : 0;
+                    displayText = `Bài ${lessonNumber}: ${selectedLesson.title}`;
+                  }
+                  
+                  return (
+                    <DarkOutlineButton
+                      size="sm"
+                      onClick={() => setShowSidebar(!showSidebar)}
+                      title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="hidden md:inline text-xs text-foreground font-medium max-w-[200px] truncate">
+                        {displayText}
+                      </span>
+                      {showSidebar ? (
+                        <PanelLeftClose className="h-4 w-4" />
+                      ) : (
+                        <PanelLeftOpen className="h-4 w-4" />
+                      )}
+                    </DarkOutlineButton>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Notes Drawer */}
       {selectedLesson && (
