@@ -20,7 +20,10 @@ export type {
     CreateEnrollmentResponse,
 } from './enrollments'
 export { lessonsApi } from './lessons'
+export { instructorLessonsApi } from './instructor-lessons'
 export { lessonNotesApi } from './lesson-notes'
+export { instructorQuizzesApi } from './instructor-quizzes'
+export { quizzesApi } from './quizzes'
 export { categoriesApi, getCategoryPath } from './categories'
 export { notificationsApi } from './notifications'
 export type {
@@ -48,3 +51,4 @@ export type {
     PlatformAnalytics,
 } from './admin-courses'
 export type { CategoryFilters, CategoryCoursesFilters } from './categories'
+export { progressApi } from './progress'

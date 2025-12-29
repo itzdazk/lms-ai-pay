@@ -1,3 +1,17 @@
+// Debounce helper
+function debounceAsync(fn, delay) {
+  let timeoutId;
+  let lastPromise = Promise.resolve();
+  return (...args) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    let resolveOuter;
+    const outerPromise = new Promise((resolve) => (resolveOuter = resolve));
+    timeoutId = setTimeout(() => {
+      lastPromise = Promise.resolve(fn(...args)).then(resolveOuter);
+    }, delay);
+    return outerPromise;
+  };
+}
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -6,30 +20,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent } from '../components/ui/tabs';
 import { DarkTabsList, DarkTabsTrigger } from '../components/ui/dark-tabs';
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  MessageCircle,
-  BookOpen,
-  Loader2,
-  ArrowLeft,
-  ArrowRight,
-  Sun,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PenTool,
-  Bell,
-  Bot,
-} from 'lucide-react';
+import { ChevronLeft, FileText, BookOpen, Loader2, ArrowLeft, ArrowRight, Sun, Moon, PanelLeftClose, PanelLeftOpen, PenTool, Bell, Bot } from 'lucide-react';
 import { VideoPlayer } from '../components/Lesson/VideoPlayer';
 import { LessonList } from '../components/Lesson/LessonList';
 import { Transcript } from '../components/Lesson/Transcript';
 import { NotesDrawer } from '../components/Lesson/NotesDrawer';
 import { NotesSidebar } from '../components/Lesson/NotesSidebar';
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar';
-import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi } from '../lib/api';
+import { QuizTaking } from '../components/Quiz/QuizTaking';
+import { coursesApi, lessonsApi, lessonNotesApi, chaptersApi, progressApi, quizzesApi } from '../lib/api';
+import { useQuizTaking } from '../hooks/useQuiz';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
@@ -45,9 +45,13 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { User, Settings, LogOut, LayoutDashboard, GraduationCap, Shield } from 'lucide-react';
-import type { Course, Lesson, Enrollment, CourseLessonsResponse, Chapter } from '../lib/api/types';
+import type { Course, Lesson, Enrollment, Chapter, Quiz } from '../lib/api/types';
 
 export function LessonPage() {
+    // Debounced update progress khi seekbar (VideoPlayer)
+    const handleSeek = (time: number) => {
+      debouncedUpdateProgressOnSeek(time);
+    };
   const params = useParams<{ slug: string; lessonSlug?: string }>();
   const courseSlug = params.slug;
   const lessonSlug = params.lessonSlug;
@@ -70,16 +74,80 @@ export function LessonPage() {
   const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(undefined);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [lessonNotes, setLessonNotes] = useState<string>('');
-  const [notesLoading, setNotesLoading] = useState(false);
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
+  const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }>>({});
+  const [progressUpdateKey, setProgressUpdateKey] = useState(0); // Force re-render when progress updates
+  const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
+    // Fetch lesson/quiz progress for all lessons in course
+    useEffect(() => {
+      async function fetchLessonQuizProgress() {
+        if (!courseId) return;
+        try {
+          const progressList = await progressApi.getCourseLessonProgressList(courseId);
+          const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
+          progressList.forEach((p) => {
+            progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+          });
+          setLessonQuizProgress(progressMap);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to fetch lesson/quiz progress:', err);
+        }
+      }
+      fetchLessonQuizProgress();
+    }, [courseId]);
+
+  // Fetch quizzes for all lessons
+  useEffect(() => {
+    const fetchQuizzesForLessons = async () => {
+      const allLessons: Lesson[] = [];
+      if (chapters.length > 0) {
+        chapters.forEach((chapter) => {
+          if (chapter.lessons) {
+            allLessons.push(...chapter.lessons);
+          }
+        });
+      } else {
+        allLessons.push(...lessons);
+      }
+
+      if (allLessons.length === 0) return;
+
+      for (const lesson of allLessons) {
+        try {
+          const quizzes = await quizzesApi.getQuizzesByLesson(lesson.id.toString());
+          setLessonQuizzes(prev => ({ ...prev, [lesson.id]: quizzes }));
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`Error fetching quizzes for lesson ${lesson.id}:`, error);
+          setLessonQuizzes(prev => ({ ...prev, [lesson.id]: [] }));
+        }
+      }
+    };
+
+    if (lessons.length > 0 || chapters.length > 0) {
+      fetchQuizzesForLessons();
+    }
+  }, [lessons, chapters]);
   const [loading, setLoading] = useState(true);
-  const [videoLoading, setVideoLoading] = useState(false);
   const [lessonNotFound, setLessonNotFound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [initialVideoTime, setInitialVideoTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
+  const [watchedDuration, setWatchedDuration] = useState(0); // tổng thời lượng đã xem lấy từ backend
   
-  const progressSaveTimeoutRef = useRef<number | null>(null);
+  // Quiz state
+    const [showQuiz, setShowQuiz] = useState(false);
+    const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
+    const [quizState, setQuizState] = useState<'taking' | 'results'>('taking');
+
+    // Remove all border-radius (rounded-*) classes from quiz UI in this file if present (Card, etc.)
+  
+  // Quiz hook
+  const quizHook = useQuizTaking();
+  
+  const progressSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isPlayingRef = useRef(false);
   const previousCourseSlugRef = useRef<string | null>(null);
   const subtitleBlobUrlRef = useRef<string | null>(null);
   const { currentChapter, currentChapterLessonIds } = useMemo(() => {
@@ -141,28 +209,23 @@ export function LessonPage() {
     }
   }, [courseSlug]);
 
-  // Load course and lessons
+  // Load course, lessons, and handle quiz param
   useEffect(() => {
     const loadData = async () => {
       if (!courseSlug) return;
 
       try {
         setLoading(true);
-        
-        // Load course by slug first (public pages use slug)
+        const params = new URLSearchParams(window.location.search);
+        const quizParam = params.get('quiz');
+
+        // Load course by slug first
         const courseData = await coursesApi.getCourseBySlug(courseSlug);
         const loadedCourseId = courseData.id;
         setCourseId(loadedCourseId);
-        
-        // Load chapters with lessons
         const chaptersData = await chaptersApi.getChaptersByCourse(loadedCourseId, true);
         setChapters(chaptersData || []);
-
-
-        
-        // Then load lessons using courseId (fallback)
         const lessonsData = await lessonsApi.getCourseLessons(loadedCourseId);
-
         setCourse(courseData);
         setLessons(lessonsData.lessons || []);
 
@@ -174,14 +237,32 @@ export function LessonPage() {
           );
           setEnrollment(userEnrollment || null);
         } catch (error) {
-          // User might not be enrolled, that's okay
           setEnrollment(null);
         }
 
-        // Select initial lesson by slug only
+        // If quiz param is present, always show quiz (even if lessonSlug is invalid)
+        if (quizParam) {
+          setShowQuiz(true);
+          setQuizState('taking');
+          await quizHook.fetchQuiz(quizParam);
+          await quizHook.fetchAttempts(quizParam);
+          // KHÔNG fetchLatestResult ở đây để không set kết quả cũ vào state
+          await quizHook.resetQuiz();
+          await quizHook.startQuiz();
+
+          // If quiz has lessonId, select that lesson
+          const quizData = quizHook.quiz;
+          if (quizData && quizData.lessonId) {
+            const lesson = lessonsData.lessons.find((l) => String(l.id) === String(quizData.lessonId));
+            if (lesson) setSelectedLesson(lesson);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // If no quiz param, proceed as normal
         let initialLesson: Lesson | null = null;
         if (lessonSlug) {
-          // Search in chapters first by slug
           for (const chapter of chaptersData) {
             const lesson = chapter.lessons?.find((l) => l.slug === lessonSlug);
             if (lesson) {
@@ -189,11 +270,9 @@ export function LessonPage() {
               break;
             }
           }
-          // Fallback to lessons array by slug
           if (!initialLesson) {
             initialLesson = lessonsData.lessons.find((l) => l.slug === lessonSlug) || null;
           }
-          // If still not found, try to load from API
           if (!initialLesson) {
             try {
               initialLesson = await lessonsApi.getLessonBySlug(courseSlug, lessonSlug);
@@ -203,27 +282,22 @@ export function LessonPage() {
               return;
             }
           }
-          
-          // If lesson not found by slug, show error page
           if (!initialLesson) {
             setLessonNotFound(true);
             setLoading(false);
             return;
           }
         } else {
-          // If no lessonSlug provided, get first available lesson
           if (chaptersData.length > 0 && chaptersData[0].lessons && chaptersData[0].lessons.length > 0) {
             initialLesson = chaptersData[0].lessons[0];
           } else if (lessonsData.lessons.length > 0) {
             initialLesson = lessonsData.lessons[0];
           }
         }
-        
         if (initialLesson) {
           setSelectedLesson(initialLesson);
         }
       } catch (error: any) {
-        // Don't show toast if lesson not found (already handled above)
         if (!lessonNotFound) {
           toast.error('Không thể tải thông tin khóa học');
         }
@@ -231,12 +305,12 @@ export function LessonPage() {
         setLoading(false);
       }
     };
-
     loadData();
   }, [courseSlug, lessonSlug, user?.id]);
 
   // Track previous lesson ID to prevent unnecessary reloads
   const previousLessonIdRef = useRef<number | null>(null);
+  const previousShowQuizRef = useRef<boolean>(false);
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -252,27 +326,50 @@ export function LessonPage() {
   useEffect(() => {
     const loadLessonData = async () => {
       if (!selectedLesson) return;
+      
+      // Skip if showing quiz (video will be loaded when quiz is closed)
+      if (showQuiz) {
+        previousShowQuizRef.current = true;
+        return;
+      }
 
-      // Prevent reload if same lesson ID
+      // Reset previousLessonIdRef when coming back from quiz to force reload
+      if (previousShowQuizRef.current && !showQuiz) {
+        previousLessonIdRef.current = null;
+        previousShowQuizRef.current = false;
+      }
+
+      // Prevent reload if same lesson ID (and not coming back from quiz)
       if (previousLessonIdRef.current === selectedLesson.id) {
         return;
       }
       previousLessonIdRef.current = selectedLesson.id;
 
       try {
-        setVideoLoading(true);
+        // setVideoLoading(true); // removed unused
         setVideoUrl('');
         setInitialVideoTime(0);
 
         // Load video URL and lesson details (to get both transcriptUrl and transcriptJsonUrl) in parallel
-        const [videoData, lessonDetails] = await Promise.all([
-          lessonsApi.getLessonVideo(selectedLesson.id).catch(() => ({ videoUrl: selectedLesson.videoUrl || '' })),
+        let videoData = { videoUrl: '' };
+        let videoError = false;
+        const [videoResult, lessonDetails] = await Promise.all([
+          lessonsApi.getLessonVideo(selectedLesson.id).catch((err) => {
+            videoError = true;
+            return { videoUrl: '' };
+          }),
           lessonsApi.getLessonById(selectedLesson.id).catch(() => {
             return null;
           }),
         ]);
-
-        setVideoUrl(videoData.videoUrl || selectedLesson.videoUrl || '');
+        videoData = videoResult;
+        if (videoError) {
+          setVideoUrl('');
+          toast.error('Bạn cần hoàn thành bài học trước đó để tiếp tục này.');
+          navigate(-1); // Quay lại trang trước nếu bài học bị khóa
+        } else {
+          setVideoUrl(videoData.videoUrl || '');
+        }
         
         // Update selectedLesson with transcriptJsonUrl only if it's different
         if (lessonDetails) {
@@ -351,10 +448,12 @@ export function LessonPage() {
         // Load progress for this lesson (if enrolled)
         if (enrollment) {
           try {
-            // TODO: Load lesson progress from progress API
-            // For now, we'll use enrollment progress
-            // const progress = await progressApi.getLessonProgress(selectedLesson.id);
-            // setInitialVideoTime(progress.lastPosition || 0);
+            const progress = await progressApi.getLessonProgress(selectedLesson.id);
+            setInitialVideoTime(progress.lastPosition || 0);
+            setWatchedDuration(progress.watchDuration || 0);
+            // Log watchedDuration từ backend
+            // eslint-disable-next-line no-console
+            console.log('[LessonPage] watchedDuration từ backend:', progress.watchDuration);
           } catch (error) {
             // Ignore progress errors
           }
@@ -363,14 +462,14 @@ export function LessonPage() {
         // Load notes for this lesson
         if (enrollment && user) {
           try {
-            setNotesLoading(true);
+            // setNotesLoading(true); // removed unused
             const noteData = await lessonNotesApi.getLessonNote(selectedLesson.id);
             setLessonNotes(noteData.note?.content || '');
           } catch (error: any) {
             // If note doesn't exist (404), that's okay - just set empty
             setLessonNotes('');
           } finally {
-            setNotesLoading(false);
+            // setNotesLoading(false); // removed unused
           }
         } else {
           setLessonNotes('');
@@ -378,67 +477,264 @@ export function LessonPage() {
       } catch (error: any) {
         toast.error('Không thể tải video bài học');
       } finally {
-        setVideoLoading(false);
+        // setVideoLoading(false); // removed unused
       }
     };
 
     loadLessonData();
-  }, [selectedLesson?.id, enrollment]);
+  }, [selectedLesson?.id, enrollment, showQuiz]);
 
   // Handle lesson selection
   const handleLessonSelect = (lesson: Lesson) => {
     setSelectedLesson(lesson);
+    setShowQuiz(false); // Hide quiz when selecting a lesson
+    // Reset previousLessonIdRef to force reload when coming back from quiz
+    if (previousLessonIdRef.current === lesson.id) {
+      previousLessonIdRef.current = null;
+    }
     // Update URL without navigation (using slug)
     if (courseSlug && lesson.slug) {
       window.history.pushState({}, '', `/courses/${courseSlug}/lessons/${lesson.slug}`);
     }
   };
 
-  // Handle video time update (auto-save progress)
-  const handleTimeUpdate = (currentTime: number, duration: number) => {
-    setCurrentTime(currentTime);
-    
-    // Auto-save progress every 10 seconds
-    if (progressSaveTimeoutRef.current) {
-      clearTimeout(progressSaveTimeoutRef.current);
-    }
-    
-    progressSaveTimeoutRef.current = setTimeout(() => {
-      if (selectedLesson && enrollment) {
-        // TODO: Save progress to API
-        // await progressApi.updateLessonProgress(selectedLesson.id, {
-        //   position: currentTime,
-        //   watchDuration: currentTime,
-        // });
+  // Handle quiz selection
+  const handleQuizSelect = async (quiz: Quiz) => {
+    setCurrentQuiz(quiz);
+    setShowQuiz(true);
+
+    // If quiz has a lessonId, set selected lesson and update URL
+    try {
+      if (quiz.lessonId) {
+        const targetLesson = lessons.find((l) => String(l.id) === String(quiz.lessonId));
+        if (targetLesson) {
+          setSelectedLesson(targetLesson);
+          if (courseSlug && targetLesson.slug) {
+            const basePath = `/courses/${courseSlug}/lessons/${targetLesson.slug}`;
+            window.history.pushState({}, '', `${basePath}?quiz=${quiz.id}`);
+          }
+        } else if (courseSlug && selectedLesson?.slug) {
+          // Fallback: keep current lesson, still set quiz param
+          const basePath = `/courses/${courseSlug}/lessons/${selectedLesson.slug}`;
+          window.history.pushState({}, '', `${basePath}?quiz=${quiz.id}`);
+        }
+      } else if (courseSlug && selectedLesson?.slug) {
+        const basePath = `/courses/${courseSlug}/lessons/${selectedLesson.slug}`;
+        window.history.pushState({}, '', `${basePath}?quiz=${quiz.id}`);
       }
-    }, 10000);
+    } catch {}
+
+    // Fetch full quiz data and related info
+    await quizHook.fetchQuiz(String(quiz.id));
+    await quizHook.fetchAttempts(String(quiz.id));
+    await quizHook.fetchLatestResult(String(quiz.id));
+
+    // Auto-start quiz immediately without requiring a Start button
+    await quizHook.startQuiz();
+    setQuizState('taking');
+  };
+
+  // Handle quiz exit
+  const handleQuizExit = () => {
+    setShowQuiz(false);
+    setCurrentQuiz(null);
+    setQuizState('taking');
+    quizHook.resetQuiz();
+    
+    // Reset previousLessonIdRef to force reload video when coming back from quiz
+    if (selectedLesson) {
+      previousLessonIdRef.current = null;
+    }
+
+    // Remove quiz param from URL and return to lesson path
+    if (courseSlug && selectedLesson?.slug) {
+      const basePath = `/courses/${courseSlug}/lessons/${selectedLesson.slug}`;
+      window.history.pushState({}, '', basePath);
+    }
+  };
+
+  // On mount or when lesson changes, auto-open quiz from URL param if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qid = params.get('quiz');
+    if (qid) {
+      (async () => {
+        setShowQuiz(true);
+        setQuizState('taking');
+        await quizHook.fetchQuiz(qid);
+        await quizHook.fetchAttempts(qid);
+        // KHÔNG fetchLatestResult ở đây để không set kết quả cũ vào state
+        await quizHook.resetQuiz();
+        await quizHook.startQuiz();
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLesson?.id, courseSlug]);
+
+  // Handle video time update (auto-save progress)
+  // Đã loại bỏ toàn bộ logic viewedSegments
+  const videoCurrentTimeRef = useRef<(() => number) | null>(null);
+  const handleTimeUpdate = (time: number, _duration?: number) => {
+    setCurrentTime(time);
+  };
+
+  // Thêm các hàm xử lý play/pause
+  const handlePlay = () => {
+    isPlayingRef.current = true;
+    if (progressSaveIntervalRef.current) clearInterval(progressSaveIntervalRef.current);
+    progressSaveIntervalRef.current = setInterval(async () => {
+      if (selectedLesson && enrollment) {
+        try {
+          const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
+          const payload: any = {
+            position,
+            actionType: 'auto',
+          };
+          console.log('[Progress] Gửi updateLessonProgress:', {
+            lessonId: selectedLesson.id,
+            ...payload,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+          const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+          if (typeof updatedProgress?.watchDuration === 'number') {
+            setWatchedDuration(updatedProgress.watchDuration);
+          }
+          // If lesson is completed, refresh progress immediately to unlock next lesson
+          if (updatedProgress?.isCompleted === true) {
+            await refreshLessonQuizProgress();
+            if (!completedLessonIds.includes(selectedLesson.id)) {
+              setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+            }
+          }
+        } catch (err) {}
+      }
+    }, 30000);
+  };
+
+  // Debounced update progress khi pause
+  const debouncedUpdateProgress = debounceAsync(async () => {
+    if (selectedLesson && enrollment) {
+      try {
+        const position = videoCurrentTimeRef.current ? videoCurrentTimeRef.current() : currentTime;
+        const payload: any = { position, actionType: 'pause' };
+        console.log('[Progress] Gửi updateLessonProgress (pause):', {
+          lessonId: selectedLesson.id,
+          ...payload,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+        if (typeof updatedProgress?.watchDuration === 'number') {
+          setWatchedDuration(updatedProgress.watchDuration);
+        }
+        // If lesson is completed, refresh progress immediately to unlock next lesson
+        if (updatedProgress?.isCompleted === true) {
+          await refreshLessonQuizProgress();
+          if (!completedLessonIds.includes(selectedLesson.id)) {
+            setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+          }
+        }
+      } catch (err: any) {
+        // Nếu lỗi rate limit, không hiện toast (đã có toast ở VideoPlayer)
+        // if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
+        //   toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
+        // }
+      }
+    }
+  }, 1500);
+
+  const handlePause = async () => {
+    isPlayingRef.current = false;
+    if (progressSaveIntervalRef.current) {
+      clearInterval(progressSaveIntervalRef.current);
+      progressSaveIntervalRef.current = null;
+    }
+    debouncedUpdateProgress();
+  };
+
+  // Helper function to refresh lesson/quiz progress when lesson is completed
+  const refreshLessonQuizProgress = async () => {
+    if (!courseId) return;
+    try {
+      const progressList = await progressApi.getCourseLessonProgressList(courseId);
+      const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
+      progressList.forEach((p) => {
+        progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+      });
+      setLessonQuizProgress(progressMap);
+      setProgressUpdateKey(prev => prev + 1); // Force LessonList re-render
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to refresh lesson/quiz progress:', err);
+    }
   };
 
   // Handle video ended
-  const handleVideoEnded = () => {
+  const handleVideoEnded = async () => {
     if (selectedLesson && enrollment) {
-      // TODO: Mark lesson as completed
-      // await progressApi.completeLesson(selectedLesson.id);
+      try {
+        await progressApi.completeLesson(selectedLesson.id);
+        // Refresh lesson/quiz progress to update unlock status
+        await refreshLessonQuizProgress();
+      } catch (err) {}
       if (!completedLessonIds.includes(selectedLesson.id)) {
         setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
       }
     }
+    if (progressSaveIntervalRef.current) {
+      clearInterval(progressSaveIntervalRef.current);
+      progressSaveIntervalRef.current = null;
+    }
   };
 
-
   // Handle transcript time click
+
+  // Debounced update progress khi seek
+  const debouncedUpdateProgressOnSeek = debounceAsync(async (seekTime: number) => {
+    if (selectedLesson && enrollment) {
+      try {
+        const payload: any = { position: seekTime, actionType: 'seek' };
+        console.log('[Progress] Gửi updateLessonProgress (seek):', {
+          lessonId: selectedLesson.id,
+          ...payload,
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
+        if (typeof updatedProgress?.watchDuration === 'number') {
+          setWatchedDuration(updatedProgress.watchDuration);
+        }
+        // If lesson is completed, refresh progress immediately to unlock next lesson
+        if (updatedProgress?.isCompleted === true) {
+          await refreshLessonQuizProgress();
+          if (!completedLessonIds.includes(selectedLesson.id)) {
+            setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+          }
+        }
+      } catch (err: any) {
+        if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
+          toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
+        }
+      }
+    }
+  }, 1500);
+
   const handleTranscriptTimeClick = (time: number) => {
     setSeekTo(time);
+    debouncedUpdateProgressOnSeek(time);
     // Reset seekTo after a short delay to allow seeking to the same time again if needed
     setTimeout(() => {
       setSeekTo(undefined);
     }, 100);
   };
 
-  // Navigate to next/previous lesson using slug
-  const navigateToLesson = (direction: 'next' | 'prev') => {
-    if (!selectedLesson) return;
+  // Navigation item type
+  type NavigationItem = 
+    | { type: 'lesson'; lesson: Lesson }
+    | { type: 'quiz'; quiz: Quiz; lesson: Lesson };
 
+  // Build navigation items list (lessons + unlocked quizzes)
+  const buildNavigationItems = useMemo((): NavigationItem[] => {
+    const items: NavigationItem[] = [];
+    
     // Flatten all lessons from chapters
     const allLessons: Lesson[] = [];
     if (chapters.length > 0) {
@@ -451,15 +747,81 @@ export function LessonPage() {
       allLessons.push(...lessons);
     }
 
-    if (allLessons.length === 0) return;
+    // Build navigation items
+    allLessons.forEach((lesson) => {
+      // Add lesson
+      items.push({ type: 'lesson', lesson });
 
-    const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
+      // Add quiz if lesson is completed and quiz exists
+      const progress = lessonQuizProgress[lesson.id];
+      const quizzes = lessonQuizzes[lesson.id] || [];
+      
+      if (progress?.isCompleted && quizzes.length > 0) {
+        // Add all quizzes for this lesson (usually just one)
+        quizzes.forEach((quiz) => {
+          items.push({ type: 'quiz', quiz, lesson });
+        });
+      }
+    });
+
+    return items;
+  }, [chapters, lessons, lessonQuizProgress, lessonQuizzes]);
+
+  // Navigate to next/previous item (lesson or quiz)
+  const navigateToItem = (direction: 'next' | 'prev') => {
+    const items = buildNavigationItems;
+    if (items.length === 0) return;
+
+    // Find current item index
+    let currentIndex = -1;
+    
+    if (showQuiz && currentQuiz) {
+      // Currently viewing a quiz
+      currentIndex = items.findIndex(
+        (item) => item.type === 'quiz' && item.quiz.id === currentQuiz.id
+      );
+    } else if (selectedLesson) {
+      // Currently viewing a lesson
+      currentIndex = items.findIndex(
+        (item) => item.type === 'lesson' && item.lesson.id === selectedLesson.id
+      );
+    }
+
     if (currentIndex === -1) return;
 
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (newIndex >= 0 && newIndex < allLessons.length) {
-      handleLessonSelect(allLessons[newIndex]);
+    if (newIndex < 0 || newIndex >= items.length) return;
+
+    const nextItem = items[newIndex];
+    
+    if (nextItem.type === 'lesson') {
+      handleLessonSelect(nextItem.lesson);
+    } else if (nextItem.type === 'quiz') {
+      handleQuizSelect(nextItem.quiz);
     }
+  };
+
+  // Get current navigation item info
+  const getCurrentNavigationInfo = () => {
+    const items = buildNavigationItems;
+    if (items.length === 0) return { currentIndex: -1, totalItems: 0, currentType: null as 'lesson' | 'quiz' | null };
+
+    let currentIndex = -1;
+    let currentType: 'lesson' | 'quiz' | null = null;
+
+    if (showQuiz && currentQuiz) {
+      currentIndex = items.findIndex(
+        (item) => item.type === 'quiz' && item.quiz.id === currentQuiz.id
+      );
+      currentType = 'quiz';
+    } else if (selectedLesson) {
+      currentIndex = items.findIndex(
+        (item) => item.type === 'lesson' && item.lesson.id === selectedLesson.id
+      );
+      currentType = 'lesson';
+    }
+
+    return { currentIndex, totalItems: items.length, currentType };
   };
 
   // Helper function to render menu items based on role
@@ -629,7 +991,7 @@ export function LessonPage() {
       {/* Top Bar */}
       <div className="bg-black border-b border-[#2D2D2D] flex-shrink-0 z-50">
         <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between gap-1 sm:gap-2">
+          <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-3">
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 min-w-0">
               <DarkOutlineButton
                 size="icon"
@@ -886,7 +1248,7 @@ export function LessonPage() {
 
       <div className="container mx-auto flex-1 overflow-hidden">
         <div className={`grid gap-0 items-start transition-all duration-300 h-full ${showSidebar ? 'lg:grid-cols-4' : 'lg:grid-cols-1'}`}>
-          {/* Video Player Section */}
+          {/* Video Player / Quiz Section */}
           <div 
             className={`space-y-0 overflow-y-auto custom-scrollbar ${showSidebar ? 'lg:col-span-3' : 'lg:col-span-1'}`}
             style={{ 
@@ -894,75 +1256,133 @@ export function LessonPage() {
               paddingBottom: selectedLesson ? '45px' : '0'
             }}
           >
-            {/* Video Player */}
-            <Card className="overflow-hidden bg-card border-none rounded-none shadow-none">
-              <VideoPlayer
-                key={selectedLesson?.id}
-                videoUrl={videoUrl}
-                subtitleUrl={subtitleUrl}
-                onTimeUpdate={handleTimeUpdate}
-                onEnded={handleVideoEnded}
-                initialTime={initialVideoTime}
-                seekTo={seekTo}
-                title={selectedLesson?.title}
-                showSidebar={showSidebar}
-              />
-            </Card>
+            {showQuiz ? (
+              // Quiz Components
+              <div className="h-full flex flex-col">
+                {/* Loading state when quiz data isn't ready */}
+                {!quizHook.quiz && (
+                  <Card className="bg-card border-border rounded-none mb-4">
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      Đang tải quiz...
+                    </CardContent>
+                  </Card>
+                )}
 
-            {/* Lesson Info and Navigation */}
-            {selectedLesson && (
-              <Card className="bg-card border-border rounded-none ">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-foreground">{selectedLesson.title}</CardTitle>
-                      {selectedLesson.description && (
-                    <p className="text-sm text-muted-foreground mt-2">{selectedLesson.description}</p>
-                  )}
-                </CardHeader>
-              </Card>
-            )}
-
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full !gap-0">
-              <DarkTabsList
-                className={`!rounded-none ${
-                  isDark ? '' : '!bg-white !text-gray-900 !border-gray-200'
-                }`}
-              >
-                <DarkTabsTrigger
-                  value="overview"
-                  variant="blue"
-                  className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
-                >
-                  Tổng quan
-                </DarkTabsTrigger>
-                <DarkTabsTrigger
-                  value="transcript"
-                  variant="blue"
-                  className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Transcript
-                </DarkTabsTrigger>
-              </DarkTabsList>
-
-              <TabsContent value="overview" className="" >
-                <Card className="bg-card border-border rounded-none">
-                  <CardContent className="pt-6">
-                    <div className="prose max-w-none">
-                      <h3 className="text-foreground">Trong bài học này bạn sẽ học:</h3>
-                      {selectedLesson?.content ? (
-                        <div className="text-muted-foreground whitespace-pre-wrap">{selectedLesson.content}</div>
-                      ) : (
-                        <ul className="text-muted-foreground">
-                          <li>Khái niệm cơ bản về {selectedLesson?.title}</li>
-                          <li>Cách triển khai và áp dụng vào dự án</li>
-                          <li>Best practices và tips</li>
-                          <li>Bài tập thực hành</li>
-                        </ul>
-                      )}
-                    </div>
-                  </CardContent>
+                {quizState === 'taking' && quizHook.quiz && (
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <QuizTaking
+                    quiz={quizHook.quiz}
+                    currentQuestionIndex={quizHook.currentQuestionIndex}
+                    answers={quizHook.answers}
+                    timeRemaining={quizHook.timeRemaining}
+                    onAnswerChange={quizHook.answerQuestion}
+                    onNext={quizHook.nextQuestion}
+                    onPrevious={quizHook.previousQuestion}
+                    onGoToQuestion={quizHook.goToQuestion}
+                    onSubmit={async () => {
+                      await quizHook.submitQuiz();
+                      // Refresh lesson/quiz progress after quiz submission to update unlock status
+                      if (courseId) {
+                        try {
+                          const progressList = await progressApi.getCourseLessonProgressList(courseId);
+                          const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
+                          progressList.forEach((p) => {
+                            progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+                          });
+                          setLessonQuizProgress(progressMap);
+                          setProgressUpdateKey(prev => prev + 1); // Force LessonList re-render
+                        } catch (err) {
+                          // eslint-disable-next-line no-console
+                          console.error('Failed to refresh progress after quiz submission:', err);
+                        }
+                      }
+                    }}
+                    onRetry={async () => {
+                      await quizHook.resetQuiz();
+                      await quizHook.startQuiz();
+                    }}
+                    onExit={handleQuizExit}
+                    showResult={!!quizHook.result}
+                    quizResult={quizHook.result}
+                  />
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Video Player and Tabs
+              <>
+                {/* Video Player */}
+                <Card className="overflow-hidden bg-card border-none rounded-none shadow-none">
+                  <VideoPlayer
+                    key={selectedLesson?.id}
+                    videoUrl={videoUrl}
+                    subtitleUrl={subtitleUrl}
+                    onTimeUpdate={handleTimeUpdate}
+                    getCurrentTime={(fn) => { videoCurrentTimeRef.current = fn; }}
+                    onEnded={handleVideoEnded}
+                    initialTime={initialVideoTime}
+                    seekTo={seekTo}
+                    className="lesson-video-player"
+                    title={selectedLesson?.title}
+                    showSidebar={showSidebar}
+                    onPlay={handlePlay}
+                    onPause={handlePause}
+                    watchedDuration={watchedDuration}
+                    onSeek={handleSeek}
+                  />
                 </Card>
+
+                {/* Lesson Info and Navigation */}
+                {selectedLesson && (
+                  <Card className="bg-card border-border rounded-none ">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-foreground">{selectedLesson.title}</CardTitle>
+                          {selectedLesson.description && (
+                        <p className="text-sm text-muted-foreground mt-2">{selectedLesson.description}</p>
+                      )}
+                    </CardHeader>
+                  </Card>
+                )}
+
+                {/* Tabs */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full !gap-0">
+                  <DarkTabsList
+                    className={`!rounded-none ${
+                      isDark ? '' : '!bg-white !text-gray-900 !border-gray-200'
+                    }`}
+                  >
+                    <DarkTabsTrigger
+                      value="overview"
+                      variant="blue"
+                      className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
+                    >
+                      Tổng quan
+                    </DarkTabsTrigger>
+                    <DarkTabsTrigger
+                      value="transcript"
+                      variant="blue"
+                      className={`!rounded-none ${isDark ? '' : '!text-gray-900 !border-gray-200'}`}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Transcript
+                    </DarkTabsTrigger>
+                  </DarkTabsList>
+
+                  <TabsContent value="overview" className="" >
+                    <Card className="bg-card border-border rounded-none">
+                      <CardContent className="pt-6">
+                        <div className="prose max-w-none">
+                          <h3 className="text-foreground">Trong bài học này bạn sẽ học:</h3>
+                          {selectedLesson?.content ? (
+                            <div className="text-muted-foreground whitespace-pre-wrap">{selectedLesson.content}</div>
+                          ) : (
+                          
+                              <p>{selectedLesson?.description}</p>
+                  
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
               </TabsContent>
 
               <TabsContent value="transcript" className="">
@@ -976,126 +1396,157 @@ export function LessonPage() {
                 )}
               </TabsContent>
             </Tabs>
+              </>
+            )}
           </div>
 
           {/* Sidebar - Course Content */}
           {showSidebar && (
             <div className="lg:col-span-1 h-full overflow-y-auto custom-scrollbar">
             <LessonList
+              key={`progress-${progressUpdateKey}`} // Force re-render when progress updates
               lessons={lessons}
-                chapters={chapters}
+              chapters={chapters}
               selectedLessonId={selectedLesson?.id}
               onLessonSelect={handleLessonSelect}
+              onQuizSelect={handleQuizSelect}
               enrollmentProgress={enrollmentProgress}
               completedLessonIds={completedLessonIds}
               isEnrolled={isEnrolled}
               courseTitle={course.title}
-                completedLessons={completedLessons}
-                totalLessons={totalLessons}
+              completedLessons={completedLessons}
+              totalLessons={totalLessons}
               courseId={courseId || undefined}
               courseSlug={courseSlug}
-              />
+              activeQuizId={showQuiz && quizHook.quiz ? String(quizHook.quiz.id) : undefined}
+              lessonQuizProgress={lessonQuizProgress}
+            />
             </div>
               )}
             </div>
           </div>
 
       {/* Bottom Bar - Navigation */}
-      {selectedLesson && (
-        <div className="bg-black border-t border-[#2D2D2D] fixed bottom-0 left-0 right-0 z-50">
-          <div className="container mx-auto px-4 py-2">
-            <div className="flex items-center justify-between">
-              {/* Notes Button - Left */}
-              <DarkOutlineButton
-                size="sm"
-                onClick={() => setShowNotesDrawer(true)}
-                title="Mở ghi chú"
-              >
-                <PenTool className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline" spellCheck={false}>Thêm ghi chú</span>
-              </DarkOutlineButton>
-              <div className="flex items-center justify-center gap-4 flex-1">
-              <DarkOutlineButton
-                size="sm"
-                onClick={() => navigateToLesson('prev')}
-                disabled={(() => {
-                  const allLessons: Lesson[] = [];
-                  if (chapters.length > 0) {
-                    chapters.forEach((chapter) => {
-                      if (chapter.lessons) {
-                        allLessons.push(...chapter.lessons);
-                      }
-                    });
-                  } else {
-                    allLessons.push(...lessons);
-                  }
-                  const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                  return currentIndex === -1 || currentIndex === 0;
-                })()}
-              >
-                <ArrowLeft className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Bài trước</span>
-              </DarkOutlineButton>
-              <Button
-                variant="blue"
-                size="sm"
-                onClick={() => navigateToLesson('next')}
-                disabled={(() => {
-                  const allLessons: Lesson[] = [];
-                  if (chapters.length > 0) {
-                    chapters.forEach((chapter) => {
-                      if (chapter.lessons) {
-                        allLessons.push(...chapter.lessons);
-                      }
-                    });
-                  } else {
-                    allLessons.push(...lessons);
-                  }
-                  const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                  return currentIndex === -1 || currentIndex === allLessons.length - 1;
-                })()}
-              >
-                <span className="hidden md:inline">Bài tiếp theo</span>
-                <ArrowRight className="h-4 w-4 md:ml-2" />
-              </Button>
-              </div>
-              {/* Toggle Sidebar Button - Right */}
-              {selectedLesson && (() => {
-                const allLessons: Lesson[] = [];
-                if (chapters.length > 0) {
-                  chapters.forEach((chapter) => {
-                    if (chapter.lessons) {
-                      allLessons.push(...chapter.lessons);
-                    }
-                  });
-                } else {
-                  allLessons.push(...lessons);
-                }
-                const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                const lessonNumber = currentIndex !== -1 ? currentIndex + 1 : 0;
-                
-                return (
+      {(selectedLesson || (showQuiz && currentQuiz)) && (() => {
+        const navInfo = getCurrentNavigationInfo();
+        const items = buildNavigationItems;
+        const prevItem = navInfo.currentIndex > 0 ? items[navInfo.currentIndex - 1] : null;
+        const nextItem = navInfo.currentIndex < items.length - 1 ? items[navInfo.currentIndex + 1] : null;
+        
+        // Check if next item is accessible
+        const isNextAccessible = (() => {
+          if (!nextItem) return false;
+          
+          // Get current item
+          const currentItem = navInfo.currentIndex >= 0 ? items[navInfo.currentIndex] : null;
+          
+          if (nextItem.type === 'lesson') {
+            const lesson = nextItem.lesson;
+            // Preview lessons are always accessible
+            if (lesson.isPreview) return true;
+            
+            // If current item is preview lesson, next item is always accessible
+            if (currentItem?.type === 'lesson' && currentItem.lesson.isPreview) return true;
+            
+            // Check if current item is completed + quizCompleted
+            if (currentItem) {
+              if (currentItem.type === 'lesson') {
+                const progress = lessonQuizProgress[currentItem.lesson.id];
+                // If current lesson is preview, next lesson is accessible
+                if (currentItem.lesson.isPreview) return true;
+                // Otherwise, check if completed + quizCompleted
+                return progress ? (progress.isCompleted && progress.quizCompleted) : false;
+              } else if (currentItem.type === 'quiz') {
+                // If current is quiz, check if the lesson is completed
+                const progress = lessonQuizProgress[currentItem.lesson.id];
+                return progress ? progress.isCompleted : false;
+              }
+            }
+            return false;
+          } else if (nextItem.type === 'quiz') {
+            // Quiz is accessible if its lesson is completed
+            const progress = lessonQuizProgress[nextItem.lesson.id];
+            return progress ? progress.isCompleted : false;
+          }
+          return false;
+        })();
+
+        return (
+          <div className="bg-black border-t border-[#2D2D2D] fixed bottom-0 left-0 right-0 z-50">
+            <div className="container mx-auto px-4 py-2">
+              <div className="flex items-center justify-between">
+                {/* Notes Button - Left */}
+                {selectedLesson && (
                   <DarkOutlineButton
                     size="sm"
-                    onClick={() => setShowSidebar(!showSidebar)}
-                    title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
-                    className="flex items-center gap-2"
+                    onClick={() => setShowNotesDrawer(true)}
+                    title="Mở ghi chú"
                   >
-                    <span className="hidden md:inline text-xs text-foreground font-medium max-w-[200px] truncate">
-                      Bài {lessonNumber}: {selectedLesson.title}
-                    </span>
-                    {showSidebar ? (
-                      <PanelLeftClose className="h-4 w-4" />
-                    ) : (
-                      <PanelLeftOpen className="h-4 w-4" />
-                    )}
+                    <PenTool className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline" spellCheck={false}>Thêm ghi chú</span>
                   </DarkOutlineButton>
-                );
-              })()}
-        </div>
-      </div>
-        </div>
-      )}
+                )}
+                {!selectedLesson && <div />}
+                <div className="flex items-center justify-center gap-4 flex-1">
+                  <DarkOutlineButton
+                    size="sm"
+                    onClick={() => navigateToItem('prev')}
+                    disabled={!prevItem}
+                  >
+                    <ArrowLeft className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline">
+                      {prevItem?.type === 'quiz' ? 'Bài trước' : 'Bài trước'}
+                    </span>
+                  </DarkOutlineButton>
+                  <Button
+                    variant="blue"
+                    size="sm"
+                    onClick={() => navigateToItem('next')}
+                    disabled={!isNextAccessible}
+                  >
+                    <span className="hidden md:inline">
+                      {nextItem?.type === 'quiz' ? 'Bài tiếp theo' : 'Bài tiếp theo'}
+                    </span>
+                    <ArrowRight className="h-4 w-4 md:ml-2" />
+                  </Button>
+                </div>
+                {/* Toggle Sidebar Button - Right */}
+                {(() => {
+                  let displayText = '';
+                  if (showQuiz && currentQuiz) {
+                    displayText = `Quiz: ${currentQuiz.title}`;
+                  } else if (selectedLesson) {
+                    // Find lesson number in navigation items
+                    const lessonIndex = items.findIndex(
+                      (item) => item.type === 'lesson' && item.lesson.id === selectedLesson.id
+                    );
+                    const lessonNumber = lessonIndex !== -1 ? lessonIndex + 1 : 0;
+                    displayText = `Bài ${lessonNumber}: ${selectedLesson.title}`;
+                  }
+                  
+                  return (
+                    <DarkOutlineButton
+                      size="sm"
+                      onClick={() => setShowSidebar(!showSidebar)}
+                      title={showSidebar ? 'Ẩn nội dung khóa học' : 'Hiện nội dung khóa học'}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="hidden md:inline text-xs text-foreground font-medium max-w-[200px] truncate">
+                        {displayText}
+                      </span>
+                      {showSidebar ? (
+                        <PanelLeftClose className="h-4 w-4" />
+                      ) : (
+                        <PanelLeftOpen className="h-4 w-4" />
+                      )}
+                    </DarkOutlineButton>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Notes Drawer */}
       {selectedLesson && (

@@ -8,6 +8,27 @@ import { prisma } from '../config/database.config.js';
 
 class InstructorQuizzesController {
     /**
+     * GET /api/v1/instructor/lessons/:lessonId/quizzes
+     * List all quizzes for a lesson (include drafts) for instructor/admin
+     */
+    getLessonQuizzes = asyncHandler(async (req, res) => {
+        const lessonId = parseInt(req.params.lessonId, 10);
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const quizzes = await instructorQuizzesService.getLessonQuizzes({
+            lessonId,
+            userId,
+            userRole,
+        });
+
+        return ApiResponse.success(
+            res,
+            quizzes,
+            'Instructor lesson quizzes retrieved successfully'
+        );
+    });
+    /**
      * POST /api/v1/instructor/lessons/:lessonId/quizzes
      */
     createLessonQuiz = asyncHandler(async (req, res) => {
@@ -26,28 +47,6 @@ class InstructorQuizzesController {
             res,
             quiz,
             'Quiz created successfully for lesson'
-        );
-    });
-
-    /**
-     * POST /api/v1/instructor/courses/:courseId/quizzes
-     */
-    createCourseQuiz = asyncHandler(async (req, res) => {
-        const courseId = parseInt(req.params.courseId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
-
-        const quiz = await instructorQuizzesService.createQuizForCourse({
-            courseId,
-            userId,
-            userRole,
-            payload: req.body,
-        });
-
-        return ApiResponse.created(
-            res,
-            quiz,
-            'Quiz created successfully for course'
         );
     });
 
@@ -179,6 +178,86 @@ class InstructorQuizzesController {
             analytics,
             'Quiz analytics retrieved successfully'
         );
+    });
+
+    /**
+     * POST /api/v1/instructor/quizzes/:quizId/questions
+     * Create a single question
+     */
+    createQuestion = asyncHandler(async (req, res) => {
+        const quizId = parseInt(req.params.quizId, 10);
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const question = await instructorQuizzesService.createQuestion({
+            quizId,
+            userId,
+            userRole,
+            payload: req.body,
+        });
+
+        return ApiResponse.created(res, question, 'Question created successfully');
+    });
+
+    /**
+     * PUT /api/v1/instructor/quizzes/:quizId/questions/:questionId
+     * Update a single question
+     */
+    updateQuestion = asyncHandler(async (req, res) => {
+        const quizId = parseInt(req.params.quizId, 10);
+        const questionId = parseInt(req.params.questionId, 10);
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const question = await instructorQuizzesService.updateQuestion({
+            quizId,
+            questionId,
+            userId,
+            userRole,
+            payload: req.body,
+        });
+
+        return ApiResponse.success(res, question, 'Question updated successfully');
+    });
+
+    /**
+     * DELETE /api/v1/instructor/quizzes/:quizId/questions/:questionId
+     * Delete a single question
+     */
+    deleteQuestion = asyncHandler(async (req, res) => {
+        const quizId = parseInt(req.params.quizId, 10);
+        const questionId = parseInt(req.params.questionId, 10);
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        await instructorQuizzesService.deleteQuestion({
+            quizId,
+            questionId,
+            userId,
+            userRole,
+        });
+
+        return ApiResponse.noContent(res);
+    });
+
+    /**
+     * PATCH /api/v1/instructor/quizzes/:quizId/questions/reorder
+     * Reorder multiple questions
+     */
+    reorderQuestions = asyncHandler(async (req, res) => {
+        const quizId = parseInt(req.params.quizId, 10);
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { orders } = req.body;
+
+        const quiz = await instructorQuizzesService.reorderQuestions({
+            quizId,
+            userId,
+            userRole,
+            orders,
+        });
+
+        return ApiResponse.success(res, quiz, 'Questions reordered successfully');
     });
 
     /**

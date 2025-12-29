@@ -5,6 +5,39 @@ import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js';
 import notificationsService from './notifications.service.js';
 
 class ProgressService {
+        /**
+         * Get progress status for all lessons in a course (for LessonList UI)
+         * Returns: [{ lessonId, isCompleted, quizCompleted }]
+         */
+        async getCourseLessonProgressList(userId, courseId) {
+            // Lấy tất cả lesson thuộc course, có lessonOrder
+            const lessons = await prisma.lesson.findMany({
+                where: { courseId, isPublished: true },
+                select: { id: true, lessonOrder: true },
+                orderBy: { lessonOrder: 'asc' },
+            });
+
+            // Lấy progress của user cho các lesson này
+            const progresses = await prisma.progress.findMany({
+                where: {
+                    userId,
+                    lessonId: { in: lessons.map(l => l.id) },
+                },
+                select: { lessonId: true, isCompleted: true, quizCompleted: true },
+            });
+            const progressMap = new Map(progresses.map(p => [p.lessonId, p]));
+
+            // Kết hợp lesson và progress, trả về lessonOrder và sort sẵn
+            return lessons.map(lesson => {
+                const p = progressMap.get(lesson.id);
+                return {
+                    lessonId: lesson.id,
+                    lessonOrder: lesson.lessonOrder,
+                    isCompleted: p ? p.isCompleted : false,
+                    quizCompleted: p ? (p.quizCompleted ?? false) : false,
+                };
+            });
+        }
     /**
      * Get course progress for a user
      * Auto-calculates progress percentage based on completed lessons
@@ -81,13 +114,23 @@ class ProgressService {
                 ...lesson,
                 progress: progress
                     ? {
+                          lessonId: lesson.id,
                           isCompleted: progress.isCompleted,
+                          quizCompleted: progress.quizCompleted ?? false,
                           completedAt: progress.completedAt,
                           watchDuration: progress.watchDuration,
                           lastPosition: progress.lastPosition,
                           attemptsCount: progress.attemptsCount,
                       }
-                    : null,
+                    : {
+                          lessonId: lesson.id,
+                          isCompleted: false,
+                          quizCompleted: false,
+                          completedAt: null,
+                          watchDuration: 0,
+                          lastPosition: 0,
+                          attemptsCount: 0,
+                      },
             };
         });
 
@@ -276,7 +319,7 @@ class ProgressService {
      * Update lesson progress (video position, watch duration)
      */
     async updateProgress(userId, lessonId, data) {
-        const { position, watchDuration } = data;
+        const { position } = data;
 
         // Get lesson
         const lesson = await prisma.lesson.findUnique({
@@ -305,13 +348,41 @@ class ProgressService {
             throw error;
         }
 
-        // Update or create progress record
+        // Lấy progress hiện tại (nếu có)
+        const currentProgress = await prisma.progress.findUnique({
+            where: {
+                userId_lessonId: {
+                    userId,
+                    lessonId,
+                },
+            },
+        });
+
         const updateData = {};
         if (position !== undefined) {
             updateData.lastPosition = position;
-        }
-        if (watchDuration !== undefined) {
-            updateData.watchDuration = watchDuration;
+            // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
+            let newWatchDuration = currentProgress === null || position > (currentProgress.watchDuration ?? 0)
+                ? position
+                : currentProgress.watchDuration;
+            if (currentProgress === null || position > (currentProgress.watchDuration ?? 0)) {
+                updateData.watchDuration = position;
+            }
+                        // Tự động đánh dấu completed nếu đã xem >= 70% video
+                        if (lesson.videoDuration && newWatchDuration >= lesson.videoDuration * 0.50) {
+                                updateData.isCompleted = true;
+                                updateData.completedAt = new Date();
+                                // Đảm bảo watchedDuration = videoDuration khi hoàn thành
+                                updateData.watchDuration = lesson.videoDuration;
+
+                                // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
+                                const quiz = await prisma.quiz.findUnique({
+                                    where: { lessonId: lesson.id },
+                                });
+                                if (!quiz || quiz.isPublished === false) {
+                                    updateData.quizCompleted = true;
+                                }
+                        }
         }
 
         const progress = await prisma.progress.upsert({
@@ -326,7 +397,8 @@ class ProgressService {
                 lessonId,
                 courseId: lesson.courseId,
                 lastPosition: position || 0,
-                watchDuration: watchDuration || 0,
+                watchDuration: position || 0,
+                isCompleted: false,
             },
             update: updateData,
         });
@@ -341,7 +413,6 @@ class ProgressService {
 
         return {
             progress: {
-                id: progress.id,
                 isCompleted: progress.isCompleted,
                 watchDuration: progress.watchDuration,
                 lastPosition: progress.lastPosition,
@@ -391,7 +462,15 @@ class ProgressService {
             throw error;
         }
 
+        // Bỏ kiểm tra điều kiện xem >= 70% video khi đánh dấu hoàn thành bài học
+        // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
+        let quizCompleted = false;
+        const quiz = await prisma.quiz.findUnique({ where: { lessonId: lesson.id } });
+        if (!quiz || quiz.isPublished === false) {
+            quizCompleted = true;
+        }
         // Update or create progress record as completed
+        // Nếu lesson có videoDuration thì set luôn watchDuration = videoDuration khi hoàn thành
         const progress = await prisma.progress.upsert({
             where: {
                 userId_lessonId: {
@@ -405,10 +484,14 @@ class ProgressService {
                 courseId: lesson.courseId,
                 isCompleted: true,
                 completedAt: new Date(),
+                quizCompleted,
+                watchDuration: lesson.videoDuration || undefined,
             },
             update: {
                 isCompleted: true,
                 completedAt: new Date(),
+                quizCompleted,
+                ...(lesson.videoDuration ? { watchDuration: lesson.videoDuration } : {}),
             },
         });
 
@@ -674,6 +757,42 @@ class ProgressService {
                 updatedAt: p.updatedAt,
             },
         }));
+    }
+
+    /**
+     * Merge viewed segments, calculate total watched time, and check completion
+     * @param {Array<{start:number,end:number}>} segments
+     * @param {number} videoDuration
+     * @param {number} [threshold=0.75] - percent required to complete (default 75%)
+     * @returns {{mergedSegments: Array<{start:number,end:number}>, totalWatched: number, isCompleted: boolean}}
+     */
+    calculateLessonCompletion(segments, videoDuration, threshold = 0.75) {
+        if (!Array.isArray(segments) || segments.length === 0 || !videoDuration) {
+            return { mergedSegments: [], totalWatched: 0, isCompleted: false };
+        }
+        // Sort segments by start
+        segments = segments
+            .filter(s => typeof s.start === 'number' && typeof s.end === 'number' && s.end > s.start)
+            .sort((a, b) => a.start - b.start);
+        const merged = [];
+        for (const seg of segments) {
+            if (merged.length === 0) {
+                merged.push({ ...seg });
+            } else {
+                const last = merged[merged.length - 1];
+                if (seg.start <= last.end) {
+                    // Overlap or adjacent: merge
+                    last.end = Math.max(last.end, seg.end);
+                } else {
+                    merged.push({ ...seg });
+                }
+            }
+        }
+        // Calculate total watched time
+        const totalWatched = merged.reduce((sum, seg) => sum + (seg.end - seg.start), 0);
+        // Completion: watched >= threshold * videoDuration
+        const isCompleted = totalWatched >= videoDuration * threshold;
+        return { mergedSegments: merged, totalWatched, isCompleted };
     }
 }
 

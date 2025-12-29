@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ProtectedRoute } from './components/routes/ProtectedRoute'
 import { RoleRoute } from './components/routes/RoleRoute'
@@ -51,6 +51,8 @@ import { CourseChaptersPage } from './pages/instructor/CourseChaptersPage'
 import { InstructorOrdersPage } from './pages/instructor/InstructorOrdersPage'
 import { InstructorEnrollmentsPage } from './pages/instructor/InstructorEnrollmentsPage'
 import { InstructorCoursesManagementPage } from './pages/instructor/InstructorCoursesManagementPage'
+import { CourseQuizzesPage } from './pages/instructor/CourseQuizzesPage'
+import { QuizzesPage } from './pages/instructor/QuizzesPage'
 
 // Admin Pages
 import { AdminDashboard } from './pages/AdminDashboard'
@@ -384,6 +386,14 @@ export default function App() {
                                             path=':id/chapters'
                                             element={<CourseChaptersPage />}
                                         />
+                                        <Route
+                                            path=':id/quizzes'
+                                            element={<CourseQuizzesPage />}
+                                        />
+                                        <Route
+                                            path=':id/quizzes/lessons/:lessonId'
+                                            element={<QuizzesPage />}
+                                        />
                                     </Route>
                                     <Route
                                         path='/instructor/orders'
@@ -411,6 +421,43 @@ export default function App() {
                                                     ]}
                                                 >
                                                     <InstructorEnrollmentsPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/instructor/courses/:courseId/quizzes'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                >
+                                                    <CourseQuizzesPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/instructor/courses/:courseId/quizzes/lessons/:lessonId'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                >
+                                                    <QuizzesPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    {/* Lesson-level quizzes management */}
+                                    <Route
+                                        path='/instructor/lessons/:lessonId/quizzes'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                >
+                                                    <QuizzesPage />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
