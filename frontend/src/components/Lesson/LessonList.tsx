@@ -275,7 +275,7 @@ export function LessonList({
                       </div>
                     </AccordionTrigger>
                   <AccordionContent className="px-3 pb-2 rounded-none">
-                    <div className="space-y-1 mt-2 rounded-none">
+                    <div className="space-y-1 mt-2 rounded-none ">
                         {chapterLessons.map((lesson) => {
                           const globalIndex = getLessonGlobalIndex(lesson);
                           const lessonNumber = globalIndex + 1;
@@ -302,13 +302,13 @@ export function LessonList({
                                   : isSelected
                                     ? 'bg-blue-600/20 border border-blue-600 '
                                     : isLocked
-                                      ? 'opacity-50 cursor-not-allowed'
+                                      ? 'opacity-50 cursor-not-allowed '
                                       : isDark
-                                        ? 'border border-transparent hover:bg-[#1F1F1F] cursor-pointer'
+                                        ? 'border border-blue-500/30 hover:bg-[#1F1F1F] cursor-pointer '
                                         : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                               }`}
                             >
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-1 min-w-0 ">
                                 {/* Status icon */}
                                 <div className="flex-shrink-0">
                                   {isLocked ? (
@@ -316,7 +316,7 @@ export function LessonList({
                                       <Lock className="h-2.5 w-2.5 text-gray-500" />
                                     </div>
                                   ) : isCompleted ? (
-                                    <div className="w-5 h-5 rounded-full bg-green-600/20 flex items-center justify-center">
+                                    <div className="w-5 h-5 rounded-full  bg-green-600/20 flex items-center justify-center ">
                                       <CheckCircle className="h-3 w-3 text-green-500" />
                                     </div>
                                   ) : (
@@ -512,8 +512,8 @@ export function LessonList({
                                 !isCompleted
                                   ? 'opacity-50 cursor-not-allowed'
                                   : isDark
-                                    ? 'hover:bg-[#1F1F1F] bg-[#151515] cursor-pointer'
-                                    : 'hover:bg-gray-50 bg-gray-50 cursor-pointer'
+                                        ? 'border border-blue-500/30 hover:bg-[#1F1F1F] cursor-pointer '
+                                        : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                               }`}
                             >
                               <FileQuestion className="h-4 w-4 text-blue-400 flex-shrink-0" />

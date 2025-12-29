@@ -29,6 +29,7 @@ import { PlaybackRateDialog } from './PlaybackRateDialog';
 import { progressApi } from '../../lib/api/progress';
 
 interface VideoPlayerProps {
+      onSeek?: (time: number) => void;
     watchedDuration?: number;
   videoUrl?: string;
   subtitleUrl?: string; // WebVTT subtitle URL
@@ -45,6 +46,7 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({
+// ...existing code...
   videoUrl,
   subtitleUrl,
   onTimeUpdate,
@@ -58,10 +60,13 @@ export function VideoPlayer({
   onPause,
   getCurrentTime,
   watchedDuration = 0,
+  onSeek,
 }: VideoPlayerProps) {
+  // Anti-spam forward: lưu lịch sử bấm forward
+  const [forwardClicks, setForwardClicks] = useState<number[]>([]);
+  const [forwardLocked, setForwardLocked] = useState(false);
   // Log mỗi lần watchedDuration prop thay đổi
   // eslint-disable-next-line no-console
-  console.log('[VideoPlayer] watchedDuration prop:', watchedDuration);
   const videoRef = useRef<HTMLVideoElement>(null);
   // Hàm lấy currentTime trực tiếp từ video element
   const getCurrentTimeFn = () => videoRef.current?.currentTime ?? currentTime;
@@ -174,28 +179,38 @@ export function VideoPlayer({
     }
   };
 
-  // Handle seek (anti-skip)
+  // Handle seek (anti-skip): chỉ cho phép kéo trong vùng đã xem
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (videoRef.current && duration > 0 && progressBarRef.current) {
       const rect = progressBarRef.current.getBoundingClientRect();
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       let newTime = pos * duration;
       if (watchedDuration !== undefined && newTime > watchedDuration) {
-        newTime = watchedDuration;
+        // Không cho phép seek vượt quá watchedDuration, không làm gì cả
         toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+        return;
       }
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+      if (onSeek) onSeek(newTime);
     }
   };
 
-  // Handle drag start
+  // Handle drag start: chỉ cho phép kéo nếu vị trí nằm trong watchedDuration
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (videoRef.current && duration > 0) {
+    if (videoRef.current && duration > 0 && progressBarRef.current) {
+      const rect = progressBarRef.current.getBoundingClientRect();
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      let newTime = pos * duration;
+      if (watchedDuration !== undefined && newTime > watchedDuration) {
+        toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+        return;
+      }
       isDraggingRef.current = true;
       setIsDragging(true);
       setShowControls(true);
       handleSeek(e);
+      if (onSeek) onSeek(newTime);
     }
   };
 
@@ -215,9 +230,9 @@ export function VideoPlayer({
       const seekBy = (delta: number) => {
         if (!videoRef.current) return;
         let newTime = videoRef.current.currentTime + delta;
-        if (watchedDuration !== undefined && newTime > watchedDuration) {
-          newTime = watchedDuration;
+        if (watchedDuration !== undefined && delta > 0 && newTime > watchedDuration) {
           toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+          return;
         }
         newTime = Math.min(Math.max(0, newTime), duration);
         videoRef.current.currentTime = newTime;
@@ -290,7 +305,11 @@ export function VideoPlayer({
       if (isDraggingRef.current && videoRef.current && duration > 0 && progressBarRef.current) {
         const rect = progressBarRef.current.getBoundingClientRect();
         const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        const newTime = pos * duration;
+        let newTime = pos * duration;
+        if (watchedDuration !== undefined && newTime > watchedDuration) {
+          // Không cho phép kéo vượt quá watchedDuration
+          return;
+        }
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
       }
@@ -1161,11 +1180,34 @@ export function VideoPlayer({
                 variant="ghost"
                 className="text-white hover:bg-white/20 h-7 px-2"
                 onClick={() => {
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = Math.min(duration, currentTime + 5);
+                  if (forwardLocked) {
+                    toast.warning('Bạn đang tua quá nhanh, vui lòng chờ một chút!');
+                    return;
+                  }
+                  const now = Date.now();
+                  // Lưu lại thời điểm bấm forward
+                  setForwardClicks(prev => {
+                    const updated = [...prev.filter(t => now - t < 10000), now];
+                    // Nếu quá 3 lần trong 10 giây thì khóa forward 5 giây
+                    if (updated.length > 3) {
+                      setForwardLocked(true);
+                      toast.warning('Bạn đang tua quá nhanh, vui lòng chờ 5 giây!');
+                      setTimeout(() => setForwardLocked(false), 5000);
+                      return [];
+                    }
+                    return updated;
+                  });
+                  if (videoRef.current && watchedDuration !== undefined) {
+                    const nextTime = Math.min(duration, currentTime + 5);
+                    if (nextTime > watchedDuration) {
+                      toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+                      return;
+                    }
+                    videoRef.current.currentTime = nextTime;
                   }
                 }}
                 title="Tiến 5 giây"
+                disabled={forwardLocked || (watchedDuration !== undefined && currentTime >= watchedDuration)}
               >
                 <SkipForward className="h-3 w-3" />
               </Button>
