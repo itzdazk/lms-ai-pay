@@ -1258,7 +1258,7 @@ export function LessonPage() {
           >
             {showQuiz ? (
               // Quiz Components
-              <div className="">
+              <div className="h-full flex flex-col">
                 {/* Loading state when quiz data isn't ready */}
                 {!quizHook.quiz && (
                   <Card className="bg-card border-border rounded-none mb-4">
@@ -1269,7 +1269,8 @@ export function LessonPage() {
                 )}
 
                 {quizState === 'taking' && quizHook.quiz && (
-                  <QuizTaking
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <QuizTaking
                     quiz={quizHook.quiz}
                     currentQuestionIndex={quizHook.currentQuestionIndex}
                     answers={quizHook.answers}
@@ -1304,6 +1305,7 @@ export function LessonPage() {
                     showResult={!!quizHook.result}
                     quizResult={quizHook.result}
                   />
+                  </div>
                 )}
               </div>
             ) : (
