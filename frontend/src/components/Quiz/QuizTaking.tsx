@@ -73,7 +73,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
     const isDark = theme === 'dark';
 
     return (
-        <div className="">
+        <div className="h-full flex flex-col min-h-0">
             {/* Sticky Header Wrapper */}
             <div className="sticky top-0 z-40" style={{background: isDark ? '#1A1A1Aee' : '#ffffffcc', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)'}}>
                 <Card
@@ -169,13 +169,13 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
             {/* Questions - Vertical Stack */}
             <Card
                 className={
-                    `${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D] text-white' : 'bg-white border-gray-200 text-black'} rounded-none`
+                    `${isDark ? 'bg-[#1A1A1A] border-[#2D2D2D] text-white' : 'bg-white border-gray-200 text-black'} rounded-none flex-1 flex flex-col min-h-0`
                 }
             >
                 <CardHeader>
                     <CardTitle className={`text-sm ${isDark ? 'text-gray-400' : 'text-black'}`}>Danh sách câu hỏi</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 flex-1 overflow-y-auto">
                     {questions.map((q, index) => {
                         const qIdRaw = (q as any).id ?? (q as any).questionId
                         if (qIdRaw === undefined || qIdRaw === null) {

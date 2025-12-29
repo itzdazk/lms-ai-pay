@@ -189,7 +189,7 @@ export function LessonList({
       if (activeQuizId) {
         for (const lesson of chapterLessons) {
           const quizzes = lessonQuizzes[lesson.id] || [];
-          if (quizzes.some((quiz) => quiz.id === activeQuizId)) {
+          if (quizzes.some((quiz) => String(quiz.id) === activeQuizId)) {
             open.push(`chapter-${chapter.id}`);
             return;
           }
@@ -286,14 +286,13 @@ export function LessonList({
                         {chapterLessons.map((lesson) => {
                           const globalIndex = getLessonGlobalIndex(lesson);
                           const lessonNumber = globalIndex + 1;
-                          const isSelected = selectedLessonId === lesson.id;
+                          const isSelected = selectedLessonId === lesson.id && !activeQuizId; // Only selected if no active quiz
                           const isLocked = isLessonLocked(lesson, globalIndex, allLessons);
                           const quizzes = lessonQuizzes[lesson.id] || [];
                           // Lấy trạng thái hoàn thành bài học và quiz từ lessonQuizProgress
                           const progress = lessonQuizProgress[lesson.id];
                           const isCompleted = progress ? progress.isCompleted : false;
                           const quizCompleted = progress ? progress.quizCompleted : false; // luôn định nghĩa để dùng cho icon
-                          const hasActiveQuiz = quizzes.some((quiz) => activeQuizId && quiz.id === activeQuizId);
                           return (
                             <div key={lesson.id} className="space-y-1">
                               {/* Lesson Item */}
@@ -304,7 +303,7 @@ export function LessonList({
                                 }
                               }}
                             className={`flex items-center justify-between p-2 border border-blue-500/30 rounded-none transition-colors ${
-                                hasActiveQuiz || isSelected
+                                isSelected
                                   ? 'bg-blue-600/20 border border-blue-600 '
                                   : isLocked
                                     ? 'opacity-50 cursor-not-allowed '
@@ -335,7 +334,7 @@ export function LessonList({
                                 <div className="flex-1 min-w-0">
                                   <p
                                     className={`text-xs font-medium truncate ${
-                                      hasActiveQuiz || isSelected
+                                      isSelected
                                         ? 'text-blue-500 dark:text-blue-400'
                                         : isDark
                                           ? 'text-white'
@@ -363,7 +362,7 @@ export function LessonList({
                               {quizzes.length > 0 && onQuizSelect && (
                                 <div className=" space-y-1 ">
                                   {quizzes.map((quiz) => {
-                                    const isQuizActive = activeQuizId && quiz.id === activeQuizId;
+                                    const isQuizActive = activeQuizId && String(quiz.id) === activeQuizId;
                                     // Quiz mở khi lesson đã hoàn thành (isCompleted)
                                     return (
                                       <div
@@ -512,6 +511,7 @@ export function LessonList({
                     {quizzes.length > 0 && onQuizSelect && (
                       <div className="ml-9 space-y-1">
                         {quizzes.map((quiz) => {
+                          const isQuizActive = activeQuizId && String(quiz.id) === activeQuizId;
                           // Quiz chỉ mở khi lesson đã hoàn thành
                           return (
                             <div
@@ -520,14 +520,22 @@ export function LessonList({
                               className={`flex items-center gap-2 p-2 rounded-lg transition-colors border-l-2 border-blue-500/30 ${
                                 !isCompleted
                                   ? 'opacity-50 cursor-not-allowed'
-                                  : isDark
-                                        ? 'border border-blue-500/30 hover:bg-[#1F1F1F] cursor-pointer '
-                                        : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
+                                  : isQuizActive
+                                    ? 'bg-blue-600/20 border border-blue-600 cursor-pointer'
+                                    : isDark
+                                      ? 'border border-blue-500/30 hover:bg-[#1F1F1F] cursor-pointer '
+                                      : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                               }`}
                             >
                               <FileQuestion className="h-4 w-4 text-blue-400 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium truncate ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                                <p className={`text-sm font-medium truncate ${
+                                  isQuizActive
+                                    ? 'text-blue-500 dark:text-blue-400'
+                                    : isDark
+                                      ? 'text-blue-400'
+                                      : 'text-blue-600'
+                                }`}>
                                   {quiz.title}
                                 </p>
                                 <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
