@@ -28,6 +28,7 @@ interface LessonListProps {
   courseSlug?: string;
   onQuizSelect?: (quiz: Quiz) => void;
   activeQuizId?: string;
+  lessonQuizProgress?: Record<number, LessonQuizProgress>;
 }
 
 export function LessonList({
@@ -45,13 +46,17 @@ export function LessonList({
   totalLessons: _totalLessons = 0,
   courseId: _courseId,
   onQuizSelect,
+  lessonQuizProgress: externalLessonQuizProgress,
 }: LessonListProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
   const [loadingQuizzes, setLoadingQuizzes] = useState<Record<number, boolean>>({});
   const [lessonQuizCompleted, setLessonQuizCompleted] = useState<Record<number, boolean>>({});
-  const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, LessonQuizProgress>>({});
+  const [internalLessonQuizProgress, setInternalLessonQuizProgress] = useState<Record<number, LessonQuizProgress>>({});
+  
+  // Use external progress if provided, otherwise use internal
+  const lessonQuizProgress = externalLessonQuizProgress || internalLessonQuizProgress;
 
   // ...existing code...
   // Fetch quizzes for all lessons
@@ -78,8 +83,10 @@ export function LessonList({
     }
   }, [lessons]);
 
-  // Fetch lesson/quiz progress for LessonList UI
+  // Fetch lesson/quiz progress for LessonList UI (only if not provided externally)
   useEffect(() => {
+    if (externalLessonQuizProgress) return; // Skip if provided externally
+    
     async function fetchLessonQuizProgress() {
       if (!_courseId) return;
       try {
@@ -88,14 +95,14 @@ export function LessonList({
         progressList.forEach((p) => {
           progressMap[p.lessonId] = p;
         });
-        setLessonQuizProgress(progressMap);
+        setInternalLessonQuizProgress(progressMap);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to fetch lesson/quiz progress:', err);
       }
     }
     fetchLessonQuizProgress();
-  }, [_courseId]);
+  }, [_courseId, externalLessonQuizProgress]);
 
   // Format duration from seconds to readable format
   const formatDuration = (seconds?: number): string => {
@@ -297,15 +304,13 @@ export function LessonList({
                                 }
                               }}
                             className={`flex items-center justify-between p-2 border border-blue-500/30 rounded-none transition-colors ${
-                                hasActiveQuiz
-                                  ? ''
-                                  : isSelected
-                                    ? 'bg-blue-600/20 border border-blue-600 '
-                                    : isLocked
-                                      ? 'opacity-50 cursor-not-allowed '
-                                      : isDark
-                                        ? 'border border-blue-500/30 hover:bg-[#1F1F1F] cursor-pointer '
-                                        : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
+                                hasActiveQuiz || isSelected
+                                  ? 'bg-blue-600/20 border border-blue-600 '
+                                  : isLocked
+                                    ? 'opacity-50 cursor-not-allowed '
+                                    : isDark
+                                      ? 'border border-blue-500/30 hover:bg-[#1F1F1F] cursor-pointer '
+                                      : 'bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer'
                               }`}
                             >
                               <div className="flex items-center gap-2 flex-1 min-w-0 ">
@@ -330,7 +335,11 @@ export function LessonList({
                                 <div className="flex-1 min-w-0">
                                   <p
                                     className={`text-xs font-medium truncate ${
-                                      isSelected ? 'text-blue-500 dark:text-blue-400' : isDark ? 'text-white' : 'text-gray-900'
+                                      hasActiveQuiz || isSelected
+                                        ? 'text-blue-500 dark:text-blue-400'
+                                        : isDark
+                                          ? 'text-white'
+                                          : 'text-gray-900'
                                     }`}
                                   >
                                     Bài {lessonNumber}. {lesson.title}
