@@ -1369,6 +1369,7 @@ export function LessonPage() {
           {showSidebar && (
             <div className="lg:col-span-1 h-full overflow-y-auto custom-scrollbar">
             <LessonList
+              key={`progress-${Object.keys(lessonQuizProgress).length}-${Object.values(lessonQuizProgress).filter(p => p.isCompleted).length}`} // Force re-render when progress changes
               lessons={lessons}
               chapters={chapters}
               selectedLessonId={selectedLesson?.id}
@@ -1412,16 +1413,16 @@ export function LessonPage() {
             // If current item is preview lesson, next item is always accessible
             if (currentItem?.type === 'lesson' && currentItem.lesson.isPreview) return true;
             
-            // If at first lesson (index 0), next lesson is accessible (first lesson is usually preview or always unlocked)
-            if (navInfo.currentIndex === 0) return true;
-            
-            // Check if previous item (current) is completed + quizCompleted
+            // Check if current item is completed + quizCompleted
             if (currentItem) {
               if (currentItem.type === 'lesson') {
                 const progress = lessonQuizProgress[currentItem.lesson.id];
+                // If current lesson is preview, next lesson is accessible
+                if (currentItem.lesson.isPreview) return true;
+                // Otherwise, check if completed + quizCompleted
                 return progress ? (progress.isCompleted && progress.quizCompleted) : false;
               } else if (currentItem.type === 'quiz') {
-                // If current is quiz, the lesson should be completed
+                // If current is quiz, check if the lesson is completed
                 const progress = lessonQuizProgress[currentItem.lesson.id];
                 return progress ? progress.isCompleted : false;
               }
