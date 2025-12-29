@@ -87,7 +87,7 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel} disabled={loading}>Hủy</Button>
-        <Button onClick={handleSubmit} disabled={loading || (quiz ? !hasChanges() : false)}>{quiz ? 'Lưu thay đổi' : 'Tạo Quiz'}</Button>
+        <Button onClick={handleSubmit} disabled={loading || (quiz ? !hasChanges() : false)}>{quiz ? 'Lưu thay đổi' : 'Tạo câu hỏi ôn tập'}</Button>
       </div>
     </div>
   )
