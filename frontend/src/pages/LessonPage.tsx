@@ -76,6 +76,7 @@ export function LessonPage() {
   const [lessonNotes, setLessonNotes] = useState<string>('');
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
   const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }>>({});
+  const [progressUpdateKey, setProgressUpdateKey] = useState(0); // Force re-render when progress updates
   const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({});
     // Fetch lesson/quiz progress for all lessons in course
     useEffect(() => {
@@ -598,6 +599,13 @@ export function LessonPage() {
           if (typeof updatedProgress?.watchDuration === 'number') {
             setWatchedDuration(updatedProgress.watchDuration);
           }
+          // If lesson is completed, refresh progress immediately to unlock next lesson
+          if (updatedProgress?.isCompleted === true) {
+            await refreshLessonQuizProgress();
+            if (!completedLessonIds.includes(selectedLesson.id)) {
+              setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+            }
+          }
         } catch (err) {}
       }
     }, 30000);
@@ -618,6 +626,13 @@ export function LessonPage() {
         if (typeof updatedProgress?.watchDuration === 'number') {
           setWatchedDuration(updatedProgress.watchDuration);
         }
+        // If lesson is completed, refresh progress immediately to unlock next lesson
+        if (updatedProgress?.isCompleted === true) {
+          await refreshLessonQuizProgress();
+          if (!completedLessonIds.includes(selectedLesson.id)) {
+            setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+          }
+        }
       } catch (err: any) {
         // Nếu lỗi rate limit, không hiện toast (đã có toast ở VideoPlayer)
         // if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
@@ -636,20 +651,30 @@ export function LessonPage() {
     debouncedUpdateProgress();
   };
 
+  // Helper function to refresh lesson/quiz progress when lesson is completed
+  const refreshLessonQuizProgress = async () => {
+    if (!courseId) return;
+    try {
+      const progressList = await progressApi.getCourseLessonProgressList(courseId);
+      const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
+      progressList.forEach((p) => {
+        progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+      });
+      setLessonQuizProgress(progressMap);
+      setProgressUpdateKey(prev => prev + 1); // Force LessonList re-render
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to refresh lesson/quiz progress:', err);
+    }
+  };
+
   // Handle video ended
   const handleVideoEnded = async () => {
     if (selectedLesson && enrollment) {
       try {
         await progressApi.completeLesson(selectedLesson.id);
         // Refresh lesson/quiz progress to update unlock status
-        if (courseId) {
-          const progressList = await progressApi.getCourseLessonProgressList(courseId);
-          const progressMap: Record<number, { lessonId: number; isCompleted: boolean; quizCompleted: boolean }> = {};
-          progressList.forEach((p) => {
-            progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
-          });
-          setLessonQuizProgress(progressMap);
-        }
+        await refreshLessonQuizProgress();
       } catch (err) {}
       if (!completedLessonIds.includes(selectedLesson.id)) {
         setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
@@ -676,6 +701,13 @@ export function LessonPage() {
         const updatedProgress = await progressApi.updateLessonProgress(selectedLesson.id, payload);
         if (typeof updatedProgress?.watchDuration === 'number') {
           setWatchedDuration(updatedProgress.watchDuration);
+        }
+        // If lesson is completed, refresh progress immediately to unlock next lesson
+        if (updatedProgress?.isCompleted === true) {
+          await refreshLessonQuizProgress();
+          if (!completedLessonIds.includes(selectedLesson.id)) {
+            setCompletedLessonIds([...completedLessonIds, selectedLesson.id]);
+          }
         }
       } catch (err: any) {
         if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
@@ -1257,6 +1289,7 @@ export function LessonPage() {
                             progressMap[p.lessonId] = { lessonId: p.lessonId, isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
                           });
                           setLessonQuizProgress(progressMap);
+                          setProgressUpdateKey(prev => prev + 1); // Force LessonList re-render
                         } catch (err) {
                           // eslint-disable-next-line no-console
                           console.error('Failed to refresh progress after quiz submission:', err);
@@ -1369,7 +1402,7 @@ export function LessonPage() {
           {showSidebar && (
             <div className="lg:col-span-1 h-full overflow-y-auto custom-scrollbar">
             <LessonList
-              key={`progress-${Object.keys(lessonQuizProgress).length}-${Object.values(lessonQuizProgress).filter(p => p.isCompleted).length}`} // Force re-render when progress changes
+              key={`progress-${progressUpdateKey}`} // Force re-render when progress updates
               lessons={lessons}
               chapters={chapters}
               selectedLessonId={selectedLesson?.id}
