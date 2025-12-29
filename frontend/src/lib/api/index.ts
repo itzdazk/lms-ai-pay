@@ -22,6 +22,12 @@ export type {
 export { lessonsApi } from './lessons'
 export { lessonNotesApi } from './lesson-notes'
 export { categoriesApi, getCategoryPath } from './categories'
+export { notificationsApi } from './notifications'
+export type {
+    GetNotificationsParams,
+    NotificationsResponse,
+    MarkAllAsReadResponse,
+} from './notifications'
 export type {
     LessonNote,
     LessonNoteResponse,

@@ -543,12 +543,35 @@ class ProgressService {
             updateData.completedAt = new Date();
             updateData.status = ENROLLMENT_STATUS.COMPLETED;
 
-            // Create notification for course completed
+            // Create notification for course completed (student)
             await notificationsService.notifyCourseCompleted(
                 userId,
                 courseId,
                 enrollment.course.title
             );
+
+            // Notify instructor about student completing course
+            try {
+                const student = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { fullName: true },
+                });
+                const instructorId = enrollment.course.instructorId;
+                if (instructorId && student) {
+                    await notificationsService.notifyInstructorStudentCompletedCourse(
+                        instructorId,
+                        courseId,
+                        enrollment.course.title,
+                        student.fullName,
+                        userId
+                    );
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to notify instructor about course completion: ${error.message}`
+                );
+                // Don't fail progress update if notification fails
+            }
         }
 
         await prisma.enrollment.update({

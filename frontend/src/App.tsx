@@ -40,6 +40,7 @@ import { EnrollmentDetailPage } from './pages/EnrollmentDetailPage'
 import { OrderHistoryPage } from './pages/OrderHistoryPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { TransactionHistoryPage } from './pages/TransactionHistoryPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 
 // Instructor Pages
 import { InstructorDashboard } from './pages/InstructorDashboard'
@@ -312,6 +313,14 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <SettingsPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/notifications'
+                                        element={
+                                            <ProtectedRoute>
+                                                <NotificationsPage />
                                             </ProtectedRoute>
                                         }
                                     />

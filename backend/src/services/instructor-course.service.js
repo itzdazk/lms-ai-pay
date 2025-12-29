@@ -233,9 +233,7 @@ class InstructorCourseService {
             _count: undefined,
         }
 
-        logger.info(
-            `Instructor ${instructorId} retrieved course ${courseId}`
-        )
+        logger.info(`Instructor ${instructorId} retrieved course ${courseId}`)
 
         return transformedCourse
     }
@@ -415,7 +413,9 @@ class InstructorCourseService {
 
         // Check ownership
         if (existingCourse.instructorId !== instructorId) {
-            const error = new Error('You do not have permission to manage this course')
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -465,9 +465,13 @@ class InstructorCourseService {
                 if (fs.existsSync(oldPath)) {
                     try {
                         fs.unlinkSync(oldPath)
-                        logger.info(`Thumbnail file deleted: ${oldThumbnailUrl}`)
+                        logger.info(
+                            `Thumbnail file deleted: ${oldThumbnailUrl}`
+                        )
                     } catch (error) {
-                        logger.error(`Error deleting thumbnail file: ${error.message}`)
+                        logger.error(
+                            `Error deleting thumbnail file: ${error.message}`
+                        )
                         // Don't throw error, just log it
                     }
                 }
@@ -484,9 +488,13 @@ class InstructorCourseService {
                 if (fs.existsSync(oldPath)) {
                     try {
                         fs.unlinkSync(oldPath)
-                        logger.info(`Video preview file deleted: ${oldVideoPreviewUrl}`)
+                        logger.info(
+                            `Video preview file deleted: ${oldVideoPreviewUrl}`
+                        )
                     } catch (error) {
-                        logger.error(`Error deleting video preview file: ${error.message}`)
+                        logger.error(
+                            `Error deleting video preview file: ${error.message}`
+                        )
                         // Don't throw error, just log it
                     }
                 }
@@ -521,8 +529,8 @@ class InstructorCourseService {
 
             if (slugExists) {
                 const error = new Error('Course with this slug already exists')
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
             }
 
             updateData.slug = newSlug
@@ -670,7 +678,9 @@ class InstructorCourseService {
 
         // Check ownership
         if (course.instructorId !== instructorId) {
-            const error = new Error('You do not have permission to manage this course')
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -740,7 +750,9 @@ class InstructorCourseService {
 
         // Check ownership FIRST before any validation
         if (course.instructorId !== instructorId) {
-            const error = new Error('You do not have permission to manage this course')
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -785,6 +797,30 @@ class InstructorCourseService {
         logger.info(
             `Instructor ${instructorId} changed status of course: ${course.title} (ID: ${courseId}) to ${status}`
         )
+
+        // Notify admins when course is published for the first time
+        if (status === COURSE_STATUS.PUBLISHED && !course.publishedAt) {
+            try {
+                const { default: notificationsService } =
+                    await import('./notifications.service.js')
+                const instructor = await prisma.user.findUnique({
+                    where: { id: instructorId },
+                    select: { fullName: true },
+                })
+                if (instructor) {
+                    await notificationsService.notifyAdminsCoursePendingApproval(
+                        courseId,
+                        course.title,
+                        instructor.fullName
+                    )
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to notify admins about course publish: ${error.message}`
+                )
+                // Don't fail course publish if notification fails
+            }
+        }
 
         return updatedCourse
     }
@@ -893,18 +929,18 @@ class InstructorCourseService {
         // Auto-crop/resize image to 16:9 aspect ratio
         const filePath = file.path
         const targetAspectRatio = 16 / 9 // 1.777...
-        
+
         try {
             const metadata = await sharp(filePath).metadata()
             const { width, height } = metadata
-            
+
             if (width && height) {
                 const currentAspectRatio = width / height
-                
+
                 // Only process if aspect ratio is different from 16:9
                 if (Math.abs(currentAspectRatio - targetAspectRatio) > 0.01) {
                     let newWidth, newHeight, left, top
-                    
+
                     if (currentAspectRatio > targetAspectRatio) {
                         // Image is wider than 16:9 - crop width (center crop)
                         newHeight = height
@@ -918,19 +954,25 @@ class InstructorCourseService {
                         left = 0
                         top = Math.round((height - newHeight) / 2)
                     }
-                    
+
                     // Crop and resize to 16:9
                     await sharp(filePath)
-                        .extract({ left, top, width: newWidth, height: newHeight })
-                        .resize(1920, 1080, { // Standard 16:9 resolution
+                        .extract({
+                            left,
+                            top,
+                            width: newWidth,
+                            height: newHeight,
+                        })
+                        .resize(1920, 1080, {
+                            // Standard 16:9 resolution
                             fit: 'cover',
-                            position: 'center'
+                            position: 'center',
                         })
                         .toFile(filePath + '.processed')
-                    
+
                     // Replace original with processed image
                     fs.renameSync(filePath + '.processed', filePath)
-                    
+
                     logger.info(
                         `Thumbnail auto-cropped to 16:9: ${width}×${height} → ${newWidth}×${newHeight} (Course ${courseId})`
                     )
@@ -1008,12 +1050,19 @@ class InstructorCourseService {
         try {
             videoPreviewDuration = await getVideoDuration(file.path)
             if (videoPreviewDuration) {
-                logger.info(`Video preview duration extracted: ${videoPreviewDuration} seconds for course ${courseId}`)
+                logger.info(
+                    `Video preview duration extracted: ${videoPreviewDuration} seconds for course ${courseId}`
+                )
             } else {
-                logger.warn(`Could not extract video preview duration for course ${courseId}`)
+                logger.warn(
+                    `Could not extract video preview duration for course ${courseId}`
+                )
             }
         } catch (error) {
-            logger.error(`Error extracting video preview duration: ${error.message}`, { error: error.stack })
+            logger.error(
+                `Error extracting video preview duration: ${error.message}`,
+                { error: error.stack }
+            )
             // Continue without duration - don't fail the upload
         }
 
@@ -1074,7 +1123,9 @@ class InstructorCourseService {
 
         // Check ownership
         if (course.instructorId !== instructorId) {
-            const error = new Error('You do not have permission to manage this course')
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1108,7 +1159,9 @@ class InstructorCourseService {
         )
 
         if (newTagIds.length === 0) {
-            const error = new Error('All tags are already associated with this course')
+            const error = new Error(
+                'All tags are already associated with this course'
+            )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -1179,7 +1232,9 @@ class InstructorCourseService {
 
         // Check ownership
         if (course.instructorId !== instructorId) {
-            const error = new Error('You do not have permission to manage this course')
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1269,7 +1324,9 @@ class InstructorCourseService {
 
         // Check ownership
         if (course.instructorId !== instructorId) {
-            const error = new Error('You do not have permission to manage this course')
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }

@@ -24,7 +24,6 @@ import {
     Menu,
     X,
     Loader2,
-    Bell,
     Sun,
     Moon,
     LogOut,
@@ -54,6 +53,7 @@ import {
     DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu'
 import { Badge } from '../components/ui/badge'
+import { NotificationBell } from '../components/Notifications/NotificationBell'
 
 function formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -463,58 +463,7 @@ export function AdminDashboard() {
                         </DarkOutlineButton>
 
                         {/* Notifications */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant='ghost'
-                                    size='icon'
-                                    className='relative text-white hover:bg-[#1F1F1F]'
-                                >
-                                    <Bell className='h-5 w-5' />
-                                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
-                                        3
-                                    </Badge>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                align='end'
-                                className='w-[480px] max-w-[90vw] bg-[#1A1A1A] border-[#2D2D2D]'
-                            >
-                                <DropdownMenuLabel className='text-white flex items-center justify-between gap-2'>
-                                    <span>Thông báo</span>
-                                    <Badge className='bg-blue-600 text-white'>
-                                        Mới
-                                    </Badge>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator className='bg-[#2D2D2D]' />
-                                <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D] custom-scrollbar'>
-                                    <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                        <p className='text-sm text-white font-semibold'>
-                                            Người dùng mới đăng ký
-                                        </p>
-                                        <p className='text-xs text-gray-500 mt-1'>
-                                            5 phút trước
-                                        </p>
-                                    </div>
-                                    <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                        <p className='text-sm text-white font-semibold'>
-                                            Khóa học mới được tạo
-                                        </p>
-                                        <p className='text-xs text-gray-500 mt-1'>
-                                            10 phút trước
-                                        </p>
-                                    </div>
-                                    <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                        <p className='text-sm text-white font-semibold'>
-                                            Thanh toán thành công
-                                        </p>
-                                        <p className='text-xs text-gray-500 mt-1'>
-                                            1 giờ trước
-                                        </p>
-                                    </div>
-                                </div>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <NotificationBell />
 
                         {/* User Menu */}
                         <DropdownMenu>

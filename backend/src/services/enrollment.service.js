@@ -420,12 +420,58 @@ class EnrollmentService {
                 `User ID: ${userId} enrolled in free course ID: ${courseId}`
             )
 
-            // Create notification for enrollment success
+            // Create notification for enrollment success (student)
             await notificationsService.notifyEnrollmentSuccess(
                 userId,
                 courseId,
                 course.title
             )
+
+            // Notify instructor about new enrollment
+            try {
+                const student = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { fullName: true },
+                })
+                if (course.instructor && student) {
+                    await notificationsService.notifyInstructorNewEnrollment(
+                        course.instructor.id,
+                        courseId,
+                        course.title,
+                        student.fullName,
+                        userId
+                    )
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to notify instructor about new enrollment: ${error.message}`
+                )
+                // Don't fail enrollment if notification fails
+            }
+
+            // Notify admins about new enrollment (free course)
+            try {
+                const student = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { fullName: true },
+                })
+                if (student && course.instructor) {
+                    await notificationsService.notifyAdminsNewEnrollment(
+                        userId,
+                        student.fullName,
+                        courseId,
+                        course.title,
+                        course.instructor.fullName,
+                        false, // isPaid = false for free course
+                        null
+                    )
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to notify admins about new enrollment: ${error.message}`
+                )
+                // Don't fail enrollment if notification fails
+            }
 
             // Send enrollment success email
             try {
@@ -495,6 +541,11 @@ class EnrollmentService {
      * @param {number} orderId - Order ID
      * @returns {Promise<object>} Enrollment object
      */
+    /**
+     * Enroll user from payment (called after successful payment)
+     * @param {number} orderId - Order ID
+     * @returns {Promise<object>} Enrollment
+     */
     async enrollFromPayment(orderId) {
         // Get order with user and course info
         const order = await prisma.order.findUnique({
@@ -504,6 +555,7 @@ class EnrollmentService {
                 userId: true,
                 courseId: true,
                 paymentStatus: true,
+                finalPrice: true,
                 course: {
                     select: {
                         id: true,
@@ -610,6 +662,54 @@ class EnrollmentService {
             .catch((err) => {
                 logger.error('Failed to send enrollment notification:', err)
             })
+
+        // Notify instructor about new enrollment from payment (fire-and-forget)
+        ;(async () => {
+            try {
+                const student = await prisma.user.findUnique({
+                    where: { id: order.userId },
+                    select: { fullName: true },
+                })
+                if (order.course.instructor && student) {
+                    await notificationsService.notifyInstructorNewEnrollment(
+                        order.course.instructor.id,
+                        order.courseId,
+                        order.course.title,
+                        student.fullName,
+                        order.userId
+                    )
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to notify instructor about enrollment from payment: ${error.message}`
+                )
+            }
+        })()
+
+        // Notify admins about new enrollment from payment (fire-and-forget)
+        ;(async () => {
+            try {
+                const student = await prisma.user.findUnique({
+                    where: { id: order.userId },
+                    select: { fullName: true },
+                })
+                if (student && order.course.instructor && order.finalPrice) {
+                    await notificationsService.notifyAdminsNewEnrollment(
+                        order.userId,
+                        student.fullName,
+                        order.courseId,
+                        order.course.title,
+                        order.course.instructor.fullName,
+                        true, // isPaid = true
+                        order.finalPrice
+                    )
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to notify admins about enrollment from payment: ${error.message}`
+                )
+            }
+        })()
 
         // Gửi email (fire-and-forget – không được await trong transaction)
         ;(async () => {
