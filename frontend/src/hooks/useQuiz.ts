@@ -245,11 +245,6 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
         if (!quiz || submitting) return
         
         // Check if all questions are answered
-        const unansweredCount = answers.filter(a => !a.answer || a.answer.trim() === '').length
-        if (unansweredCount > 0 && !isTimeUp) {
-            toast.error(`Còn ${unansweredCount} câu hỏi chưa trả lời`)
-            return
-        }
         
         setSubmitting(true)
         try {
@@ -260,7 +255,8 @@ export const useQuizTaking = (): UseQuizTakingReturn => {
             // Validate IDs before building payload
             const missingIds = (questions || []).filter((q: any) => (q as any).id === undefined && (q as any).questionId === undefined)
             if (missingIds.length > 0) {
-                toast.error('Quiz không hợp lệ: thiếu ID câu hỏi, không thể nộp bài.')
+                // Thiếu ID câu hỏi, không thể nộp bài
+                toast.error('Câu hỏi ông tập không hợp lệ')
                 setSubmitting(false)
                 return
             }
