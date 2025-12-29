@@ -1,19 +1,14 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { instructorDashboardApi } from '../lib/api/instructor-dashboard'
-import type { Enrollment } from '../lib/api/types'
+import type { Student } from '../lib/api/instructor-dashboard'
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error'
 
-export interface InstructorEnrollmentsFilters {
+export interface InstructorStudentsFilters {
     page?: number
     limit?: number
     search?: string
-    courseId?: number
-    status?: string
-    startDate?: string
-    endDate?: string
-    sort?: string
 }
 
 const parseErrorMessage = (error: unknown): string => {
@@ -30,12 +25,10 @@ const parseErrorMessage = (error: unknown): string => {
 }
 
 /**
- * Hook: fetch instructor enrollments list with filters and pagination
+ * Hook: fetch instructor students list with pagination and search
  */
-export function useInstructorEnrollments(
-    filters?: InstructorEnrollmentsFilters
-) {
-    const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+export function useInstructorStudents(filters?: InstructorStudentsFilters) {
+    const [students, setStudents] = useState<Student[]>([])
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 20,
@@ -48,26 +41,17 @@ export function useInstructorEnrollments(
     // Memoize filters to prevent unnecessary re-renders
     const memoizedFilters = useMemo(
         () => filters,
-        [
-            filters?.page,
-            filters?.limit,
-            filters?.search,
-            filters?.courseId,
-            filters?.status,
-            filters?.startDate,
-            filters?.endDate,
-            filters?.sort,
-        ]
+        [filters?.page, filters?.limit, filters?.search]
     )
 
-    const fetchEnrollments = useCallback(async () => {
+    const fetchStudents = useCallback(async () => {
         setStatus('loading')
         setError(null)
         try {
-            const data = await instructorDashboardApi.getInstructorEnrollments(
+            const data = await instructorDashboardApi.getInstructorStudents(
                 memoizedFilters
             )
-            setEnrollments(data.enrollments)
+            setStudents(data.students)
             setPagination(data.pagination)
             setStatus('success')
         } catch (err) {
@@ -86,16 +70,16 @@ export function useInstructorEnrollments(
     }, [memoizedFilters])
 
     useEffect(() => {
-        fetchEnrollments()
-    }, [fetchEnrollments])
+        fetchStudents()
+    }, [fetchStudents])
 
     return {
-        enrollments,
+        students,
         pagination,
         status,
         isLoading: status === 'loading',
         isError: status === 'error',
         error,
-        refetch: fetchEnrollments,
+        refetch: fetchStudents,
     }
 }
