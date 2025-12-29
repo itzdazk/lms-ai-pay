@@ -369,7 +369,7 @@ class ProgressService {
                 updateData.watchDuration = position;
             }
                         // Tự động đánh dấu completed nếu đã xem >= 70% video
-                        if (lesson.videoDuration && newWatchDuration >= lesson.videoDuration * 0.05) {
+                        if (lesson.videoDuration && newWatchDuration >= lesson.videoDuration * 0.50) {
                                 updateData.isCompleted = true;
                                 updateData.completedAt = new Date();
                                 // Đảm bảo watchedDuration = videoDuration khi hoàn thành

@@ -321,7 +321,7 @@ export const QuizTaking: React.FC<QuizTakingProps> = ({
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-gray-300">
-                                Bạn còn <span className="text-orange-400 font-semibold">{totalQuestions - answeredCount}</span> câu hỏi chưa trả lời.
+                                Bạn còn <span className="text-orange-400 font-semibold">{totalQuestions - answeredCount}</span>  trả lời.
                             </p>
                             <p className="text-gray-400 text-sm">
                                 Bạn có chắc chắn muốn nộp bài không?
