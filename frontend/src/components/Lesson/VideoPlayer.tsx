@@ -83,7 +83,16 @@ export function VideoPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
+  const [volume, setVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem('video-volume');
+      if (saved !== null) {
+        const v = parseFloat(saved);
+        if (!isNaN(v) && v >= 0 && v <= 1) return v;
+      }
+    } catch {}
+    return 1;
+  });
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -154,8 +163,17 @@ export function VideoPlayer({
       videoRef.current.volume = newVolume;
       setVolume(newVolume);
       setIsMuted(newVolume === 0);
+      try {
+        localStorage.setItem('video-volume', String(newVolume));
+      } catch {}
     }
   };
+  // Khi mount hoặc khi videoUrl đổi, luôn đồng bộ volume từ state vào video element
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = volume;
+    }
+  }, [volume, videoUrl]);
 
   // Handle mute toggle
   const toggleMute = () => {
@@ -179,6 +197,8 @@ export function VideoPlayer({
     }
   };
 
+  // Prevent duplicated toast: only show once every 2 seconds
+  const lastSeekToastRef = useRef<number>(0);
   // Handle seek (anti-skip): chỉ cho phép kéo trong vùng đã xem
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (videoRef.current && duration > 0 && progressBarRef.current) {
@@ -187,7 +207,11 @@ export function VideoPlayer({
       let newTime = pos * duration;
       if (watchedDuration !== undefined && newTime > watchedDuration) {
         // Không cho phép seek vượt quá watchedDuration, không làm gì cả
-        toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+        const now = Date.now();
+        if (now - lastSeekToastRef.current > 2000) {
+          toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+          lastSeekToastRef.current = now;
+        }
         return;
       }
       videoRef.current.currentTime = newTime;
@@ -203,7 +227,11 @@ export function VideoPlayer({
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       let newTime = pos * duration;
       if (watchedDuration !== undefined && newTime > watchedDuration) {
-        toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+        const now = Date.now();
+        if (now - lastSeekToastRef.current > 2000) {
+          toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+          lastSeekToastRef.current = now;
+        }
         return;
       }
       isDraggingRef.current = true;
@@ -231,7 +259,11 @@ export function VideoPlayer({
         if (!videoRef.current) return;
         let newTime = videoRef.current.currentTime + delta;
         if (watchedDuration !== undefined && delta > 0 && newTime > watchedDuration) {
-          toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+          const now = Date.now();
+          if (now - lastSeekToastRef.current > 2000) {
+            toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+            lastSeekToastRef.current = now;
+          }
           return;
         }
         newTime = Math.min(Math.max(0, newTime), duration);

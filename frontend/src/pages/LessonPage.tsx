@@ -75,6 +75,25 @@ export function LessonPage() {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [lessonNotes, setLessonNotes] = useState<string>('');
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
+  const [lessonQuizProgress, setLessonQuizProgress] = useState<Record<number, { isCompleted: boolean; quizCompleted: boolean }>>({});
+    // Fetch lesson/quiz progress for all lessons in course
+    useEffect(() => {
+      async function fetchLessonQuizProgress() {
+        if (!courseId) return;
+        try {
+          const progressList = await progressApi.getCourseLessonProgressList(courseId);
+          const progressMap: Record<number, { isCompleted: boolean; quizCompleted: boolean }> = {};
+          progressList.forEach((p) => {
+            progressMap[p.lessonId] = { isCompleted: p.isCompleted, quizCompleted: p.quizCompleted };
+          });
+          setLessonQuizProgress(progressMap);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to fetch lesson/quiz progress:', err);
+        }
+      }
+      fetchLessonQuizProgress();
+    }, [courseId]);
   const [loading, setLoading] = useState(true);
   const [lessonNotFound, setLessonNotFound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -544,9 +563,10 @@ export function LessonPage() {
           setWatchedDuration(updatedProgress.watchDuration);
         }
       } catch (err: any) {
-        if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
-          toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
-        }
+        // Nếu lỗi rate limit, không hiện toast (đã có toast ở VideoPlayer)
+        // if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
+        //   toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
+        // }
       }
     }
   }, 1500);
@@ -1271,7 +1291,15 @@ export function LessonPage() {
                     allLessons.push(...lessons);
                   }
                   const currentIndex = allLessons.findIndex((l) => l.id === selectedLesson.id);
-                  return currentIndex === -1 || currentIndex === allLessons.length - 1;
+                  if (currentIndex === -1 || currentIndex === allLessons.length - 1) return true;
+                  // Kiểm tra trạng thái unlock của bài tiếp theo
+                  const nextLesson = allLessons[currentIndex + 1];
+                  // Nếu là preview thì luôn unlock
+                  if (nextLesson.isPreview) return false;
+                  // Kiểm tra bài hiện tại đã hoàn thành và quizCompleted chưa
+                  const progress = lessonQuizProgress[selectedLesson.id];
+                  if (!progress) return true;
+                  return !(progress.isCompleted && progress.quizCompleted);
                 })()}
               >
                 <span className="hidden md:inline">Bài tiếp theo</span>

@@ -413,7 +413,6 @@ class ProgressService {
 
         return {
             progress: {
-                id: progress.id,
                 isCompleted: progress.isCompleted,
                 watchDuration: progress.watchDuration,
                 lastPosition: progress.lastPosition,
