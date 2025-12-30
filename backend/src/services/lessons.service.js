@@ -586,6 +586,7 @@ class LessonsService {
                 title: true,
                 videoUrl: true,
                 transcriptUrl: true,
+                transcriptStatus: true,
             },
         })
 
@@ -595,6 +596,19 @@ class LessonsService {
 
         if (lesson.courseId !== courseId) {
             throw new Error('Lesson does not belong to this course')
+        }
+
+        // Cancel any ongoing transcription job if it exists
+        if (lesson.transcriptStatus === TRANSCRIPT_STATUS.PROCESSING) {
+            const wasCancelled = transcriptionService.cancelTranscriptionJob(lessonId)
+            if (wasCancelled) {
+                logger.info(`Cancelled transcription job for lesson ${lessonId} before deletion`)
+                // Give a small delay to ensure the process is killed
+                await new Promise(resolve => setTimeout(resolve, 500))
+            }
+        } else {
+            // Also try to cancel even if status is not PROCESSING (might be in queue)
+            transcriptionService.cancelTranscriptionJob(lessonId)
         }
 
         // Delete associated files
@@ -659,8 +673,13 @@ class LessonsService {
 
     /**
      * Upload video to lesson
+     * @param {number} courseId - Course ID
+     * @param {number} lessonId - Lesson ID
+     * @param {Object} file - Video file object
+     * @param {number} userId - User ID
+     * @param {boolean} autoCreateTranscript - Whether to automatically create transcript (default: false)
      */
-    async uploadVideo(courseId, lessonId, file, userId) {
+    async uploadVideo(courseId, lessonId, file, userId, autoCreateTranscript = false) {
         // Check if lesson exists
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
@@ -723,7 +742,8 @@ class LessonsService {
             // Continue without duration - don't fail the upload
         }
 
-        const shouldTranscribe = config.WHISPER_ENABLED !== false
+        // Only transcribe if autoCreateTranscript is true AND Whisper is enabled
+        const shouldTranscribe = autoCreateTranscript && config.WHISPER_ENABLED !== false
 
         // Cancel any existing transcription job BEFORE updating database
         // This ensures the old job is stopped before we start a new one

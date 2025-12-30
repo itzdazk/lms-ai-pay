@@ -34,7 +34,8 @@ interface LessonFormProps {
     chapterId?: number
     onSubmit: (
         data: CreateLessonRequest | UpdateLessonRequest,
-        videoFile?: File
+        videoFile?: File,
+        autoCreateTranscript?: boolean
     ) => Promise<void>
     onCancel: () => void
     loading?: boolean
@@ -66,6 +67,7 @@ export function LessonForm({
     const [isRequestingTranscript, setIsRequestingTranscript] = useState(false)
     const [showUpdateWarningDialog, setShowUpdateWarningDialog] = useState(false)
     const [pendingSubmit, setPendingSubmit] = useState<(() => Promise<void>) | null>(null)
+    const [autoCreateTranscript, setAutoCreateTranscript] = useState(false)
 
     // Store initial form data for change tracking
     const [initialFormData, setInitialFormData] = useState<LessonFormData | null>(null)
@@ -121,6 +123,7 @@ export function LessonForm({
             setVideoPreview(null)
             setVideoFile(null)
             setVideoRemoved(false)
+            setAutoCreateTranscript(false) // Default to false for new lessons
         }
     }, [lesson?.id]) // Only depend on lesson id to avoid infinite loops
 
@@ -322,7 +325,8 @@ export function LessonForm({
                 isPublished: formData.isPublished,
             }
 
-            await onSubmit(submitData, videoFile || undefined)
+            // Pass autoCreateTranscript flag to parent component
+            await onSubmit(submitData, videoFile || undefined, autoCreateTranscript)
         } catch (error: any) {
             console.error('Error submitting lesson:', error)
             // Error toast is already shown by API client interceptor
@@ -507,6 +511,36 @@ export function LessonForm({
                             <div className="flex items-center gap-3 pb-2 border-b border-[#2D2D2D]">
                                 <Upload className="h-5 w-5 text-purple-500" />
                                 <h3 className="text-lg font-semibold text-white">Media & Tài liệu</h3>
+                            </div>
+
+                            {/* Auto-create Transcript Checkbox */}
+                            <div className="group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg hover:border-purple-500/50 transition-colors">
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="autoCreateTranscript"
+                                        checked={autoCreateTranscript}
+                                        onCheckedChange={(checked) =>
+                                            setAutoCreateTranscript(checked as boolean)
+                                        }
+                                        className="border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 h-5 w-5 mt-0.5"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Label htmlFor="autoCreateTranscript" className="text-white font-medium cursor-pointer flex items-center gap-2">
+                                                Tự động tạo transcript
+                                            </Label>
+                                            <div className="group/help relative">
+                                                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                                                <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                                                    Nếu bật, hệ thống sẽ tự động tạo transcript (phụ đề) từ video bằng AI Whisper sau khi bài học được lưu. Transcript sẽ được tạo trong vài phút.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-400">
+                                            Tự động tạo phụ đề từ video sau khi lưu bài học
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Video Upload */}
