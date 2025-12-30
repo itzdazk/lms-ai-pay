@@ -560,7 +560,7 @@ export function AdminDashboard() {
                                         to='/admin/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <Shield className='mr-2 h-4 w-4' />
+                                        <Shield className='mr-2 h-4 w-4 text-gray-300' />
                                         Quản trị viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -572,7 +572,7 @@ export function AdminDashboard() {
                                         to='/instructor/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <GraduationCap className='mr-2 h-4 w-4' />
+                                        <GraduationCap className='mr-2 h-4 w-4 text-gray-300' />
                                         Giảng viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -584,7 +584,7 @@ export function AdminDashboard() {
                                         to='/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <UserIcon className='mr-2 h-4 w-4' />
+                                        <UserIcon className='mr-2 h-4 w-4 text-gray-300' />
                                         Học viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -596,7 +596,7 @@ export function AdminDashboard() {
                                         to='/orders'
                                         className='flex items-center'
                                     >
-                                        <ReceiptText className='mr-2 h-4 w-4' />
+                                        <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
                                         Đơn hàng của tôi
                                     </Link>
                                 </DropdownMenuItem>
