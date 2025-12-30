@@ -47,6 +47,7 @@ model User {
   lessonNotes         LessonNote[]
   learningGoals       LearningGoal[]
   bookmarks           Bookmark[]
+  refundRequests      RefundRequest[]
 
   @@index([email])
   @@index([userName])
@@ -288,6 +289,7 @@ model Order {
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   paymentTransactions PaymentTransaction[]
+  refundRequests      RefundRequest[]
 
   @@index([userId])
   @@index([courseId])
@@ -606,4 +608,29 @@ model Bookmark {
   @@index([userId])
   @@index([userId, type])
   @@map("bookmarks")
+}
+
+// =====================================================
+// 19. REFUND REQUESTS
+// =====================================================
+model RefundRequest {
+  id                 Int       @id @default(autoincrement())
+  orderId            Int       @map("order_id")
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  studentId          Int       @map("student_id")
+  student            User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reason             String    @db.Text
+  status             String    @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
+  progressPercentage Decimal   @map("progress_percentage") @db.Decimal(5, 2)
+  adminNotes         String?   @map("admin_notes") @db.Text
+  processedAt        DateTime? @map("processed_at") @db.Timestamptz
+  processedBy        Int?      @map("processed_by")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([orderId])
+  @@index([studentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("refund_requests")
 }

@@ -219,6 +219,7 @@ export function OrderHistoryPage() {
                     loading={isLoading}
                     onCancel={handleCancelOrder}
                     cancelLoading={cancelLoading ? orderToCancel : null}
+                    onRefundRequestCreated={refetch}
                 />
 
                 {/* Pagination */}

@@ -147,6 +147,21 @@ class AdminOrderService {
                         },
                         take: 1,
                     },
+                    refundRequests: {
+                        orderBy: {
+                            createdAt: 'desc',
+                        },
+                        take: 1,
+                        include: {
+                            student: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
                 },
             }),
             prisma.order.count({ where }),

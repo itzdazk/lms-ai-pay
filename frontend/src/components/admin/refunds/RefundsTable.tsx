@@ -86,11 +86,6 @@ export function RefundsTable({
                 </div>
             </CardHeader>
             <CardContent>
-                {/* Top Pagination */}
-                {pagination.totalPages > 1 && (
-                    <div className='mb-4'>{renderPagination()}</div>
-                )}
-
                 {/* Table */}
                 <div className='rounded-lg border border-[#2D2D2D] overflow-hidden'>
                     <div className='overflow-x-auto'>
@@ -166,9 +161,11 @@ export function RefundsTable({
                     </div>
                 </div>
 
-                {/* Bottom Pagination */}
+                {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                    <div className='mt-4'>{renderPagination()}</div>
+                    <div className='flex items-center justify-center mt-6'>
+                        {renderPagination()}
+                    </div>
                 )}
 
                 {/* Results Summary */}

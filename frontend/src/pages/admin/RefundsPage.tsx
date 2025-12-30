@@ -319,11 +319,11 @@ export function RefundsPage() {
                 <div className='mb-6'>
                     <div className='flex items-start justify-between gap-4 mb-2'>
                         <div>
-                            <h1 className='text-3xl md:text-4xl font-bold mb-2 text-black dark:text-white flex items-center gap-3'>
+                            <h1 className='text-3xl md:text-4xl font-bold mb-2 text-white flex items-center gap-3'>
                                 <RotateCcw className='h-8 w-8' />
                                 Quản lý Hoàn tiền
                             </h1>
-                            <p className='text-gray-600 dark:text-gray-300'>
+                            <p className='text-gray-400'>
                                 Xem và xử lý các yêu cầu hoàn tiền cho đơn hàng
                             </p>
                         </div>
