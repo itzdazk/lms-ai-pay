@@ -8,6 +8,15 @@ import {
 import { Badge } from '../ui/badge'
 import { Loader2, TrendingUp, TrendingDown, Award, Target } from 'lucide-react'
 import { useQuizPerformance } from '../../hooks/useQuizPerformance'
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts'
 
 export function QuizPerformanceSummary() {
     const { performance, loading, error } = useQuizPerformance()
@@ -40,6 +49,12 @@ export function QuizPerformanceSummary() {
                 </CardContent>
             </Card>
         )
+    }
+
+    // Format date for trend chart
+    const formatDate = (dateString: string): string => {
+        const date = new Date(dateString)
+        return `${date.getDate()}/${date.getMonth() + 1}`
     }
 
     return (
@@ -84,6 +99,101 @@ export function QuizPerformanceSummary() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Performance Trend Chart */}
+            {performance.performanceTrend &&
+                performance.performanceTrend.length > 0 && (
+                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                        <CardHeader>
+                            <CardTitle className='text-white'>
+                                Xu hướng điểm số
+                            </CardTitle>
+                            <CardDescription className='text-gray-400'>
+                                Điểm trung bình theo thời gian
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer width='100%' height={300}>
+                                <LineChart
+                                    data={performance.performanceTrend}
+                                    margin={{
+                                        top: 5,
+                                        right: 10,
+                                        left: 0,
+                                        bottom: 0,
+                                    }}
+                                >
+                                    <defs>
+                                        <linearGradient
+                                            id='scoreGradient'
+                                            x1='0'
+                                            y1='0'
+                                            x2='0'
+                                            y2='1'
+                                        >
+                                            <stop
+                                                offset='5%'
+                                                stopColor='#3B82F6'
+                                                stopOpacity={0.3}
+                                            />
+                                            <stop
+                                                offset='95%'
+                                                stopColor='#3B82F6'
+                                                stopOpacity={0}
+                                            />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid
+                                        strokeDasharray='3 3'
+                                        stroke='#2D2D2D'
+                                    />
+                                    <XAxis
+                                        dataKey='date'
+                                        stroke='#9CA3AF'
+                                        tickFormatter={formatDate}
+                                        style={{ fontSize: '12px' }}
+                                    />
+                                    <YAxis
+                                        stroke='#9CA3AF'
+                                        domain={[0, 100]}
+                                        style={{ fontSize: '12px' }}
+                                        tickFormatter={(value) => `${value}%`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: '#1F1F1F',
+                                            border: '1px solid #2D2D2D',
+                                            borderRadius: '8px',
+                                            color: '#FFFFFF',
+                                        }}
+                                        formatter={(
+                                            value: number | undefined
+                                        ) => [
+                                            value !== undefined
+                                                ? `${value.toFixed(1)}%`
+                                                : '0%',
+                                            'Điểm trung bình',
+                                        ]}
+                                        labelFormatter={(label) =>
+                                            `Ngày: ${formatDate(label)}`
+                                        }
+                                    />
+                                    <Line
+                                        type='monotone'
+                                        dataKey='averageScore'
+                                        stroke='#3B82F6'
+                                        strokeWidth={2}
+                                        dot={{
+                                            fill: '#3B82F6',
+                                            r: 4,
+                                        }}
+                                        activeDot={{ r: 6 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                )}
 
             {/* Recent Quizzes */}
             {performance.recentQuizzes.length > 0 && (

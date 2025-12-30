@@ -26,8 +26,6 @@ import {
     RecommendedCourses,
     LearningStreakCard,
     CalendarHeatmap,
-    BookmarksList,
-    NotesSummaryCard,
     StatCard,
     ContinueWatchingSection,
     MyCoursesSection,
@@ -250,9 +248,6 @@ export function StudentDashboard() {
                         completedCourses={completedCourses}
                         totalProgress={totalProgress}
                     />
-                    <NextRecommendationsSection
-                        enrolledCourses={enrolledCourses}
-                    />
                 </div>
             </div>
 
@@ -273,20 +268,14 @@ export function StudentDashboard() {
             </div>
 
             {/* Phase 2: Learning Streak & Calendar */}
-            <div className='grid lg:grid-cols-2 gap-6 mb-10'>
+            <div className='space-y-6 mb-10'>
                 <LearningStreakCard />
                 <CalendarHeatmap />
             </div>
 
-            {/* Phase 2: Bookmarks & Notes */}
-            <div className='grid lg:grid-cols-2 gap-6 mb-10'>
-                <BookmarksList />
-                <NotesSummaryCard />
-            </div>
-
             {/* Recommended Courses */}
             <div className='mb-10'>
-                <RecommendedCourses />
+                <NextRecommendationsSection enrolledCourses={enrolledCourses} />
             </div>
         </div>
     )
