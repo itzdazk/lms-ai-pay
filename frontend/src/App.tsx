@@ -1,4 +1,4 @@
- import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ProtectedRoute } from './components/routes/ProtectedRoute'
 import { RoleRoute } from './components/routes/RoleRoute'
@@ -35,7 +35,6 @@ import { CertificatePage } from './pages/CertificatePage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
-import { MyCoursesPage } from './pages/MyCoursesPage'
 import { EnrollmentDetailPage } from './pages/EnrollmentDetailPage'
 import { OrderHistoryPage } from './pages/OrderHistoryPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
@@ -58,6 +57,7 @@ import { AdminDashboard } from './pages/AdminDashboard'
 import { UsersPage } from './pages/admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './pages/admin/CoursesPage'
 import { OrdersPage } from './pages/admin/OrdersPage'
+import { RefundsPage } from './pages/admin/RefundsPage'
 
 export default function App() {
     return (
@@ -148,22 +148,6 @@ export default function App() {
                                                     ]}
                                                 >
                                                     <StudentDashboard />
-                                                </RoleRoute>
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path='/my-courses'
-                                        element={
-                                            <ProtectedRoute>
-                                                <RoleRoute
-                                                    allowedRoles={[
-                                                        'STUDENT',
-                                                        'INSTRUCTOR',
-                                                        'ADMIN',
-                                                    ]}
-                                                >
-                                                    <MyCoursesPage />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
@@ -421,7 +405,10 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
                                                 >
                                                     <CourseQuizzesPage />
                                                 </RoleRoute>
@@ -433,7 +420,10 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
                                                 >
                                                     <QuizzesPage />
                                                 </RoleRoute>
@@ -446,7 +436,10 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
                                                 >
                                                     <QuizzesPage />
                                                 </RoleRoute>
@@ -484,6 +477,10 @@ export default function App() {
                                             <Route
                                                 path='/orders'
                                                 element={<OrdersPage />}
+                                            />
+                                            <Route
+                                                path='/refunds'
+                                                element={<RefundsPage />}
                                             />
                                         </Routes>
                                     </AdminLayout>

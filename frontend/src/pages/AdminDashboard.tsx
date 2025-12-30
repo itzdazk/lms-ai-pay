@@ -31,6 +31,7 @@ import {
     ReceiptText,
     Users,
     BookOpen,
+    RotateCcw,
 } from 'lucide-react'
 import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
@@ -57,6 +58,7 @@ import {
     DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu'
 import { Badge } from '../components/ui/badge'
+import { RefundsPage } from './admin/RefundsPage'
 
 type AdminSection =
     | 'dashboard'
@@ -66,6 +68,7 @@ type AdminSection =
     | 'courses'
     | 'analytics'
     | 'orders'
+    | 'refunds'
     | 'categories'
     | 'settings'
     | 'tags'
@@ -138,6 +141,12 @@ const menuGroups: MenuGroup[] = [
                 label: 'Đơn hàng',
                 icon: ShoppingCart,
                 color: 'text-orange-400',
+            },
+            {
+                id: 'refunds',
+                label: 'Hoàn tiền',
+                icon: RotateCcw,
+                color: 'text-yellow-400',
             },
         ],
     },
@@ -228,6 +237,12 @@ export function AdminDashboard() {
                 return (
                     <div className='h-full'>
                         <OrdersPage />
+                    </div>
+                )
+            case 'refunds':
+                return (
+                    <div className='h-full'>
+                        <RefundsPage />
                     </div>
                 )
             case 'categories':
@@ -560,7 +575,7 @@ export function AdminDashboard() {
                                         to='/admin/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <Shield className='mr-2 h-4 w-4' />
+                                        <Shield className='mr-2 h-4 w-4 text-gray-300' />
                                         Quản trị viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -572,7 +587,7 @@ export function AdminDashboard() {
                                         to='/instructor/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <GraduationCap className='mr-2 h-4 w-4' />
+                                        <GraduationCap className='mr-2 h-4 w-4 text-gray-300' />
                                         Giảng viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -584,20 +599,8 @@ export function AdminDashboard() {
                                         to='/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <UserIcon className='mr-2 h-4 w-4' />
+                                        <UserIcon className='mr-2 h-4 w-4 text-gray-300' />
                                         Học viên
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    asChild
-                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                                >
-                                    <Link
-                                        to='/my-courses'
-                                        className='flex items-center'
-                                    >
-                                        <LibraryBig className='mr-2 h-4 w-4' />
-                                        Khóa học của tôi
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -608,7 +611,7 @@ export function AdminDashboard() {
                                         to='/orders'
                                         className='flex items-center'
                                     >
-                                        <ReceiptText className='mr-2 h-4 w-4' />
+                                        <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
                                         Đơn hàng của tôi
                                     </Link>
                                 </DropdownMenuItem>

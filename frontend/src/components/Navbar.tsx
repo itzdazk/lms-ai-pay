@@ -123,7 +123,7 @@ export function Navbar() {
                                 to='/instructor/dashboard'
                                 className='flex items-center'
                             >
-                                <LayoutDashboard className='mr-2 h-4 w-4' />
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-gray-300' />
                                 Bảng điều khiển
                             </Link>
                         </DropdownMenuItem>
@@ -131,20 +131,8 @@ export function Navbar() {
                             asChild
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
-                            <Link
-                                to='/my-courses'
-                                className='flex items-center'
-                            >
-                                <LibraryBig className='mr-2 h-4 w-4' />
-                                Khóa học của tôi
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            asChild
-                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                        >
                             <Link to='/orders' className='flex items-center'>
-                                <ReceiptText className='mr-2 h-4 w-4' />
+                                <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
                                 Đơn hàng của tôi
                             </Link>
                         </DropdownMenuItem>
@@ -169,7 +157,7 @@ export function Navbar() {
                                 to='/admin/dashboard'
                                 className='flex items-center pl-6'
                             >
-                                <Shield className='mr-2 h-4 w-4' />
+                                <Shield className='mr-2 h-4 w-4 text-gray-300' />
                                 Quản trị viên
                             </Link>
                         </DropdownMenuItem>
@@ -181,7 +169,7 @@ export function Navbar() {
                                 to='/instructor/dashboard'
                                 className='flex items-center pl-6'
                             >
-                                <GraduationCap className='mr-2 h-4 w-4' />
+                                <GraduationCap className='mr-2 h-4 w-4 text-gray-300' />
                                 Giảng viên
                             </Link>
                         </DropdownMenuItem>
@@ -193,7 +181,7 @@ export function Navbar() {
                                 to='/dashboard'
                                 className='flex items-center pl-6'
                             >
-                                <User className='mr-2 h-4 w-4' />
+                                <User className='mr-2 h-4 w-4 text-gray-300' />
                                 Học viên
                             </Link>
                         </DropdownMenuItem>
@@ -201,20 +189,8 @@ export function Navbar() {
                             asChild
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
-                            <Link
-                                to='/my-courses'
-                                className='flex items-center'
-                            >
-                                <LibraryBig className='mr-2 h-4 w-4' />
-                                Khóa học của tôi
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            asChild
-                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                        >
                             <Link to='/orders' className='flex items-center'>
-                                <ReceiptText className='mr-2 h-4 w-4' />
+                                <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
                                 Đơn hàng của tôi
                             </Link>
                         </DropdownMenuItem>
@@ -229,7 +205,7 @@ export function Navbar() {
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link to='/dashboard' className='flex items-center'>
-                                <LayoutDashboard className='mr-2 h-4 w-4' />
+                                <LayoutDashboard className='mr-2 h-4 w-4 text-gray-300' />
                                 Bảng điều khiển
                             </Link>
                         </DropdownMenuItem>
@@ -237,20 +213,8 @@ export function Navbar() {
                             asChild
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
-                            <Link
-                                to='/my-courses'
-                                className='flex items-center'
-                            >
-                                <LibraryBig className='mr-2 h-4 w-4' />
-                                Khóa học của tôi
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            asChild
-                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                        >
                             <Link to='/orders' className='flex items-center'>
-                                <ReceiptText className='mr-2 h-4 w-4' />
+                                <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
                                 Đơn hàng của tôi
                             </Link>
                         </DropdownMenuItem>
@@ -270,7 +234,7 @@ export function Navbar() {
                         {/* Bảng điều khiển - Disabled Label */}
                         <div className='px-4 py-2'>
                             <div className='flex items-center gap-2 text-gray-400 text-sm font-medium'>
-                                <LayoutDashboard className='h-4 w-4' />
+                                <LayoutDashboard className='h-4 w-4 text-gray-300' />
                                 Bảng điều khiển
                             </div>
                         </div>
@@ -281,18 +245,8 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <GraduationCap className='h-5 w-5' />
+                            <GraduationCap className='h-5 w-5 text-gray-300' />
                             Giảng viên
-                        </Link>
-
-                        {/* Khóa học của tôi */}
-                        <Link
-                            to='/my-courses'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            <LibraryBig className='h-5 w-5' />
-                            Khóa học của tôi
                         </Link>
 
                         {/* Đơn hàng của tôi */}
@@ -301,7 +255,7 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <ReceiptText className='h-5 w-5' />
+                            <ReceiptText className='h-5 w-5 text-gray-300' />
                             Đơn hàng của tôi
                         </Link>
                     </>
@@ -311,7 +265,7 @@ export function Navbar() {
                     <>
                         <div className='px-4 py-2'>
                             <div className='flex items-center gap-2 text-gray-400 text-sm font-medium'>
-                                <LayoutDashboard className='h-4 w-4' />
+                                <LayoutDashboard className='h-4 w-4 text-gray-300' />
                                 Bảng điều khiển
                             </div>
                         </div>
@@ -320,7 +274,7 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <Shield className='h-5 w-5' />
+                            <Shield className='h-5 w-5 text-gray-300' />
                             Quản trị viên
                         </Link>
                         <Link
@@ -328,7 +282,7 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <GraduationCap className='h-5 w-5' />
+                            <GraduationCap className='h-5 w-5 text-gray-300' />
                             Giảng viên
                         </Link>
                         <Link
@@ -336,17 +290,8 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <User className='h-5 w-5' />
+                            <User className='h-5 w-5 text-gray-300' />
                             Học viên
-                        </Link>
-                        {/* Khóa học của tôi */}
-                        <Link
-                            to='/my-courses'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            <LibraryBig className='h-5 w-5' />
-                            Khóa học của tôi
                         </Link>
 
                         {/* Đơn hàng của tôi */}
@@ -355,7 +300,7 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <ReceiptText className='h-5 w-5' />
+                            <ReceiptText className='h-5 w-5 text-gray-300' />
                             Đơn hàng của tôi
                         </Link>
                     </>
@@ -368,23 +313,15 @@ export function Navbar() {
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <LayoutDashboard className='h-5 w-5' />
+                            <LayoutDashboard className='h-5 w-5 text-gray-300' />
                             Bảng điều khiển
-                        </Link>
-                        <Link
-                            to='/my-courses'
-                            className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            <LibraryBig className='mr-2 h-4 w-4' />
-                            Khóa học của tôi
                         </Link>
                         <Link
                             to='/orders'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            <ReceiptText className='h-5 w-5' />
+                            <ReceiptText className='h-5 w-5 text-gray-300' />
                             Đơn hàng của tôi
                         </Link>
                     </>

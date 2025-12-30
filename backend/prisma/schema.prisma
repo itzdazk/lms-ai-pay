@@ -45,6 +45,8 @@ model User {
   notifications       Notification[]
   userSessions        UserSession[]
   lessonNotes         LessonNote[]
+  learningGoals       LearningGoal[]
+  bookmarks           Bookmark[]
 
   @@index([email])
   @@index([userName])
@@ -142,6 +144,8 @@ model Course {
   quizzes           Quiz[]
   aiRecommendations AiRecommendation[]
   conversations     Conversation[]
+  learningGoals     LearningGoal[]
+  bookmarks         Bookmark[]
 
   @@index([slug])
   @@index([instructorId])
@@ -220,6 +224,7 @@ model Lesson {
   quizzes       Quiz[]
   conversations Conversation[]
   lessonNotes   LessonNote[]
+  bookmarks     Bookmark[]
 
   @@unique([courseId, slug])
   @@index([courseId])
@@ -559,4 +564,46 @@ model LessonNote {
   @@index([courseId])
   @@index([createdAt])
   @@map("lesson_notes")
+}
+
+// =====================================================
+// 17. LEARNING GOALS
+// =====================================================
+model LearningGoal {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String    @db.VarChar(50) // 'DAILY_LESSONS', 'WEEKLY_LESSONS', 'MONTHLY_LESSONS', 'COURSE_COMPLETION'
+  targetValue  Int       @map("target_value")
+  currentValue Int       @default(0) @map("current_value")
+  courseId     Int?      @map("course_id")
+  course       Course?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  deadline     DateTime? @db.Timestamptz
+  status       String    @default("IN_PROGRESS") @db.VarChar(20) // 'IN_PROGRESS', 'COMPLETED', 'FAILED'
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([userId, status])
+  @@map("learning_goals")
+}
+
+// =====================================================
+// 18. BOOKMARKS
+// =====================================================
+model Bookmark {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  Int?     @map("course_id")
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonId  Int?     @map("lesson_id")
+  lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  type      String   @db.VarChar(20) // 'COURSE', 'LESSON'
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([userId, type])
+  @@map("bookmarks")
 }

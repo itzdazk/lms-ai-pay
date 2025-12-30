@@ -52,10 +52,12 @@ export const instructorLessonsApi = {
         courseId: number,
         lessonId: number,
         videoFile: File,
-        onUploadProgress?: (progress: number) => void
+        onUploadProgress?: (progress: number) => void,
+        autoCreateTranscript: boolean = false
     ): Promise<Lesson> {
         const formData = new FormData()
         formData.append('video', videoFile)
+        formData.append('autoCreateTranscript', String(autoCreateTranscript))
 
         const response = await apiClient.patch<ApiResponse<Lesson>>(
             `/instructor/courses/${courseId}/lessons/${lessonId}/video`,

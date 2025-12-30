@@ -382,7 +382,7 @@ export function CourseChaptersPage() {
     const handleLessonSubmit = async (
         data: CreateLessonRequest | UpdateLessonRequest,
         videoFile?: File,
-        transcriptFile?: File
+        autoCreateTranscript: boolean = false
     ) => {
         if (!courseId || !selectedChapterId) return
 
@@ -396,12 +396,13 @@ export function CourseChaptersPage() {
 
                 // Upload video if provided
                 if (videoFile) {
-                    await instructorLessonsApi.uploadVideo(courseId, editingLesson.id, videoFile)
-                }
-
-                // Upload transcript if provided
-                if (transcriptFile) {
-                    await instructorLessonsApi.uploadTranscript(courseId, editingLesson.id, transcriptFile)
+                    await instructorLessonsApi.uploadVideo(
+                        courseId, 
+                        editingLesson.id, 
+                        videoFile,
+                        undefined, // onUploadProgress
+                        autoCreateTranscript
+                    )
                 }
 
                 // Refresh the chapter to get updated lesson data
@@ -415,12 +416,13 @@ export function CourseChaptersPage() {
 
                 // Upload video if provided
                 if (videoFile) {
-                    await instructorLessonsApi.uploadVideo(courseId, newLesson.id, videoFile)
-                }
-
-                // Upload transcript if provided
-                if (transcriptFile) {
-                    await instructorLessonsApi.uploadTranscript(courseId, newLesson.id, transcriptFile)
+                    await instructorLessonsApi.uploadVideo(
+                        courseId, 
+                        newLesson.id, 
+                        videoFile,
+                        undefined, // onUploadProgress
+                        autoCreateTranscript
+                    )
                 }
 
                 // Refresh the chapter to get the new lesson with all data

@@ -63,7 +63,7 @@ export function EnrollmentDetailPage() {
                 error?.response?.data?.message ||
                     'Không thể tải thông tin đăng ký'
             )
-            navigate('/my-courses')
+            navigate('/dashboard')
         } finally {
             setIsLoading(false)
         }
@@ -135,10 +135,10 @@ export function EnrollmentDetailPage() {
                         Đăng ký bạn đang tìm không tồn tại.
                     </p>
                     <Button
-                        onClick={() => navigate('/my-courses')}
+                        onClick={() => navigate('/dashboard')}
                         className='bg-white text-gray-900 hover:bg-gray-100'
                     >
-                        Quay lại khóa học của tôi
+                        Quay lại bảng điều khiển
                     </Button>
                 </div>
             </div>
@@ -155,7 +155,7 @@ export function EnrollmentDetailPage() {
                 <div className='container mx-auto px-4 py-6'>
                     <Button
                         variant='outline'
-                        onClick={() => navigate('/my-courses')}
+                        onClick={() => navigate('/dashboard')}
                         className='mb-4 cursor-pointer border-[#2d2d2d] hover:bg-[#414040] text-gray-900 dark:bg-white dark:hover:bg-[#414040]'
                     >
                         <ArrowLeft className='mr-2 h-4 w-4' />
