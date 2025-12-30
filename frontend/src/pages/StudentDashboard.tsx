@@ -1,27 +1,17 @@
 import { Link } from 'react-router-dom'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '../components/ui/card'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import { Progress } from '../components/ui/progress'
-import { Badge } from '../components/ui/badge'
 import {
-    BookOpen,
     Clock,
     Award,
     TrendingUp,
     PlayCircle,
     CheckCircle,
     Flame,
-    Calendar,
-    BookmarkCheck,
     Compass,
     Target,
     Loader2,
+    BookOpen,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useStudentDashboard } from '../hooks/useStudentDashboard'
@@ -29,15 +19,20 @@ import { useEnrolledCourses } from '../hooks/useEnrolledCourses'
 import { useContinueWatching } from '../hooks/useContinueWatching'
 import { useStudyTime } from '../hooks/useStudyTime'
 import { useLearningStreak } from '../hooks/useLearningStreak'
-import { RecentActivities } from '../components/Dashboard/RecentActivities'
-import { QuizPerformanceSummary } from '../components/Dashboard/QuizPerformanceSummary'
-import { StudyTimeChart } from '../components/Dashboard/StudyTimeChart'
-import { RecommendedCourses } from '../components/Dashboard/RecommendedCourses'
-import { LearningStreakCard } from '../components/Dashboard/LearningStreakCard'
-import { CalendarHeatmap } from '../components/Dashboard/CalendarHeatmap'
-import { BookmarksList } from '../components/Dashboard/BookmarksList'
-import { NotesSummaryCard } from '../components/Dashboard/NotesSummaryCard'
-import { formatStudyTime } from '../lib/dashboardUtils'
+import {
+    RecentActivities,
+    QuizPerformanceSummary,
+    StudyTimeChart,
+    RecommendedCourses,
+    LearningStreakCard,
+    CalendarHeatmap,
+    BookmarksList,
+    NotesSummaryCard,
+    StatCard,
+    ContinueWatchingSection,
+    MyCoursesSection,
+    AchievementsSection,
+} from '../components/Dashboard'
 
 export function StudentDashboard() {
     const { user } = useAuth()
@@ -106,7 +101,7 @@ export function StudentDashboard() {
         },
         {
             label: 'Khám phá lộ trình',
-            description: 'Gợi ý khóa học phù hợp',
+            description: 'Hãy chọn khóa học phù hợp với bạn',
             icon: Compass,
             href: '/courses',
         },
@@ -134,7 +129,7 @@ export function StudentDashboard() {
     return (
         <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
             {/* Hero */}
-            <section className='grid gap-6 lg:grid-cols-[2fr,1fr] mb-10'>
+            <section className='mb-10'>
                 <div className='bg-[#1A1A1A] border border-[#2D2D2D] rounded-2xl p-6 lg:p-8 relative overflow-hidden'>
                     <div className='absolute inset-y-0 right-0 w-1/3 opacity-20 pointer-events-none' />
                     <div className='relative z-10'>
@@ -194,367 +189,66 @@ export function StudentDashboard() {
                         </div>
                     </div>
                 </div>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D] rounded-2xl'>
-                    <CardHeader className='pb-4'>
-                        <CardTitle className='text-white flex items-center gap-2'>
-                            <Calendar className='h-4 w-4 text-blue-400' />
-                            Hoạt động gần đây
-                        </CardTitle>
-                        <CardDescription className='text-gray-400'>
-                            Xem các hoạt động học tập của bạn
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className='space-y-4'>
-                        {continueWatching.length > 0 ? (
-                            continueWatching.slice(0, 2).map((lesson) => (
-                                <div
-                                    key={lesson.id}
-                                    className='rounded-xl border border-[#2D2D2D] bg-black/40 p-4 flex flex-col gap-1'
-                                >
-                                    <Badge className='bg-blue-500/20 text-blue-400 border-blue-500/30 w-fit'>
-                                        Đang học
-                                    </Badge>
-                                    <p className='text-white font-semibold mt-1 line-clamp-1'>
-                                        {lesson.title}
-                                    </p>
-                                    <p className='text-sm text-gray-400 line-clamp-1'>
-                                        {lesson.course.title}
-                                    </p>
-                                    <div className='flex items-center gap-2 text-sm text-gray-400 mt-2'>
-                                        <Clock className='h-4 w-4 text-blue-400' />
-                                        {formatStudyTime(lesson.watchDuration)}{' '}
-                                        /{' '}
-                                        {lesson.videoDuration
-                                            ? formatStudyTime(
-                                                  lesson.videoDuration
-                                              )
-                                            : 'N/A'}
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <p className='text-gray-400 text-sm text-center py-4'>
-                                Chưa có hoạt động gần đây
-                            </p>
-                        )}
-                    </CardContent>
-                    <CardContent className='pt-2 border-t border-[#2D2D2D]'>
-                        <DarkOutlineButton asChild className='w-full'>
-                            <Link to='/dashboard'>Xem chi tiết</Link>
-                        </DarkOutlineButton>
-                    </CardContent>
-                </Card>
             </section>
 
             {/* Stats Cards */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10'>
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Khóa học đã đăng ký
-                        </CardTitle>
-                        <BookOpen className='h-4 w-4 text-blue-600' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {stats.totalEnrollments || enrolledCourses.length}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Tổng số khóa học
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Đang học
-                        </CardTitle>
-                        <PlayCircle className='h-4 w-4 text-green-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {stats.activeEnrollments || activeCourses.length}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Khóa học đang học
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Đã hoàn thành
-                        </CardTitle>
-                        <CheckCircle className='h-4 w-4 text-purple-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {stats.completedEnrollments ||
-                                completedCourses.length}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Khóa học đã hoàn thành
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
+                <StatCard
+                    title='Khóa học đã đăng ký'
+                    value={stats.totalEnrollments || enrolledCourses.length}
+                    icon={BookOpen}
+                    iconColor='text-violet-400'
+                    bgColor='bg-violet-950/50'
+                    borderColor='border-violet-900'
+                    description='Tổng số khóa học'
+                />
+                <StatCard
+                    title='Đang học'
+                    value={stats.activeEnrollments || activeCourses.length}
+                    icon={PlayCircle}
+                    iconColor='text-blue-400'
+                    bgColor='bg-blue-950/50'
+                    borderColor='border-blue-900'
+                    description='Khóa học đang học'
+                />
+                <StatCard
+                    title='Đã hoàn thành'
+                    value={
+                        stats.completedEnrollments || completedCourses.length
+                    }
+                    icon={CheckCircle}
+                    iconColor='text-green-400'
+                    bgColor='bg-green-950/50'
+                    borderColor='border-green-900'
+                    description='Khóa học đã hoàn thành'
+                />
+                <div className='bg-[#1A1A1A] border-l-4 border-orange-900 rounded-lg p-4 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1'>
+                    <div className='flex items-center justify-between mb-2'>
+                        <span className='text-sm text-gray-300 dark:text-gray-300'>
                             Tiến độ tổng quan
-                        </CardTitle>
-                        <TrendingUp className='h-4 w-4 text-orange-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {Math.round(totalProgress)}%
+                        </span>
+                        <div className='p-2.5 rounded-lg bg-orange-950/50'>
+                            <TrendingUp className='h-4 w-4 text-orange-400' />
                         </div>
-                        <Progress value={totalProgress} className='mt-2' />
-                    </CardContent>
-                </Card>
+                    </div>
+                    <div className='text-2xl font-bold text-gray-300 dark:text-gray-300 mb-2'>
+                        {Math.round(totalProgress)}%
+                    </div>
+                    <Progress value={totalProgress} />
+                </div>
             </div>
 
             {/* Continue Watching */}
-            {continueWatching.length > 0 && (
-                <div className='mb-8'>
-                    <h2 className='text-2xl font-bold mb-4 text-black dark:text-white'>
-                        Tiếp tục học
-                    </h2>
-                    <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                        {continueWatching.slice(0, 3).map((lesson) => (
-                            <Card
-                                key={lesson.id}
-                                className='bg-[#1A1A1A] border-[#2D2D2D] hover:border-white/30 transition-colors overflow-hidden'
-                            >
-                                <Link
-                                    to={`/courses/${lesson.course.slug}/lessons/${lesson.slug}`}
-                                >
-                                    <div className='relative aspect-video overflow-hidden rounded-t-lg'>
-                                        {lesson.course.thumbnailUrl ? (
-                                            <img
-                                                src={lesson.course.thumbnailUrl}
-                                                alt={lesson.course.title}
-                                                className='w-full h-full object-cover'
-                                            />
-                                        ) : (
-                                            <div className='w-full h-full bg-[#2D2D2D] flex items-center justify-center'>
-                                                <PlayCircle className='h-12 w-12 text-gray-500' />
-                                            </div>
-                                        )}
-                                        <div className='absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity'>
-                                            <PlayCircle className='h-12 w-12 text-white' />
-                                        </div>
-                                    </div>
-                                </Link>
-                                <CardHeader>
-                                    <CardTitle className='text-white line-clamp-2'>
-                                        {lesson.title}
-                                    </CardTitle>
-                                    <CardDescription className='text-gray-400'>
-                                        {lesson.course.title}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className='mb-4'>
-                                        <div className='flex items-center justify-between text-xs text-gray-400 mb-1'>
-                                            <span>
-                                                Đã xem:{' '}
-                                                {formatStudyTime(
-                                                    lesson.watchDuration
-                                                )}
-                                            </span>
-                                            {lesson.videoDuration && (
-                                                <span>
-                                                    Tổng:{' '}
-                                                    {formatStudyTime(
-                                                        lesson.videoDuration
-                                                    )}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <Progress
-                                            value={
-                                                lesson.videoDuration
-                                                    ? Math.min(
-                                                          (lesson.watchDuration /
-                                                              lesson.videoDuration) *
-                                                              100,
-                                                          100
-                                                      )
-                                                    : 0
-                                            }
-                                        />
-                                    </div>
-                                    <DarkOutlineButton
-                                        asChild
-                                        className='w-full'
-                                    >
-                                        <Link
-                                            to={`/courses/${lesson.course.slug}/lessons/${lesson.slug}`}
-                                        >
-                                            Tiếp tục học
-                                        </Link>
-                                    </DarkOutlineButton>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <ContinueWatchingSection lessons={continueWatching} />
 
             {/* My Courses & Achievements */}
-            <div className='grid lg:grid-cols-[2fr,1fr] gap-6'>
-                <div className='mb-8'>
-                    <div className='flex items-center justify-between mb-4'>
-                        <h2 className='text-2xl font-bold text-black dark:text-white'>
-                            Khóa học của tôi
-                        </h2>
-                        <DarkOutlineButton asChild>
-                            <Link to='/courses'>Xem tất cả</Link>
-                        </DarkOutlineButton>
-                    </div>
-                    <div className='grid md:grid-cols-2 gap-6'>
-                        {enrolledCourses.map((enrollment) => {
-                            const course = enrollment.course
-                            return (
-                                <Card
-                                    key={enrollment.id}
-                                    className='bg-[#1A1A1A] border-[#2D2D2D] overflow-hidden'
-                                >
-                                    <Link to={`/courses/${course.slug}`}>
-                                        <div className='relative aspect-video overflow-hidden rounded-t-lg'>
-                                            {course.thumbnailUrl ? (
-                                                <img
-                                                    src={course.thumbnailUrl}
-                                                    alt={course.title}
-                                                    className='w-full h-full object-cover'
-                                                />
-                                            ) : (
-                                                <div className='w-full h-full bg-[#2D2D2D] flex items-center justify-center'>
-                                                    <BookOpen className='h-12 w-12 text-gray-500' />
-                                                </div>
-                                            )}
-                                            {enrollment.progressPercentage ===
-                                                100 && (
-                                                <div className='absolute top-2 right-2'>
-                                                    <Badge className='bg-green-600'>
-                                                        <CheckCircle className='h-3 w-3 mr-1' />
-                                                        Hoàn thành
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Link>
-                                    <CardHeader>
-                                        <CardTitle className='text-white line-clamp-2'>
-                                            {course.title}
-                                        </CardTitle>
-                                        <CardDescription className='text-gray-400'>
-                                            {enrollment.progressPercentage}%
-                                            hoàn thành
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Progress
-                                            value={
-                                                enrollment.progressPercentage
-                                            }
-                                            className='mb-4'
-                                        />
-                                        <div className='flex gap-2'>
-                                            <DarkOutlineButton
-                                                asChild
-                                                className='flex-1'
-                                            >
-                                                <Link
-                                                    to={`/courses/${course.slug}`}
-                                                >
-                                                    Xem chi tiết
-                                                </Link>
-                                            </DarkOutlineButton>
-                                            <DarkOutlineButton
-                                                asChild
-                                                className='flex-1'
-                                            >
-                                                <Link
-                                                    to={`/courses/${course.slug}/lessons`}
-                                                >
-                                                    Học tiếp
-                                                </Link>
-                                            </DarkOutlineButton>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                </div>
-
-                <div className='space-y-6'>
-                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                        <CardHeader>
-                            <CardTitle className='text-white flex items-center gap-2'>
-                                <BookmarkCheck className='h-4 w-4 text-blue-400' />
-                                Thành tích nổi bật
-                            </CardTitle>
-                            <CardDescription className='text-gray-400'>
-                                Kỷ niệm các cột mốc quan trọng của bạn
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className='space-y-4'>
-                            <div className='rounded-xl border border-[#2D2D2D] p-4 bg-black/40'>
-                                <p className='text-white font-semibold'>
-                                    Chứng chỉ mới
-                                </p>
-                                <p className='text-sm text-gray-400'>
-                                    {completedCourses.length > 0
-                                        ? `${completedCourses[0].course.title}`
-                                        : 'Hãy hoàn thành khóa học để nhận chứng chỉ đầu tiên.'}
-                                </p>
-                                <DarkOutlineButton className='mt-3 w-full'>
-                                    Xem chứng chỉ
-                                </DarkOutlineButton>
-                            </div>
-                            <div className='rounded-xl border border-[#2D2D2D] p-4 bg-black/40'>
-                                <p className='text-white font-semibold'>
-                                    Tiến độ tổng quan
-                                </p>
-                                <p className='text-sm text-gray-400'>
-                                    Bạn đã hoàn thành{' '}
-                                    {Math.round(totalProgress)}% mục tiêu đã
-                                    đăng ký
-                                </p>
-                                <Progress
-                                    value={totalProgress}
-                                    className='mt-3'
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                        <CardHeader>
-                            <CardTitle className='text-white flex items-center gap-2'>
-                                <BookOpen className='h-4 w-4 text-blue-400' />
-                                Gợi ý tiếp theo
-                            </CardTitle>
-                            <CardDescription className='text-gray-400'>
-                                Những nội dung phù hợp với mục tiêu của bạn
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className='space-y-4'>
-                            {enrolledCourses.length === 0 && (
-                                <p className='text-gray-400 text-sm text-center py-4'>
-                                    Chưa có khóa học nào. Hãy khám phá các khóa
-                                    học mới!
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+            <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
+                <MyCoursesSection enrollments={enrolledCourses} />
+                <AchievementsSection
+                    completedCourses={completedCourses}
+                    totalProgress={totalProgress}
+                    enrolledCoursesCount={enrolledCourses.length}
+                />
             </div>
 
             {/* Phase 1: New Features */}

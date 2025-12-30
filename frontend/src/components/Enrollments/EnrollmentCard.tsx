@@ -178,19 +178,21 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                                 </p>
                             </div>
                         </div>
-                        <div className='flex items-center gap-2'>
-                            <div className='p-2 bg-[#1a1a1a] rounded-lg border border-[#2d2d2d]'>
-                                <Clock className='h-4 w-4 text-gray-300' />
+                        {course.durationHours > 0 && (
+                            <div className='flex items-center gap-2'>
+                                <div className='p-2 bg-[#1a1a1a] rounded-lg border border-[#2d2d2d]'>
+                                    <Clock className='h-4 w-4 text-gray-300' />
+                                </div>
+                                <div>
+                                    <p className='text-xs text-gray-500'>
+                                        Thời lượng
+                                    </p>
+                                    <p className='text-sm font-medium text-white'>
+                                        {course.durationHours}h
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className='text-xs text-gray-500'>
-                                    Thời lượng
-                                </p>
-                                <p className='text-sm font-medium text-white'>
-                                    {course.durationHours}h
-                                </p>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Enrollment Info */}

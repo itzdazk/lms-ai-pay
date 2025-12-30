@@ -593,18 +593,6 @@ export function AdminDashboard() {
                                     className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                                 >
                                     <Link
-                                        to='/my-courses'
-                                        className='flex items-center'
-                                    >
-                                        <LibraryBig className='mr-2 h-4 w-4' />
-                                        Khóa học của tôi
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    asChild
-                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                                >
-                                    <Link
                                         to='/orders'
                                         className='flex items-center'
                                     >
