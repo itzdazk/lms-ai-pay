@@ -131,6 +131,7 @@ class LessonsController {
      */
     uploadVideo = asyncHandler(async (req, res) => {
         const { courseId, id } = req.params
+        const autoCreateTranscript = req.body.autoCreateTranscript === true || req.body.autoCreateTranscript === 'true' || req.query.autoCreateTranscript === 'true'
 
         if (!req.file) {
             return ApiResponse.badRequest(res, 'Video file is required')
@@ -141,7 +142,8 @@ class LessonsController {
                 parseInt(courseId),
                 parseInt(id),
                 req.file,
-                req.user.id
+                req.user.id,
+                autoCreateTranscript
             )
 
             return ApiResponse.success(
