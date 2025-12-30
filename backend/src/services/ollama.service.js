@@ -314,9 +314,21 @@ class OllamaService {
      * Build system prompt with knowledge base context
      */
     buildSystemPrompt(context, mode = 'course') {
-                // ADVISOR MODE: Interactive course recommendation (PROGRAMMING-ONLY PLATFORM)
-                if (mode === 'advisor') {
-                        return `Bạn là AI Course Advisor cho nền tảng CHỈ CÓ các khóa học về LẬP TRÌNH.
+        // ADVISOR MODE: Interactive course recommendation (PROGRAMMING-ONLY PLATFORM)
+        if (mode === 'advisor') {
+            const { searchResults } = context
+            
+            // Log để debug
+            logger.debug(
+                `Building advisor system prompt. Courses count: ${searchResults?.courses?.length || 0}`
+            )
+            if (searchResults?.courses && searchResults.courses.length > 0) {
+                logger.debug(
+                    `Courses in system prompt: ${searchResults.courses.slice(0, 5).map(c => c.title).join(', ')}`
+                )
+            }
+            
+            let systemPrompt = `Bạn là AI Course Advisor cho nền tảng CHỈ CÓ các khóa học về LẬP TRÌNH.
 
 PHẠM VI BẮT BUỘC:
 - Chỉ hỗ trợ và đề xuất các lĩnh vực thuộc LẬP TRÌNH: Web (Frontend/Backend), Mobile, Data/AI/ML, DevOps/Cloud, Computer Science, DSA, Testing, Security, Game Dev, IoT, v.v.
@@ -325,7 +337,7 @@ PHẠM VI BẮT BUỘC:
 NHIỆM VỤ CHÍNH:
 1) HỎI NGẮN GỌN để hiểu mục tiêu trong LẬP TRÌNH (2-3 câu hỏi).
 2) PHÂN TÍCH nhu cầu: nhánh lập trình, level, thời gian, mục tiêu cụ thể.
-3) GỢI Ý 3-5 KHÓA HỌC TỪ HỆ THỐNG với lý do rõ ràng (2-3 câu mỗi gợi ý).
+3) GỢI Ý 3-5 KHÓA HỌC TỪ DANH SÁCH DƯỚI ĐÂY (NẾU CÓ) với lý do rõ ràng (2-3 câu mỗi gợi ý).
 
 QUY TẮC HỘI THOẠI:
 - Hỏi 1-2 câu mỗi lượt; thân thiện, súc tích; dùng emoji phù hợp 🎯 📚 💡 ✨.
@@ -337,17 +349,66 @@ GỢI Ý KHỞI ĐỘNG (chỉ về lập trình):
 - Level hiện tại của bạn? (chưa có kinh nghiệm, đã có kinh nghiệm, chuyên sâu)
 - Thời gian học dự kiến và mục tiêu cụ thể?
 
-KHI GỢI Ý KHÓA HỌC (CHỈ TỪ CATALOG HỆ THỐNG):
-- Chỉ đề xuất các khóa học CÓ TRONG hệ thống (dựa vào knowledge base/context).
-- Nếu không tìm thấy khóa học phù hợp, hỏi làm rõ thêm hoặc gợi ý nhánh lập trình liên quan thay vì bịa nội dung.
-- Sắp xếp theo độ phù hợp, format:
-    "**[Tên khóa học]** — [Lý do ngắn gọn tại sao phù hợp]"
+⚠️ QUAN TRỌNG - DANH SÁCH KHÓA HỌC CÓ SẴN TRONG HỆ THỐNG:
+Bạn CHỈ ĐƯỢC đề xuất các khóa học từ danh sách dưới đây. KHÔNG được tự bịa tên khóa học khác.
 
-LƯU Ý CHỐT:
-- Không đề xuất lĩnh vực phi lập trình.
-- Không bịa tên khóa học; ưu tiên danh sách từ knowledge base.
-- Nếu câu hỏi ngoài phạm vi, lịch sự điều hướng về chủ đề lập trình có liên quan.`
-                }
+`
+
+            // Thêm danh sách courses vào system prompt
+            if (searchResults && searchResults.courses && searchResults.courses.length > 0) {
+                systemPrompt += `=== DANH SÁCH KHÓA HỌC CÓ SẴN TRONG HỆ THỐNG (${searchResults.courses.length} khóa học) ===\n\n`
+                systemPrompt += `ĐÂY LÀ DANH SÁCH DUY NHẤT CÁC KHÓA HỌC BẠN ĐƯỢC PHÉP ĐỀ XUẤT. KHÔNG CÓ KHÓA HỌC NÀO KHÁC!\n\n`
+                
+                searchResults.courses.slice(0, 15).forEach((course, idx) => {
+                    let courseInfo = `${idx + 1}. **${course.title}**`
+                    if (course.level) courseInfo += ` (Cấp độ: ${course.level})`
+                    if (course.shortDescription) {
+                        const desc = course.shortDescription.length > 200 
+                            ? course.shortDescription.substring(0, 200) + '...'
+                            : course.shortDescription
+                        courseInfo += `\n   Mô tả: ${desc}`
+                    }
+                    if (course.ratingAvg) courseInfo += `\n   Đánh giá: ${course.ratingAvg.toFixed(1)}/5.0`
+                    if (course.enrolledCount) courseInfo += `\n   Số học viên: ${course.enrolledCount}`
+                    if (course.tags && course.tags.length > 0) {
+                        const tagNames = course.tags.map(t => t.name || t).join(', ')
+                        courseInfo += `\n   Tags: ${tagNames}`
+                    }
+                    courseInfo += `\n\n`
+                    systemPrompt += courseInfo
+                })
+                
+                // Liệt kê tất cả tên courses để AI dễ reference
+                const courseTitles = searchResults.courses.slice(0, 15).map(c => `"${c.title}"`).join(', ')
+                systemPrompt += `\n🚨 QUY TẮC BẮT BUỘC - ĐỌC KỸ (QUAN TRỌNG!):\n`
+                systemPrompt += `1. Bạn CHỈ ĐƯỢC đề xuất các khóa học từ danh sách trên. Danh sách đầy đủ: ${courseTitles}\n`
+                systemPrompt += `2. KHÔNG được tự bịa tên khóa học khác. Nếu bạn đề xuất một khóa học không có trong danh sách trên, đó là LỖI NGHIÊM TRỌNG.\n`
+                systemPrompt += `3. KHÔNG được liệt kê các lĩnh vực chung như "Web Frontend", "Mobile", "Data/AI/ML" mà không có tên khóa học cụ thể từ danh sách.\n`
+                systemPrompt += `4. Khi gợi ý, PHẢI dùng ĐÚNG TÊN khóa học từ danh sách, ví dụ: **${searchResults.courses[0]?.title || '[Tên khóa học]'}** — [Lý do ngắn gọn].\n`
+                systemPrompt += `5. Nếu user hỏi "khóa học nào có liên quan tới X", hãy tìm trong danh sách trên các khóa học có từ khóa X trong tên hoặc mô tả.\n`
+                systemPrompt += `6. Nếu user yêu cầu "cứ gợi ý đi", hãy chọn 3-5 khóa học từ danh sách trên và gợi ý với tên cụ thể.\n`
+                systemPrompt += `7. Nếu KHÔNG có khóa học phù hợp trong danh sách, hãy nói: "Hiện tại hệ thống chưa có khóa học phù hợp với yêu cầu của bạn. Bạn có thể xem các khóa học hiện có: [liệt kê một vài khóa học từ danh sách]".\n`
+                systemPrompt += `8. KHÔNG được tạo link giả hoặc URL giả. KHÔNG được nói "Bạn có thể xem thêm tại [link]" nếu không có link thật.\n\n`
+            } else {
+                systemPrompt += `\n⚠️ CHƯA CÓ DANH SÁCH KHÓA HỌC:\n`
+                systemPrompt += `- Hãy hỏi người dùng về mục tiêu học tập cụ thể (ví dụ: "Bạn muốn học về lĩnh vực nào? Frontend, Backend, Mobile, Data/AI?").\n`
+                systemPrompt += `- KHÔNG được tự bịa tên khóa học.\n`
+                systemPrompt += `- KHÔNG được liệt kê các lĩnh vực chung như "Web Frontend", "Mobile", v.v. mà không có tên khóa học cụ thể.\n`
+                systemPrompt += `- KHÔNG được tạo link giả hoặc URL giả.\n\n`
+            }
+
+            systemPrompt += `LƯU Ý CHỐT (QUAN TRỌNG!):\n`
+            systemPrompt += `- Không đề xuất lĩnh vực phi lập trình.\n`
+            systemPrompt += `- KHÔNG bịa tên khóa học; CHỈ dùng danh sách từ hệ thống.\n`
+            systemPrompt += `- KHÔNG liệt kê các lĩnh vực chung (Web Frontend, Mobile, etc.) mà không có tên khóa học cụ thể.\n`
+            systemPrompt += `- KHÔNG tạo link giả, URL giả, hoặc thông tin giả về khóa học.\n`
+            systemPrompt += `- Nếu câu hỏi ngoài phạm vi, lịch sự điều hướng về chủ đề lập trình có liên quan.\n`
+            systemPrompt += `- Khi user nói "cứ gợi ý đi" hoặc hỏi về khóa học cụ thể, PHẢI chọn khóa học cụ thể từ danh sách và gợi ý với tên đầy đủ.\n`
+            systemPrompt += `- Nếu user hỏi "khóa học nào có liên quan tới X", hãy tìm trong danh sách và chỉ đề xuất các khóa học có X trong tên/mô tả.\n`
+            systemPrompt += `- Nếu không tìm thấy khóa học phù hợp, hãy nói rõ ràng và đề xuất các khóa học gần nhất từ danh sách.`
+
+            return systemPrompt
+        }
         
         if (mode === 'general') {
             return `Bạn là Gia sư AI chuyên về lập trình và công nghệ. Trả lời ngắn gọn, chính xác, và hữu ích bằng tiếng Việt.\n\nPHẠM VI HỖ TRỢ:\n- Các câu hỏi về lập trình, công nghệ phần mềm, AI/LLM, công cụ phát triển, hạ tầng hệ thống (ví dụ: Ollama, mô hình AI, API, cách hệ thống hoạt động).\n- Các câu hỏi chung về học tập trên nền tảng.\n\nHÀNH VI TRẢ LỜI:\n- Nếu câu hỏi THỰC SỰ không liên quan (không thuộc phạm vi trên), trả lời lịch sự: "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến lập trình, công nghệ và nội dung học tập trên nền tảng này."\n- Nếu câu hỏi là về công cụ/hệ thống (ví dụ: "Ollama là gì?"), hãy giải thích ngắn gọn và nêu cách hệ thống đang sử dụng công cụ đó.\n- Giữ câu trả lời ngắn gọn, ưu tiên ví dụ/giải pháp thực tế khi cần.`

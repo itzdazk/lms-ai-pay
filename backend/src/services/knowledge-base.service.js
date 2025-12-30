@@ -10,6 +10,272 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 class KnowledgeBaseService {
+    /**
+     * Recommend courses for user (rule-based: subject, level, new, popular, featured)
+     * Enhanced with conversation history analysis and featured courses priority
+     * @param {string} userId
+     * @param {object} options - { conversationId, conversationHistory }
+     * @returns {Promise<Array>} Danh sách khóa học gợi ý
+     */
+    async recommendCoursesForUser(userId, options = {}) {
+        const { conversationId, conversationHistory } = options
+
+        // 1. Lấy context user và enrolled courses (parallel queries)
+        const [userContext, enrolledCoursesData] = await Promise.all([
+            this.getUserContext(userId),
+            prisma.enrollment.findMany({
+                where: { 
+                    userId, 
+                    status: { in: ['ACTIVE', 'COMPLETED'] }
+                },
+                select: { courseId: true },
+            }),
+        ])
+
+        const enrolledCourseIds = enrolledCoursesData.map(e => e.courseId)
+        logger.debug(`User ${userId} has ${enrolledCourseIds.length} enrolled courses`)
+
+        // 2. Phân tích conversation history để extract preferences
+        let extractedPreferences = {
+            tags: [],
+            categoryId: null,
+            level: null,
+            keywords: [],
+        }
+
+        // Lấy conversation history nếu chưa có
+        let history = conversationHistory
+        if (!history && conversationId) {
+            history = await this.getConversationHistory(conversationId, 20) // Lấy nhiều hơn để phân tích
+        }
+
+        if (history && history.length > 0) {
+            extractedPreferences = this._extractPreferencesFromHistory(history, userContext)
+            logger.debug(`Extracted preferences from conversation:`, extractedPreferences)
+        }
+
+        // 3. Xây dựng filters dựa trên user context và preferences
+        const baseFilters = { page: 1, limit: 20 } // Lấy nhiều hơn để có thể filter và sort
+
+        // Level: ưu tiên từ conversation > current course > null
+        if (extractedPreferences.level) {
+            baseFilters.level = extractedPreferences.level
+        } else if (userContext.currentCourse?.level) {
+            baseFilters.level = userContext.currentCourse.level
+        }
+
+        // Category: từ conversation preferences
+        if (extractedPreferences.categoryId) {
+            baseFilters.categoryId = extractedPreferences.categoryId
+        }
+
+        // Tags: từ conversation preferences
+        if (extractedPreferences.tags && extractedPreferences.tags.length > 0) {
+            baseFilters.tagIds = extractedPreferences.tags
+        }
+
+        // 4. Query courses với nhiều tiêu chí (parallel queries)
+        const [featuredCourses, newestCourses, popularCourses, highRatedCourses] = await Promise.all([
+            // Featured courses (ưu tiên cao nhất)
+            (async () => {
+                const filters = { ...baseFilters, isFeatured: true, sort: 'newest', limit: 5 }
+                const { courses } = await (await import('./course.service.js')).default.getCourses(filters)
+                return courses.map(c => ({ ...c, priority: 10, source: 'featured' }))
+            })(),
+            // Newest courses
+            (async () => {
+                const filters = { ...baseFilters, sort: 'newest', limit: 10 }
+                const { courses } = await (await import('./course.service.js')).default.getCourses(filters)
+                return courses.map(c => ({ ...c, priority: 5, source: 'newest' }))
+            })(),
+            // Popular courses
+            (async () => {
+                const filters = { ...baseFilters, sort: 'popular', limit: 10 }
+                const { courses } = await (await import('./course.service.js')).default.getCourses(filters)
+                return courses.map(c => ({ ...c, priority: 6, source: 'popular' }))
+            })(),
+            // High rated courses (rating >= 4.0)
+            (async () => {
+                // Note: course.service.js không có filter rating trực tiếp, sẽ filter sau
+                const filters = { ...baseFilters, sort: 'rating', limit: 10 }
+                const { courses } = await (await import('./course.service.js')).default.getCourses(filters)
+                return courses
+                    .filter(c => c.ratingAvg && c.ratingAvg >= 4.0)
+                    .map(c => ({ ...c, priority: 7, source: 'high_rated' }))
+            })(),
+        ])
+
+        // 5. Gộp và loại trùng courses
+        const courseMap = new Map()
+        
+        // Thêm courses với priority (featured > high_rated > popular > newest)
+        const allCourses = [
+            ...featuredCourses,
+            ...highRatedCourses,
+            ...popularCourses,
+            ...newestCourses,
+        ]
+
+        for (const course of allCourses) {
+            const existing = courseMap.get(course.id)
+            if (!existing || course.priority > existing.priority) {
+                courseMap.set(course.id, course)
+            }
+        }
+
+        // 6. Loại trừ courses đã enroll
+        let recommendedCourses = Array.from(courseMap.values())
+            .filter(c => !enrolledCourseIds.includes(c.id))
+
+        // 7. Tính điểm relevance dựa trên preferences từ conversation
+        if (extractedPreferences.keywords.length > 0 || extractedPreferences.tags.length > 0) {
+            recommendedCourses = recommendedCourses.map(course => {
+                let relevanceScore = course.priority || 0
+
+                // Bonus điểm nếu match keywords trong title/description
+                const searchableText = [
+                    course.title,
+                    course.shortDescription,
+                ].filter(Boolean).join(' ').toLowerCase()
+
+                const keywordMatches = extractedPreferences.keywords.filter(keyword =>
+                    searchableText.includes(keyword.toLowerCase())
+                ).length
+
+                if (keywordMatches > 0) {
+                    relevanceScore += keywordMatches * 2 // Bonus cho mỗi keyword match
+                }
+
+                // Bonus điểm nếu match tags
+                const courseTagIds = (course.tags || []).map(t => t.id)
+                const tagMatches = extractedPreferences.tags.filter(tagId =>
+                    courseTagIds.includes(tagId)
+                ).length
+
+                if (tagMatches > 0) {
+                    relevanceScore += tagMatches * 3 // Bonus cho mỗi tag match
+                }
+
+                // Bonus điểm nếu có rating cao
+                if (course.ratingAvg && course.ratingAvg >= 4.5) {
+                    relevanceScore += 2
+                }
+
+                return { ...course, relevanceScore }
+            })
+
+            // Sort theo relevance score
+            recommendedCourses.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+        } else {
+            // Nếu không có preferences, sort theo priority và rating
+            recommendedCourses.sort((a, b) => {
+                const priorityDiff = (b.priority || 0) - (a.priority || 0)
+                if (priorityDiff !== 0) return priorityDiff
+                // Nếu cùng priority, sort theo rating
+                const ratingA = a.ratingAvg || 0
+                const ratingB = b.ratingAvg || 0
+                return ratingB - ratingA
+            })
+        }
+
+        // 8. Nếu không có courses sau khi filter, lấy tất cả courses (fallback)
+        if (recommendedCourses.length === 0) {
+            logger.warn(`No courses found with filters, falling back to all courses for user ${userId}`)
+            // Fallback: Lấy tất cả courses không có filter
+            const fallbackFilters = { page: 1, limit: 20, sort: 'newest' }
+            const { courses: fallbackCourses } = await (await import('./course.service.js')).default.getCourses(fallbackFilters)
+            
+            recommendedCourses = fallbackCourses
+                .filter(c => !enrolledCourseIds.includes(c.id))
+                .map(c => ({ ...c, priority: 3, source: 'fallback' }))
+                .sort((a, b) => {
+                    // Sort by featured first, then rating
+                    if (a.isFeatured && !b.isFeatured) return -1
+                    if (!a.isFeatured && b.isFeatured) return 1
+                    return (b.ratingAvg || 0) - (a.ratingAvg || 0)
+                })
+        }
+
+        // 9. Loại bỏ các field tạm (priority, source, relevanceScore) và trả về
+        const finalCourses = recommendedCourses
+            .slice(0, 8)
+            .map(({ priority, source, relevanceScore, ...course }) => course)
+
+        logger.info(
+            `Recommended ${finalCourses.length} courses for user ${userId} ` +
+            `(featured: ${featuredCourses.length}, excluded enrolled: ${enrolledCourseIds.length})`
+        )
+
+        return finalCourses
+    }
+
+    /**
+     * Extract user preferences from conversation history
+     * @param {Array} conversationHistory - Array of messages
+     * @param {Object} userContext - User context
+     * @returns {Object} Extracted preferences { tags, categoryId, level, keywords }
+     */
+    _extractPreferencesFromHistory(conversationHistory, userContext) {
+        const preferences = {
+            tags: [],
+            categoryId: null,
+            level: null,
+            keywords: [],
+        }
+
+        // Lấy tất cả user messages
+        const userMessages = conversationHistory
+            .filter(msg => msg.senderType === 'user')
+            .map(msg => msg.message)
+            .join(' ')
+            .toLowerCase()
+
+        if (!userMessages) return preferences
+
+        // Extract keywords (lập trình, web, mobile, frontend, backend, etc.)
+        const programmingKeywords = [
+            'web', 'frontend', 'backend', 'fullstack', 'full stack',
+            'mobile', 'ios', 'android', 'react native', 'flutter',
+            'data', 'ai', 'machine learning', 'ml', 'deep learning',
+            'devops', 'cloud', 'aws', 'azure', 'docker', 'kubernetes',
+            'python', 'javascript', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust',
+            'react', 'vue', 'angular', 'node', 'express', 'django', 'flask', 'spring',
+            'database', 'sql', 'mongodb', 'mysql', 'postgresql',
+            'testing', 'security', 'game', 'iot', 'blockchain',
+        ]
+
+        const foundKeywords = programmingKeywords.filter(keyword =>
+            userMessages.includes(keyword)
+        )
+
+        preferences.keywords = [...new Set(foundKeywords)] // Remove duplicates
+
+        // Extract level preferences
+        const levelKeywords = {
+            'beginner': 'BEGINNER',
+            'cơ bản': 'BEGINNER',
+            'mới bắt đầu': 'BEGINNER',
+            'intermediate': 'INTERMEDIATE',
+            'trung bình': 'INTERMEDIATE',
+            'advanced': 'ADVANCED',
+            'nâng cao': 'ADVANCED',
+            'expert': 'ADVANCED',
+            'chuyên sâu': 'ADVANCED',
+        }
+
+        for (const [keyword, level] of Object.entries(levelKeywords)) {
+            if (userMessages.includes(keyword)) {
+                preferences.level = level
+                break
+            }
+        }
+
+        // Note: Tags và CategoryId extraction có thể được mở rộng thêm
+        // bằng cách query database để match keywords với tags/categories
+        // Hiện tại chỉ extract keywords và level
+
+        return preferences
+    }
     constructor() {
         // Cache parsed transcripts to avoid re-parsing (in-memory cache)
         this.transcriptCache = new Map()
@@ -614,19 +880,25 @@ class KnowledgeBaseService {
 
             // 2. Search strategy
             // Short-circuit for lesson-specific mode: only search transcripts for the current lesson
+
             let courses = []
             let lessons = []
             let transcripts = []
 
             if (mode === 'advisor') {
-                // Advisor mode: No knowledge base search needed
-                // AI advisor will recommend courses based on conversation only
-                courses = []
+                // Advisor mode: Gợi ý khóa học theo rule-based với conversation history
+                // Get conversation history nếu có conversationId
+                let advisorHistory = []
+                if (conversationId) {
+                    advisorHistory = await this.getConversationHistory(conversationId, 20)
+                }
+                courses = await this.recommendCoursesForUser(userId, {
+                    conversationId,
+                    conversationHistory: advisorHistory,
+                })
                 lessons = []
                 transcripts = []
             } else if (mode === 'course' && targetLessonId) {
-                // Restrict to the exact lesson's transcript; searchInTranscripts already
-                // falls back to lesson content/description/title if transcript is missing
                 transcripts = await this.searchInTranscripts(
                     query,
                     targetLessonId,
@@ -634,10 +906,7 @@ class KnowledgeBaseService {
                     userId,
                     enrolledCourseIds
                 )
-                // No course-level fallback; rely only on lesson transcript + lesson content
             } else {
-                // Broader search for general mode - only search transcripts
-                // (searchInCourses and searchInLessons methods don't exist)
                 transcripts = await this.searchInTranscripts(
                     query,
                     targetLessonId,

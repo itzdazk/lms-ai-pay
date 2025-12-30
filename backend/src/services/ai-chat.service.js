@@ -709,11 +709,11 @@ class AIChatService {
      * @param {Object} options - Additional options (error, reason)
      */
     generateTemplateResponse(context, query, options = {}) {
-        const { searchResults, userContext, mode } = context
+        const { searchResults, userContext, mode } = context;
 
         // If in general mode, return a friendly conversational fallback
         if (mode === 'general') {
-            return this.generateGeneralFallbackResponse(query)
+            return this.generateGeneralFallbackResponse(query);
         }
 
         // CASE 1: Tìm thấy trong TRANSCRIPT (Best case!)
@@ -721,7 +721,7 @@ class AIChatService {
             return this.generateTranscriptResponse(
                 searchResults.transcripts,
                 query
-            )
+            );
         }
 
         // CASE 2: Tìm thấy trong LESSONS
@@ -730,27 +730,56 @@ class AIChatService {
                 searchResults.lessons,
                 query,
                 userContext
-            )
+            );
         }
 
-        // CASE 3: Tìm thấy trong COURSES
+        // CASE 3: Tìm thấy trong COURSES (Advisor mode: custom advisor-style response)
         if (searchResults.courses.length > 0) {
-            return this.generateCourseResponse(searchResults.courses, query)
+            if (mode === 'advisor') {
+                // Custom advisor-style response for course recommendations
+                const topCourses = searchResults.courses.slice(0, 8);
+                let text = `🤖 **Gợi ý khóa học phù hợp cho bạn:**\n\n`;
+                topCourses.forEach((course, idx) => {
+                    text += `${idx + 1}. **${course.title}**`;
+                    if (course.level) text += ` _(Cấp độ: ${course.level})_`;
+                    text += `\n`;
+                    if (course.shortDescription) text += `   - ${course.shortDescription}\n`;
+                });
+                text += `\nBạn có thể nhấn vào từng khóa học để xem chi tiết hoặc đăng ký học ngay!`;
+
+                const sources = topCourses.map((c) => ({
+                    type: 'course',
+                    courseId: c.id,
+                    courseTitle: c.title,
+                    level: c.level,
+                    description: c.shortDescription,
+                }));
+
+                const suggestedActions = topCourses.map((c) => ({
+                    type: 'view_course',
+                    label: `Xem khóa "${c.title}"`,
+                    courseId: c.id,
+                }));
+
+                return { text, sources, suggestedActions };
+            } else {
+                return this.generateCourseResponse(searchResults.courses, query);
+            }
         }
 
         // CASE 4: Không tìm thấy gì - nhưng nếu đang hỏi về nội dung bài học và có currentLesson,
         // thì trả về thông tin từ lesson content/description
         const isAskingAboutContent =
-            /nội dung|content|bài học này|lesson/i.test(query)
+            /nội dung|content|bài học này|lesson/i.test(query);
         if (isAskingAboutContent && userContext.currentLesson) {
             return this.generateLessonContentResponse(
                 userContext.currentLesson,
                 query
-            )
+            );
         }
 
         // CASE 5: Không tìm thấy gì
-        return this.generateNoResultResponse(query, userContext)
+        return this.generateNoResultResponse(query, userContext);
     }
 
     /**
