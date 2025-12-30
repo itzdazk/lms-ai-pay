@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import { dashboardApi } from '../lib/api/dashboard'
+import { instructorDashboardApi } from '../lib/api/instructor-dashboard'
 import type { Enrollment } from '../lib/api/types'
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error'
 
-export type InstructorEnrollmentFilters = {
+export interface InstructorEnrollmentsFilters {
     page?: number
     limit?: number
     search?: string
@@ -33,23 +33,40 @@ const parseErrorMessage = (error: unknown): string => {
  * Hook: fetch instructor enrollments list with filters and pagination
  */
 export function useInstructorEnrollments(
-    filters?: InstructorEnrollmentFilters
+    filters?: InstructorEnrollmentsFilters
 ) {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
     const [pagination, setPagination] = useState({
         page: 1,
-        limit: 10,
+        limit: 20,
         total: 0,
         totalPages: 0,
     })
     const [status, setStatus] = useState<FetchStatus>('idle')
     const [error, setError] = useState<string | null>(null)
 
+    // Memoize filters to prevent unnecessary re-renders
+    const memoizedFilters = useMemo(
+        () => filters,
+        [
+            filters?.page,
+            filters?.limit,
+            filters?.search,
+            filters?.courseId,
+            filters?.status,
+            filters?.startDate,
+            filters?.endDate,
+            filters?.sort,
+        ]
+    )
+
     const fetchEnrollments = useCallback(async () => {
         setStatus('loading')
         setError(null)
         try {
-            const data = await dashboardApi.getInstructorEnrollments(filters)
+            const data = await instructorDashboardApi.getInstructorEnrollments(
+                memoizedFilters
+            )
             setEnrollments(data.enrollments)
             setPagination(data.pagination)
             setStatus('success')
@@ -57,9 +74,16 @@ export function useInstructorEnrollments(
             const message = parseErrorMessage(err)
             setError(message)
             setStatus('error')
-            toast.error(message)
+            // Only show toast for non-429 errors (rate limiting)
+            if (
+                err &&
+                typeof err === 'object' &&
+                (err as any).response?.status !== 429
+            ) {
+                toast.error(message)
+            }
         }
-    }, [filters])
+    }, [memoizedFilters])
 
     useEffect(() => {
         fetchEnrollments()

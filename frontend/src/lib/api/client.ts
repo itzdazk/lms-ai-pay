@@ -88,6 +88,12 @@ apiClient.interceptors.response.use(
             }
         }
 
+        // Suppress toast for backend rate limit seek update error
+        if (typeof message === 'string' && message.toLowerCase().includes('rate limit') && message.toLowerCase().includes('seek update')) {
+            // Do not show toast, let VideoPlayer handle UX
+            return Promise.reject(error);
+        }
+
         // Translate common error messages to Vietnamese
         const lowerMessage = message.toLowerCase()
 

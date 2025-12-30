@@ -17,28 +17,97 @@ import logger from '../config/logger.config.js';
 class QuizzesService {
     /**
      * Sanitize quiz questions for public consumption
+     * Questions come from Question table via quiz.questionItems
      * Removes correct answers unless explicitly allowed
      */
-    sanitizeQuestions(questions = [], includeCorrectAnswers = false) {
-        if (!Array.isArray(questions)) {
+    sanitizeQuestions(questionItems = [], includeCorrectAnswers = false) {
+        if (!Array.isArray(questionItems)) {
             return [];
         }
 
-        return questions.map((question) => {
+        const normalizeOptions = (opts) => {
+            if (Array.isArray(opts)) {
+                return opts;
+            }
+            if (opts && typeof opts === 'object') {
+                const keys = Object.keys(opts).sort();
+                return keys.map((k) => opts[k]);
+            }
+            return [];
+        };
+
+        const toIndex = (answer, opts, type) => {
+            const options = normalizeOptions(opts);
+            if (!includeCorrectAnswers) return null;
+
+            if (typeof answer === 'number' && Number.isFinite(answer)) {
+                return answer;
+            }
+
+            if (typeof answer === 'string') {
+                // Try parse numeric index encoded as string
+                const n = Number.parseInt(answer, 10);
+                if (!Number.isNaN(n)) {
+                    return n;
+                }
+
+                // Map letter (A, B, C, ...) to index
+                const upper = answer.trim().toUpperCase();
+                if (upper.length === 1 && upper >= 'A' && upper <= 'Z') {
+                    return upper.charCodeAt(0) - 'A'.charCodeAt(0);
+                }
+
+                // Match by option text (case-insensitive)
+                const idxByText = options.findIndex((opt) =>
+                    String(opt ?? '')
+                        .trim()
+                        .toLowerCase() === upper.toLowerCase()
+                );
+                if (idxByText !== -1) {
+                    return idxByText;
+                }
+
+                // True/False mapping
+                if (type === 'true_false') {
+                    const tf = upper === 'TRUE' || upper === 'T' ? 'true' : upper === 'FALSE' || upper === 'F' ? 'false' : upper;
+                    if (tf === 'true') return 0;
+                    if (tf === 'false') return 1;
+                }
+            }
+
+            return null;
+        };
+
+        return questionItems.map((question) => {
             if (typeof question !== 'object' || question === null) {
                 return question;
             }
 
-            const { correctAnswer, ...rest } = question;
+            const { correctAnswer, id, quizId, createdAt, updatedAt, options, type, ...rest } = question;
+
+            const normalizedOptions = normalizeOptions(options);
 
             if (includeCorrectAnswers) {
+                const mappedCorrect =
+                    type === 'short_answer'
+                        ? (typeof correctAnswer === 'string'
+                              ? correctAnswer
+                              : correctAnswer !== undefined && correctAnswer !== null
+                              ? String(correctAnswer)
+                              : '')
+                        : toIndex(correctAnswer, options, type);
+
                 return {
+                    id, // include id for instructor edit operations
                     ...rest,
-                    correctAnswer,
+                    type,
+                    options: normalizedOptions,
+                    correctAnswer: mappedCorrect,
                 };
             }
 
-            return rest;
+            // Always include real question id for client mapping
+            return { id, ...rest, type, options: normalizedOptions };
         });
     }
 
@@ -62,16 +131,19 @@ class QuizzesService {
             lessonId: quiz.lessonId,
             courseId: quiz.courseId,
             passingScore: quiz.passingScore,
-            attemptsAllowed: quiz.attemptsAllowed,
-            timeLimitMinutes: quiz.timeLimitMinutes ?? null,
             isPublished: quiz.isPublished,
             createdAt: quiz.createdAt,
             updatedAt: quiz.updatedAt,
         };
 
         if (includeQuestions) {
+            // Use questionItems from relation if available, otherwise fallback to questions JSON
+            const questionsToUse = quiz.questionItems && Array.isArray(quiz.questionItems) 
+                ? quiz.questionItems 
+                : (Array.isArray(quiz.questions) ? quiz.questions : []);
+            
             sanitizedQuiz.questions = this.sanitizeQuestions(
-                quiz.questions,
+                questionsToUse,
                 includeCorrectAnswers
             );
         }
@@ -135,6 +207,16 @@ class QuizzesService {
     }
 
     /**
+     * Helper to build conflict error
+     */
+    buildConflictError(message) {
+        const error = new Error(message);
+        error.statusCode = HTTP_STATUS.CONFLICT;
+        error.code = ERROR_CODES.DUPLICATE_ENTRY;
+        return error;
+    }
+
+    /**
      * Resolve course ID associated with a quiz
      */
     resolveCourseId(quiz) {
@@ -168,6 +250,9 @@ class QuizzesService {
         return prisma.quiz.findUnique({
             where: { id: quizId },
             include: {
+                questionItems: {
+                    orderBy: { questionOrder: 'asc' },
+                },
                 lesson: {
                     select: {
                         id: true,
@@ -321,29 +406,13 @@ class QuizzesService {
                     : String(payload.description ?? '');
         }
 
-        if (!isUpdate || 'questions' in payload) {
-            data.questions = Array.isArray(payload.questions)
-                ? payload.questions
-                : payload.questions ?? [];
-        }
+        // Note: questions are now managed separately in the Question table
+        // They are not included in quiz.questions anymore (kept for backward compatibility only)
+        // Use buildQuestionsDataFromPayload() to handle question data
 
         if (!isUpdate || 'passingScore' in payload) {
             if (payload.passingScore !== undefined) {
                 data.passingScore = Number(payload.passingScore);
-            }
-        }
-
-        if (!isUpdate || 'attemptsAllowed' in payload) {
-            if (payload.attemptsAllowed !== undefined) {
-                data.attemptsAllowed = Number(payload.attemptsAllowed);
-            }
-        }
-
-        if ('timeLimitMinutes' in payload) {
-            if (payload.timeLimitMinutes === null || payload.timeLimitMinutes === undefined) {
-                data.timeLimitMinutes = null;
-            } else {
-                data.timeLimitMinutes = Number(payload.timeLimitMinutes);
             }
         }
 
@@ -354,6 +423,26 @@ class QuizzesService {
         }
 
         return data;
+    }
+
+    /**
+     * Build questions data from payload
+     * Returns array of question objects to be created/updated in Question table
+     */
+    buildQuestionsDataFromPayload(questions = [], quizId) {
+        if (!Array.isArray(questions)) {
+            return [];
+        }
+
+        return questions.map((q, index) => ({
+            quizId,
+            question: typeof q.question === 'string' ? q.question.trim() : '',
+            type: q.type || 'multiple_choice',
+            options: q.options || [],
+            correctAnswer: q.correctAnswer || null,
+            explanation: q.explanation || null,
+            questionOrder: index,
+        }));
     }
 
     /**
@@ -552,10 +641,6 @@ class QuizzesService {
                     answer.selectedOption ??
                     answer.selectedAnswer ??
                     null,
-                timeSpent:
-                    typeof answer.timeSpent === 'number'
-                        ? Math.max(0, Math.trunc(answer.timeSpent))
-                        : null,
             });
         });
 
@@ -626,47 +711,54 @@ class QuizzesService {
             return true;
         }
 
-        if (
-            typeof providedAnswer === 'string' ||
-            typeof correctAnswer === 'string'
-        ) {
-            return (
-                String(providedAnswer ?? '')
-                    .trim()
-                    .toLowerCase() ===
-                String(correctAnswer ?? '').trim().toLowerCase()
-            );
-        }
-
-        return providedAnswer === correctAnswer;
+        // Normalize both to string for comparison (handles number vs string mismatch)
+        const normalizedProvided = String(providedAnswer ?? '').trim().toLowerCase();
+        const normalizedCorrect = String(correctAnswer ?? '').trim().toLowerCase();
+        
+        return normalizedProvided === normalizedCorrect;
     }
 
     /**
      * Grade quiz answers
      */
     gradeQuiz(quiz, answersPayload = []) {
-        const questions = Array.isArray(quiz?.questions)
-            ? quiz.questions
-            : [];
+        // Use questionItems from Question table if available, fallback to legacy questions JSON
+        let questions = [];
+        if (quiz?.questionItems && Array.isArray(quiz.questionItems)) {
+            questions = quiz.questionItems;
+        } else if (Array.isArray(quiz?.questions)) {
+            questions = quiz.questions;
+        }
+        
         const answersMap = this.buildAnswersMap(answersPayload);
+
+        // Debug logs removed
 
         let correctCount = 0;
 
         const gradedAnswers = questions.map((question, index) => {
             const questionKey = this.getQuestionKey(question, index);
+            const hasEntry = answersMap.has(String(questionKey));
             const correctAnswer =
                 question && typeof question === 'object'
                     ? question.correctAnswer ?? null
                     : null;
-            const answerEntry = answersMap.get(questionKey) ?? null;
-            const providedAnswer =
+            let answerEntry = answersMap.get(String(questionKey)) ?? null;
+            if (!answerEntry && Array.isArray(answersPayload)) {
+                const byIndex = answersPayload[index];
+                if (byIndex && (byIndex.answer !== undefined)) {
+                    answerEntry = {
+                        answer: byIndex.answer ?? null,
+                    };
+                }
+            }
+            let providedAnswer =
                 answerEntry && 'answer' in answerEntry
                     ? answerEntry.answer
                     : null;
-            const timeSpent =
-                answerEntry && 'timeSpent' in answerEntry
-                    ? answerEntry.timeSpent
-                    : null;
+
+            // Ensure providedAnswer is not undefined
+            providedAnswer = providedAnswer !== undefined ? providedAnswer : null;
 
             const isCorrect = this.isAnswerCorrect(
                 providedAnswer,
@@ -679,11 +771,9 @@ class QuizzesService {
 
             return {
                 questionId: questionKey,
-                providedAnswer:
-                    providedAnswer !== undefined ? providedAnswer : null,
+                providedAnswer,
                 correctAnswer,
                 isCorrect,
-                timeSpent,
             };
         });
 

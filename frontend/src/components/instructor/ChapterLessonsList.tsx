@@ -52,7 +52,7 @@ export function ChapterLessonsList({
 }: ChapterLessonsListProps) {
     return (
         <div
-            className="relative border-t border-[#2D2D2D] p-4 space-y-2 max-h-[520px] overflow-y-auto custom-scrollbar"
+            className="relative border-t border-[#2D2D2D] p-4 space-y-4 max-h-[520px] overflow-y-auto custom-scrollbar"
             ref={containerRef}
             onPointerUp={onClearDragStates}
         >

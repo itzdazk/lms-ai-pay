@@ -4,17 +4,20 @@ import rateLimit from 'express-rate-limit';
 import instructorQuizzesController from '../controllers/instructor-quizzes.controller.js';
 import { authenticate } from '../middlewares/authenticate.middleware.js';
 import { isInstructor } from '../middlewares/role.middleware.js';
-import { isCourseInstructorOrAdmin } from '../middlewares/role.middleware.js';
 import {
-    createCourseQuizValidator,
     createLessonQuizValidator,
     deleteQuizValidator,
+    getLessonQuizzesValidator,
     getInstructorQuizSubmissionsValidator,
     getQuizAnalyticsValidator,
     publishQuizValidator,
     updateQuizValidator,
     generateQuizFromLessonValidator,
     generateQuizFromCourseValidator,
+    createQuestionValidator,
+    updateQuestionValidator,
+    deleteQuestionValidator,
+    reorderQuestionsValidator,
 } from '../validators/quizzes.validator.js';
 
 // Rate limiting cho AI generation (10 requests per 15 minutes)
@@ -33,6 +36,19 @@ const aiGenerationLimiter = rateLimit({
 const router = express.Router();
 
 /**
+ * @route   GET /api/v1/instructor/lessons/:lessonId/quizzes
+ * @desc    List all quizzes for lesson (include drafts)
+ * @access  Private (Instructor/Admin)
+ */
+router.get(
+    '/lessons/:lessonId/quizzes',
+    authenticate,
+    isInstructor,
+    getLessonQuizzesValidator,
+    instructorQuizzesController.getLessonQuizzes
+);
+
+/**
  * @route   POST /api/v1/instructor/lessons/:lessonId/quizzes
  * @desc    Create quiz for lesson
  * @access  Private (Instructor/Admin)
@@ -43,20 +59,6 @@ router.post(
     isInstructor,
     createLessonQuizValidator,
     instructorQuizzesController.createLessonQuiz
-);
-
-/**
- * @route   POST /api/v1/instructor/courses/:courseId/quizzes
- * @desc    Create quiz for course
- * @access  Private (Instructor/Admin)
- */
-router.post(
-    '/courses/:courseId/quizzes',
-    authenticate,
-    isInstructor,
-    isCourseInstructorOrAdmin,
-    createCourseQuizValidator,
-    instructorQuizzesController.createCourseQuiz
 );
 
 /**
@@ -122,6 +124,58 @@ router.get(
     isInstructor,
     getQuizAnalyticsValidator,
     instructorQuizzesController.getQuizAnalytics
+);
+
+/**
+ * @route   POST /api/v1/instructor/quizzes/:quizId/questions
+ * @desc    Create a single question in quiz
+ * @access  Private (Instructor/Admin)
+ */
+router.post(
+    '/quizzes/:quizId/questions',
+    authenticate,
+    isInstructor,
+    createQuestionValidator,
+    instructorQuizzesController.createQuestion
+);
+
+/**
+ * @route   PUT /api/v1/instructor/quizzes/:quizId/questions/:questionId
+ * @desc    Update a single question in quiz
+ * @access  Private (Instructor/Admin)
+ */
+router.put(
+    '/quizzes/:quizId/questions/:questionId',
+    authenticate,
+    isInstructor,
+    updateQuestionValidator,
+    instructorQuizzesController.updateQuestion
+);
+
+/**
+ * @route   DELETE /api/v1/instructor/quizzes/:quizId/questions/:questionId
+ * @desc    Delete a single question in quiz
+ * @access  Private (Instructor/Admin)
+ */
+router.delete(
+    '/quizzes/:quizId/questions/:questionId',
+    authenticate,
+    isInstructor,
+    deleteQuestionValidator,
+    instructorQuizzesController.deleteQuestion
+);
+
+/**
+ * @route   PATCH /api/v1/instructor/quizzes/:quizId/questions/reorder
+ * @desc    Reorder multiple questions
+ * @access  Private (Instructor/Admin)
+ */
+router.patch(
+    '/quizzes/:quizId/questions/reorder',
+    authenticate,
+    isInstructor,
+    reorderQuestionsValidator,
+    instructorQuizzesController.reorderQuestions
 );
 
 /**

@@ -526,8 +526,6 @@ export interface Quiz {
     description?: string
     questions: QuizQuestion[] | Record<string, any> // JSON field
     passingScore: number
-    attemptsAllowed: number
-    timeLimitMinutes?: number
     isPublished: boolean
     createdAt: string
     updatedAt: string
@@ -541,8 +539,6 @@ export interface CreateQuizRequest {
     description?: string
     questions: QuizQuestion[]
     passingScore?: number
-    attemptsAllowed?: number
-    timeLimitMinutes?: number
     isPublished?: boolean
 }
 
@@ -850,4 +846,80 @@ export interface Instructor {
     bio?: string
     totalCourses?: number
     otherCourses?: Course[]
+}
+
+// =====================================================
+// QUIZ TYPES
+// =====================================================
+export type QuestionType = 'multiple_choice' | 'true_false' | 'short_answer'
+
+export interface Question {
+    id: string
+    quizId: string
+    questionText: string
+    questionType: QuestionType
+    options?: string[] // For multiple_choice and true_false
+    correctAnswer: string // Index for multiple_choice, 'true'/'false' for true_false, text for short_answer
+    order: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface Quiz {
+    id: string
+    title: string
+    description?: string
+    lessonId?: string
+    courseId?: string
+    passingScore: number
+    timeLimit?: number // in minutes
+    attemptsAllowed?: number
+    isPublished: boolean
+    questions?: Question[]
+    questionCount?: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface QuizAnswer {
+    questionId: string
+    answer: string
+}
+
+export interface QuizSubmission {
+    quizId: string
+    answers: QuizAnswer[]
+}
+
+export interface QuestionResult {
+    questionId: string
+    questionText: string
+    questionType: QuestionType
+    userAnswer: string
+    correctAnswer: string
+    isCorrect: boolean
+    options?: string[]
+    explanation?: string // Explanation for the correct answer
+}
+
+export interface QuizResult {
+    id: string
+    quizId: string
+    userId: string
+    score: number
+    passed: boolean
+    totalQuestions: number
+    correctAnswers: number
+    answers: QuestionResult[]
+
+    attemptNumber: number
+    submittedAt: string
+}
+
+export interface QuizAttempt {
+    quizId: string
+    attemptCount: number
+    attemptsAllowed?: number
+    canRetake: boolean
+    latestResult?: QuizResult
 }

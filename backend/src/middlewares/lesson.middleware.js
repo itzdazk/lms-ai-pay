@@ -41,5 +41,65 @@ const checkLessonExists = async (req, res, next) => {
     }
 }
 
-export { checkLessonExists }
+
+/**
+ * Middleware: Only allow access to lesson if previous lesson is completed
+ * Assumes lessons have lessonOrder and chapterId fields
+ * - If lesson is first in course, allow
+ * - Else, check previous lesson in order (same chapter or previous chapter)
+ *   and require user's progress.isCompleted = true
+ */
+const restrictLessonAccess = async (req, res, next) => {
+    try {
+        const userId = req.user?.id
+        const lessonId = parseInt(req.params.id)
+        if (!userId || !lessonId) {
+            return ApiResponse.badRequest(res, 'User and lesson ID required')
+        }
+        // Get current lesson info
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: { id: true, courseId: true, chapterId: true, lessonOrder: true },
+        })
+        if (!lesson) return ApiResponse.notFound(res, 'Lesson not found')
+        // Find previous lesson in course order
+        const prevLesson = await prisma.lesson.findFirst({
+            where: {
+                courseId: lesson.courseId,
+                OR: [
+                    // Same chapter, lower order
+                    { chapterId: lesson.chapterId, lessonOrder: { lt: lesson.lessonOrder } },
+                    // Previous chapters (any lessonOrder)
+                    { chapterId: { lt: lesson.chapterId } },
+                ],
+            },
+            orderBy: [
+                { chapterId: 'desc' },
+                { lessonOrder: 'desc' },
+            ],
+        })
+        if (!prevLesson) return next() // First lesson, allow
+        // Check progress of previous lesson (phải hoàn thành cả bài học và quiz nếu có)
+        const progress = await prisma.progress.findFirst({
+            where: {
+                userId,
+                lessonId: prevLesson.id,
+                isCompleted: true,
+                quizCompleted: true,
+            },
+        })
+        if (!progress) {
+            return ApiResponse.error(
+                res,
+                'Bạn cần hoàn thành bài học và câu hỏi trước để truy cập bài học này.',
+                HTTP_STATUS.FORBIDDEN
+            )
+        }
+        next()
+    } catch (error) {
+        return ApiResponse.error(res, 'Error checking lesson access', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+    }
+}
+
+export { checkLessonExists, restrictLessonAccess }
 

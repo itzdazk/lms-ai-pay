@@ -1,6 +1,12 @@
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { GripVertical, Video, FileText, Eye, EyeOff, Edit, Trash2, Clock } from 'lucide-react'
+import { GripVertical, Video, FileText, Eye, EyeOff, Edit, Trash2, Clock, MoreVertical, FileQuestion } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '../ui/dropdown-menu'
 import { TranscriptStatus } from './TranscriptStatus'
 import type { Lesson } from '../../lib/api/types'
 
@@ -20,6 +26,7 @@ interface LessonItemProps {
     onEdit: () => void
     onDelete: () => void
     onRequestTranscript: () => void
+    onManageQuiz?: () => void // Optional, for quiz management action
 }
 
 export function LessonItem({
@@ -38,19 +45,21 @@ export function LessonItem({
     onEdit,
     onDelete,
     onRequestTranscript,
+    onManageQuiz,
 }: LessonItemProps) {
     return (
         <div
             data-lesson-id={lesson.id}
-            className={`flex items-center gap-3 p-3 bg-[#1A1A1A] border rounded-lg transition-all duration-150 ${
+            className={`flex items-center gap-4 p-5 bg-[#232323] border border-[#2D2D2D] rounded-xl transition-all duration-150 shadow-sm ${
                 isDragged
-                    ? 'border-blue-500 bg-blue-500/10 shadow-lg'
+                    ? 'border-blue-500 bg-blue-500/10 shadow-lg scale-[1.01]'
                     : isDragOver
                     ? 'border-blue-500 border-dashed bg-blue-500/5'
                     : isSwapped
                     ? 'border-green-500 bg-green-500/10'
-                    : 'border-[#2D2D2D] hover:bg-[#252525]'
+                    : 'hover:border-blue-500/40'
             }`}
+            style={{ minHeight: 72 }}
             draggable
             onDragStart={onDragStart}
             onDragOver={onDragOver}
@@ -74,61 +83,64 @@ export function LessonItem({
                         Preview
                     </Badge>
                 )}
-                {!lesson.isPublished && (
-                    <Badge variant="outline" className="text-xs text-gray-500 border-gray-500 flex-shrink-0">
-                        Đang ẩn
-                    </Badge>
-                )}
             </div>
             {/* Video info - Right side */}
             <div className="flex items-center gap-4 flex-shrink-0 mr-2">
-                {/* Video duration */}
-                <div className="flex items-center gap-1 text-gray-400 text-xs whitespace-nowrap min-w-[3rem] justify-end">
-                    {lesson.videoDuration && lesson.videoDuration > 0 ? (
-                        <>
-                            <Clock className="h-3 w-3 flex-shrink-0" />
-                            <span>{formatDuration(lesson.videoDuration)}</span>
-                        </>
-                    ) : null}
-                </div>
                 {/* Transcript status */}
                 <div className="flex items-center gap-2 text-xs whitespace-nowrap min-w-[4rem] sm:min-w-[5rem] justify-end">
                     <TranscriptStatus lesson={lesson} onRequestTranscript={onRequestTranscript} />
                 </div>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onPublish(!lesson.isPublished)}
-                    className={lesson.isPublished ? "text-green-500 hover:text-green-600 hover:bg-green-500/10" : "text-gray-500 hover:text-gray-400 hover:bg-gray-500/10"}
-                    title={lesson.isPublished ? "Ẩn bài học" : "Xuất bản bài học"}
-                >
+                {/* Video duration + trạng thái xuất bản/ẩn */}
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-gray-400 text-xs whitespace-nowrap min-w-[3rem] justify-end">
+                        {lesson.videoDuration && lesson.videoDuration > 0 ? (
+                            <>
+                                <Clock className="h-3 w-3 flex-shrink-0" />
+                                <span>{formatDuration(lesson.videoDuration)}</span>
+                            </>
+                        ) : null}
+                    </div>
+                    {/* Trạng thái xuất bản/ẩn */}
                     {lesson.isPublished ? (
-                        <Eye className="h-4 w-4" />
+                        <Badge className="bg-green-600 text-white flex items-center gap-1 text-xs" title="Bài học đã xuất bản">
+                            <Eye className="h-3 w-3" /> Xuất bản
+                        </Badge>
                     ) : (
-                        <EyeOff className="h-4 w-4" />
+                        <Badge className="bg-gray-500 text-white flex items-center gap-1 text-xs" title="Bài học đang ẩn">
+                            <EyeOff className="h-3 w-3" /> Ẩn
+                        </Badge>
                     )}
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onEdit}
-                    className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                    title="Chỉnh sửa bài học"
-                >
-                    <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onDelete}
-                    className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                    title="Xóa bài học"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                </div>
             </div>
+                        <div className="flex items-center gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-500">
+                                        <MoreVertical className="h-5 w-5" />
+                                        <span className="sr-only">Thao tác bài học</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-[#181818] text-white border-[#222]">
+                                    <DropdownMenuItem onClick={onEdit}>
+                                        <Edit className="h-4 w-4 mr-2 text-blue-500" />Chỉnh sửa bài học
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onPublish(!lesson.isPublished)}>
+                                        {lesson.isPublished ? (
+                                            <>
+                                                <Eye className="h-4 w-4 mr-2 text-green-400" />Ẩn bài học
+                                            </>
+                                        ) : (
+                                            <>
+                                                <EyeOff className="h-4 w-4 mr-2 text-gray-400" />Xuất bản bài học
+                                            </>
+                                        )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={onDelete} className="text-red-500">
+                                        <Trash2 className="h-4 w-4 mr-2" />Xóa bài học
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
         </div>
     )
 }

@@ -250,15 +250,13 @@ class AdminDashboardService {
      * @returns {Promise<object>} User statistics
      */
     async getUserStats() {
-        const [
-            totalUsers,
-            totalInstructors,
-            totalStudents,
-        ] = await Promise.all([
-            prisma.user.count(),
-            prisma.user.count({ where: { role: USER_ROLES.INSTRUCTOR } }),
-            prisma.user.count({ where: { role: USER_ROLES.STUDENT } }),
-        ])
+        const [totalUsers, totalInstructors, totalStudents] = await Promise.all(
+            [
+                prisma.user.count(),
+                prisma.user.count({ where: { role: USER_ROLES.INSTRUCTOR } }),
+                prisma.user.count({ where: { role: USER_ROLES.STUDENT } }),
+            ]
+        )
 
         logger.info('User statistics retrieved')
 
@@ -482,22 +480,21 @@ class AdminDashboardService {
             _sum: {
                 enrolledCount: true,
             },
-            orderBy: {
-                _count: {
-                    categoryId: 'desc',
-                },
-            },
-            take: 10,
         })
 
+        // Sort by course count descending and take top 10
+        const sortedCategories = coursesByCategory
+            .sort((a, b) => b._count - a._count)
+            .slice(0, 10)
+
         // Get category names
-        const categoryIds = coursesByCategory.map((item) => item.categoryId)
+        const categoryIds = sortedCategories.map((item) => item.categoryId)
         const categories = await prisma.category.findMany({
             where: { id: { in: categoryIds } },
             select: { id: true, name: true, slug: true },
         })
 
-        const categoryDistribution = coursesByCategory.map((item) => {
+        const categoryDistribution = sortedCategories.map((item) => {
             const category = categories.find((c) => c.id === item.categoryId)
             return {
                 categoryId: item.categoryId,
@@ -601,18 +598,19 @@ class AdminDashboardService {
         // Get revenue trend (last 30 days)
         const revenueTrend = []
         for (let i = 29; i >= 0; i--) {
-            const date = new Date(now)
-            date.setDate(date.getDate() - i)
-            date.setHours(0, 0, 0, 0)
+            // Create date in UTC to match database Timestamptz
+            const targetDate = new Date(now)
+            targetDate.setUTCDate(targetDate.getUTCDate() - i)
+            targetDate.setUTCHours(0, 0, 0, 0)
 
-            const nextDate = new Date(date)
-            nextDate.setDate(nextDate.getDate() + 1)
+            const nextDate = new Date(targetDate)
+            nextDate.setUTCDate(nextDate.getUTCDate() + 1)
 
             const dayRevenue = await prisma.order.aggregate({
                 where: {
                     paymentStatus: PAYMENT_STATUS.PAID,
                     paidAt: {
-                        gte: date,
+                        gte: targetDate,
                         lt: nextDate,
                     },
                 },
@@ -621,7 +619,7 @@ class AdminDashboardService {
             })
 
             revenueTrend.push({
-                date: date.toISOString().split('T')[0],
+                date: targetDate.toISOString().split('T')[0],
                 revenue: parseFloat(dayRevenue._sum.finalPrice || 0),
                 orders: dayRevenue._count,
             })
@@ -681,15 +679,23 @@ class AdminDashboardService {
         })
 
         // Get monthly revenue comparison (current vs previous month)
-        const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        // Use UTC to match database Timestamptz
+        const thisMonth = new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
+        )
+        const lastMonth = new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0)
+        )
         const lastMonthEnd = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            0,
-            23,
-            59,
-            59
+            Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                0,
+                23,
+                59,
+                59,
+                999
+            )
         )
 
         const [thisMonthRevenue, lastMonthRevenue] = await Promise.all([
