@@ -422,6 +422,11 @@ export interface OrderFilters {
     search?: string
 }
 
+export interface RefundRequest {
+    amount: number
+    reason?: string
+}
+
 // =====================================================
 // PAYMENT TRANSACTION TYPES
 // =====================================================

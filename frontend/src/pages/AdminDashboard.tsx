@@ -31,6 +31,7 @@ import {
     ReceiptText,
     Users,
     BookOpen,
+    RotateCcw,
 } from 'lucide-react'
 import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
@@ -57,6 +58,7 @@ import {
     DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu'
 import { Badge } from '../components/ui/badge'
+import { RefundsPage } from './admin/RefundsPage'
 
 type AdminSection =
     | 'dashboard'
@@ -66,6 +68,7 @@ type AdminSection =
     | 'courses'
     | 'analytics'
     | 'orders'
+    | 'refunds'
     | 'categories'
     | 'settings'
     | 'tags'
@@ -138,6 +141,12 @@ const menuGroups: MenuGroup[] = [
                 label: 'Đơn hàng',
                 icon: ShoppingCart,
                 color: 'text-orange-400',
+            },
+            {
+                id: 'refunds',
+                label: 'Hoàn tiền',
+                icon: RotateCcw,
+                color: 'text-yellow-400',
             },
         ],
     },
@@ -228,6 +237,12 @@ export function AdminDashboard() {
                 return (
                     <div className='h-full'>
                         <OrdersPage />
+                    </div>
+                )
+            case 'refunds':
+                return (
+                    <div className='h-full'>
+                        <RefundsPage />
                     </div>
                 )
             case 'categories':

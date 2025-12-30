@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { ApiResponse, PaginatedApiResponse } from './types'
+import type { ApiResponse, PaginatedApiResponse, RefundRequest } from './types'
 import type { Order } from './types'
 
 /**
