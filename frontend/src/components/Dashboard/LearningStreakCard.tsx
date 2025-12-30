@@ -212,6 +212,12 @@ export function LearningStreakCard() {
                                     borderRadius: '8px',
                                     color: '#FFFFFF',
                                 }}
+                                labelStyle={{
+                                    color: '#FFFFFF',
+                                }}
+                                itemStyle={{
+                                    color: '#FFFFFF',
+                                }}
                                 formatter={(value: number | undefined) => [
                                     value === 1 ? 'Có học' : 'Không học',
                                     '',
