@@ -1,4 +1,4 @@
- import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ProtectedRoute } from './components/routes/ProtectedRoute'
 import { RoleRoute } from './components/routes/RoleRoute'
@@ -404,7 +404,10 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
                                                 >
                                                     <CourseQuizzesPage />
                                                 </RoleRoute>
@@ -416,7 +419,10 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
                                                 >
                                                     <QuizzesPage />
                                                 </RoleRoute>
@@ -429,7 +435,10 @@ export default function App() {
                                         element={
                                             <ProtectedRoute>
                                                 <RoleRoute
-                                                    allowedRoles={['INSTRUCTOR', 'ADMIN']}
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
                                                 >
                                                     <QuizzesPage />
                                                 </RoleRoute>

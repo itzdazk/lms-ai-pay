@@ -32,6 +32,7 @@ import {
     ContinueWatchingSection,
     MyCoursesSection,
     AchievementsSection,
+    NextRecommendationsSection,
 } from '../components/Dashboard'
 
 export function StudentDashboard() {
@@ -175,7 +176,7 @@ export function StudentDashboard() {
                                         <Link to={action.href}>
                                             <action.icon className='h-4 w-4 text-blue-400' />
                                             <div className='text-left'>
-                                                <p className='text-sm font-semibold text-black dark:text-white'>
+                                                <p className='text-sm font-semibold text-white'>
                                                     {action.label}
                                                 </p>
                                                 <p className='text-xs text-gray-400'>
@@ -244,11 +245,15 @@ export function StudentDashboard() {
             {/* My Courses & Achievements */}
             <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
                 <MyCoursesSection enrollments={enrolledCourses} />
-                <AchievementsSection
-                    completedCourses={completedCourses}
-                    totalProgress={totalProgress}
-                    enrolledCoursesCount={enrolledCourses.length}
-                />
+                <div className='space-y-6'>
+                    <AchievementsSection
+                        completedCourses={completedCourses}
+                        totalProgress={totalProgress}
+                    />
+                    <NextRecommendationsSection
+                        enrolledCourses={enrolledCourses}
+                    />
+                </div>
             </div>
 
             {/* Phase 1: New Features */}
