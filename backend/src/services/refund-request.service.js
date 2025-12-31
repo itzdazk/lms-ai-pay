@@ -134,42 +134,55 @@ class RefundRequestService {
             adminNotes = `Tự động từ chối: Tiến độ khóa học đạt ${progressPercentage.toFixed(2)}% (yêu cầu < 50%)`
         }
 
-        // Create refund request
-        const refundRequest = await prisma.refundRequest.create({
-            data: {
-                orderId,
-                studentId: userId,
-                reason,
-                status,
-                progressPercentage,
-                adminNotes,
-            },
-            include: {
-                order: {
-                    include: {
-                        course: {
-                            select: {
-                                id: true,
-                                title: true,
+        // Create refund request and update order status
+        const refundRequest = await prisma.$transaction(async (tx) => {
+            // Update order status to REFUND_PENDING if request is pending
+            if (status === 'PENDING') {
+                await tx.order.update({
+                    where: { id: orderId },
+                    data: {
+                        paymentStatus: PAYMENT_STATUS.REFUND_PENDING,
+                    },
+                })
+            }
+
+            // Create refund request
+            return await tx.refundRequest.create({
+                data: {
+                    orderId,
+                    studentId: userId,
+                    reason,
+                    status,
+                    progressPercentage,
+                    adminNotes,
+                },
+                include: {
+                    order: {
+                        include: {
+                            course: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                },
                             },
-                        },
-                        user: {
-                            select: {
-                                id: true,
-                                fullName: true,
-                                email: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                    email: true,
+                                },
                             },
                         },
                     },
-                },
-                student: {
-                    select: {
-                        id: true,
-                        fullName: true,
-                        email: true,
+                    student: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
                     },
                 },
-            },
+            })
         })
 
         // Send notification to admin if request is pending

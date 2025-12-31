@@ -670,8 +670,14 @@ class PaymentService {
             throw error
         }
 
-        if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
-            const error = new Error('Only paid orders can be refunded')
+        // Allow refund for PAID or REFUND_PENDING orders
+        if (
+            order.paymentStatus !== PAYMENT_STATUS.PAID &&
+            order.paymentStatus !== PAYMENT_STATUS.REFUND_PENDING
+        ) {
+            const error = new Error(
+                `Only paid or refund pending orders can be refunded. Current status: ${order.paymentStatus}`
+            )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -846,22 +852,32 @@ class PaymentService {
             responseBody = await response.json()
 
             if (!response.ok || responseBody.resultCode !== 0) {
-                await prisma.paymentTransaction.create({
-                    data: {
-                        orderId: order.id,
-                        paymentGateway: PAYMENT_GATEWAY.MOMO,
-                        transactionId: responseBody?.transId || requestId,
-                        amount: toDecimal(requestedAmount),
-                        currency: 'VND',
-                        status: TRANSACTION_STATUS.FAILED,
-                        gatewayResponse: responseBody,
-                        errorMessage:
-                            responseBody?.message ||
-                            ERROR_MESSAGES.refundFailed(
-                                PAYMENT_GATEWAY.MOMO,
-                                responseBody?.resultCode
-                            ),
-                    },
+                await prisma.$transaction(async (tx) => {
+                    await tx.paymentTransaction.create({
+                        data: {
+                            orderId: order.id,
+                            paymentGateway: PAYMENT_GATEWAY.MOMO,
+                            transactionId: responseBody?.transId || requestId,
+                            amount: toDecimal(requestedAmount),
+                            currency: 'VND',
+                            status: TRANSACTION_STATUS.FAILED,
+                            gatewayResponse: responseBody,
+                            errorMessage:
+                                responseBody?.message ||
+                                ERROR_MESSAGES.refundFailed(
+                                    PAYMENT_GATEWAY.MOMO,
+                                    responseBody?.resultCode
+                                ),
+                        },
+                    })
+
+                    // Update order status to REFUND_FAILED
+                    await tx.order.update({
+                        where: { id: order.id },
+                        data: {
+                            paymentStatus: PAYMENT_STATUS.REFUND_FAILED,
+                        },
+                    })
                 })
 
                 throw new Error(
@@ -872,6 +888,28 @@ class PaymentService {
             logger.error(
                 `MoMo refund failed for order ${order.orderCode}: ${error.message}`
             )
+            
+            // Update order status to REFUND_FAILED if not already updated
+            try {
+                const currentOrder = await prisma.order.findUnique({
+                    where: { id: order.id },
+                    select: { paymentStatus: true },
+                })
+                
+                if (currentOrder?.paymentStatus === PAYMENT_STATUS.REFUND_PENDING) {
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                            paymentStatus: PAYMENT_STATUS.REFUND_FAILED,
+                        },
+                    })
+                }
+            } catch (updateError) {
+                logger.error(
+                    `Failed to update order status to REFUND_FAILED: ${updateError.message}`
+                )
+            }
+            
             throw error
         }
 
