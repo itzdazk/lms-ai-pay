@@ -1,8 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { DarkOutlineButton } from '../ui/buttons'
+import { RefundRequestDialog } from './RefundRequestDialog'
+import { refundRequestsApi } from '../../lib/api/refund-requests'
+import { toast } from 'sonner'
+import { RotateCcw } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -31,6 +35,7 @@ type OrderTableProps = {
     onCancel?: (orderId: number) => void
     cancelLoading?: number | null
     showActions?: boolean
+    onRefundRequestCreated?: () => void
 }
 
 function getStatusBadge(status: Order['paymentStatus']) {
@@ -91,6 +96,7 @@ export function OrderTable({
     onCancel,
     cancelLoading,
     showActions = true,
+    onRefundRequestCreated,
 }: OrderTableProps) {
     // Cancel order dialog state
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
@@ -98,6 +104,119 @@ export function OrderTable({
         id: number
         orderCode: string
     } | null>(null)
+
+    // Refund request dialog state
+    const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+    const [orderForRefund, setOrderForRefund] = useState<Order | null>(null)
+    const [refundRequestLoading, setRefundRequestLoading] = useState(false)
+    const [ordersWithRefundRequests, setOrdersWithRefundRequests] = useState<
+        Set<number>
+    >(new Set())
+
+    // Check refund requests for PAID orders
+    useEffect(() => {
+        const checkRefundRequests = async () => {
+            const paidOrders = orders.filter(
+                (order) => order.paymentStatus === 'PAID'
+            )
+
+            if (paidOrders.length === 0) return
+
+            try {
+                const requests = await Promise.all(
+                    paidOrders.map((order) =>
+                        refundRequestsApi
+                            .getRefundRequestByOrderId(order.id)
+                            .then((req) => ({
+                                orderId: order.id,
+                                request: req,
+                            }))
+                            .catch(() => ({
+                                orderId: order.id,
+                                request: null,
+                            }))
+                    )
+                )
+
+                const orderIdsWithRequests = new Set<number>()
+                requests.forEach(({ orderId, request }) => {
+                    if (
+                        request &&
+                        (request.status === 'PENDING' ||
+                            request.status === 'APPROVED')
+                    ) {
+                        orderIdsWithRequests.add(orderId)
+                    }
+                })
+
+                setOrdersWithRefundRequests(orderIdsWithRequests)
+            } catch (error) {
+                console.error('Error checking refund requests:', error)
+            }
+        }
+
+        if (!loading && orders.length > 0) {
+            checkRefundRequests()
+        }
+    }, [orders, loading])
+
+    // Handle refund request click
+    const handleRefundRequestClick = useCallback((order: Order) => {
+        setOrderForRefund(order)
+        setRefundDialogOpen(true)
+    }, [])
+
+    // Handle refund request submit
+    const handleRefundRequestSubmit = useCallback(
+        async (reason: string) => {
+            if (!orderForRefund) return
+
+            try {
+                setRefundRequestLoading(true)
+                const refundRequest =
+                    await refundRequestsApi.createRefundRequest({
+                        orderId: orderForRefund.id,
+                        reason,
+                    })
+
+                if (refundRequest.status === 'REJECTED') {
+                    toast.warning(
+                        refundRequest.adminNotes ||
+                            'Yêu cầu hoàn tiền đã bị từ chối tự động do tiến độ khóa học >= 50%'
+                    )
+                } else {
+                    toast.success(
+                        'Yêu cầu hoàn tiền đã được gửi thành công. Quản trị viên sẽ xem xét yêu cầu của bạn.'
+                    )
+                    // Add to set of orders with refund requests
+                    setOrdersWithRefundRequests((prev) => {
+                        const next = new Set(prev)
+                        next.add(orderForRefund.id)
+                        return next
+                    })
+                }
+
+                setRefundDialogOpen(false)
+                setOrderForRefund(null)
+
+                // Call callback if provided
+                if (onRefundRequestCreated) {
+                    onRefundRequestCreated()
+                }
+            } catch (error: any) {
+                console.error('Error creating refund request:', error)
+                toast.error(
+                    error.response?.data?.message ||
+                        error.message ||
+                        'Không thể gửi yêu cầu hoàn tiền'
+                )
+                throw error
+            } finally {
+                setRefundRequestLoading(false)
+            }
+        },
+        [orderForRefund, onRefundRequestCreated]
+    )
 
     // Handle cancel click - open dialog
     const handleCancelClick = useCallback(
@@ -274,22 +393,43 @@ export function OrderTable({
                             {showActions && (
                                 <DarkOutlineTableCell>
                                     <div className='flex items-center gap-2'>
+                                        {/* View Button */}
                                         <DarkOutlineButton
                                             size='sm'
                                             asChild
-                                            className='h-8'
+                                            className='h-8 px-3 whitespace-nowrap'
                                         >
                                             <Link to={`/orders/${order.id}`}>
-                                                <Eye className='h-3 w-3 mr-1' />
+                                                <Eye className='h-3.5 w-3.5 mr-1.5' />
                                                 Xem
                                             </Link>
                                         </DarkOutlineButton>
+
+                                        {/* Refund Request Button - Only for PAID orders without existing request */}
+                                        {order.paymentStatus === 'PAID' &&
+                                            !ordersWithRefundRequests.has(
+                                                order.id
+                                            ) && (
+                                                <DarkOutlineButton
+                                                    size='sm'
+                                                    className='h-8 px-3 whitespace-nowrap border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400/60 hover:text-blue-300 transition-colors'
+                                                    onClick={() =>
+                                                        handleRefundRequestClick(
+                                                            order
+                                                        )
+                                                    }
+                                                >
+                                                    <RotateCcw className='h-3.5 w-3.5 mr-1.5' />
+                                                    Hoàn tiền
+                                                </DarkOutlineButton>
+                                            )}
+
+                                        {/* Cancel Button - Only for PENDING orders */}
                                         {order.paymentStatus === 'PENDING' &&
                                             onCancel && (
-                                                <Button
+                                                <DarkOutlineButton
                                                     size='sm'
-                                                    variant='outline'
-                                                    className='h-8 border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300'
+                                                    className='h-8 px-3 whitespace-nowrap border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400/60 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                                                     onClick={() =>
                                                         handleCancelClick(
                                                             order.id,
@@ -304,16 +444,16 @@ export function OrderTable({
                                                     {cancelLoading ===
                                                     order.id ? (
                                                         <>
-                                                            <div className='animate-spin rounded-full h-3 w-3 border-2 border-red-400 border-t-transparent mr-1' />
+                                                            <div className='animate-spin rounded-full h-3.5 w-3.5 border-2 border-red-400 border-t-transparent mr-1.5' />
                                                             Đang hủy...
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <X className='h-3 w-3 mr-1' />
+                                                            <X className='h-3.5 w-3.5 mr-1.5' />
                                                             Hủy
                                                         </>
                                                     )}
-                                                </Button>
+                                                </DarkOutlineButton>
                                             )}
                                     </div>
                                 </DarkOutlineTableCell>
@@ -359,6 +499,15 @@ export function OrderTable({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Refund Request Dialog */}
+            <RefundRequestDialog
+                isOpen={refundDialogOpen}
+                setIsOpen={setRefundDialogOpen}
+                order={orderForRefund}
+                onSubmit={handleRefundRequestSubmit}
+                loading={refundRequestLoading}
+            />
         </div>
     )
 }

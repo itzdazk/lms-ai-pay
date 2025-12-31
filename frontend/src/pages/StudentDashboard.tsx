@@ -1,69 +1,88 @@
 import { Link } from 'react-router-dom'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '../components/ui/card'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import { Progress } from '../components/ui/progress'
-import { Badge } from '../components/ui/badge'
 import {
-    BookOpen,
     Clock,
     Award,
     TrendingUp,
     PlayCircle,
     CheckCircle,
     Flame,
-    Calendar,
-    BookmarkCheck,
     Compass,
     Target,
+    Loader2,
+    BookOpen,
 } from 'lucide-react'
-import { mockCourses, getEnrollment, currentUser } from '../lib/mockData'
+import { useAuth } from '../contexts/AuthContext'
+import { useStudentDashboard } from '../hooks/useStudentDashboard'
+import { useEnrolledCourses } from '../hooks/useEnrolledCourses'
+import { useContinueWatching } from '../hooks/useContinueWatching'
+import { useStudyTime } from '../hooks/useStudyTime'
+import { useLearningStreak } from '../hooks/useLearningStreak'
+import {
+    RecentActivities,
+    QuizPerformanceSummary,
+    StudyTimeChart,
+    RecommendedCourses,
+    LearningStreakCard,
+    CalendarHeatmap,
+    StatCard,
+    ContinueWatchingSection,
+    MyCoursesSection,
+    AchievementsSection,
+    NextRecommendationsSection,
+} from '../components/Dashboard'
 
 export function StudentDashboard() {
-    const enrolledCourses = mockCourses.filter((course) => {
-        const enrollment = getEnrollment(currentUser.id, course.id)
-        return enrollment !== null
-    })
+    const { user } = useAuth()
+    const { dashboard, loading: dashboardLoading } = useStudentDashboard()
+    const { courses: enrolledCourses, loading: coursesLoading } =
+        useEnrolledCourses(10)
+    const { lessons: continueWatching } = useContinueWatching(5)
+    const { analytics: studyTime } = useStudyTime()
+    const { streak, loading: streakLoading } = useLearningStreak()
 
-    const activeCourses = enrolledCourses.filter((course) => {
-        const enrollment = getEnrollment(currentUser.id, course.id)
-        return enrollment && enrollment.progress_percentage < 100
-    })
-
-    const completedCourses = enrolledCourses.filter((course) => {
-        const enrollment = getEnrollment(currentUser.id, course.id)
-        return enrollment && enrollment.progress_percentage === 100
-    })
+    const activeCourses = enrolledCourses.filter(
+        (enrollment) => enrollment.progressPercentage < 100
+    )
+    const completedCourses = enrolledCourses.filter(
+        (enrollment) => enrollment.progressPercentage === 100
+    )
 
     const totalProgress =
-        enrolledCourses.reduce((acc, course) => {
-            const enrollment = getEnrollment(currentUser.id, course.id)
-            return acc + (enrollment?.progress_percentage || 0)
-        }, 0) / (enrolledCourses.length || 1)
+        enrolledCourses.length > 0
+            ? enrolledCourses.reduce(
+                  (acc, enrollment) =>
+                      acc + (enrollment.progressPercentage || 0),
+                  0
+              ) / enrolledCourses.length
+            : 0
 
+    const stats = dashboard?.stats || {}
     const quickStats = [
         {
             label: 'Chuỗi học tập',
-            value: '7 ngày',
+            value: streak?.currentStreak
+                ? `${streak.currentStreak} ngày`
+                : '0 ngày',
             icon: Flame,
-            description: 'Giữ phong độ đều đặn',
+            description: streak?.streakMaintained
+                ? 'Đang duy trì'
+                : 'Bắt đầu học ngay',
         },
         {
             label: 'Thời gian học tuần này',
-            value: '5h 45p',
+            value: studyTime?.formatted?.thisWeek || '0h 0m',
             icon: Clock,
-            description: '+1h so với tuần trước',
+            description: studyTime?.totals?.thisWeek
+                ? `Tổng ${Math.floor(studyTime.totals.thisWeek / 3600)}h`
+                : 'Chưa có dữ liệu',
         },
         {
-            label: 'Mục tiêu tuần',
-            value: '80% hoàn thành',
+            label: 'Bài học đã hoàn thành',
+            value: stats.totalLessonsCompleted || 0,
             icon: Target,
-            description: 'Còn 2 bài học',
+            description: `${stats.totalEnrollments || 0} khóa học đã đăng ký`,
         },
     ]
 
@@ -72,13 +91,16 @@ export function StudentDashboard() {
             label: 'Tiếp tục học',
             description: 'Quay lại bài giảng gần nhất',
             icon: PlayCircle,
-            href: activeCourses[0]
-                ? `/learn/${activeCourses[0].id}`
-                : '/courses',
+            href:
+                continueWatching.length > 0
+                    ? `/courses/${continueWatching[0].course.slug}/lessons/${continueWatching[0].slug}`
+                    : activeCourses.length > 0
+                    ? `/courses/${activeCourses[0].course.slug}/lessons`
+                    : '/courses',
         },
         {
             label: 'Khám phá lộ trình',
-            description: 'Gợi ý khóa học phù hợp',
+            description: 'Hãy chọn khóa học phù hợp với bạn',
             icon: Compass,
             href: '/courses',
         },
@@ -90,25 +112,23 @@ export function StudentDashboard() {
         },
     ]
 
-    const upcomingSessions = [
-        {
-            title: 'React Hooks Mastery',
-            time: 'Hôm nay • 14:00',
-            type: 'Live session',
-            course: 'React Pro 2024',
-        },
-        {
-            title: 'AI Project Workshop',
-            time: 'Thứ 5 • 09:00',
-            type: 'Nhắc học',
-            course: 'Applied AI',
-        },
-    ]
+    const loading = dashboardLoading || coursesLoading || streakLoading
+
+    if (loading) {
+        return (
+            <div className='container mx-auto px-4 py-8 bg-background min-h-screen flex items-center justify-center'>
+                <div className='text-center'>
+                    <Loader2 className='h-8 w-8 animate-spin text-blue-500 mx-auto mb-4' />
+                    <p className='text-gray-400'>Đang tải dashboard...</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className='container mx-auto px-4 py-8 bg-background min-h-screen'>
             {/* Hero */}
-            <section className='grid gap-6 lg:grid-cols-[2fr,1fr] mb-10'>
+            <section className='mb-10'>
                 <div className='bg-[#1A1A1A] border border-[#2D2D2D] rounded-2xl p-6 lg:p-8 relative overflow-hidden'>
                     <div className='absolute inset-y-0 right-0 w-1/3 opacity-20 pointer-events-none' />
                     <div className='relative z-10'>
@@ -118,7 +138,7 @@ export function StudentDashboard() {
                                     Xin chào,
                                 </p>
                                 <h1 className='text-3xl md:text-4xl font-bold text-white'>
-                                    {currentUser.full_name}
+                                    {user?.fullName || 'Học viên'}
                                 </h1>
                                 <p className='text-gray-400 mt-2 text-base'>
                                     Tiếp tục hành trình chinh phục kỹ năng lập
@@ -149,12 +169,12 @@ export function StudentDashboard() {
                                     <DarkOutlineButton
                                         key={action.label}
                                         asChild
-                                        className='justify-start gap-3 !bg-black py-8'
+                                        className='justify-start gap-3 bg-black! py-8'
                                     >
                                         <Link to={action.href}>
                                             <action.icon className='h-4 w-4 text-blue-400' />
                                             <div className='text-left'>
-                                                <p className='text-sm font-semibold text-black dark:text-white'>
+                                                <p className='text-sm font-semibold text-white'>
                                                     {action.label}
                                                 </p>
                                                 <p className='text-xs text-gray-400'>
@@ -168,355 +188,94 @@ export function StudentDashboard() {
                         </div>
                     </div>
                 </div>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D] rounded-2xl'>
-                    <CardHeader className='pb-4'>
-                        <CardTitle className='text-white flex items-center gap-2'>
-                            <Calendar className='h-4 w-4 text-blue-400' />
-                            Lịch học của bạn
-                        </CardTitle>
-                        <CardDescription className='text-gray-400'>
-                            Ghi nhớ các buổi học và hoạt động quan trọng
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className='space-y-4'>
-                        {upcomingSessions.map((session, index) => (
-                            <div
-                                key={session.title}
-                                className='rounded-xl border border-[#2D2D2D] bg-black/40 p-4 flex flex-col gap-1'
-                            >
-                                <div className='flex items-center justify-between'>
-                                    <Badge className='bg-black/40 border border-[#2D2D2D] text-gray-300'>
-                                        {session.type}
-                                    </Badge>
-                                    <span className='text-xs text-gray-500'>
-                                        {index === 0
-                                            ? 'Sắp diễn ra'
-                                            : 'Gần đây'}
-                                    </span>
-                                </div>
-                                <p className='text-white font-semibold mt-1'>
-                                    {session.title}
-                                </p>
-                                <p className='text-sm text-gray-400'>
-                                    {session.course}
-                                </p>
-                                <div className='flex items-center gap-2 text-sm text-gray-400 mt-2'>
-                                    <Clock className='h-4 w-4 text-blue-400' />
-                                    {session.time}
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                    <CardContent className='pt-2 border-t border-[#2D2D2D]'>
-                        <DarkOutlineButton className='w-full'>
-                            Xem toàn bộ lịch
-                        </DarkOutlineButton>
-                    </CardContent>
-                </Card>
             </section>
 
             {/* Stats Cards */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10'>
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Khóa học đã đăng ký
-                        </CardTitle>
-                        <BookOpen className='h-4 w-4 text-blue-600' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {enrolledCourses.length}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Tổng số khóa học
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Đang học
-                        </CardTitle>
-                        <PlayCircle className='h-4 w-4 text-green-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {activeCourses.length}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Khóa học đang học
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Đã hoàn thành
-                        </CardTitle>
-                        <CheckCircle className='h-4 w-4 text-purple-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {completedCourses.length}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Khóa học đã hoàn thành
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
+                <StatCard
+                    title='Khóa học đã đăng ký'
+                    value={stats.totalEnrollments || enrolledCourses.length}
+                    icon={BookOpen}
+                    iconColor='text-violet-400'
+                    bgColor='bg-violet-950/50'
+                    borderColor='border-violet-900'
+                    description='Tổng số khóa học'
+                />
+                <StatCard
+                    title='Đang học'
+                    value={stats.activeEnrollments || activeCourses.length}
+                    icon={PlayCircle}
+                    iconColor='text-blue-400'
+                    bgColor='bg-blue-950/50'
+                    borderColor='border-blue-900'
+                    description='Khóa học đang học'
+                />
+                <StatCard
+                    title='Đã hoàn thành'
+                    value={
+                        stats.completedEnrollments || completedCourses.length
+                    }
+                    icon={CheckCircle}
+                    iconColor='text-green-400'
+                    bgColor='bg-green-950/50'
+                    borderColor='border-green-900'
+                    description='Khóa học đã hoàn thành'
+                />
+                <div className='bg-[#1A1A1A] border-l-4 border-orange-900 rounded-lg p-4 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1'>
+                    <div className='flex items-center justify-between mb-2'>
+                        <span className='text-sm text-gray-300 dark:text-gray-300'>
                             Tiến độ tổng quan
-                        </CardTitle>
-                        <TrendingUp className='h-4 w-4 text-orange-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {Math.round(totalProgress)}%
+                        </span>
+                        <div className='p-2.5 rounded-lg bg-orange-950/50'>
+                            <TrendingUp className='h-4 w-4 text-orange-400' />
                         </div>
-                        <Progress value={totalProgress} className='mt-2' />
-                    </CardContent>
-                </Card>
+                    </div>
+                    <div className='text-2xl font-bold text-gray-300 dark:text-gray-300 mb-2'>
+                        {Math.round(totalProgress)}%
+                    </div>
+                    <Progress value={totalProgress} />
+                </div>
             </div>
 
             {/* Continue Watching */}
-            {activeCourses.length > 0 && (
-                <div className='mb-8'>
-                    <h2 className='text-2xl font-bold mb-4 text-black dark:text-white'>
-                        Tiếp tục học
-                    </h2>
-                    <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                        {activeCourses.slice(0, 3).map((course) => {
-                            const enrollment = getEnrollment(
-                                currentUser.id,
-                                course.id
-                            )
-                            return (
-                                <Card
-                                    key={course.id}
-                                    className='bg-[#1A1A1A] border-[#2D2D2D] hover:border-white/30 transition-colors overflow-hidden'
-                                >
-                                    <Link
-                                        to={`/courses/${course.slug}/lessons`}
-                                    >
-                                        <div className='relative aspect-video overflow-hidden rounded-t-lg'>
-                                            <img
-                                                src={course.thumbnail}
-                                                alt={course.title}
-                                                className='w-full h-full object-cover'
-                                            />
-                                            <div className='absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity'>
-                                                <PlayCircle className='h-12 w-12 text-white' />
-                                            </div>
-                                        </div>
-                                    </Link>
-                                    <CardHeader>
-                                        <CardTitle className='text-white line-clamp-2'>
-                                            {course.title}
-                                        </CardTitle>
-                                        <CardDescription className='text-gray-400'>
-                                            Tiến độ:{' '}
-                                            {enrollment?.progress_percentage ||
-                                                0}
-                                            %
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Progress
-                                            value={
-                                                enrollment?.progress_percentage ||
-                                                0
-                                            }
-                                            className='mb-4'
-                                        />
-                                        <DarkOutlineButton
-                                            asChild
-                                            className='w-full'
-                                        >
-                                            <Link
-                                                to={`/courses/${course.slug}/lessons`}
-                                            >
-                                                Tiếp tục học
-                                            </Link>
-                                        </DarkOutlineButton>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
+            <ContinueWatchingSection lessons={continueWatching} />
 
             {/* My Courses & Achievements */}
-            <div className='grid lg:grid-cols-[2fr,1fr] gap-6'>
-                <div className='mb-8'>
-                    <div className='flex items-center justify-between mb-4'>
-                        <h2 className='text-2xl font-bold text-black dark:text-white'>
-                            Khóa học của tôi
-                        </h2>
-                        <DarkOutlineButton asChild>
-                            <Link to='/courses'>Xem tất cả</Link>
-                        </DarkOutlineButton>
-                    </div>
-                    <div className='grid md:grid-cols-2 gap-6'>
-                        {enrolledCourses.map((course) => {
-                            const enrollment = getEnrollment(
-                                currentUser.id,
-                                course.id
-                            )
-                            return (
-                                <Card
-                                    key={course.id}
-                                    className='bg-[#1A1A1A] border-[#2D2D2D] overflow-hidden'
-                                >
-                                    <Link to={`/courses/${course.id}`}>
-                                        <div className='relative aspect-video overflow-hidden rounded-t-lg'>
-                                            <img
-                                                src={course.thumbnail}
-                                                alt={course.title}
-                                                className='w-full h-full object-cover'
-                                            />
-                                            {enrollment?.progress_percentage ===
-                                                100 && (
-                                                <div className='absolute top-2 right-2'>
-                                                    <Badge className='bg-green-600'>
-                                                        <CheckCircle className='h-3 w-3 mr-1' />
-                                                        Hoàn thành
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Link>
-                                    <CardHeader>
-                                        <CardTitle className='text-white line-clamp-2'>
-                                            {course.title}
-                                        </CardTitle>
-                                        <CardDescription className='text-gray-400'>
-                                            {enrollment?.progress_percentage ||
-                                                0}
-                                            % hoàn thành
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Progress
-                                            value={
-                                                enrollment?.progress_percentage ||
-                                                0
-                                            }
-                                            className='mb-4'
-                                        />
-                                        <div className='flex gap-2'>
-                                            <DarkOutlineButton
-                                                asChild
-                                                className='flex-1'
-                                            >
-                                                <Link
-                                                    to={`/courses/${course.id}`}
-                                                >
-                                                    Xem chi tiết
-                                                </Link>
-                                            </DarkOutlineButton>
-                                            <DarkOutlineButton
-                                                asChild
-                                                className='flex-1'
-                                            >
-                                                <Link
-                                                    to={`/courses/${course.slug}/lessons`}
-                                                >
-                                                    Học tiếp
-                                                </Link>
-                                            </DarkOutlineButton>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                </div>
-
+            <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
+                <MyCoursesSection enrollments={enrolledCourses} />
                 <div className='space-y-6'>
-                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                        <CardHeader>
-                            <CardTitle className='text-white flex items-center gap-2'>
-                                <BookmarkCheck className='h-4 w-4 text-blue-400' />
-                                Thành tích nổi bật
-                            </CardTitle>
-                            <CardDescription className='text-gray-400'>
-                                Kỷ niệm các cột mốc quan trọng của bạn
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className='space-y-4'>
-                            <div className='rounded-xl border border-[#2D2D2D] p-4 bg-black/40'>
-                                <p className='text-white font-semibold'>
-                                    Chứng chỉ mới
-                                </p>
-                                <p className='text-sm text-gray-400'>
-                                    {completedCourses.length > 0
-                                        ? `${completedCourses[0].title}`
-                                        : 'Hãy hoàn thành khóa học để nhận chứng chỉ đầu tiên.'}
-                                </p>
-                                <DarkOutlineButton className='mt-3 w-full'>
-                                    Xem chứng chỉ
-                                </DarkOutlineButton>
-                            </div>
-                            <div className='rounded-xl border border-[#2D2D2D] p-4 bg-black/40'>
-                                <p className='text-white font-semibold'>
-                                    Tiến độ tổng quan
-                                </p>
-                                <p className='text-sm text-gray-400'>
-                                    Bạn đã hoàn thành{' '}
-                                    {Math.round(totalProgress)}% mục tiêu đã
-                                    đăng ký
-                                </p>
-                                <Progress
-                                    value={totalProgress}
-                                    className='mt-3'
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                        <CardHeader>
-                            <CardTitle className='text-white flex items-center gap-2'>
-                                <BookOpen className='h-4 w-4 text-blue-400' />
-                                Gợi ý tiếp theo
-                            </CardTitle>
-                            <CardDescription className='text-gray-400'>
-                                Những nội dung phù hợp với mục tiêu của bạn
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className='space-y-4'>
-                            {mockCourses.slice(0, 2).map((course) => (
-                                <div
-                                    key={course.id}
-                                    className='rounded-xl border border-[#2D2D2D] p-4 bg-black/40'
-                                >
-                                    <p className='text-white font-semibold'>
-                                        {course.title}
-                                    </p>
-                                    <p className='text-sm text-gray-400 mt-1'>
-                                        {course.level}
-                                    </p>
-                                    <DarkOutlineButton
-                                        asChild
-                                        className='mt-3 w-full'
-                                    >
-                                        <Link to={`/courses/${course.id}`}>
-                                            Xem khóa học
-                                        </Link>
-                                    </DarkOutlineButton>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
+                    <AchievementsSection
+                        completedCourses={completedCourses}
+                        totalProgress={totalProgress}
+                    />
                 </div>
+            </div>
+
+            {/* Phase 1: New Features */}
+            <div className='space-y-6 mb-10'>
+                <h2 className='text-2xl font-bold text-black dark:text-white'>
+                    Phân tích & Thống kê
+                </h2>
+
+                {/* Recent Activities & Quiz Performance */}
+                <div className='grid lg:grid-cols-2 gap-6'>
+                    <RecentActivities />
+                    <QuizPerformanceSummary />
+                </div>
+
+                {/* Study Time Analytics */}
+                <StudyTimeChart />
+            </div>
+
+            {/* Phase 2: Learning Streak & Calendar */}
+            <div className='space-y-6 mb-10'>
+                <LearningStreakCard />
+                <CalendarHeatmap />
+            </div>
+
+            {/* Recommended Courses */}
+            <div className='mb-10'>
+                <NextRecommendationsSection enrolledCourses={enrolledCourses} />
             </div>
         </div>
     )

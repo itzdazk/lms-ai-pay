@@ -30,6 +30,7 @@ import adminDashboardRoutes from './admin-dashboard.routes.js'
 import aiRoutes from './ai.routes.js'
 import lessonNotesRoutes from './lesson-notes.routes.js'
 import chaptersRoutes from './chapters.routes.js'
+import refundRequestRoutes from './refund-request.routes.js'
 
 const router = express.Router()
 
@@ -69,6 +70,7 @@ router.get('/', (req, res) => {
             adminDashboard: '/api/v1/dashboard/admin',
             ai: '/api/v1/ai',
             notes: '/api/v1/notes',
+            refundRequests: '/api/v1/refund-requests',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -113,6 +115,7 @@ router.use('/dashboard/admin', adminDashboardRoutes)
 router.use('/ai', aiRoutes)
 router.use('/notes', lessonNotesRoutes)
 router.use('/', chaptersRoutes)
+router.use('/refund-requests', refundRequestRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

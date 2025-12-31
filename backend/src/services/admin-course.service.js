@@ -255,7 +255,9 @@ class AdminCourseService {
 
         // Only published courses can be featured
         if (isFeatured && course.status !== COURSE_STATUS.PUBLISHED) {
-            const error = new Error('Only published courses can be marked as featured')
+            const error = new Error(
+                'Only published courses can be marked as featured'
+            )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -565,18 +567,19 @@ class AdminCourseService {
         // 10. Revenue Trend (last 30 days)
         const revenueTrend = []
         for (let i = 29; i >= 0; i--) {
-            const date = new Date(now)
-            date.setDate(date.getDate() - i)
-            date.setHours(0, 0, 0, 0)
+            // Create date in UTC to match database Timestamptz
+            const targetDate = new Date(now)
+            targetDate.setUTCDate(targetDate.getUTCDate() - i)
+            targetDate.setUTCHours(0, 0, 0, 0)
 
-            const nextDate = new Date(date)
-            nextDate.setDate(nextDate.getDate() + 1)
+            const nextDate = new Date(targetDate)
+            nextDate.setUTCDate(nextDate.getUTCDate() + 1)
 
             const dayRevenue = await prisma.order.aggregate({
                 where: {
                     paymentStatus: PAYMENT_STATUS.PAID,
                     paidAt: {
-                        gte: date,
+                        gte: targetDate,
                         lt: nextDate,
                     },
                 },
@@ -585,7 +588,7 @@ class AdminCourseService {
             })
 
             revenueTrend.push({
-                date: date.toISOString().split('T')[0],
+                date: targetDate.toISOString().split('T')[0],
                 revenue: parseFloat(dayRevenue._sum.finalPrice || 0),
                 orders: dayRevenue._count,
             })
@@ -667,11 +670,11 @@ class AdminCourseService {
      */
     async getInstructorsForCourses(limit = 1000) {
         try {
-            console.log('getInstructorsForCourses called with limit:', limit);
+            console.log('getInstructorsForCourses called with limit:', limit)
 
             const instructors = await prisma.user.findMany({
                 where: {
-                    role: USER_ROLES.INSTRUCTOR
+                    role: USER_ROLES.INSTRUCTOR,
                 },
                 select: {
                     id: true,
@@ -684,16 +687,16 @@ class AdminCourseService {
                     createdAt: true,
                 },
                 orderBy: {
-                    fullName: 'asc'
+                    fullName: 'asc',
                 },
-                take: Math.min(limit, 1000)
-            });
+                take: Math.min(limit, 1000),
+            })
 
-            console.log('Found instructors:', instructors.length);
-            return instructors;
+            console.log('Found instructors:', instructors.length)
+            return instructors
         } catch (error) {
-            console.error('Error in getInstructorsForCourses:', error);
-            throw error;
+            console.error('Error in getInstructorsForCourses:', error)
+            throw error
         }
     }
 }

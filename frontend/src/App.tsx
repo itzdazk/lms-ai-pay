@@ -35,7 +35,6 @@ import { CertificatePage } from './pages/CertificatePage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
-import { MyCoursesPage } from './pages/MyCoursesPage'
 import { EnrollmentDetailPage } from './pages/EnrollmentDetailPage'
 import { OrderHistoryPage } from './pages/OrderHistoryPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
@@ -51,12 +50,15 @@ import { CourseChaptersPage } from './pages/instructor/CourseChaptersPage'
 import { InstructorOrdersPage } from './pages/instructor/InstructorOrdersPage'
 import { InstructorEnrollmentsPage } from './pages/instructor/InstructorEnrollmentsPage'
 import { InstructorCoursesManagementPage } from './pages/instructor/InstructorCoursesManagementPage'
+import { CourseQuizzesPage } from './pages/instructor/CourseQuizzesPage'
+import { QuizzesPage } from './pages/instructor/QuizzesPage'
 
 // Admin Pages
 import { AdminDashboard } from './pages/AdminDashboard'
 import { UsersPage } from './pages/admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './pages/admin/CoursesPage'
 import { OrdersPage } from './pages/admin/OrdersPage'
+import { RefundsPage } from './pages/admin/RefundsPage'
 
 export default function App() {
     return (
@@ -147,22 +149,6 @@ export default function App() {
                                                     ]}
                                                 >
                                                     <StudentDashboard />
-                                                </RoleRoute>
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path='/my-courses'
-                                        element={
-                                            <ProtectedRoute>
-                                                <RoleRoute
-                                                    allowedRoles={[
-                                                        'STUDENT',
-                                                        'INSTRUCTOR',
-                                                        'ADMIN',
-                                                    ]}
-                                                >
-                                                    <MyCoursesPage />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
@@ -384,6 +370,14 @@ export default function App() {
                                             path=':id/chapters'
                                             element={<CourseChaptersPage />}
                                         />
+                                        <Route
+                                            path=':id/quizzes'
+                                            element={<CourseQuizzesPage />}
+                                        />
+                                        <Route
+                                            path=':id/quizzes/lessons/:lessonId'
+                                            element={<QuizzesPage />}
+                                        />
                                     </Route>
                                     <Route
                                         path='/instructor/orders'
@@ -411,6 +405,52 @@ export default function App() {
                                                     ]}
                                                 >
                                                     <InstructorEnrollmentsPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/instructor/courses/:courseId/quizzes'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <CourseQuizzesPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/instructor/courses/:courseId/quizzes/lessons/:lessonId'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <QuizzesPage />
+                                                </RoleRoute>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    {/* Lesson-level quizzes management */}
+                                    <Route
+                                        path='/instructor/lessons/:lessonId/quizzes'
+                                        element={
+                                            <ProtectedRoute>
+                                                <RoleRoute
+                                                    allowedRoles={[
+                                                        'INSTRUCTOR',
+                                                        'ADMIN',
+                                                    ]}
+                                                >
+                                                    <QuizzesPage />
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
@@ -446,6 +486,10 @@ export default function App() {
                                             <Route
                                                 path='/orders'
                                                 element={<OrdersPage />}
+                                            />
+                                            <Route
+                                                path='/refunds'
+                                                element={<RefundsPage />}
                                             />
                                         </Routes>
                                     </AdminLayout>

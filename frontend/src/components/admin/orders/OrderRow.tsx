@@ -5,7 +5,7 @@ import {
 } from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
-import { MoreVertical, Eye, RotateCcw } from 'lucide-react'
+import { MoreVertical, Eye } from 'lucide-react'
 import { formatDateTime } from '../../../lib/utils'
 import type { Order } from '../../../lib/api/types'
 
@@ -21,7 +21,6 @@ interface OrderRowProps {
     isSelected: boolean
     onRowSelect: (id: number | null) => void
     onViewDetail: (order: Order) => void
-    onRefund: (order: Order) => void
 }
 
 export function OrderRow({
@@ -29,7 +28,6 @@ export function OrderRow({
     isSelected,
     onRowSelect,
     onViewDetail,
-    onRefund,
 }: OrderRowProps) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
@@ -144,10 +142,6 @@ export function OrderRow({
         )
     }
 
-    const canRefund =
-        order.paymentStatus === 'PAID' ||
-        order.paymentStatus === 'PARTIALLY_REFUNDED'
-
     return (
         <>
             <DarkOutlineTableRow
@@ -245,18 +239,6 @@ export function OrderRow({
                         <Eye className='h-4 w-4' />
                         Xem chi tiết
                     </div>
-                    {canRefund && (
-                        <div
-                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer'
-                            onClick={() => {
-                                onRefund(order)
-                                setMenuOpen(false)
-                            }}
-                        >
-                            <RotateCcw className='h-4 w-4' />
-                            Hoàn tiền
-                        </div>
-                    )}
                 </div>
             )}
         </>

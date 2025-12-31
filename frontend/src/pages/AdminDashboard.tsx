@@ -10,12 +10,6 @@ import {
 import { Button } from '../components/ui/button'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import {
-    Users,
-    BookOpen,
-    DollarSign,
-    TrendingUp,
-    UserCheck,
-    UserX,
     BarChart3,
     Settings,
     ShoppingCart,
@@ -34,8 +28,10 @@ import {
     Tag,
     LibraryBig,
     ReceiptText,
+    Users,
+    BookOpen,
+    RotateCcw,
 } from 'lucide-react'
-import { dashboardApi } from '../lib/api/dashboard'
 import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
 import { CategoriesPage } from './admin/CategoriesPage'
@@ -44,6 +40,14 @@ import { OrdersPage } from './admin/OrdersPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
+import {
+    OverviewStats,
+    UsersAnalytics,
+    CoursesAnalytics,
+    RevenueAnalytics,
+    RecentActivities,
+    SystemStats,
+} from '../components/admin/dashboard'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -54,6 +58,7 @@ import {
 } from '../components/ui/dropdown-menu'
 import { Badge } from '../components/ui/badge'
 import { NotificationBell } from '../components/Notifications/NotificationBell'
+import { RefundsPage } from './admin/RefundsPage'
 
 function formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -70,6 +75,7 @@ type AdminSection =
     | 'courses'
     | 'analytics'
     | 'orders'
+    | 'refunds'
     | 'categories'
     | 'settings'
     | 'tags'
@@ -143,6 +149,12 @@ const menuGroups: MenuGroup[] = [
                 icon: ShoppingCart,
                 color: 'text-orange-400',
             },
+            {
+                id: 'refunds',
+                label: 'Hoàn tiền',
+                icon: RotateCcw,
+                color: 'text-yellow-400',
+            },
         ],
     },
 ]
@@ -153,9 +165,7 @@ export function AdminDashboard() {
     const navigate = useNavigate()
     const [activeSection, setActiveSection] =
         useState<AdminSection>('dashboard')
-    const [loading, setLoading] = useState(true)
     const [sectionLoading, setSectionLoading] = useState(false)
-    const [dashboard, setDashboard] = useState<any>(null)
     const [sidebarOpen, setSidebarOpen] = useState(true)
 
     // Check if user is admin
@@ -172,38 +182,6 @@ export function AdminDashboard() {
             }
         }
     }, [currentUser, authLoading, navigate])
-
-    useEffect(() => {
-        if (activeSection === 'dashboard') {
-            loadDashboard()
-        }
-    }, [activeSection])
-
-    const loadDashboard = async () => {
-        try {
-            setLoading(true)
-            const dashboardData = await dashboardApi.getAdminDashboard()
-            setDashboard(dashboardData)
-        } catch (error: any) {
-            console.error('Error loading dashboard:', error)
-            // Error toast is already shown by API client interceptor
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    // Extract stats from dashboard response
-    const summary = dashboard?.summary || {}
-    const displayStats = {
-        totalUsers: summary.users?.total || 0,
-        totalStudents: summary.users?.students || 0,
-        totalInstructors: summary.users?.instructors || 0,
-        totalCourses: summary.courses?.total || 0,
-        publishedCourses: summary.courses?.published || 0,
-        totalRevenue: summary.revenue?.total || 0,
-        growth: summary.users?.growthPercentage || 0,
-        featuredCourses: summary.courses?.featured || 0,
-    }
 
     const getBreadcrumb = () => {
         if (activeSection === 'dashboard') {
@@ -247,9 +225,7 @@ export function AdminDashboard() {
     const renderContent = () => {
         switch (activeSection) {
             case 'dashboard':
-                return (
-                    <DashboardOverview loading={loading} stats={displayStats} />
-                )
+                return <DashboardOverview />
             case 'users':
                 return (
                     <div className='h-full'>
@@ -263,11 +239,17 @@ export function AdminDashboard() {
                     </div>
                 )
             case 'analytics':
-                return <AnalyticsView stats={displayStats} />
+                return <AnalyticsView />
             case 'orders':
                 return (
                     <div className='h-full'>
                         <OrdersPage />
+                    </div>
+                )
+            case 'refunds':
+                return (
+                    <div className='h-full'>
+                        <RefundsPage />
                     </div>
                 )
             case 'categories':
@@ -277,9 +259,7 @@ export function AdminDashboard() {
             case 'settings':
                 return <SettingsView />
             default:
-                return (
-                    <DashboardOverview loading={loading} stats={displayStats} />
-                )
+                return <DashboardOverview />
         }
     }
 
@@ -551,7 +531,7 @@ export function AdminDashboard() {
                                         to='/admin/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <Shield className='mr-2 h-4 w-4' />
+                                        <Shield className='mr-2 h-4 w-4 text-gray-300' />
                                         Quản trị viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -563,7 +543,7 @@ export function AdminDashboard() {
                                         to='/instructor/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <GraduationCap className='mr-2 h-4 w-4' />
+                                        <GraduationCap className='mr-2 h-4 w-4 text-gray-300' />
                                         Giảng viên
                                     </Link>
                                 </DropdownMenuItem>
@@ -575,20 +555,8 @@ export function AdminDashboard() {
                                         to='/dashboard'
                                         className='flex items-center pl-6'
                                     >
-                                        <UserIcon className='mr-2 h-4 w-4' />
+                                        <UserIcon className='mr-2 h-4 w-4 text-gray-300' />
                                         Học viên
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    asChild
-                                    className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
-                                >
-                                    <Link
-                                        to='/my-courses'
-                                        className='flex items-center'
-                                    >
-                                        <LibraryBig className='mr-2 h-4 w-4' />
-                                        Khóa học của tôi
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -599,7 +567,7 @@ export function AdminDashboard() {
                                         to='/orders'
                                         className='flex items-center'
                                     >
-                                        <ReceiptText className='mr-2 h-4 w-4' />
+                                        <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
                                         Đơn hàng của tôi
                                     </Link>
                                 </DropdownMenuItem>
@@ -665,253 +633,25 @@ export function AdminDashboard() {
 }
 
 // Dashboard Overview Component
-function DashboardOverview({
-    loading,
-    stats,
-}: {
-    loading: boolean
-    stats: any
-}) {
-    if (loading) {
-        return (
-            <div className='flex items-center justify-center h-full'>
-                <Loader2 className='h-8 w-8 animate-spin text-blue-500' />
-            </div>
-        )
-    }
-
+function DashboardOverview() {
     return (
         <div className='space-y-6'>
-            {/* Stats Cards */}
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Tổng người dùng
-                        </CardTitle>
-                        <Users className='h-4 w-4 text-blue-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {stats.totalUsers || 0}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            {stats.totalStudents || 0} học viên •{' '}
-                            {stats.totalInstructors || 0} giảng viên
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Tổng khóa học
-                        </CardTitle>
-                        <BookOpen className='h-4 w-4 text-green-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {stats.totalCourses || 0}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Khóa học trong hệ thống
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Tổng doanh thu
-                        </CardTitle>
-                        <DollarSign className='h-4 w-4 text-yellow-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {formatPrice(stats.totalRevenue || 0)}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            Tổng thu nhập
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium text-gray-400'>
-                            Tăng trưởng
-                        </CardTitle>
-                        <TrendingUp className='h-4 w-4 text-purple-500' />
-                    </CardHeader>
-                    <CardContent>
-                        <div className='text-2xl font-bold text-white'>
-                            {stats.growth !== undefined
-                                ? `${
-                                      stats.growth >= 0 ? '+' : ''
-                                  }${stats.growth.toFixed(1)}%`
-                                : 'N/A'}
-                        </div>
-                        <p className='text-xs text-gray-500 mt-1'>
-                            So với tháng trước
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Quick Stats */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader>
-                        <CardTitle className='text-white'>
-                            Thống kê người dùng
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className='space-y-4'>
-                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                <div className='flex items-center gap-3'>
-                                    <UserCheck className='h-5 w-5 text-green-500' />
-                                    <span className='text-gray-300'>
-                                        Người dùng hoạt động
-                                    </span>
-                                </div>
-                                <span className='text-2xl font-bold text-white'>
-                                    {stats.totalUsers || 0}
-                                </span>
-                            </div>
-                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                <div className='flex items-center gap-3'>
-                                    <UserX className='h-5 w-5 text-red-500' />
-                                    <span className='text-gray-300'>
-                                        Người dùng bị khóa
-                                    </span>
-                                </div>
-                                <span className='text-2xl font-bold text-white'>
-                                    0
-                                </span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader>
-                        <CardTitle className='text-white'>
-                            Thống kê khóa học
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className='space-y-4'>
-                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                <span className='text-gray-300'>
-                                    Tổng khóa học
-                                </span>
-                                <span className='text-2xl font-bold text-white'>
-                                    {stats.totalCourses || 0}
-                                </span>
-                            </div>
-                            <div className='flex justify-between items-center p-4 bg-[#1F1F1F] rounded-lg'>
-                                <span className='text-gray-300'>
-                                    Khóa học nổi bật
-                                </span>
-                                <span className='text-2xl font-bold text-white'>
-                                    {stats.featuredCourses || 0}
-                                </span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <OverviewStats />
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+                <RecentActivities />
+                <SystemStats />
             </div>
         </div>
     )
 }
 
 // Analytics View Component
-function AnalyticsView({ stats }: { stats: any }) {
+function AnalyticsView() {
     return (
         <div className='space-y-6'>
-            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                <CardHeader>
-                    <CardTitle className='text-white'>
-                        Phân tích và Báo cáo
-                    </CardTitle>
-                    <CardDescription className='text-gray-400'>
-                        Xem các báo cáo chi tiết về hệ thống
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                        <div className='p-4 bg-[#1F1F1F] rounded-lg'>
-                            <h3 className='text-lg font-semibold text-white mb-4'>
-                                Thống kê người dùng
-                            </h3>
-                            <div className='space-y-3'>
-                                <div className='flex justify-between'>
-                                    <span className='text-gray-300'>
-                                        Tổng người dùng
-                                    </span>
-                                    <span className='text-white font-bold'>
-                                        {stats.totalUsers || 0}
-                                    </span>
-                                </div>
-                                <div className='flex justify-between'>
-                                    <span className='text-gray-300'>
-                                        Học viên
-                                    </span>
-                                    <span className='text-white font-bold'>
-                                        {stats.totalStudents || 0}
-                                    </span>
-                                </div>
-                                <div className='flex justify-between'>
-                                    <span className='text-gray-300'>
-                                        Giảng viên
-                                    </span>
-                                    <span className='text-white font-bold'>
-                                        {stats.totalInstructors || 0}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className='p-4 bg-[#1F1F1F] rounded-lg'>
-                            <h3 className='text-lg font-semibold text-white mb-4'>
-                                Thống kê khóa học
-                            </h3>
-                            <div className='space-y-3'>
-                                <div className='flex justify-between'>
-                                    <span className='text-gray-300'>
-                                        Tổng khóa học
-                                    </span>
-                                    <span className='text-white font-bold'>
-                                        {stats.totalCourses || 0}
-                                    </span>
-                                </div>
-                                <div className='flex justify-between'>
-                                    <span className='text-gray-300'>
-                                        Đã xuất bản
-                                    </span>
-                                    <span className='text-white font-bold'>
-                                        {stats.publishedCourses || 0}
-                                    </span>
-                                </div>
-                                <div className='flex justify-between'>
-                                    <span className='text-gray-300'>
-                                        Nổi bật
-                                    </span>
-                                    <span className='text-white font-bold'>
-                                        {stats.featuredCourses || 0}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className='mt-6'>
-                        <p className='text-gray-400 text-sm'>
-                            Biểu đồ và phân tích chi tiết sẽ được triển khai
-                            sau.
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
+            <UsersAnalytics />
+            <CoursesAnalytics />
+            <RevenueAnalytics />
         </div>
     )
 }
