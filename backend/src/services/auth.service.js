@@ -3,7 +3,12 @@ import { prisma } from '../config/database.config.js'
 import BcryptUtil from '../utils/bcrypt.util.js'
 import JWTUtil from '../utils/jwt.util.js'
 import DeviceUtil from '../utils/device.util.js'
-import { USER_STATUS, USER_ROLES, HTTP_STATUS, JWT_EXPIRY } from '../config/constants.js'
+import {
+    USER_STATUS,
+    USER_ROLES,
+    HTTP_STATUS,
+    JWT_EXPIRY,
+} from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import emailService from './email.service.js'
 
@@ -99,6 +104,24 @@ class AuthService {
         })
 
         logger.info(`New user registered: ${user.email}`)
+
+        // Notify admins about new user registration
+        try {
+            const { default: notificationsService } =
+                await import('./notifications.service.js')
+            await notificationsService.notifyAdminsUserRegistered(
+                user.id,
+                user.userName,
+                user.fullName,
+                user.email,
+                user.role
+            )
+        } catch (error) {
+            logger.error(
+                `Failed to notify admins about user registration: ${error.message}`
+            )
+            // Don't fail registration if notification fails
+        }
 
         // Send verification email
         try {

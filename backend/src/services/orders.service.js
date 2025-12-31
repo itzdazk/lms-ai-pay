@@ -608,7 +608,7 @@ class OrdersService {
             }
         }
 
-        // Create notification for payment success
+        // Create notification for payment success (student)
         await notificationsService.notifyPaymentSuccess(
             result.user.id,
             result.id,
@@ -616,6 +616,25 @@ class OrdersService {
             result.course.title,
             result.finalPrice
         )
+
+        // Notify instructor about payment received
+        try {
+            if (result.course.instructor) {
+                await notificationsService.notifyInstructorPaymentReceived(
+                    result.course.instructor.id,
+                    result.id,
+                    result.courseId,
+                    result.course.title,
+                    result.finalPrice,
+                    result.user.fullName
+                )
+            }
+        } catch (error) {
+            logger.error(
+                `Failed to notify instructor about payment: ${error.message}`
+            )
+            // Don't fail payment if notification fails
+        }
 
         // Send payment success email
         try {

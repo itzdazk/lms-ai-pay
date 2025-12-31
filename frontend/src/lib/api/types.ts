@@ -585,16 +585,39 @@ export interface Notification {
     userId: number
     user?: User
     type:
-        | 'COURSE_ENROLLED'
-        | 'LESSON_COMPLETED'
-        | 'COURSE_COMPLETED'
-        | 'QUIZ_PASSED'
-        | 'QUIZ_FAILED'
+        // Student notifications
+        | 'ENROLLMENT_SUCCESS'
         | 'PAYMENT_SUCCESS'
         | 'PAYMENT_FAILED'
         | 'ORDER_CANCELLED'
-        | 'NEW_COURSE_PUBLISHED'
-        | 'COURSE_UPDATE'
+        | 'LESSON_COMPLETED'
+        | 'COURSE_COMPLETED'
+        | 'QUIZ_GRADED'
+        // Admin notifications
+        | 'USER_REGISTERED'
+        | 'USER_STATUS_CHANGED'
+        | 'USER_ROLE_CHANGED'
+        | 'COURSE_PENDING_APPROVAL'
+        | 'COURSE_APPROVED'
+        | 'COURSE_REJECTED'
+        | 'COURSE_PUBLISHED'
+        | 'LARGE_ORDER'
+        | 'REFUND_REQUEST'
+        | 'SYSTEM_ALERT'
+        | 'DAILY_REPORT'
+        // Instructor notifications
+        | 'NEW_ENROLLMENT'
+        | 'COURSE_APPROVAL_STATUS'
+        | 'NEW_REVIEW'
+        | 'STUDENT_COMPLETED_COURSE'
+        | 'NEW_QUESTION'
+        | 'QUIZ_SUBMISSION'
+        | 'PAYMENT_RECEIVED'
+        | 'REVENUE_REPORT'
+        | 'PAYOUT_PROCESSED'
+        | 'TRANSCRIPT_COMPLETED'
+        | 'VIDEO_UPLOADED'
+        | string // Allow other types for backward compatibility
     title: string
     message: string
     relatedId?: number

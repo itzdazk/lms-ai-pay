@@ -25,6 +25,12 @@ export { lessonNotesApi } from './lesson-notes'
 export { instructorQuizzesApi } from './instructor-quizzes'
 export { quizzesApi } from './quizzes'
 export { categoriesApi, getCategoryPath } from './categories'
+export { notificationsApi } from './notifications'
+export type {
+    GetNotificationsParams,
+    NotificationsResponse,
+    MarkAllAsReadResponse,
+} from './notifications'
 export type {
     LessonNote,
     LessonNoteResponse,
