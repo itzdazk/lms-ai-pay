@@ -1,9 +1,14 @@
 // src/services/student-quizzes.service.js
 // Student quiz service - extends base service
-import { prisma } from '../config/database.config.js';
-import { PAGINATION, USER_ROLES, COURSE_STATUS, ENROLLMENT_STATUS } from '../config/constants.js';
-import logger from '../config/logger.config.js';
-import QuizzesService from './quizzes.service.js';
+import { prisma } from '../config/database.config.js'
+import {
+    PAGINATION,
+    USER_ROLES,
+    COURSE_STATUS,
+    ENROLLMENT_STATUS,
+} from '../config/constants.js'
+import logger from '../config/logger.config.js'
+import QuizzesService from './quizzes.service.js'
 
 class StudentQuizzesService extends QuizzesService {
     /**
@@ -11,16 +16,18 @@ class StudentQuizzesService extends QuizzesService {
      * Requires: Authentication + Authorization (enrollment/instructor/admin)
      */
     async getQuizById(quizId, userId, userRole) {
-        const quiz = await this.fetchQuizWithContext(quizId);
+        const quiz = await this.fetchQuizWithContext(quizId)
 
-        this.assertQuizVisibility(quiz);
-        
+        this.assertQuizVisibility(quiz)
+
         // Check access permission
-        await this.ensureQuizAccess(quiz, userId, userRole);
+        await this.ensureQuizAccess(quiz, userId, userRole)
 
-        logger.info(`Retrieved quiz ${quizId} by user ${userId} (role: ${userRole})`);
+        logger.info(
+            `Retrieved quiz ${quizId} by user ${userId} (role: ${userRole})`
+        )
 
-        return this.sanitizeQuiz(quiz);
+        return this.sanitizeQuiz(quiz)
     }
 
     /**
@@ -29,10 +36,10 @@ class StudentQuizzesService extends QuizzesService {
      */
     async getLessonQuizzes(lessonId, userId, userRole) {
         // First, check access to the lesson
-        const lesson = await this.fetchLessonWithCourse(lessonId);
-        
+        const lesson = await this.fetchLessonWithCourse(lessonId)
+
         if (!lesson) {
-            throw this.buildNotFoundError('Lesson not found');
+            throw this.buildNotFoundError('Lesson not found')
         }
 
         // Check if user has access to this lesson's course
@@ -42,7 +49,7 @@ class StudentQuizzesService extends QuizzesService {
                 if (lesson.course.instructorId !== userId) {
                     throw this.buildForbiddenError(
                         'You do not have permission to access quizzes for this lesson'
-                    );
+                    )
                 }
             } else {
                 // Student: Check enrollment
@@ -56,12 +63,15 @@ class StudentQuizzesService extends QuizzesService {
                     select: {
                         status: true,
                     },
-                });
+                })
 
-                if (!enrollment || enrollment.status === 'dropped') {
+                if (
+                    !enrollment ||
+                    enrollment.status === ENROLLMENT_STATUS.DROPPED
+                ) {
                     throw this.buildForbiddenError(
                         'You are not enrolled in this course'
-                    );
+                    )
                 }
             }
         }
@@ -107,13 +117,13 @@ class StudentQuizzesService extends QuizzesService {
                     },
                 },
             },
-        });
+        })
 
         logger.info(
             `Retrieved ${quizzes.length} quizzes for lesson ${lessonId} by user ${userId} (role: ${userRole})`
-        );
+        )
 
-        return quizzes.map((quiz) => this.sanitizeQuiz(quiz));
+        return quizzes.map((quiz) => this.sanitizeQuiz(quiz))
     }
 
     /**
@@ -129,10 +139,10 @@ class StudentQuizzesService extends QuizzesService {
                 instructorId: true,
                 status: true,
             },
-        });
+        })
 
         if (!course) {
-            throw this.buildNotFoundError('Course not found');
+            throw this.buildNotFoundError('Course not found')
         }
 
         // Check if user has access to this course
@@ -142,7 +152,7 @@ class StudentQuizzesService extends QuizzesService {
                 if (course.instructorId !== userId) {
                     throw this.buildForbiddenError(
                         'You do not have permission to access quizzes for this course'
-                    );
+                    )
                 }
             } else {
                 // Student: Check enrollment
@@ -156,12 +166,15 @@ class StudentQuizzesService extends QuizzesService {
                     select: {
                         status: true,
                     },
-                });
+                })
 
-                if (!enrollment || enrollment.status === 'dropped') {
+                if (
+                    !enrollment ||
+                    enrollment.status === ENROLLMENT_STATUS.DROPPED
+                ) {
                     throw this.buildForbiddenError(
                         'You are not enrolled in this course'
-                    );
+                    )
                 }
             }
         }
@@ -204,36 +217,36 @@ class StudentQuizzesService extends QuizzesService {
                     },
                 },
             },
-        });
+        })
 
         logger.info(
             `Retrieved ${quizzes.length} quizzes for course ${courseId} by user ${userId} (role: ${userRole})`
-        );
+        )
 
-        return quizzes.map((quiz) => this.sanitizeQuiz(quiz));
+        return quizzes.map((quiz) => this.sanitizeQuiz(quiz))
     }
 
     /**
      * Submit quiz answers (student)
      */
     async submitQuiz({ quizId, userId, userRole, answers, startedAt }) {
-        const quiz = await this.fetchQuizWithContext(quizId);
+        const quiz = await this.fetchQuizWithContext(quizId)
 
-        this.assertQuizVisibility(quiz);
-        await this.ensureQuizAccess(quiz, userId, userRole);
+        this.assertQuizVisibility(quiz)
+        await this.ensureQuizAccess(quiz, userId, userRole)
 
-        const attemptsAllowed = null; // unlimited by design
-        const unlimitedAttempts = true;
+        const attemptsAllowed = null // unlimited by design
+        const unlimitedAttempts = true
 
         const attemptsCount = await prisma.quizSubmission.count({
             where: {
                 quizId,
                 userId,
             },
-        });
+        })
 
-        const grading = this.gradeQuiz(quiz, answers);
-        const isPassed = grading.score >= quiz.passingScore;
+        const grading = this.gradeQuiz(quiz, answers)
+        const isPassed = grading.score >= quiz.passingScore
 
         const submission = await prisma.quizSubmission.create({
             data: {
@@ -254,7 +267,7 @@ class StudentQuizzesService extends QuizzesService {
                 startedAt: true,
                 submittedAt: true,
             },
-        });
+        })
 
         // Nếu đạt điểm qua, cập nhật progress.quizCompleted=true
         if (isPassed && quiz.lessonId) {
@@ -268,15 +281,15 @@ class StudentQuizzesService extends QuizzesService {
                 data: {
                     quizCompleted: true,
                 },
-            });
+            })
         }
 
         logger.info(
             `User ${userId} submitted quiz ${quizId} (score: ${grading.score})`
-        );
+        )
 
-        const attemptsUsed = attemptsCount + 1;
-        const attemptsRemaining = null;
+        const attemptsUsed = attemptsCount + 1
+        const attemptsRemaining = null
 
         return {
             submission: this.buildSubmissionResponse(submission, {
@@ -297,25 +310,25 @@ class StudentQuizzesService extends QuizzesService {
             quiz: this.sanitizeQuiz(quiz, {
                 includeCorrectAnswers: false,
             }),
-        };
+        }
     }
 
     /**
      * Get quiz submissions for the current user
      */
     async getQuizSubmissions({ quizId, userId, userRole, page, limit }) {
-        const quiz = await this.fetchQuizWithContext(quizId);
+        const quiz = await this.fetchQuizWithContext(quizId)
 
-        this.assertQuizVisibility(quiz);
-        await this.ensureQuizAccess(quiz, userId, userRole);
+        this.assertQuizVisibility(quiz)
+        await this.ensureQuizAccess(quiz, userId, userRole)
 
-        const sanitizedPage = Number.isInteger(page) && page > 0 ? page : 1;
+        const sanitizedPage = Number.isInteger(page) && page > 0 ? page : 1
         const sanitizedLimit =
             Number.isInteger(limit) && limit > 0
                 ? Math.min(limit, PAGINATION.MAX_LIMIT)
-                : Math.min(10, PAGINATION.MAX_LIMIT);
+                : Math.min(10, PAGINATION.MAX_LIMIT)
 
-        const skip = (sanitizedPage - 1) * sanitizedLimit;
+        const skip = (sanitizedPage - 1) * sanitizedLimit
 
         const [items, total] = await prisma.$transaction([
             prisma.quizSubmission.findMany({
@@ -344,37 +357,32 @@ class StudentQuizzesService extends QuizzesService {
                     userId,
                 },
             }),
-        ]);
+        ])
 
         const submissions = items.map((submission, index) => {
-            const attemptNumber = total - (skip + index);
+            const attemptNumber = total - (skip + index)
             return this.buildSubmissionResponse(submission, {
                 includeAnswers: false,
                 attemptNumber,
-            });
-        });
+            })
+        })
 
         return {
             items: submissions,
             total,
             page: sanitizedPage,
             limit: sanitizedLimit,
-        };
+        }
     }
 
     /**
      * Get quiz submission detail by ID
      */
-    async getQuizSubmissionById({
-        quizId,
-        submissionId,
-        userId,
-        userRole,
-    }) {
-        const quiz = await this.fetchQuizWithContext(quizId);
+    async getQuizSubmissionById({ quizId, submissionId, userId, userRole }) {
+        const quiz = await this.fetchQuizWithContext(quizId)
 
-        this.assertQuizVisibility(quiz);
-        await this.ensureQuizAccess(quiz, userId, userRole);
+        this.assertQuizVisibility(quiz)
+        await this.ensureQuizAccess(quiz, userId, userRole)
 
         const submission = await prisma.quizSubmission.findUnique({
             where: {
@@ -389,10 +397,10 @@ class StudentQuizzesService extends QuizzesService {
                 isPassed: true,
                 submittedAt: true,
             },
-        });
+        })
 
         if (!submission || submission.quizId !== quizId) {
-            throw this.buildNotFoundError('Quiz submission not found');
+            throw this.buildNotFoundError('Quiz submission not found')
         }
 
         if (
@@ -402,22 +410,22 @@ class StudentQuizzesService extends QuizzesService {
         ) {
             throw this.buildForbiddenError(
                 'You do not have permission to view this submission'
-            );
+            )
         }
 
         return this.buildSubmissionResponse(submission, {
             includeAnswers: true,
-        });
+        })
     }
 
     /**
      * Get attempts summary for a quiz
      */
     async getQuizAttemptsSummary({ quizId, userId, userRole }) {
-        const quiz = await this.fetchQuizWithContext(quizId);
+        const quiz = await this.fetchQuizWithContext(quizId)
 
-        this.assertQuizVisibility(quiz);
-        await this.ensureQuizAccess(quiz, userId, userRole);
+        this.assertQuizVisibility(quiz)
+        await this.ensureQuizAccess(quiz, userId, userRole)
 
         const [attemptsCount, latestPassed] = await prisma.$transaction([
             prisma.quizSubmission.count({
@@ -441,19 +449,18 @@ class StudentQuizzesService extends QuizzesService {
                     submittedAt: true,
                 },
             }),
-        ]);
+        ])
 
-        const attemptsAllowed = null;
-        const unlimitedAttempts = true;
-        const attemptsRemaining = null;
+        const attemptsAllowed = null
+        const unlimitedAttempts = true
+        const attemptsRemaining = null
 
         return {
             quizId,
             attemptsAllowed: null,
             attemptsUsed: attemptsCount,
             attemptsRemaining,
-            hasRemainingAttempts:
-                unlimitedAttempts || attemptsRemaining > 0,
+            hasRemainingAttempts: unlimitedAttempts || attemptsRemaining > 0,
             lastPassedSubmission: latestPassed
                 ? {
                       id: latestPassed.id,
@@ -464,17 +471,17 @@ class StudentQuizzesService extends QuizzesService {
                       submittedAt: latestPassed.submittedAt,
                   }
                 : null,
-        };
+        }
     }
 
     /**
      * Get latest quiz result
      */
     async getLatestQuizResult({ quizId, userId, userRole }) {
-        const quiz = await this.fetchQuizWithContext(quizId);
+        const quiz = await this.fetchQuizWithContext(quizId)
 
-        this.assertQuizVisibility(quiz);
-        await this.ensureQuizAccess(quiz, userId, userRole);
+        this.assertQuizVisibility(quiz)
+        await this.ensureQuizAccess(quiz, userId, userRole)
 
         const submission = await prisma.quizSubmission.findFirst({
             where: {
@@ -493,17 +500,16 @@ class StudentQuizzesService extends QuizzesService {
                 isPassed: true,
                 submittedAt: true,
             },
-        });
+        })
 
         if (!submission) {
-            return null;
+            return null
         }
 
         return this.buildSubmissionResponse(submission, {
             includeAnswers: true,
-        });
+        })
     }
 }
 
-export default new StudentQuizzesService();
-
+export default new StudentQuizzesService()

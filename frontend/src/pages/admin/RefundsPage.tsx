@@ -2,13 +2,15 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { RotateCcw, Loader2 } from 'lucide-react'
-import { adminOrdersApi } from '../../lib/api/admin-orders'
-import type { Order } from '../../lib/api/types'
+import {
+    refundRequestsApi,
+    type RefundRequest,
+} from '../../lib/api/refund-requests'
 import {
     RefundsFilters,
     RefundsTable,
     RefundsPagination,
-    RefundDialog,
+    RefundRequestDetailDialog,
     type RefundFilters,
 } from '../../components/admin/refunds'
 import { toast } from 'sonner'
@@ -16,7 +18,7 @@ import { toast } from 'sonner'
 export function RefundsPage() {
     const { user: currentUser, loading: authLoading } = useAuth()
     const navigate = useNavigate()
-    const [orders, setOrders] = useState<Order[]>([])
+    const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [pagination, setPagination] = useState({
         page: 1,
@@ -28,7 +30,7 @@ export function RefundsPage() {
         page: 1,
         limit: 10,
         search: '',
-        paymentStatus: undefined,
+        status: undefined,
         sort: 'newest',
         startDate: undefined,
         endDate: undefined,
@@ -43,7 +45,7 @@ export function RefundsPage() {
             filters.page,
             filters.limit,
             filters.search,
-            filters.paymentStatus,
+            filters.status,
             filters.sort,
             filters.startDate,
             filters.endDate,
@@ -52,13 +54,12 @@ export function RefundsPage() {
         ]
     )
 
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-    const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false)
     const [actionLoading, setActionLoading] = useState(false)
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
+    const [selectedRefundRequest, setSelectedRefundRequest] =
+        useState<RefundRequest | null>(null)
+    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
     const [searchInput, setSearchInput] = useState<string>(filters.search || '')
-    const [refundAmount, setRefundAmount] = useState<string>('')
-    const [refundReason, setRefundReason] = useState<string>('')
     const scrollPositionRef = useRef<number>(0)
     const isPageChangingRef = useRef<boolean>(false)
 
@@ -77,16 +78,16 @@ export function RefundsPage() {
         }
     }, [currentUser, authLoading, navigate])
 
-    // Load orders when filters change
+    // Load refund requests when filters change
     useEffect(() => {
         if (currentUser) {
-            loadOrders()
+            loadRefundRequests()
         }
     }, [
         filters.page,
         filters.limit,
         filters.search,
-        filters.paymentStatus,
+        filters.status,
         filters.sort,
         filters.startDate,
         filters.endDate,
@@ -120,33 +121,31 @@ export function RefundsPage() {
         }
     }, [pagination.page])
 
-    const loadOrders = async () => {
+    const loadRefundRequests = async () => {
         try {
             setLoading(true)
-            // Filter only refundable orders (PAID, PARTIALLY_REFUNDED, REFUNDED)
-            const refundableStatuses = [
-                'PAID',
-                'PARTIALLY_REFUNDED',
-                'REFUNDED',
-            ]
-            const statusFilter = filters.paymentStatus || undefined
 
-            const result = await adminOrdersApi.getAllOrders({
-                ...filters,
-                paymentStatus: statusFilter,
+            const result = await refundRequestsApi.getAllRefundRequests({
+                page: filters.page,
+                limit: filters.limit,
+                status: filters.status as
+                    | 'PENDING'
+                    | 'APPROVED'
+                    | 'REJECTED'
+                    | undefined,
+                search: filters.search,
+                sort:
+                    filters.sort === 'newest' || filters.sort === 'oldest'
+                        ? filters.sort
+                        : 'newest',
             })
 
-            // Filter orders to show only refundable ones
-            const refundableOrders = result.data.filter((order: Order) =>
-                refundableStatuses.includes(order.paymentStatus)
-            )
-
-            setOrders(refundableOrders)
+            setRefundRequests(result.data)
             setPagination(result.pagination || pagination)
         } catch (error: any) {
-            console.error('Error loading orders:', error)
-            toast.error('Không thể tải danh sách đơn hàng')
-            setOrders([])
+            console.error('Error loading refund requests:', error)
+            toast.error('Không thể tải danh sách yêu cầu hoàn tiền')
+            setRefundRequests([])
         } finally {
             setLoading(false)
         }
@@ -160,7 +159,12 @@ export function RefundsPage() {
     // Handle clear search (reset both input and filters)
     const handleClearSearch = () => {
         setSearchInput('')
-        setFilters((prev) => ({ ...prev, search: '', page: 1 }))
+        setFilters((prev) => ({
+            ...prev,
+            search: '',
+            page: 1,
+            status: undefined,
+        }))
     }
 
     // Handle search execution (manual search)
@@ -214,53 +218,53 @@ export function RefundsPage() {
         setFilters((prev) => ({ ...prev, page: newPage }))
     }, [])
 
-    const handleViewDetail = (order: Order) => {
-        // Navigate to order detail page
-        navigate(`/orders/${order.id}`)
+    const handleViewDetail = (refundRequest: RefundRequest) => {
+        // Open detail dialog instead of navigating
+        setSelectedRefundRequest(refundRequest)
+        setIsDetailDialogOpen(true)
     }
 
-    const handleRefund = (order: Order) => {
-        setSelectedOrder(order)
-        setRefundAmount('')
-        setRefundReason('')
-        setIsRefundDialogOpen(true)
+    const handleRefund = (refundRequest: RefundRequest) => {
+        // Open detail dialog which now has process buttons
+        setSelectedRefundRequest(refundRequest)
+        setIsDetailDialogOpen(true)
     }
 
-    const confirmRefund = async () => {
-        if (!selectedOrder) return
-
+    const handleProcessRefundRequest = async (
+        requestId: number,
+        action: 'APPROVE' | 'REJECT',
+        customAmount?: number,
+        notes?: string
+    ) => {
         try {
             setActionLoading(true)
 
-            const amount = parseFloat(refundAmount)
-            if (isNaN(amount) || amount <= 0) {
-                toast.error('Vui lòng nhập số tiền hợp lệ')
-                return
-            }
+            await refundRequestsApi.processRefundRequest(
+                requestId,
+                action,
+                customAmount,
+                notes
+            )
 
-            const maxRefund =
-                selectedOrder.finalPrice - selectedOrder.refundAmount
-            if (amount > maxRefund) {
-                toast.error('Số tiền hoàn vượt quá số tiền có thể hoàn')
-                return
-            }
+            toast.success(
+                action === 'APPROVE'
+                    ? 'Yêu cầu hoàn tiền đã được duyệt thành công'
+                    : 'Yêu cầu hoàn tiền đã bị từ chối'
+            )
 
-            await adminOrdersApi.refundOrder(selectedOrder.id, {
-                amount: amount,
-                reason: refundReason.trim() || undefined,
-            })
+            setIsDetailDialogOpen(false)
+            setSelectedRefundRequest(null)
 
-            toast.success('Hoàn tiền thành công')
-            setIsRefundDialogOpen(false)
-            setSelectedOrder(null)
-            setRefundAmount('')
-            setRefundReason('')
-
-            // Reload orders
-            await loadOrders()
+            // Reload refund requests
+            await loadRefundRequests()
         } catch (error: any) {
-            console.error('Error refunding order:', error)
-            toast.error(error.message || 'Không thể hoàn tiền')
+            console.error('Error processing refund request:', error)
+            toast.error(
+                error.response?.data?.message ||
+                    error.message ||
+                    'Không thể xử lý yêu cầu hoàn tiền'
+            )
+            throw error
         } finally {
             setActionLoading(false)
         }
@@ -280,7 +284,7 @@ export function RefundsPage() {
             page: 1,
             limit: 10,
             search: '',
-            paymentStatus: undefined,
+            status: undefined,
             sort: 'newest',
             startDate: undefined,
             endDate: undefined,
@@ -339,7 +343,7 @@ export function RefundsPage() {
 
                 {/* Refunds Table */}
                 <RefundsTable
-                    orders={orders}
+                    refundRequests={refundRequests}
                     loading={loading}
                     pagination={pagination}
                     searchInput={searchInput}
@@ -354,17 +358,13 @@ export function RefundsPage() {
                     renderPagination={renderPagination}
                 />
 
-                {/* Refund Dialog */}
-                <RefundDialog
-                    isOpen={isRefundDialogOpen}
-                    setIsOpen={setIsRefundDialogOpen}
-                    selectedOrder={selectedOrder}
-                    refundAmount={refundAmount}
-                    setRefundAmount={setRefundAmount}
-                    refundReason={refundReason}
-                    setRefundReason={setRefundReason}
-                    onConfirmRefund={confirmRefund}
-                    actionLoading={actionLoading}
+                {/* Refund Request Detail Dialog */}
+                <RefundRequestDetailDialog
+                    isOpen={isDetailDialogOpen}
+                    setIsOpen={setIsDetailDialogOpen}
+                    refundRequest={selectedRefundRequest}
+                    onProcessRequest={handleProcessRefundRequest}
+                    processing={actionLoading}
                 />
             </div>
         </div>

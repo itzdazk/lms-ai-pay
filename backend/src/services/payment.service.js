@@ -670,13 +670,15 @@ class PaymentService {
             throw error
         }
 
-        // Allow refund for PAID or REFUND_PENDING orders
+        // Allow refund for PAID, REFUND_PENDING, or REFUND_FAILED orders
+        // REFUND_FAILED allows retry of failed refund attempts (especially for MoMo)
         if (
             order.paymentStatus !== PAYMENT_STATUS.PAID &&
-            order.paymentStatus !== PAYMENT_STATUS.REFUND_PENDING
+            order.paymentStatus !== PAYMENT_STATUS.REFUND_PENDING &&
+            order.paymentStatus !== PAYMENT_STATUS.REFUND_FAILED
         ) {
             const error = new Error(
-                `Only paid or refund pending orders can be refunded. Current status: ${order.paymentStatus}`
+                `Only paid, refund pending, or refund failed orders can be refunded. Current status: ${order.paymentStatus}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -781,17 +783,37 @@ class PaymentService {
 
         const orderAmount = normalizeAmount(order.finalPrice)
         const existingRefundAmount = normalizeAmount(order.refundAmount)
-        const requestedAmount =
-            amountInput !== null && amountInput !== undefined
-                ? Math.round(parseFloat(amountInput))
-                : orderAmount
+        const remainingAmount = orderAmount - existingRefundAmount
+
+        // Calculate requested amount - ensure it's a positive integer
+        // Same logic as VNPay for consistency
+        let requestedAmount = 0
+        if (amountInput !== null && amountInput !== undefined) {
+            const parsed = parseFloat(amountInput)
+            if (isNaN(parsed) || parsed <= 0) {
+                throw new Error('Refund amount must be a positive number')
+            }
+            requestedAmount = Math.round(parsed)
+        } else {
+            // Full refund - use remaining amount
+            requestedAmount = Math.round(remainingAmount)
+        }
 
         if (requestedAmount <= 0) {
             throw new Error('Refund amount must be greater than 0')
         }
 
-        if (requestedAmount > orderAmount - existingRefundAmount) {
-            throw new Error('Refund amount exceeds remaining paid amount')
+        if (requestedAmount > remainingAmount) {
+            throw new Error(
+                `Refund amount (${requestedAmount}) exceeds remaining paid amount (${remainingAmount})`
+            )
+        }
+
+        // MoMo requires amount to be a positive integer (no decimals)
+        if (!Number.isInteger(requestedAmount) || requestedAmount < 1) {
+            throw new Error(
+                'Refund amount must be a positive integer (MoMo requirement)'
+            )
         }
 
         const timestamp = Date.now()
@@ -817,9 +839,12 @@ class PaymentService {
             )
         }
 
+        // Ensure amount is a string representation of integer (MoMo requirement)
+        const amountString = String(Math.floor(requestedAmount))
+
         const signaturePayload = {
             accessKey: momoConfig.accessKey,
-            amount: requestedAmount.toString(),
+            amount: amountString,
             description,
             orderId: refundOrderId,
             partnerCode: momoConfig.partnerCode,
@@ -834,7 +859,7 @@ class PaymentService {
             accessKey: momoConfig.accessKey,
             requestId,
             orderId: refundOrderId,
-            amount: requestedAmount.toString(),
+            amount: amountString, // Must be integer string for MoMo
             transId: gatewayTransId,
             lang: 'vi',
             description,
@@ -853,11 +878,16 @@ class PaymentService {
 
             if (!response.ok || responseBody.resultCode !== 0) {
                 await prisma.$transaction(async (tx) => {
+                    // Convert transId to string if it exists (Prisma requirement)
+                    const failedTransactionId = responseBody?.transId
+                        ? String(responseBody.transId)
+                        : requestId
+
                     await tx.paymentTransaction.create({
                         data: {
                             orderId: order.id,
                             paymentGateway: PAYMENT_GATEWAY.MOMO,
-                            transactionId: responseBody?.transId || requestId,
+                            transactionId: failedTransactionId,
                             amount: toDecimal(requestedAmount),
                             currency: 'VND',
                             status: TRANSACTION_STATUS.FAILED,
@@ -888,15 +918,18 @@ class PaymentService {
             logger.error(
                 `MoMo refund failed for order ${order.orderCode}: ${error.message}`
             )
-            
+
             // Update order status to REFUND_FAILED if not already updated
             try {
                 const currentOrder = await prisma.order.findUnique({
                     where: { id: order.id },
                     select: { paymentStatus: true },
                 })
-                
-                if (currentOrder?.paymentStatus === PAYMENT_STATUS.REFUND_PENDING) {
+
+                if (
+                    currentOrder?.paymentStatus ===
+                    PAYMENT_STATUS.REFUND_PENDING
+                ) {
                     await prisma.order.update({
                         where: { id: order.id },
                         data: {
@@ -909,7 +942,7 @@ class PaymentService {
                     `Failed to update order status to REFUND_FAILED: ${updateError.message}`
                 )
             }
-            
+
             throw error
         }
 

@@ -13,7 +13,7 @@ import { Filter } from 'lucide-react'
 export interface RefundFilters {
     page?: number
     limit?: number
-    paymentStatus?: 'PAID' | 'PARTIALLY_REFUNDED' | 'REFUNDED'
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED'
     search?: string
     sort?: 'newest' | 'oldest' | 'amount_asc' | 'amount_desc'
     startDate?: string
@@ -45,16 +45,16 @@ export function RefundsFilters({
                 <div className='space-y-4'>
                     {/* First Row: 5 columns */}
                     <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
-                        {/* Payment Status Filter */}
+                        {/* Refund Request Status Filter */}
                         <div className='space-y-2'>
                             <Label className='text-sm font-medium text-gray-400'>
-                                Trạng thái hoàn tiền
+                                Trạng thái yêu cầu
                             </Label>
                             <Select
-                                value={filters.paymentStatus || 'all'}
+                                value={filters.status || 'all'}
                                 onValueChange={(value) =>
                                     onFilterChange(
-                                        'paymentStatus',
+                                        'status',
                                         value === 'all' ? undefined : value
                                     )
                                 }
@@ -66,14 +66,14 @@ export function RefundsFilters({
                                     <DarkOutlineSelectItem value='all'>
                                         Tất cả trạng thái
                                     </DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value='PAID'>
-                                        Đã thanh toán (Chưa hoàn)
+                                    <DarkOutlineSelectItem value='PENDING'>
+                                        Đang chờ xử lý
                                     </DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value='PARTIALLY_REFUNDED'>
-                                        Hoàn tiền một phần
-                                    </DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value='REFUNDED'>
+                                    <DarkOutlineSelectItem value='APPROVED'>
                                         Đã hoàn tiền
+                                    </DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value='REJECTED'>
+                                        Đã từ chối
                                     </DarkOutlineSelectItem>
                                 </DarkOutlineSelectContent>
                             </Select>

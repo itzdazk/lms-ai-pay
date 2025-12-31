@@ -4,9 +4,13 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { DarkOutlineButton } from '../ui/buttons'
 import { RefundRequestDialog } from './RefundRequestDialog'
-import { refundRequestsApi } from '../../lib/api/refund-requests'
+import { RefundOfferDialog } from './RefundOfferDialog'
+import {
+    refundRequestsApi,
+    type RefundRequest,
+} from '../../lib/api/refund-requests'
 import { toast } from 'sonner'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, AlertCircle } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -124,6 +128,14 @@ export function OrderTable({
     const [ordersWithRefundRequests, setOrdersWithRefundRequests] = useState<
         Set<number>
     >(new Set())
+    const [refundRequestsMap, setRefundRequestsMap] = useState<
+        Map<number, RefundRequest>
+    >(new Map())
+
+    // Refund offer dialog state
+    const [refundOfferDialogOpen, setRefundOfferDialogOpen] = useState(false)
+    const [refundRequestForOffer, setRefundRequestForOffer] =
+        useState<RefundRequest | null>(null)
 
     // Check refund requests for PAID and REFUND_PENDING orders
     useEffect(() => {
@@ -154,13 +166,17 @@ export function OrderTable({
                 )
 
                 const orderIdsWithRequests = new Set<number>()
+                const requestsMap = new Map<number, RefundRequest>()
+
                 requests.forEach(({ orderId, request }) => {
-                    if (
-                        request &&
-                        (request.status === 'PENDING' ||
-                            request.status === 'APPROVED')
-                    ) {
-                        orderIdsWithRequests.add(orderId)
+                    if (request) {
+                        requestsMap.set(orderId, request)
+                        if (
+                            request.status === 'PENDING' ||
+                            request.status === 'APPROVED'
+                        ) {
+                            orderIdsWithRequests.add(orderId)
+                        }
                     }
                 })
 
@@ -172,6 +188,7 @@ export function OrderTable({
                 })
 
                 setOrdersWithRefundRequests(orderIdsWithRequests)
+                setRefundRequestsMap(requestsMap)
             } catch (error) {
                 console.error('Error checking refund requests:', error)
             }
@@ -190,7 +207,14 @@ export function OrderTable({
 
     // Handle refund request submit
     const handleRefundRequestSubmit = useCallback(
-        async (reason: string) => {
+        async (
+            reason: string,
+            reasonType?:
+                | 'MEDICAL'
+                | 'FINANCIAL_EMERGENCY'
+                | 'DISSATISFACTION'
+                | 'OTHER'
+        ) => {
             if (!orderForRefund) return
 
             try {
@@ -198,8 +222,16 @@ export function OrderTable({
                 const refundRequest =
                     await refundRequestsApi.createRefundRequest({
                         orderId: orderForRefund.id,
-                        reason,
+                        reason: reason,
+                        reasonType: reasonType,
                     })
+
+                // Update refund requests map
+                setRefundRequestsMap((prev) => {
+                    const next = new Map(prev)
+                    next.set(orderForRefund.id, refundRequest)
+                    return next
+                })
 
                 if (refundRequest.status === 'REJECTED') {
                     toast.warning(
@@ -427,6 +459,45 @@ export function OrderTable({
                                             </Link>
                                         </DarkOutlineButton>
 
+                                        {/* Refund Offer Button - For orders with pending offer */}
+                                        {(() => {
+                                            const refundRequest =
+                                                refundRequestsMap.get(order.id)
+                                            const hasPendingOffer =
+                                                refundRequest &&
+                                                refundRequest.status ===
+                                                    'PENDING' &&
+                                                refundRequest.refundType ===
+                                                    'PARTIAL' &&
+                                                refundRequest.offerExpiresAt &&
+                                                !refundRequest.studentAcceptedOffer &&
+                                                !refundRequest.studentRejectedOffer &&
+                                                new Date(
+                                                    refundRequest.offerExpiresAt
+                                                ) > new Date()
+
+                                            if (hasPendingOffer) {
+                                                return (
+                                                    <DarkOutlineButton
+                                                        size='sm'
+                                                        className='h-8 px-3 whitespace-nowrap border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-400/60 hover:text-yellow-300 transition-colors'
+                                                        onClick={() => {
+                                                            setRefundRequestForOffer(
+                                                                refundRequest
+                                                            )
+                                                            setRefundOfferDialogOpen(
+                                                                true
+                                                            )
+                                                        }}
+                                                    >
+                                                        <AlertCircle className='h-3.5 w-3.5 mr-1.5' />
+                                                        Xem đề xuất
+                                                    </DarkOutlineButton>
+                                                )
+                                            }
+                                            return null
+                                        })()}
+
                                         {/* Refund Request Button - Only for PAID orders without existing request */}
                                         {(order.paymentStatus === 'PAID' ||
                                             order.paymentStatus ===
@@ -531,6 +602,31 @@ export function OrderTable({
                 order={orderForRefund}
                 onSubmit={handleRefundRequestSubmit}
                 loading={refundRequestLoading}
+            />
+
+            {/* Refund Offer Dialog */}
+            <RefundOfferDialog
+                isOpen={refundOfferDialogOpen}
+                setIsOpen={setRefundOfferDialogOpen}
+                refundRequest={refundRequestForOffer}
+                onActionComplete={() => {
+                    // Refresh refund requests
+                    if (orderForRefund) {
+                        refundRequestsApi
+                            .getRefundRequestByOrderId(orderForRefund.id)
+                            .then((req) => {
+                                if (req) {
+                                    setRefundRequestsMap((prev) => {
+                                        const next = new Map(prev)
+                                        next.set(orderForRefund.id, req)
+                                        return next
+                                    })
+                                }
+                            })
+                            .catch(() => {})
+                    }
+                    onRefundRequestCreated?.()
+                }}
             />
         </div>
     )

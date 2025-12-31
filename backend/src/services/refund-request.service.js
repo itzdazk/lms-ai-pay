@@ -4,12 +4,147 @@ import {
     HTTP_STATUS,
     PAYMENT_STATUS,
     USER_STATUS,
+    REFUND_REASON_TYPES,
+    REFUND_TYPES,
+    REFUND_POLICY,
+    ENROLLMENT_STATUS,
 } from '../config/constants.js'
+import { Prisma } from '@prisma/client'
 import logger from '../config/logger.config.js'
 import progressService from './progress.service.js'
 import notificationsService from './notifications.service.js'
+import emailService from './email.service.js'
 
 class RefundRequestService {
+    /**
+     * Check days since payment
+     * @param {Date} paidAt - Payment date
+     * @returns {number} Number of days since payment
+     */
+    checkDaysSincePayment(paidAt) {
+        if (!paidAt) {
+            return Infinity // If no paidAt, consider it as very old
+        }
+        const now = new Date()
+        const diffTime = now.getTime() - paidAt.getTime()
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+        return diffDays
+    }
+
+    /**
+     * Calculate partial refund amount
+     * @param {number|Decimal} orderAmount - Order final price
+     * @param {number} progressPercentage - Progress percentage (0-100)
+     * @returns {Decimal} Calculated refund amount
+     */
+    calculatePartialRefundAmount(orderAmount, progressPercentage) {
+        const amount = parseFloat(orderAmount)
+        const progress = parseFloat(progressPercentage) / 100
+        const refundAmount =
+            amount *
+            (1 - progress) *
+            (1 - REFUND_POLICY.PARTIAL_REFUND_PROCESSING_FEE)
+        return new Prisma.Decimal(refundAmount.toFixed(2))
+    }
+
+    /**
+     * Check refund eligibility
+     * @param {number} orderId - Order ID
+     * @param {number} userId - User ID
+     * @returns {Promise<Object>} Eligibility result
+     */
+    async checkRefundEligibility(orderId, userId) {
+        // Get order with enrollment info
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                course: true,
+            },
+        })
+
+        if (!order) {
+            return {
+                eligible: false,
+                type: null,
+                suggestedAmount: null,
+                message: 'Order not found',
+            }
+        }
+
+        if (order.userId !== userId) {
+            return {
+                eligible: false,
+                type: null,
+                suggestedAmount: null,
+                message: 'Unauthorized access',
+            }
+        }
+
+        if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
+            return {
+                eligible: false,
+                type: null,
+                suggestedAmount: null,
+                message: 'Only paid orders can be refunded',
+            }
+        }
+
+        // Calculate progress
+        const progressPercentage = await this.calculateProgressPercentage(
+            userId,
+            order.courseId
+        )
+
+        // Check days since payment
+        const daysSincePayment = this.checkDaysSincePayment(order.paidAt)
+
+        // Check for FULL refund eligibility
+        // Condition: progress < 20% AND within 7 days of payment
+        if (
+            progressPercentage < REFUND_POLICY.FULL_REFUND_MAX_PROGRESS &&
+            daysSincePayment <= REFUND_POLICY.FULL_REFUND_MAX_DAYS
+        ) {
+            return {
+                eligible: true,
+                type: REFUND_TYPES.FULL,
+                suggestedAmount: new Prisma.Decimal(order.finalPrice),
+                message: `Bạn đủ điều kiện hoàn tiền toàn bộ. Tiến độ: ${progressPercentage.toFixed(2)}%, Thời gian: ${daysSincePayment} ngày`,
+                progressPercentage,
+                daysSincePayment,
+            }
+        }
+
+        // Check for PARTIAL refund eligibility
+        // Condition: progress < 50% (and not eligible for FULL refund)
+        // This covers cases where:
+        // - progress < 20% but days > 7 (missed FULL refund window)
+        // - progress >= 20% and < 50% (standard partial refund)
+        if (progressPercentage < REFUND_POLICY.PARTIAL_REFUND_MAX_PROGRESS) {
+            const suggestedAmount = this.calculatePartialRefundAmount(
+                order.finalPrice,
+                progressPercentage
+            )
+            return {
+                eligible: true,
+                type: REFUND_TYPES.PARTIAL,
+                suggestedAmount,
+                message: `Bạn đủ điều kiện hoàn tiền một phần. Tiến độ: ${progressPercentage.toFixed(2)}%`,
+                progressPercentage,
+                daysSincePayment,
+            }
+        }
+
+        // REJECT - Progress too high (>= 50%)
+        return {
+            eligible: false,
+            type: null,
+            suggestedAmount: null,
+            message: `Không thể hoàn tiền. Tiến độ khóa học đạt ${progressPercentage.toFixed(2)}% (yêu cầu < ${REFUND_POLICY.PARTIAL_REFUND_MAX_PROGRESS}%)`,
+            progressPercentage,
+            daysSincePayment,
+        }
+    }
+
     /**
      * Calculate course progress percentage for a student
      * @param {number} userId - User ID
@@ -66,10 +201,11 @@ class RefundRequestService {
      * Create a refund request
      * @param {number} userId - Student ID
      * @param {number} orderId - Order ID
-     * @param {string} reason - Refund reason
+     * @param {string} reason - Refund reason (detailed)
+     * @param {string} reasonType - Reason type (MEDICAL, FINANCIAL_EMERGENCY, DISSATISFACTION, OTHER)
      * @returns {Promise<Object>} Created refund request
      */
-    async createRefundRequest(userId, orderId, reason) {
+    async createRefundRequest(userId, orderId, reason, reasonType = null) {
         // Validate order exists and belongs to user
         const order = await prisma.order.findUnique({
             where: { id: orderId },
@@ -119,19 +255,29 @@ class RefundRequestService {
             throw error
         }
 
-        // Calculate progress percentage
-        const progressPercentage = await this.calculateProgressPercentage(
-            userId,
-            order.courseId
-        )
+        // Check refund eligibility
+        const eligibility = await this.checkRefundEligibility(orderId, userId)
 
-        // If progress >= 50%, automatically reject
+        if (!eligibility.eligible) {
+            const error = new Error(eligibility.message)
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        // Determine status and refund details
         let status = 'PENDING'
         let adminNotes = null
+        let refundType = eligibility.type
+        let suggestedRefundAmount = eligibility.suggestedAmount
+        let offerExpiresAt = null
 
-        if (progressPercentage >= 50) {
-            status = 'REJECTED'
-            adminNotes = `Tự động từ chối: Tiến độ khóa học đạt ${progressPercentage.toFixed(2)}% (yêu cầu < 50%)`
+        // If PARTIAL refund, set offer expiry
+        if (refundType === REFUND_TYPES.PARTIAL) {
+            const expiryDate = new Date()
+            expiryDate.setHours(
+                expiryDate.getHours() + REFUND_POLICY.OFFER_EXPIRY_HOURS
+            )
+            offerExpiresAt = expiryDate
         }
 
         // Create refund request and update order status
@@ -152,9 +298,14 @@ class RefundRequestService {
                     orderId,
                     studentId: userId,
                     reason,
+                    reasonType: reasonType || REFUND_REASON_TYPES.OTHER,
                     status,
-                    progressPercentage,
+                    refundType,
+                    progressPercentage: eligibility.progressPercentage,
+                    suggestedRefundAmount,
+                    requestedRefundAmount: suggestedRefundAmount, // Initially same as suggested
                     adminNotes,
+                    offerExpiresAt,
                 },
                 include: {
                     order: {
@@ -219,6 +370,41 @@ class RefundRequestService {
                 logger.info(
                     `Sent refund request notifications to ${admins.length} admin(s) for order ${order.orderCode}`
                 )
+
+                // Send email to student
+                try {
+                    await emailService.sendRefundRequestSubmittedEmail(
+                        refundRequest.student,
+                        refundRequest,
+                        order
+                    )
+                } catch (emailError) {
+                    logger.error(
+                        'Error sending refund request submitted email:',
+                        emailError
+                    )
+                    // Don't throw error, just log it
+                }
+
+                // For PARTIAL refunds, send offer email immediately
+                if (refundType === REFUND_TYPES.PARTIAL) {
+                    try {
+                        await emailService.sendRefundOfferEmail(
+                            refundRequest.student,
+                            refundRequest,
+                            order
+                        )
+                        logger.info(
+                            `Sent refund offer email to student ${refundRequest.studentId} for request ${refundRequest.id}`
+                        )
+                    } catch (emailError) {
+                        logger.error(
+                            'Error sending refund offer email:',
+                            emailError
+                        )
+                        // Don't throw error, just log it
+                    }
+                }
             } catch (error) {
                 logger.error(
                     'Error sending refund request notification:',
@@ -264,6 +450,145 @@ class RefundRequestService {
                 orderBy: {
                     createdAt: 'desc',
                 },
+                skip: (page - 1) * limit,
+                take: limit,
+            }),
+            prisma.refundRequest.count({ where }),
+        ])
+
+        return {
+            refundRequests,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        }
+    }
+
+    /**
+     * Get all refund requests for admin
+     * @param {Object} filters - Filters (page, limit, status, search, sort)
+     * @returns {Promise<Object>} Refund requests with pagination
+     */
+    async getAllRefundRequests(filters = {}) {
+        const {
+            page = 1,
+            limit = 10,
+            status,
+            search,
+            sort = 'newest',
+        } = filters
+
+        const where = {}
+
+        // Filter by status
+        if (status) {
+            where.status = status
+        }
+
+        // Search by order code, student name, or course title
+        if (search) {
+            where.OR = [
+                {
+                    order: {
+                        orderCode: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                },
+                {
+                    student: {
+                        fullName: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                },
+                {
+                    student: {
+                        email: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                },
+                {
+                    order: {
+                        course: {
+                            title: {
+                                contains: search,
+                                mode: 'insensitive',
+                            },
+                        },
+                    },
+                },
+            ]
+        }
+
+        // Sort order
+        let orderBy = { createdAt: 'desc' }
+        if (sort === 'oldest') {
+            orderBy = { createdAt: 'asc' }
+        } else if (sort === 'newest') {
+            orderBy = { createdAt: 'desc' }
+        }
+
+        const [refundRequests, total] = await Promise.all([
+            prisma.refundRequest.findMany({
+                where,
+                include: {
+                    order: {
+                        select: {
+                            id: true,
+                            orderCode: true,
+                            originalPrice: true,
+                            discountAmount: true,
+                            finalPrice: true,
+                            paymentGateway: true,
+                            paymentStatus: true,
+                            refundAmount: true,
+                            refundedAt: true,
+                            paidAt: true,
+                            createdAt: true,
+                            notes: true,
+                            course: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    thumbnailUrl: true,
+                                    price: true,
+                                    discountPrice: true,
+                                    durationHours: true,
+                                    totalLessons: true,
+                                    instructor: {
+                                        select: {
+                                            id: true,
+                                            fullName: true,
+                                        },
+                                    },
+                                },
+                            },
+                            user: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
+                    student: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
+                    },
+                },
+                orderBy,
                 skip: (page - 1) * limit,
                 take: limit,
             }),
@@ -346,6 +671,421 @@ class RefundRequestService {
             where: { orderId },
             orderBy: { createdAt: 'desc' },
         })
+    }
+
+    /**
+     * Revoke enrollment access (hard delete - remove enrollment and related data)
+     * @param {number} userId - User ID
+     * @param {number} courseId - Course ID
+     * @param {string} reason - Reason for revocation
+     * @returns {Promise<Object|null>} Deleted enrollment info or null
+     */
+    async revokeEnrollmentAccess(userId, courseId, reason = '') {
+        const enrollment = await prisma.enrollment.findUnique({
+            where: {
+                userId_courseId: {
+                    userId,
+                    courseId,
+                },
+            },
+        })
+
+        if (!enrollment) {
+            logger.warn(
+                `No enrollment found to revoke for user ${userId} and course ${courseId}`
+            )
+            return null
+        }
+
+        // Get all lessons in the course to delete related data
+        const courseLessons = await prisma.lesson.findMany({
+            where: { courseId },
+            select: { id: true },
+        })
+        const lessonIds = courseLessons.map((lesson) => lesson.id)
+
+        // Delete all related data in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Delete progress records for all lessons in this course
+            if (lessonIds.length > 0) {
+                await tx.progress.deleteMany({
+                    where: {
+                        userId,
+                        lessonId: {
+                            in: lessonIds,
+                        },
+                    },
+                })
+            }
+
+            // 2. Delete lesson notes for all lessons in this course
+            if (lessonIds.length > 0) {
+                await tx.lessonNote.deleteMany({
+                    where: {
+                        userId,
+                        lessonId: {
+                            in: lessonIds,
+                        },
+                    },
+                })
+            }
+
+            // 3. Delete enrollment
+            const deletedEnrollment = await tx.enrollment.delete({
+                where: { id: enrollment.id },
+            })
+
+            // 4. Decrement course enrolled count
+            await tx.course.update({
+                where: { id: courseId },
+                data: {
+                    enrolledCount: {
+                        decrement: 1,
+                    },
+                },
+            })
+
+            return deletedEnrollment
+        })
+
+        logger.info(
+            `Enrollment and related data deleted for user ${userId} in course ${courseId}. Reason: ${reason}`
+        )
+
+        return result
+    }
+
+    /**
+     * Accept refund offer (for student)
+     * @param {number} requestId - Refund request ID
+     * @param {number} userId - Student ID
+     * @returns {Promise<Object>} Updated refund request
+     */
+    async acceptRefundOffer(requestId, userId) {
+        const refundRequest = await prisma.refundRequest.findUnique({
+            where: { id: requestId },
+        })
+
+        if (!refundRequest) {
+            const error = new Error('Refund request not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        if (refundRequest.studentId !== userId) {
+            const error = new Error('Unauthorized')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
+        }
+
+        if (refundRequest.status !== 'PENDING') {
+            const error = new Error(
+                'Only pending refund requests can have offers accepted'
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        if (refundRequest.refundType !== REFUND_TYPES.PARTIAL) {
+            const error = new Error(
+                'Offer acceptance only applies to partial refunds'
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        if (
+            refundRequest.offerExpiresAt &&
+            new Date() > refundRequest.offerExpiresAt
+        ) {
+            const error = new Error('Refund offer has expired')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        const updated = await prisma.refundRequest.update({
+            where: { id: requestId },
+            data: {
+                studentAcceptedOffer: true,
+                studentRejectedOffer: false,
+            },
+        })
+
+        logger.info(
+            `Student ${userId} accepted refund offer for request ${requestId}`
+        )
+
+        return updated
+    }
+
+    /**
+     * Reject refund offer (for student)
+     * @param {number} requestId - Refund request ID
+     * @param {number} userId - Student ID
+     * @returns {Promise<Object>} Updated refund request
+     */
+    async rejectRefundOffer(requestId, userId) {
+        const refundRequest = await prisma.refundRequest.findUnique({
+            where: { id: requestId },
+        })
+
+        if (!refundRequest) {
+            const error = new Error('Refund request not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        if (refundRequest.studentId !== userId) {
+            const error = new Error('Unauthorized')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
+        }
+
+        if (refundRequest.status !== 'PENDING') {
+            const error = new Error(
+                'Only pending refund requests can have offers rejected'
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        const updated = await prisma.$transaction(async (tx) => {
+            // Update refund request
+            const refundRequestUpdated = await tx.refundRequest.update({
+                where: { id: requestId },
+                data: {
+                    studentRejectedOffer: true,
+                    studentAcceptedOffer: false,
+                    status: 'REJECTED',
+                    adminNotes: 'Học viên đã từ chối offer hoàn tiền một phần',
+                },
+            })
+
+            // Revert order status back to PAID
+            await tx.order.update({
+                where: { id: refundRequest.orderId },
+                data: {
+                    paymentStatus: PAYMENT_STATUS.PAID,
+                },
+            })
+
+            return refundRequestUpdated
+        })
+
+        logger.info(
+            `Student ${userId} rejected refund offer for request ${requestId}`
+        )
+
+        return updated
+    }
+
+    /**
+     * Process refund request (Admin only)
+     * @param {number} requestId - Refund request ID
+     * @param {number} adminUserId - Admin user ID
+     * @param {string} action - 'APPROVE' or 'REJECT'
+     * @param {number|null} customAmount - Custom refund amount (optional, overrides suggested)
+     * @param {string} notes - Admin notes
+     * @returns {Promise<Object>} Processed refund request and refund result
+     */
+    async processRefundRequest(
+        requestId,
+        adminUserId,
+        action,
+        customAmount = null,
+        notes = null
+    ) {
+        const refundRequest = await prisma.refundRequest.findUnique({
+            where: { id: requestId },
+            include: {
+                order: {
+                    include: {
+                        course: true,
+                        user: true,
+                    },
+                },
+                student: true,
+            },
+        })
+
+        if (!refundRequest) {
+            const error = new Error('Refund request not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        if (refundRequest.status !== 'PENDING') {
+            const error = new Error(
+                `Cannot process refund request with status: ${refundRequest.status}`
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        // For PARTIAL refunds, check if student has accepted offer
+        if (
+            refundRequest.refundType === REFUND_TYPES.PARTIAL &&
+            !refundRequest.studentAcceptedOffer &&
+            !refundRequest.studentRejectedOffer
+        ) {
+            const error = new Error(
+                'Student must accept or reject the refund offer before processing'
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        if (
+            refundRequest.refundType === REFUND_TYPES.PARTIAL &&
+            refundRequest.studentRejectedOffer
+        ) {
+            const error = new Error('Student has rejected the refund offer')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        if (action === 'REJECT') {
+            const updated = await prisma.$transaction(async (tx) => {
+                const refundRequestUpdated = await tx.refundRequest.update({
+                    where: { id: requestId },
+                    data: {
+                        status: 'REJECTED',
+                        processedAt: new Date(),
+                        processedBy: adminUserId,
+                        adminNotes: notes || 'Rejected by admin',
+                    },
+                })
+
+                // Revert order status back to PAID
+                await tx.order.update({
+                    where: { id: refundRequest.orderId },
+                    data: {
+                        paymentStatus: PAYMENT_STATUS.PAID,
+                    },
+                })
+
+                return refundRequestUpdated
+            })
+
+            logger.info(
+                `Admin ${adminUserId} rejected refund request ${requestId}`
+            )
+
+            // Send rejection email
+            try {
+                await emailService.sendRefundRejectedEmail(
+                    refundRequest.student,
+                    refundRequest,
+                    refundRequest.order,
+                    notes || 'Rejected by admin'
+                )
+            } catch (emailError) {
+                logger.error('Error sending refund rejected email:', emailError)
+                // Don't throw error, just log it
+            }
+
+            return {
+                refundRequest: updated,
+                refundTransaction: null,
+            }
+        }
+
+        // APPROVE action
+        let refundAmount = null
+
+        if (customAmount !== null && customAmount !== undefined) {
+            // Validate and parse customAmount
+            const parsedAmount = parseFloat(customAmount)
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                const error = new Error(
+                    `Invalid refund amount: ${customAmount}. Amount must be a positive number.`
+                )
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
+            refundAmount = new Prisma.Decimal(parsedAmount)
+        } else {
+            // Use requested or suggested amount
+            refundAmount =
+                refundRequest.requestedRefundAmount ||
+                refundRequest.suggestedRefundAmount
+        }
+
+        if (!refundAmount || refundAmount <= 0) {
+            const error = new Error(
+                'Invalid refund amount. Please specify a valid refund amount or ensure the refund request has a suggested amount.'
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        // Import payment service dynamically to avoid circular dependency
+        const { default: paymentService } = await import('./payment.service.js')
+
+        // Get admin user
+        const adminUser = await prisma.user.findUnique({
+            where: { id: adminUserId },
+        })
+
+        if (!adminUser || adminUser.role !== 'ADMIN') {
+            const error = new Error('Only administrators can process refunds')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
+        }
+
+        // Process refund through payment service
+        const refundResult = await paymentService.refundOrder(
+            refundRequest.orderId,
+            adminUser,
+            parseFloat(refundAmount.toString()),
+            notes || `Refund processed for request ${requestId}`
+        )
+
+        // Update refund request and revoke enrollment
+        const result = await prisma.$transaction(async (tx) => {
+            const refundRequestUpdated = await tx.refundRequest.update({
+                where: { id: requestId },
+                data: {
+                    status: 'APPROVED',
+                    processedAt: new Date(),
+                    processedBy: adminUserId,
+                    requestedRefundAmount: refundAmount,
+                    adminNotes: notes || 'Approved by admin',
+                },
+            })
+
+            // Revoke enrollment access (soft delete)
+            await this.revokeEnrollmentAccess(
+                refundRequest.studentId,
+                refundRequest.order.courseId,
+                `Refund approved for order ${refundRequest.order.orderCode}`
+            )
+
+            return refundRequestUpdated
+        })
+
+        logger.info(
+            `Admin ${adminUserId} approved refund request ${requestId}. Amount: ${refundAmount}`
+        )
+
+        // Send approval email
+        try {
+            await emailService.sendRefundApprovedEmail(
+                refundRequest.student,
+                refundRequest,
+                refundRequest.order,
+                refundAmount.toString()
+            )
+        } catch (emailError) {
+            logger.error('Error sending refund approved email:', emailError)
+            // Don't throw error, just log it
+        }
+
+        return {
+            refundRequest: result,
+            refundTransaction: refundResult.refundTransaction,
+            order: refundResult.order,
+        }
     }
 }
 
