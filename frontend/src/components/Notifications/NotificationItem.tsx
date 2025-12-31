@@ -1,9 +1,11 @@
 import {
     formatNotificationTime,
     getNotificationTypeConfig,
+    getNotificationRoute,
 } from '../../lib/notificationUtils'
 import type { Notification } from '../../lib/api'
 import { cn } from '../ui/utils'
+import { useNavigate } from 'react-router-dom'
 
 export interface NotificationItemProps {
     notification: Notification
@@ -18,18 +20,37 @@ export function NotificationItem({
     onMarkAsRead,
     onDelete,
     compact = false,
-    clickable = true, // Mặc định là clickable
+    clickable = false, // Mặc định vô hiệu hóa navigation
 }: NotificationItemProps) {
+    const navigate = useNavigate()
     const config = getNotificationTypeConfig(notification.type)
     const Icon = config.icon
     const isUnread = !notification.isRead
+    const route = getNotificationRoute(notification)
 
     const handleClick = () => {
-        if (!clickable) return
+        console.log('[NotificationItem] Click detected:', {
+            notificationId: notification.id,
+            clickable,
+            route,
+            isRead: notification.isRead,
+        })
 
-        // Chỉ đánh dấu đã đọc, không navigate
+        // Đánh dấu đã đọc (luôn thực hiện khi click)
         if (onMarkAsRead && !notification.isRead) {
+            console.log('[NotificationItem] Marking as read:', notification.id)
             onMarkAsRead(notification.id)
+        }
+
+        // Navigate chỉ khi clickable = true
+        if (clickable && route) {
+            console.log('[NotificationItem] Navigating to:', route)
+            navigate(route)
+        } else {
+            console.log('[NotificationItem] Navigation blocked:', {
+                clickable,
+                route,
+            })
         }
     }
 
@@ -44,13 +65,12 @@ export function NotificationItem({
         <div
             className={cn(
                 'flex gap-3 p-4 transition-colors',
-                clickable && 'cursor-pointer',
-                !clickable && 'cursor-default',
+                'cursor-pointer', // Luôn cho phép click để đánh dấu đã đọc
                 isUnread ? 'bg-blue-950/20' : 'bg-transparent',
-                clickable && !isUnread && 'hover:bg-gray-800',
+                isUnread && 'hover:bg-blue-950/30', // Hover effect cho unread
                 compact && 'p-3'
             )}
-            onClick={clickable ? handleClick : undefined}
+            onClick={handleClick}
         >
             <div
                 className={cn(

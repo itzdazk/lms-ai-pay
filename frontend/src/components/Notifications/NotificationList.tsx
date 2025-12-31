@@ -17,7 +17,7 @@ export function NotificationList({
     onDelete,
     compact = false,
     emptyType = 'empty',
-    clickable = true, // Mặc định là clickable
+    clickable = false, // Vô hiệu hóa navigation, chỉ cho phép đánh dấu đã đọc
 }: NotificationListProps) {
     if (notifications.length === 0) {
         return <EmptyNotifications type={emptyType} />

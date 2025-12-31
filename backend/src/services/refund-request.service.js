@@ -1,6 +1,10 @@
 // backend/src/services/refund-request.service.js
 import { prisma } from '../config/database.config.js'
-import { HTTP_STATUS, PAYMENT_STATUS } from '../config/constants.js'
+import {
+    HTTP_STATUS,
+    PAYMENT_STATUS,
+    USER_STATUS,
+} from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import progressService from './progress.service.js'
 import notificationsService from './notifications.service.js'
@@ -81,7 +85,9 @@ class RefundRequestService {
         }
 
         if (order.userId !== userId) {
-            const error = new Error('You can only request refund for your own orders')
+            const error = new Error(
+                'You can only request refund for your own orders'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -173,12 +179,15 @@ class RefundRequestService {
                 const admins = await prisma.user.findMany({
                     where: {
                         role: 'ADMIN',
-                        status: 'active',
+                        status: USER_STATUS.ACTIVE,
                     },
                     select: {
                         id: true,
                     },
                 })
+
+                // Format amount in VND
+                const formattedAmount = order.finalPrice.toLocaleString('vi-VN')
 
                 // Send notification to each admin
                 await Promise.all(
@@ -187,14 +196,21 @@ class RefundRequestService {
                             userId: admin.id,
                             type: 'REFUND_REQUEST',
                             title: 'Yêu cầu hoàn tiền mới',
-                            message: `Học viên ${refundRequest.student.fullName} đã yêu cầu hoàn tiền cho đơn hàng ${order.orderCode}`,
-                            relatedId: refundRequest.id,
-                            relatedType: 'REFUND_REQUEST',
+                            message: `Học viên ${refundRequest.student.fullName} yêu cầu hoàn tiền ${formattedAmount} VNĐ cho đơn hàng ${order.orderCode} - Khóa học: ${order.course.title}`,
+                            relatedId: order.id,
+                            relatedType: 'ORDER',
                         })
                     )
                 )
+
+                logger.info(
+                    `Sent refund request notifications to ${admins.length} admin(s) for order ${order.orderCode}`
+                )
             } catch (error) {
-                logger.error('Error sending refund request notification:', error)
+                logger.error(
+                    'Error sending refund request notification:',
+                    error
+                )
                 // Don't throw error, just log it
             }
         }
@@ -321,4 +337,3 @@ class RefundRequestService {
 }
 
 export default new RefundRequestService()
-

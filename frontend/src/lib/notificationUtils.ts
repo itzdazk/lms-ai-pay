@@ -22,6 +22,7 @@ import {
     Download,
     Video,
     FileText,
+    RotateCcw,
     type LucideIcon,
 } from 'lucide-react'
 
@@ -109,9 +110,9 @@ export const NOTIFICATION_TYPES: Record<string, NotificationTypeConfig> = {
         bgColor: 'bg-yellow-950/20',
     },
     REFUND_REQUEST: {
-        icon: AlertCircle,
-        iconColor: 'text-orange-600',
-        bgColor: 'bg-orange-950/20',
+        icon: RotateCcw,
+        iconColor: 'text-orange-500',
+        bgColor: 'bg-orange-950/30',
     },
     SYSTEM_ALERT: {
         icon: AlertCircle,
@@ -241,11 +242,17 @@ export function formatNotificationTime(dateString: string): string {
 }
 
 /**
- * Get navigation route for notification based on relatedType
+ * Get navigation route for notification based on type and relatedType
  */
 export function getNotificationRoute(
     notification: Notification
 ): string | null {
+    // Special handling for REFUND_REQUEST notifications
+    if (notification.type === 'REFUND_REQUEST') {
+        // Navigate to admin refunds page
+        return '/admin/refunds'
+    }
+
     if (!notification.relatedId || !notification.relatedType) {
         return null
     }
@@ -265,4 +272,3 @@ export function getNotificationRoute(
             return null
     }
 }
-
