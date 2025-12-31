@@ -60,6 +60,13 @@ import { Badge } from '../components/ui/badge'
 import { NotificationBell } from '../components/Notifications/NotificationBell'
 import { RefundsPage } from './admin/RefundsPage'
 
+function formatPrice(price: number): string {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+    }).format(price)
+}
+
 type AdminSection =
     | 'dashboard'
     | 'users'

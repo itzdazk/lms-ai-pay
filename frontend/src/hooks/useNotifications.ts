@@ -33,7 +33,7 @@ export function useNotifications(options?: UseNotificationsOptions) {
         limit = 20,
         isRead,
         autoRefresh = false,
-        refreshInterval = 30000, // 30 seconds
+        refreshInterval = 10000, // 10 seconds - faster notification updates
     } = options || {}
 
     const [notifications, setNotifications] = useState<Notification[]>([])
@@ -171,8 +171,24 @@ export function useNotifications(options?: UseNotificationsOptions) {
             const notification = notifications.find((n) => n.id === id)
             const wasUnread = notification && !notification.isRead
 
+            console.log('[useNotifications] Deleting notification:', {
+                id,
+                wasUnread,
+                currentTotal: total,
+            })
+
             // Optimistic update
             setNotifications((prev) => prev.filter((n) => n.id !== id))
+            setTotal((prev) => {
+                const newTotal = Math.max(0, prev - 1)
+                console.log(
+                    '[useNotifications] Total updated:',
+                    prev,
+                    '->',
+                    newTotal
+                )
+                return newTotal
+            })
             if (wasUnread) {
                 setUnreadCount((prev) => Math.max(0, prev - 1))
             }
@@ -180,7 +196,12 @@ export function useNotifications(options?: UseNotificationsOptions) {
             try {
                 await notificationsApi.deleteNotification(id)
                 await fetchUnreadCount()
+                console.log('[useNotifications] Delete successful')
             } catch (err) {
+                console.error(
+                    '[useNotifications] Delete failed, reverting:',
+                    err
+                )
                 // Revert on error
                 if (notification) {
                     setNotifications((prev) =>
@@ -190,6 +211,7 @@ export function useNotifications(options?: UseNotificationsOptions) {
                                 new Date(a.createdAt).getTime()
                         )
                     )
+                    setTotal((prev) => prev + 1) // Revert totalCount
                 }
                 if (wasUnread) {
                     setUnreadCount((prev) => prev + 1)
@@ -198,7 +220,7 @@ export function useNotifications(options?: UseNotificationsOptions) {
                 toast.error(message || 'Không thể xóa thông báo')
             }
         },
-        [notifications, fetchUnreadCount]
+        [notifications, total, fetchUnreadCount]
     )
 
     const clearAll = useCallback(async () => {
@@ -277,7 +299,7 @@ export function useUnreadCount(autoRefresh = true) {
             if (document.visibilityState === 'visible') {
                 fetchUnreadCount()
             }
-        }, 30000) // 30 seconds
+        }, 10000) // 10 seconds - faster notification updates
 
         return () => clearInterval(interval)
     }, [autoRefresh, fetchUnreadCount])

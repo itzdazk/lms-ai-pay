@@ -56,10 +56,10 @@ export function NotificationsPage() {
     return (
         <div className='container mx-auto px-4 py-8 max-w-4xl'>
             <div className='mb-8'>
-                <h1 className='text-3xl font-bold text-white mb-2'>
+                <h1 className='text-3xl font-bold text-black dark:text-white mb-2'>
                     Thông báo của tôi
                 </h1>
-                <p className='text-gray-400'>
+                <p className='text-gray-500'>
                     Quản lý và xem tất cả thông báo của bạn
                 </p>
             </div>

@@ -5,6 +5,7 @@ import { DropdownMenuContent, DropdownMenuLabel } from '../ui/dropdown-menu'
 import { NotificationList } from './NotificationList'
 import { useNotifications } from '../../hooks/useNotifications'
 import { Loader2 } from 'lucide-react'
+import { useImperativeHandle, forwardRef } from 'react'
 
 export interface NotificationDropdownProps {
     isOpen: boolean
@@ -12,16 +13,30 @@ export interface NotificationDropdownProps {
     onUnreadCountChange: (count: number, actionPromise?: Promise<any>) => void
 }
 
-export function NotificationDropdown({
-    isOpen,
-    onClose,
-    onUnreadCountChange,
-}: NotificationDropdownProps) {
-    const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
-        useNotifications({
-            limit: 3,
-            autoRefresh: false,
-        })
+export interface NotificationDropdownRef {
+    refetch: () => Promise<void>
+}
+
+export const NotificationDropdown = forwardRef<
+    NotificationDropdownRef,
+    NotificationDropdownProps
+>(({ isOpen, onClose, onUnreadCountChange }, ref) => {
+    const {
+        notifications,
+        unreadCount,
+        isLoading,
+        markAsRead,
+        markAllAsRead,
+        refetch,
+    } = useNotifications({
+        limit: 3,
+        autoRefresh: false,
+    })
+
+    // Expose refetch method to parent
+    useImperativeHandle(ref, () => ({
+        refetch,
+    }))
 
     const handleMarkAllAsRead = async () => {
         // Tạo Promise cho action
@@ -71,7 +86,6 @@ export function NotificationDropdown({
                         onMarkAsRead={handleMarkAsRead}
                         compact={true}
                         emptyType='empty'
-                        clickable={true}
                     />
                 )}
             </div>
@@ -99,4 +113,4 @@ export function NotificationDropdown({
             </div>
         </DropdownMenuContent>
     )
-}
+})

@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Bell } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { DropdownMenu, DropdownMenuTrigger } from '../ui/dropdown-menu'
-import { NotificationDropdown } from './NotificationDropdown'
+import {
+    NotificationDropdown,
+    NotificationDropdownRef,
+} from './NotificationDropdown'
 import { useUnreadCount } from '../../hooks/useNotifications'
 
 export function NotificationBell() {
@@ -12,9 +15,27 @@ export function NotificationBell() {
     const [localUnreadCount, setLocalUnreadCount] = useState<number | null>(
         null
     )
+    const dropdownRef = useRef<NotificationDropdownRef>(null)
 
     const displayCount =
         localUnreadCount !== null ? localUnreadCount : unreadCount
+
+    // Refetch when dropdown opens
+    const handleOpenChange = useCallback(
+        (open: boolean) => {
+            setIsOpen(open)
+
+            // When opening dropdown, refetch to get latest data
+            if (open) {
+                console.log('Dropdown opened, refetching notifications...')
+                // Refetch unread count
+                refetch()
+                // Refetch notification list
+                dropdownRef.current?.refetch()
+            }
+        },
+        [refetch]
+    )
 
     // BEST FIX: Nhận Promise từ Dropdown để đợi API hoàn thành
     const handleUnreadCountChange = async (
@@ -49,7 +70,7 @@ export function NotificationBell() {
     }
 
     return (
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant='ghost'
@@ -70,6 +91,7 @@ export function NotificationBell() {
                 </Button>
             </DropdownMenuTrigger>
             <NotificationDropdown
+                ref={dropdownRef}
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}
                 onUnreadCountChange={handleUnreadCountChange}
