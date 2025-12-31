@@ -393,40 +393,43 @@ export function OrderTable({
                             {showActions && (
                                 <DarkOutlineTableCell>
                                     <div className='flex items-center gap-2'>
+                                        {/* View Button */}
                                         <DarkOutlineButton
                                             size='sm'
                                             asChild
-                                            className='h-8'
+                                            className='h-8 px-3 whitespace-nowrap'
                                         >
                                             <Link to={`/orders/${order.id}`}>
-                                                <Eye className='h-3 w-3 mr-1' />
+                                                <Eye className='h-3.5 w-3.5 mr-1.5' />
                                                 Xem
                                             </Link>
                                         </DarkOutlineButton>
+
+                                        {/* Refund Request Button - Only for PAID orders without existing request */}
                                         {order.paymentStatus === 'PAID' &&
                                             !ordersWithRefundRequests.has(
                                                 order.id
                                             ) && (
-                                                <Button
+                                                <DarkOutlineButton
                                                     size='sm'
-                                                    variant='outline'
-                                                    className='h-8 border-blue-500/50 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300'
+                                                    className='h-8 px-3 whitespace-nowrap border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400/60 hover:text-blue-300 transition-colors'
                                                     onClick={() =>
                                                         handleRefundRequestClick(
                                                             order
                                                         )
                                                     }
                                                 >
-                                                    <RotateCcw className='h-3 w-3 mr-1' />
-                                                    Yêu cầu hoàn tiền
-                                                </Button>
+                                                    <RotateCcw className='h-3.5 w-3.5 mr-1.5' />
+                                                    Hoàn tiền
+                                                </DarkOutlineButton>
                                             )}
+
+                                        {/* Cancel Button - Only for PENDING orders */}
                                         {order.paymentStatus === 'PENDING' &&
                                             onCancel && (
-                                                <Button
+                                                <DarkOutlineButton
                                                     size='sm'
-                                                    variant='outline'
-                                                    className='h-8 border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300'
+                                                    className='h-8 px-3 whitespace-nowrap border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400/60 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                                                     onClick={() =>
                                                         handleCancelClick(
                                                             order.id,
@@ -441,16 +444,16 @@ export function OrderTable({
                                                     {cancelLoading ===
                                                     order.id ? (
                                                         <>
-                                                            <div className='animate-spin rounded-full h-3 w-3 border-2 border-red-400 border-t-transparent mr-1' />
+                                                            <div className='animate-spin rounded-full h-3.5 w-3.5 border-2 border-red-400 border-t-transparent mr-1.5' />
                                                             Đang hủy...
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <X className='h-3 w-3 mr-1' />
+                                                            <X className='h-3.5 w-3.5 mr-1.5' />
                                                             Hủy
                                                         </>
                                                     )}
-                                                </Button>
+                                                </DarkOutlineButton>
                                             )}
                                     </div>
                                 </DarkOutlineTableCell>
