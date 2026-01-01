@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import { Progress } from '../components/ui/progress'
@@ -8,10 +9,10 @@ import {
     PlayCircle,
     CheckCircle,
     Flame,
-    Compass,
     Target,
     Loader2,
     BookOpen,
+    History,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useStudentDashboard } from '../hooks/useStudentDashboard'
@@ -19,14 +20,12 @@ import { useEnrolledCourses } from '../hooks/useEnrolledCourses'
 import { useStudyTime } from '../hooks/useStudyTime'
 import { useLearningStreak } from '../hooks/useLearningStreak'
 import {
-    RecentActivities,
-    QuizPerformanceSummary,
     StudyTimeChart,
-    RecommendedCourses,
     StatCard,
     MyCoursesSection,
     AchievementsSection,
     NextRecommendationsSection,
+    RecentActivitiesModal,
 } from '../components/Dashboard'
 
 export function StudentDashboard() {
@@ -36,6 +35,7 @@ export function StudentDashboard() {
         useEnrolledCourses(10)
     const { analytics: studyTime } = useStudyTime()
     const { streak, loading: streakLoading } = useLearningStreak()
+    const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false)
 
     const activeCourses = enrolledCourses.filter(
         (enrollment) => enrollment.progressPercentage < 100
@@ -92,10 +92,10 @@ export function StudentDashboard() {
                     : '/courses',
         },
         {
-            label: 'Khám phá lộ trình',
-            description: 'Hãy chọn khóa học phù hợp với bạn',
-            icon: Compass,
-            href: '/courses',
+            label: 'Hoạt động gần đây',
+            description: 'Xem lịch sử học tập của bạn',
+            icon: History,
+            onClick: () => setIsActivitiesModalOpen(true),
         },
         {
             label: 'Xem chứng chỉ',
@@ -161,20 +161,35 @@ export function StudentDashboard() {
                                 {quickActions.map((action) => (
                                     <DarkOutlineButton
                                         key={action.label}
-                                        asChild
+                                        asChild={!!action.href}
+                                        onClick={action.onClick || undefined}
                                         className='justify-start gap-3 bg-black! py-8'
                                     >
-                                        <Link to={action.href}>
-                                            <action.icon className='h-4 w-4 text-blue-400' />
-                                            <div className='text-left'>
-                                                <p className='text-sm font-semibold text-white'>
-                                                    {action.label}
-                                                </p>
-                                                <p className='text-xs text-gray-400'>
-                                                    {action.description}
-                                                </p>
+                                        {action.href ? (
+                                            <Link to={action.href}>
+                                                <action.icon className='h-4 w-4 text-blue-400' />
+                                                <div className='text-left'>
+                                                    <p className='text-sm font-semibold text-white'>
+                                                        {action.label}
+                                                    </p>
+                                                    <p className='text-xs text-gray-400'>
+                                                        {action.description}
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                        ) : (
+                                            <div className='flex items-center gap-3 w-full'>
+                                                <action.icon className='h-4 w-4 text-blue-400' />
+                                                <div className='text-left'>
+                                                    <p className='text-sm font-semibold text-white'>
+                                                        {action.label}
+                                                    </p>
+                                                    <p className='text-xs text-gray-400'>
+                                                        {action.description}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </Link>
+                                        )}
                                     </DarkOutlineButton>
                                 ))}
                             </div>
@@ -234,11 +249,7 @@ export function StudentDashboard() {
             <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
                 <MyCoursesSection enrollments={enrolledCourses} />
                 {/* Recommended Courses */}
-                <div className='mb-10'>
-                    <NextRecommendationsSection
-                        enrolledCourses={enrolledCourses}
-                    />
-                </div>
+                <NextRecommendationsSection enrolledCourses={enrolledCourses} />
                 <div className='space-y-6'>
                     <AchievementsSection
                         completedCourses={completedCourses}
@@ -247,21 +258,20 @@ export function StudentDashboard() {
                 </div>
             </div>
 
-            {/* Phase 1: New Features */}
             <div className='space-y-6 mb-10'>
                 <h2 className='text-2xl font-bold text-black dark:text-white'>
                     Phân tích & Thống kê
                 </h2>
 
-                {/* Recent Activities & Quiz Performance */}
-                <div className='grid lg:grid-cols-2 gap-6'>
-                    <RecentActivities />
-                    <QuizPerformanceSummary />
-                </div>
-
                 {/* Study Time Analytics */}
                 <StudyTimeChart />
             </div>
+
+            {/* Recent Activities Modal */}
+            <RecentActivitiesModal
+                open={isActivitiesModalOpen}
+                onOpenChange={setIsActivitiesModalOpen}
+            />
         </div>
     )
 }

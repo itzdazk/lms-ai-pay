@@ -1,4 +1,5 @@
 export { RecentActivities } from './RecentActivities'
+export { RecentActivitiesModal } from './RecentActivitiesModal'
 export { QuizPerformanceSummary } from './QuizPerformanceSummary'
 export { StudyTimeChart } from './StudyTimeChart'
 export { RecommendedCourses } from './RecommendedCourses'
