@@ -14,6 +14,7 @@ import {
     Shield,
     UserCheck,
     UserX,
+    BookOpen,
 } from 'lucide-react'
 import { formatDate } from '../../../lib/utils'
 import type { User } from '../../../lib/api/types'
@@ -24,6 +25,7 @@ interface UserRowProps {
     onDelete: (user: User) => void
     onChangeRole: (user: User) => void
     onChangeStatus: (user: User) => void
+    onViewEnrollments: (user: User) => void
     isSelected: boolean
     onSelect: (userId: string | null) => void
 }
@@ -34,6 +36,7 @@ export function UserRow({
     onDelete,
     onChangeRole,
     onChangeStatus,
+    onViewEnrollments,
     isSelected,
     onSelect,
 }: UserRowProps) {
@@ -364,6 +367,16 @@ export function UserRow({
                             {user.status === 'ACTIVE'
                                 ? 'Khóa tài khoản'
                                 : 'Kích hoạt tài khoản'}
+                        </div>
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onViewEnrollments(user)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <BookOpen className='h-4 w-4' />
+                            Khóa đã đăng ký
                         </div>
                         <div
                             className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-400 hover:bg-[#1F1F1F] cursor-pointer'

@@ -1,5 +1,10 @@
 import apiClient from './client';
-import type { ApiResponse, User, PaginatedResponse } from './types';
+import type {
+  ApiResponse,
+  User,
+  PaginatedResponse,
+  Enrollment,
+} from './types';
 
 // Profile types
 export interface UpdateProfileRequest {
@@ -39,6 +44,14 @@ export interface ChangeRoleRequest {
 
 export interface ChangeStatusRequest {
   status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
+}
+
+export interface GetUserEnrollmentsParams {
+  page?: number;
+  limit?: number;
+  status?: 'ACTIVE' | 'COMPLETED' | 'DROPPED';
+  search?: string;
+  sort?: 'newest' | 'oldest' | 'progress' | 'lastAccessed';
 }
 
 export const usersApi = {
@@ -160,6 +173,58 @@ export const usersApi = {
   // Admin: Delete user
   async deleteUser(id: string): Promise<void> {
     await apiClient.delete<ApiResponse<null>>(`/users/${id}`);
+  },
+
+  // Admin: Get a user's enrollments
+  async getUserEnrollments(
+    id: string | number,
+    params?: GetUserEnrollmentsParams
+  ): Promise<PaginatedResponse<Enrollment> & { totalEnrollments?: number }> {
+    const searchParams = new URLSearchParams();
+
+    if (params) {
+      if (params.page) searchParams.append('page', params.page.toString());
+      if (params.limit) searchParams.append('limit', params.limit.toString());
+      if (params.status) searchParams.append('status', params.status);
+      if (params.search && params.search.trim()) {
+        searchParams.append('search', params.search.trim());
+      }
+      if (params.sort) searchParams.append('sort', params.sort);
+    }
+
+    const queryString = searchParams.toString();
+    const url = queryString
+      ? `/users/${id}/enrollments?${queryString}`
+      : `/users/${id}/enrollments`;
+
+    const response = await apiClient.get<
+      ApiResponse<{ enrollments: Enrollment[]; pagination: any; totalEnrollments?: number }>
+    >(url);
+
+    const backendData = response.data.data;
+
+    return {
+      data: backendData.enrollments || [],
+      pagination: backendData.pagination || {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      },
+      totalEnrollments: backendData.totalEnrollments ?? backendData.pagination?.total ?? 0,
+    };
+  },
+
+  // Admin: Delete a user's enrollment
+  async deleteUserEnrollment(
+    userId: string | number,
+    enrollmentId: number | string
+  ): Promise<{ message: string; totalEnrollments?: number }> {
+    const response = await apiClient.delete<
+      ApiResponse<{ message: string; totalEnrollments?: number }>
+    >(`/users/${userId}/enrollments/${enrollmentId}`);
+
+    return response.data.data;
   },
 };
 

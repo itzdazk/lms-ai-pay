@@ -108,6 +108,34 @@ class UsersController {
         await usersService.deleteUser(req.params.id);
         return ApiResponse.success(res, null, 'User deleted successfully');
     });
+
+    /**
+     * Get user enrollments (Admin only)
+     * GET /api/v1/users/:id/enrollments
+     */
+    getUserEnrollments = asyncHandler(async (req, res) => {
+        const userId = parseInt(req.params.id);
+        const filters = {
+            page: parseInt(req.query.page) || 1,
+            limit: parseInt(req.query.limit) || 20,
+            status: req.query.status,
+            search: req.query.search,
+            sort: req.query.sort || 'newest',
+        };
+        const result = await usersService.getUserEnrollments(userId, filters);
+        return ApiResponse.success(res, result, 'User enrollments retrieved successfully');
+    });
+
+    /**
+     * Delete a user's enrollment (Admin only)
+     * DELETE /api/v1/users/:id/enrollments/:enrollmentId
+     */
+    deleteUserEnrollment = asyncHandler(async (req, res) => {
+        const userId = parseInt(req.params.id);
+        const enrollmentId = parseInt(req.params.enrollmentId);
+        const result = await usersService.deleteUserEnrollment(userId, enrollmentId);
+        return ApiResponse.success(res, result, 'User enrollment deleted successfully');
+    });
 }
 
 export default new UsersController();

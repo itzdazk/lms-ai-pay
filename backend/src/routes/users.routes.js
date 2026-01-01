@@ -15,6 +15,8 @@ import {
     userIdValidator,
     changeRoleValidator,
     changeStatusValidator,
+    getUserEnrollmentsValidator,
+    deleteUserEnrollmentValidator,
 } from '../validators/users.validator.js'
 import { uploadAvatar } from '../config/multer.config.js'
 
@@ -71,5 +73,21 @@ router.put(
     usersController.updateUser
 )
 router.delete('/:id', isAdmin, userIdValidator, usersController.deleteUser)
+
+// Get user enrollments (Admin only)
+router.get(
+    '/:id/enrollments',
+    isAdmin,
+    getUserEnrollmentsValidator,
+    usersController.getUserEnrollments
+)
+
+// Delete a specific enrollment for user (Admin only)
+router.delete(
+    '/:id/enrollments/:enrollmentId',
+    isAdmin,
+    deleteUserEnrollmentValidator,
+    usersController.deleteUserEnrollment
+)
 
 export default router

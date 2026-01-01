@@ -16,6 +16,7 @@ interface UserTableProps {
   onDelete: (user: User) => void;
   onChangeRole: (user: User) => void;
   onChangeStatus: (user: User) => void;
+  onViewEnrollments: (user: User) => void;
   loading?: boolean;
   selectedRowId?: string | null;
   onRowSelect?: (userId: string | null) => void;
@@ -27,6 +28,7 @@ export const UserTable = React.memo(function UserTable({
   onDelete,
   onChangeRole,
   onChangeStatus,
+  onViewEnrollments,
   loading = false,
   selectedRowId,
   onRowSelect,
@@ -69,6 +71,7 @@ export const UserTable = React.memo(function UserTable({
             onDelete={onDelete}
             onChangeRole={onChangeRole}
             onChangeStatus={onChangeStatus}
+            onViewEnrollments={onViewEnrollments}
             isSelected={selectedRowId === user.id}
             onSelect={onRowSelect || (() => {})}
           />

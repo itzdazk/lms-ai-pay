@@ -164,6 +164,54 @@ const changeStatusValidator = [
     validate,
 ];
 
+// Get user enrollments validator (Admin only)
+const getUserEnrollmentsValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Invalid user ID'),
+
+    query('page')
+        .optional()
+        .isInt({ min: 1 })
+        .withMessage('Page must be a positive integer'),
+
+    query('limit')
+        .optional()
+        .isInt({ min: 1, max: 100 })
+        .withMessage('Limit must be between 1 and 100'),
+
+    query('status')
+        .optional()
+        .isIn(['ACTIVE', 'COMPLETED', 'DROPPED', 'EXPIRED'])
+        .withMessage('Invalid status'),
+
+    query('search')
+        .optional()
+        .trim()
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Search query must be between 1 and 100 characters'),
+
+    query('sort')
+        .optional()
+        .isIn(['newest', 'oldest', 'progress', 'lastAccessed'])
+        .withMessage('Invalid sort option'),
+
+    validate,
+];
+
+// Delete user enrollment validator (Admin only)
+const deleteUserEnrollmentValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Invalid user ID'),
+
+    param('enrollmentId')
+        .isInt({ min: 1 })
+        .withMessage('Invalid enrollment ID'),
+
+    validate,
+];
+
 export {
     updateProfileValidator,
     changePasswordValidator,
@@ -172,6 +220,8 @@ export {
     userIdValidator,
     changeRoleValidator,
     changeStatusValidator,
+    getUserEnrollmentsValidator,
+    deleteUserEnrollmentValidator,
 };
 
 

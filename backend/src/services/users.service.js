@@ -623,6 +623,202 @@ class UsersService {
 
         return { message: 'User deleted successfully' }
     }
+
+    /**
+     * Get user enrollments (Admin only)
+     */
+    async getUserEnrollments(userId, filters) {
+        const userIdInt = parseInt(userId, 10)
+        if (isNaN(userIdInt)) {
+            throw new Error('Invalid user ID')
+        }
+
+        // Check if user exists
+        const user = await prisma.user.findUnique({
+            where: { id: userIdInt },
+            select: { id: true, userName: true },
+        })
+
+        if (!user) {
+            throw new Error('User not found')
+        }
+
+        const {
+            page = 1,
+            limit = 20,
+            status,
+            search,
+            sort = 'newest',
+        } = filters
+
+        const skip = (page - 1) * limit
+
+        // Build where clause
+        const where = {
+            userId: userIdInt,
+        }
+
+        // Filter by status
+        if (status) {
+            where.status = status
+        }
+
+        // Search in course title
+        if (search) {
+            where.course = {
+                title: {
+                    contains: search,
+                    mode: 'insensitive',
+                },
+            }
+        }
+
+        // Build orderBy clause
+        let orderBy = {}
+        switch (sort) {
+            case 'oldest':
+                orderBy = { enrolledAt: 'asc' }
+                break
+            case 'progress':
+                orderBy = { progressPercentage: 'desc' }
+                break
+            case 'lastAccessed':
+                orderBy = { lastAccessedAt: 'desc' }
+                break
+            case 'newest':
+            default:
+                orderBy = { enrolledAt: 'desc' }
+        }
+
+        // Execute query
+        const [enrollments, total] = await Promise.all([
+            prisma.enrollment.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                select: {
+                    id: true,
+                    userId: true,
+                    courseId: true,
+                    enrolledAt: true,
+                    startedAt: true,
+                    completedAt: true,
+                    progressPercentage: true,
+                    lastAccessedAt: true,
+                    expiresAt: true,
+                    status: true,
+                    user: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            userName: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            shortDescription: true,
+                            level: true,
+                            durationHours: true,
+                            totalLessons: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                    userName: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            prisma.enrollment.count({ where }),
+        ])
+
+        logger.info(
+            `Admin retrieved ${enrollments.length} enrollments for user: ${user.userName} (ID: ${userIdInt})`
+        )
+
+        return {
+            enrollments,
+            totalEnrollments: total,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        }
+    }
+
+    /**
+     * Delete a specific enrollment for a user (Admin only)
+     */
+    async deleteUserEnrollment(userId, enrollmentId) {
+        const userIdInt = parseInt(userId, 10)
+        const enrollmentIdInt = parseInt(enrollmentId, 10)
+
+        if (isNaN(userIdInt) || isNaN(enrollmentIdInt)) {
+            throw new Error('Invalid user or enrollment ID')
+        }
+
+        // Ensure enrollment belongs to user and grab course for cleanup
+        const enrollment = await prisma.enrollment.findFirst({
+            where: {
+                id: enrollmentIdInt,
+                userId: userIdInt,
+            },
+            select: { id: true, courseId: true },
+        })
+
+        if (!enrollment) {
+            const error = new Error('Enrollment not found for this user')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Delete related learning artifacts for this course/user, then enrollment
+        await prisma.$transaction([
+            prisma.progress.deleteMany({
+                where: {
+                    userId: userIdInt,
+                    courseId: enrollment.courseId,
+                },
+            }),
+            prisma.quizSubmission.deleteMany({
+                where: {
+                    userId: userIdInt,
+                    quiz: { courseId: enrollment.courseId },
+                },
+            }),
+            prisma.lessonNote.deleteMany({
+                where: {
+                    userId: userIdInt,
+                    courseId: enrollment.courseId,
+                },
+            }),
+            prisma.enrollment.delete({ where: { id: enrollmentIdInt } }),
+        ])
+
+        const totalRemaining = await prisma.enrollment.count({
+            where: { userId: userIdInt },
+        })
+
+        logger.info(
+            `Admin deleted enrollment ${enrollmentIdInt} for user ID: ${userIdInt}`
+        )
+
+        return {
+            message: 'Enrollment deleted successfully',
+            totalEnrollments: totalRemaining,
+        }
+    }
 }
 
 export default new UsersService()

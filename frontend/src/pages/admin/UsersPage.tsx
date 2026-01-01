@@ -21,9 +21,15 @@ import {
     UserFilters,
     UserTable,
     UserDialogs,
+    UserEnrollmentsDialog,
 } from '../../components/admin/users'
 import type { User } from '../../lib/api/types'
-import type { GetUsersParams, UpdateUserRequest } from '../../lib/api/users'
+import type {
+    GetUsersParams,
+    GetUserEnrollmentsParams,
+    UpdateUserRequest,
+} from '../../lib/api/users'
+import type { Enrollment } from '../../lib/api/types'
 
 interface UsersPageProps {
     defaultRole?: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
@@ -84,6 +90,28 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         instructors: 0,
         admins: 0,
     })
+    const [isEnrollmentsDialogOpen, setIsEnrollmentsDialogOpen] =
+        useState(false)
+    const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+    const [enrollmentPagination, setEnrollmentPagination] = useState({
+        page: 1,
+        limit: 8,
+        total: 0,
+        totalPages: 0,
+    })
+    const [totalEnrollments, setTotalEnrollments] = useState(0)
+    const [enrollmentFilters, setEnrollmentFilters] =
+        useState<GetUserEnrollmentsParams>({
+            page: 1,
+            limit: 8,
+            search: '',
+            sort: 'newest',
+        })
+    const [enrollmentSearchInput, setEnrollmentSearchInput] = useState('')
+    const [enrollmentLoading, setEnrollmentLoading] = useState(false)
+    const [removingEnrollmentId, setRemovingEnrollmentId] = useState<number | null>(
+        null
+    )
 
     // Update filter role when defaultRole prop changes
     useEffect(() => {
@@ -397,6 +425,87 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
         }
     }
 
+    const fetchUserEnrollments = async (
+        userId: string,
+        overrides: Partial<GetUserEnrollmentsParams> = {}
+    ) => {
+        const nextFilters = {
+            ...enrollmentFilters,
+            ...overrides,
+        }
+        setEnrollmentFilters(nextFilters)
+        try {
+            setEnrollmentLoading(true)
+            const response = await usersApi.getUserEnrollments(
+                userId,
+                nextFilters
+            )
+            setEnrollments(response.data)
+            setEnrollmentPagination(response.pagination)
+            setTotalEnrollments(response.totalEnrollments || 0)
+        } catch (error) {
+            console.error('Error loading enrollments:', error)
+            toast.error('Không thể tải khóa đã đăng ký của người dùng')
+        } finally {
+            setEnrollmentLoading(false)
+        }
+    }
+
+    const handleViewEnrollments = (user: User) => {
+        setSelectedUser(user)
+        setEnrollmentSearchInput('')
+        setIsEnrollmentsDialogOpen(true)
+        fetchUserEnrollments(user.id, { page: 1, search: '' })
+    }
+
+    const handleEnrollmentSearch = () => {
+        if (!selectedUser) return
+        fetchUserEnrollments(selectedUser.id, {
+            page: 1,
+            search: enrollmentSearchInput.trim(),
+        })
+    }
+
+    const handleEnrollmentPageChange = (page: number) => {
+        if (!selectedUser) return
+        fetchUserEnrollments(selectedUser.id, { page })
+    }
+
+    const handleRemoveEnrollment = async (enrollmentId: number) => {
+        if (!selectedUser) return
+
+        const confirmed = window.confirm(
+            `Bạn có chắc muốn xóa học viên này khỏi khóa học?\nViệc này sẽ xóa tiến độ học liên quan.`
+        )
+        if (!confirmed) return
+
+        try {
+            setRemovingEnrollmentId(enrollmentId)
+            const resp = await usersApi.deleteUserEnrollment(
+                selectedUser.id,
+                enrollmentId
+            )
+            toast.success('Đã xóa khỏi khóa học')
+
+            // Refresh list with current filters
+            await fetchUserEnrollments(selectedUser.id, {
+                page: enrollmentPagination.page,
+            })
+
+            if (resp?.totalEnrollments !== undefined) {
+                setTotalEnrollments(resp.totalEnrollments)
+            }
+        } catch (error: any) {
+            console.error('Error removing enrollment:', error)
+            toast.error(
+                error?.response?.data?.message ||
+                    'Không thể xóa học viên khỏi khóa học'
+            )
+        } finally {
+            setRemovingEnrollmentId(null)
+        }
+    }
+
     // Handle user form update
     const handleUpdateUser = async (
         id: string,
@@ -525,6 +634,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                             onDelete={handleDelete}
                             onChangeRole={handleChangeRole}
                             onChangeStatus={handleChangeStatus}
+                            onViewEnrollments={handleViewEnrollments}
                             loading={loading}
                             selectedRowId={selectedRowId}
                             onRowSelect={setSelectedRowId}
@@ -706,6 +816,22 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
                     onChangeStatus={confirmChangeStatus}
                     // Common
                     actionLoading={actionLoading}
+                />
+
+                <UserEnrollmentsDialog
+                    open={isEnrollmentsDialogOpen}
+                    onOpenChange={setIsEnrollmentsDialogOpen}
+                    user={selectedUser}
+                    enrollments={enrollments}
+                    loading={enrollmentLoading}
+                    pagination={enrollmentPagination}
+                    totalEnrollments={totalEnrollments}
+                    search={enrollmentSearchInput}
+                    onSearchChange={setEnrollmentSearchInput}
+                    onSearch={handleEnrollmentSearch}
+                    onPageChange={handleEnrollmentPageChange}
+                    onRemoveEnrollment={handleRemoveEnrollment}
+                    removingEnrollmentId={removingEnrollmentId}
                 />
             </div>
         </div>
