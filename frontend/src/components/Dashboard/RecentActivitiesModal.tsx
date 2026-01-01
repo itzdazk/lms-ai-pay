@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Badge } from '../ui/badge'
 import { Loader2, Clock } from 'lucide-react'
@@ -6,7 +5,6 @@ import { useRecentActivities } from '../../hooks/useRecentActivities'
 import {
     formatActivityMessage,
     formatRelativeTime,
-    getActivityIcon,
     type Activity,
 } from '../../lib/dashboardUtils'
 import { Link } from 'react-router-dom'
@@ -27,7 +25,7 @@ export function RecentActivitiesModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] max-w-2xl max-h-[80vh] overflow-hidden flex flex-col'>
+            <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] max-w-2xl max-h-[80vh] overflow-hidden flex flex-col [&>button]:text-white'>
                 <DialogHeader>
                     <DialogTitle className='text-white text-2xl'>
                         Hoạt động gần đây
@@ -67,7 +65,6 @@ export function RecentActivitiesModal({
 }
 
 function ActivityItem({ activity }: { activity: Activity }) {
-    const icon = getActivityIcon(activity.type)
     const message = formatActivityMessage(activity)
     const relativeTime = formatRelativeTime(activity.timestamp)
 
@@ -86,7 +83,6 @@ function ActivityItem({ activity }: { activity: Activity }) {
 
     return (
         <div className='flex gap-3 p-3 rounded-lg border border-[#2D2D2D] bg-black/40 hover:bg-black/60 transition-colors'>
-            <div className='text-2xl'>{icon}</div>
             <div className='flex-1 min-w-0'>
                 <div className='flex items-center gap-2 mb-1'>
                     <Badge className={`text-xs ${getBadgeColor()}`}>
