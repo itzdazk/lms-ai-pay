@@ -537,4 +537,169 @@ export const dashboardApi = {
         )
         return response.data.data
     },
+
+    // Study Schedule APIs
+    async getStudySchedules(params?: {
+        dateFrom?: string
+        dateTo?: string
+        courseId?: number
+        status?: string
+        limit?: number
+        offset?: number
+    }): Promise<Array<StudySchedule>> {
+        const queryParams = new URLSearchParams()
+        if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom)
+        if (params?.dateTo) queryParams.append('dateTo', params.dateTo)
+        if (params?.courseId)
+            queryParams.append('courseId', params.courseId.toString())
+        if (params?.status) queryParams.append('status', params.status)
+        if (params?.limit) queryParams.append('limit', params.limit.toString())
+        if (params?.offset)
+            queryParams.append('offset', params.offset.toString())
+
+        const queryString = queryParams.toString()
+        const url = `/dashboard/student/study-schedules${
+            queryString ? `?${queryString}` : ''
+        }`
+        const response = await apiClient.get<ApiResponse<StudySchedule[]>>(url)
+        return response.data.data
+    },
+
+    async getStudyScheduleById(id: number): Promise<StudySchedule> {
+        const response = await apiClient.get<ApiResponse<StudySchedule>>(
+            `/dashboard/student/study-schedules/${id}`
+        )
+        return response.data.data
+    },
+
+    async getTodaySchedules(): Promise<StudySchedule[]> {
+        const response = await apiClient.get<ApiResponse<StudySchedule[]>>(
+            '/dashboard/student/study-schedules/today'
+        )
+        return response.data.data
+    },
+
+    async getUpcomingSchedules(): Promise<StudySchedule[]> {
+        const response = await apiClient.get<ApiResponse<StudySchedule[]>>(
+            '/dashboard/student/study-schedules/upcoming'
+        )
+        return response.data.data
+    },
+
+    async createStudySchedule(
+        data: CreateStudyScheduleData
+    ): Promise<StudySchedule> {
+        const response = await apiClient.post<ApiResponse<StudySchedule>>(
+            '/dashboard/student/study-schedules',
+            data
+        )
+        return response.data.data
+    },
+
+    async updateStudySchedule(
+        id: number,
+        data: UpdateStudyScheduleData
+    ): Promise<StudySchedule> {
+        const response = await apiClient.put<ApiResponse<StudySchedule>>(
+            `/dashboard/student/study-schedules/${id}`,
+            data
+        )
+        return response.data.data
+    },
+
+    async deleteStudySchedule(id: number): Promise<void> {
+        await apiClient.delete(`/dashboard/student/study-schedules/${id}`)
+    },
+
+    async completeSchedule(id: number): Promise<StudySchedule> {
+        const response = await apiClient.post<ApiResponse<StudySchedule>>(
+            `/dashboard/student/study-schedules/${id}/complete`
+        )
+        return response.data.data
+    },
+
+    async skipSchedule(id: number): Promise<StudySchedule> {
+        const response = await apiClient.post<ApiResponse<StudySchedule>>(
+            `/dashboard/student/study-schedules/${id}/skip`
+        )
+        return response.data.data
+    },
+
+    async getScheduleSuggestions(): Promise<ScheduleSuggestion[]> {
+        const response = await apiClient.get<ApiResponse<ScheduleSuggestion[]>>(
+            '/dashboard/student/study-schedules/suggestions'
+        )
+        return response.data.data
+    },
+}
+
+// Study Schedule Types
+export interface StudySchedule {
+    id: number
+    userId: number
+    courseId: number
+    lessonId: number | null
+    title: string | null
+    scheduledDate: string
+    duration: number
+    reminderMinutes: number
+    isReminderSent: boolean
+    reminderSentAt: string | null
+    repeatType: 'ONCE' | 'DAILY' | 'WEEKLY' | 'CUSTOM' | null
+    repeatDays: number[] | null
+    repeatUntil: string | null
+    notes: string | null
+    status: 'scheduled' | 'completed' | 'skipped' | 'cancelled'
+    completedAt: string | null
+    createdAt: string
+    updatedAt: string
+    course: {
+        id: number
+        title: string
+        slug: string
+        thumbnailUrl: string | null
+    }
+    lesson: {
+        id: number
+        title: string
+        slug: string
+        videoDuration: number | null
+    } | null
+}
+
+export interface CreateStudyScheduleData {
+    courseId: number
+    lessonId?: number | null
+    title?: string | null
+    scheduledDate: string
+    duration?: number
+    reminderMinutes?: number
+    repeatType?: 'ONCE' | 'DAILY' | 'WEEKLY' | 'CUSTOM' | null
+    repeatDays?: number[] | null
+    repeatUntil?: string | null
+    notes?: string | null
+}
+
+export interface UpdateStudyScheduleData {
+    courseId?: number
+    lessonId?: number | null
+    title?: string | null
+    scheduledDate?: string
+    duration?: number
+    reminderMinutes?: number
+    repeatType?: 'ONCE' | 'DAILY' | 'WEEKLY' | 'CUSTOM' | null
+    repeatDays?: number[] | null
+    repeatUntil?: string | null
+    notes?: string | null
+    status?: 'scheduled' | 'completed' | 'skipped' | 'cancelled'
+}
+
+export interface ScheduleSuggestion {
+    courseId: number
+    courseTitle: string
+    courseSlug: string
+    lessonId: number
+    lessonTitle: string
+    lessonSlug: string
+    suggestedDuration: number
 }

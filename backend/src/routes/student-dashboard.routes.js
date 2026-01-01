@@ -205,4 +205,131 @@ router.get(
     studentDashboardController.getCourseProgressDetail
 )
 
+// Study Schedule routes
+import studyScheduleController from '../controllers/study-schedule.controller.js'
+import {
+    createStudyScheduleValidator,
+    updateStudyScheduleValidator,
+    getStudySchedulesValidator,
+    scheduleIdValidator,
+} from '../validators/study-schedule.validator.js'
+import { validate } from '../middlewares/validate.middleware.js'
+
+/**
+ * @route   GET /api/v1/dashboard/student/study-schedules
+ * @desc    Get study schedules
+ * @access  Private (Student)
+ */
+router.get(
+    '/study-schedules',
+    isStudent,
+    validate(getStudySchedulesValidator),
+    studyScheduleController.getStudySchedules
+)
+
+/**
+ * @route   GET /api/v1/dashboard/student/study-schedules/today
+ * @desc    Get today's study schedules
+ * @access  Private (Student)
+ */
+router.get(
+    '/study-schedules/today',
+    isStudent,
+    studyScheduleController.getTodaySchedules
+)
+
+/**
+ * @route   GET /api/v1/dashboard/student/study-schedules/upcoming
+ * @desc    Get upcoming study schedules
+ * @access  Private (Student)
+ */
+router.get(
+    '/study-schedules/upcoming',
+    isStudent,
+    studyScheduleController.getUpcomingSchedules
+)
+
+/**
+ * @route   GET /api/v1/dashboard/student/study-schedules/suggestions
+ * @desc    Get schedule suggestions
+ * @access  Private (Student)
+ */
+router.get(
+    '/study-schedules/suggestions',
+    isStudent,
+    studyScheduleController.getScheduleSuggestions
+)
+
+/**
+ * @route   GET /api/v1/dashboard/student/study-schedules/:id
+ * @desc    Get study schedule by ID
+ * @access  Private (Student)
+ */
+router.get(
+    '/study-schedules/:id',
+    isStudent,
+    validate(scheduleIdValidator),
+    studyScheduleController.getStudyScheduleById
+)
+
+/**
+ * @route   POST /api/v1/dashboard/student/study-schedules
+ * @desc    Create study schedule
+ * @access  Private (Student)
+ */
+router.post(
+    '/study-schedules',
+    isStudent,
+    validate(createStudyScheduleValidator),
+    studyScheduleController.createStudySchedule
+)
+
+/**
+ * @route   PUT /api/v1/dashboard/student/study-schedules/:id
+ * @desc    Update study schedule
+ * @access  Private (Student)
+ */
+router.put(
+    '/study-schedules/:id',
+    isStudent,
+    validate([...scheduleIdValidator, ...updateStudyScheduleValidator]),
+    studyScheduleController.updateStudySchedule
+)
+
+/**
+ * @route   DELETE /api/v1/dashboard/student/study-schedules/:id
+ * @desc    Delete study schedule
+ * @access  Private (Student)
+ */
+router.delete(
+    '/study-schedules/:id',
+    isStudent,
+    validate(scheduleIdValidator),
+    studyScheduleController.deleteStudySchedule
+)
+
+/**
+ * @route   POST /api/v1/dashboard/student/study-schedules/:id/complete
+ * @desc    Mark schedule as completed
+ * @access  Private (Student)
+ */
+router.post(
+    '/study-schedules/:id/complete',
+    isStudent,
+    validate(scheduleIdValidator),
+    studyScheduleController.completeSchedule
+)
+
+/**
+ * @route   POST /api/v1/dashboard/student/study-schedules/:id/skip
+ * @desc    Skip schedule
+ * @access  Private (Student)
+ */
+router.post(
+    '/study-schedules/:id/skip',
+    isStudent,
+    validate(scheduleIdValidator),
+    studyScheduleController.skipSchedule
+)
+
 export default router

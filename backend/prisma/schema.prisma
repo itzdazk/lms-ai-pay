@@ -47,6 +47,7 @@ model User {
   lessonNotes         LessonNote[]
   learningGoals       LearningGoal[]
   bookmarks           Bookmark[]
+  studySchedules      StudySchedule[]
   refundRequests      RefundRequest[]
 
   @@index([email])
@@ -147,6 +148,7 @@ model Course {
   conversations     Conversation[]
   learningGoals     LearningGoal[]
   bookmarks         Bookmark[]
+  studySchedules    StudySchedule[]
 
   @@index([slug])
   @@index([instructorId])
@@ -221,11 +223,12 @@ model Lesson {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  progress      Progress[]
-  quizzes       Quiz[]
-  conversations Conversation[]
-  lessonNotes   LessonNote[]
-  bookmarks     Bookmark[]
+  progress       Progress[]
+  quizzes        Quiz[]
+  conversations  Conversation[]
+  lessonNotes    LessonNote[]
+  bookmarks      Bookmark[]
+  studySchedules StudySchedule[]
 
   @@unique([courseId, slug])
   @@index([courseId])
@@ -611,7 +614,41 @@ model Bookmark {
 }
 
 // =====================================================
-// 19. REFUND REQUESTS
+// 19. STUDY SCHEDULES
+// =====================================================
+model StudySchedule {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        Int       @map("course_id")
+  course          Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonId        Int?      @map("lesson_id")
+  lesson          Lesson?   @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  title           String?   @db.VarChar(200)
+  scheduledDate   DateTime  @map("scheduled_date") @db.Timestamptz
+  duration        Int       @default(60)
+  reminderMinutes Int       @default(15) @map("reminder_minutes")
+  isReminderSent  Boolean   @default(false) @map("is_reminder_sent")
+  reminderSentAt  DateTime? @map("reminder_sent_at") @db.Timestamptz
+  repeatType      String?   @map("repeat_type") @db.VarChar(20)
+  repeatDays      Json?     @map("repeat_days")
+  repeatUntil     DateTime? @map("repeat_until") @db.Timestamptz
+  notes           String?   @db.Text
+  status          String    @default("scheduled") @db.VarChar(20)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([scheduledDate])
+  @@index([courseId])
+  @@index([status])
+  @@index([userId, scheduledDate])
+  @@map("study_schedules")
+}
+
+// =====================================================
+// 20. REFUND REQUESTS
 // =====================================================
 model RefundRequest {
   id                    Int       @id @default(autoincrement())

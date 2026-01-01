@@ -42,7 +42,10 @@ class EmailService {
 
             // Replace year placeholder if not provided
             if (!data.year) {
-                html = html.replace(/{{year}}/g, new Date().getFullYear().toString())
+                html = html.replace(
+                    /{{year}}/g,
+                    new Date().getFullYear().toString()
+                )
             }
 
             return html
@@ -176,7 +179,9 @@ class EmailService {
             amount: formattedAmount,
             paymentGateway: order.paymentGateway || 'N/A',
             transactionId: order.transactionId || 'N/A',
-            paymentDate: new Date(order.paidAt || Date.now()).toLocaleString('vi-VN'),
+            paymentDate: new Date(order.paidAt || Date.now()).toLocaleString(
+                'vi-VN'
+            ),
             courseUrl,
             year: new Date().getFullYear().toString(),
         })
@@ -211,6 +216,51 @@ class EmailService {
         return this.sendEmail({
             to: email,
             subject: 'Đăng ký Thành công - LMS AI Pay',
+            html,
+            text,
+        })
+    }
+
+    /**
+     * Send study schedule reminder email
+     */
+    async sendStudyScheduleReminderEmail(email, userName, schedule) {
+        const scheduledDate = new Date(schedule.scheduledDate)
+        const now = new Date()
+        const timeRemaining = Math.ceil(
+            (scheduledDate.getTime() - now.getTime()) / (1000 * 60)
+        )
+
+        const scheduledTime = scheduledDate.toLocaleString('vi-VN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        })
+
+        const lessonUrl = schedule.lesson
+            ? `${config.CLIENT_URL}/courses/${schedule.course.slug}/lessons/${schedule.lesson.slug}`
+            : `${config.CLIENT_URL}/courses/${schedule.course.slug}/lessons`
+
+        const html = await this.loadTemplate('study-schedule-reminder', {
+            userName,
+            courseTitle: schedule.course.title || 'N/A',
+            lessonTitle: schedule.lesson?.title || 'Bài tiếp theo',
+            scheduledTime,
+            duration: schedule.duration || 60,
+            timeRemaining: timeRemaining > 0 ? timeRemaining : 0,
+            lessonUrl,
+            notes: schedule.notes || '',
+            year: new Date().getFullYear().toString(),
+        })
+
+        const text = `Xin chào ${userName},\n\nBạn có một buổi học sắp bắt đầu!\n\nKhóa học: ${schedule.course.title}\n${schedule.lesson ? `Bài học: ${schedule.lesson.title}\n` : ''}Thời gian: ${scheduledTime}\nThời lượng: ${schedule.duration} phút\nCòn lại: ${timeRemaining} phút\n\nBắt đầu học ngay: ${lessonUrl}`
+
+        return this.sendEmail({
+            to: email,
+            subject: `Nhắc nhở: Lịch học sắp tới - ${schedule.course.title}`,
             html,
             text,
         })

@@ -4,6 +4,7 @@ import config from './config/app.config.js'
 import logger from './config/logger.config.js'
 import { connectDB, disconnectDB } from './config/database.config.js'
 import paymentExpirationCron from './cron/payment-expiration.cron.js'
+import studyScheduleReminderCron from './cron/study-schedule-reminder.cron.js'
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -19,8 +20,9 @@ const startServer = async () => {
         // Connect to database
         await connectDB() // Wait until completion -> continue
 
-        // Start cron jobs (VNPay expiration handler)
+        // Start cron jobs
         paymentExpirationCron.start()
+        studyScheduleReminderCron.start()
 
         // Start server
         const server = app.listen(config.PORT, () => {
@@ -42,6 +44,7 @@ const startServer = async () => {
 
             server.close(async () => {
                 paymentExpirationCron.stop()
+                studyScheduleReminderCron.stop()
                 await disconnectDB()
                 process.exit(1)
             })
@@ -53,6 +56,7 @@ const startServer = async () => {
             server.close(async () => {
                 logger.info('Process terminated!')
                 paymentExpirationCron.stop()
+                studyScheduleReminderCron.stop()
                 await disconnectDB()
                 process.exit(0)
             })
@@ -64,6 +68,7 @@ const startServer = async () => {
             server.close(async () => {
                 logger.info('Process terminated!')
                 paymentExpirationCron.stop()
+                studyScheduleReminderCron.stop()
                 await disconnectDB()
                 process.exit(0)
             })
