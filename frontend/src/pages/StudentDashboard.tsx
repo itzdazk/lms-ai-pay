@@ -23,8 +23,6 @@ import {
     QuizPerformanceSummary,
     StudyTimeChart,
     RecommendedCourses,
-    LearningStreakCard,
-    CalendarHeatmap,
     StatCard,
     MyCoursesSection,
     AchievementsSection,
@@ -235,6 +233,12 @@ export function StudentDashboard() {
             {/* My Courses & Achievements */}
             <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
                 <MyCoursesSection enrollments={enrolledCourses} />
+                {/* Recommended Courses */}
+                <div className='mb-10'>
+                    <NextRecommendationsSection
+                        enrolledCourses={enrolledCourses}
+                    />
+                </div>
                 <div className='space-y-6'>
                     <AchievementsSection
                         completedCourses={completedCourses}
@@ -257,17 +261,6 @@ export function StudentDashboard() {
 
                 {/* Study Time Analytics */}
                 <StudyTimeChart />
-            </div>
-
-            {/* Phase 2: Learning Streak & Calendar */}
-            <div className='space-y-6 mb-10'>
-                <LearningStreakCard />
-                <CalendarHeatmap />
-            </div>
-
-            {/* Recommended Courses */}
-            <div className='mb-10'>
-                <NextRecommendationsSection enrolledCourses={enrolledCourses} />
             </div>
         </div>
     )
