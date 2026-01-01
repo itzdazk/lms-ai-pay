@@ -508,15 +508,7 @@ export function InstructorDashboard() {
                     <DarkTabsList>
                         <DarkTabsTrigger value='courses' variant='blue'>
                             <BookOpen className='h-4 w-4 mr-2' />
-                            Quản lí khóa học
-                        </DarkTabsTrigger>
-                        <DarkTabsTrigger value='orders' variant='blue'>
-                            <ShoppingCart className='h-4 w-4 mr-2' />
-                            Quản lí đơn hàng
-                        </DarkTabsTrigger>
-                        <DarkTabsTrigger value='enrollments' variant='blue'>
-                            <Users className='h-4 w-4 mr-2' />
-                            Quản lí học viên
+                            Khóa học
                         </DarkTabsTrigger>
                         <DarkTabsTrigger value='analytics' variant='blue'>
                             <BarChart3 className='h-4 w-4 mr-2' />
@@ -525,6 +517,14 @@ export function InstructorDashboard() {
                         <DarkTabsTrigger value='revenue' variant='blue'>
                             <DollarSign className='h-4 w-4 mr-2' />
                             Doanh thu
+                        </DarkTabsTrigger>
+                        <DarkTabsTrigger value='orders' variant='blue'>
+                            <ShoppingCart className='h-4 w-4 mr-2' />
+                            Đơn hàng
+                        </DarkTabsTrigger>
+                        <DarkTabsTrigger value='enrollments' variant='blue'>
+                            <Users className='h-4 w-4 mr-2' />
+                            Học viên
                         </DarkTabsTrigger>
                     </DarkTabsList>
                     {/* Courses Management Tab */}
