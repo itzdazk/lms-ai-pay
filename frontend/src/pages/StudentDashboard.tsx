@@ -16,7 +16,6 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { useStudentDashboard } from '../hooks/useStudentDashboard'
 import { useEnrolledCourses } from '../hooks/useEnrolledCourses'
-import { useContinueWatching } from '../hooks/useContinueWatching'
 import { useStudyTime } from '../hooks/useStudyTime'
 import { useLearningStreak } from '../hooks/useLearningStreak'
 import {
@@ -27,7 +26,6 @@ import {
     LearningStreakCard,
     CalendarHeatmap,
     StatCard,
-    ContinueWatchingSection,
     MyCoursesSection,
     AchievementsSection,
     NextRecommendationsSection,
@@ -38,7 +36,6 @@ export function StudentDashboard() {
     const { dashboard, loading: dashboardLoading } = useStudentDashboard()
     const { courses: enrolledCourses, loading: coursesLoading } =
         useEnrolledCourses(10)
-    const { lessons: continueWatching } = useContinueWatching(5)
     const { analytics: studyTime } = useStudyTime()
     const { streak, loading: streakLoading } = useLearningStreak()
 
@@ -92,9 +89,7 @@ export function StudentDashboard() {
             description: 'Quay lại bài giảng gần nhất',
             icon: PlayCircle,
             href:
-                continueWatching.length > 0
-                    ? `/courses/${continueWatching[0].course.slug}/lessons/${continueWatching[0].slug}`
-                    : activeCourses.length > 0
+                activeCourses.length > 0
                     ? `/courses/${activeCourses[0].course.slug}/lessons`
                     : '/courses',
         },
@@ -236,9 +231,6 @@ export function StudentDashboard() {
                     <Progress value={totalProgress} />
                 </div>
             </div>
-
-            {/* Continue Watching */}
-            <ContinueWatchingSection lessons={continueWatching} />
 
             {/* My Courses & Achievements */}
             <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
