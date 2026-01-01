@@ -20,7 +20,7 @@ import { useEnrolledCourses } from '../hooks/useEnrolledCourses'
 import { useStudyTime } from '../hooks/useStudyTime'
 import { useLearningStreak } from '../hooks/useLearningStreak'
 import {
-    StudyTimeChart,
+    StudyTimeAnalytics,
     StatCard,
     MyCoursesSection,
     AchievementsSection,
@@ -250,21 +250,26 @@ export function StudentDashboard() {
                 <MyCoursesSection enrollments={enrolledCourses} />
                 {/* Recommended Courses */}
                 <NextRecommendationsSection enrolledCourses={enrolledCourses} />
-                <div className='space-y-6'>
-                    <AchievementsSection
-                        completedCourses={completedCourses}
-                        totalProgress={totalProgress}
-                    />
-                </div>
             </div>
 
+            {/* Analytics Section */}
             <div className='space-y-6 mb-10'>
                 <h2 className='text-2xl font-bold text-black dark:text-white'>
                     Phân tích & Thống kê
                 </h2>
 
                 {/* Study Time Analytics */}
-                <StudyTimeChart />
+                <StudyTimeAnalytics />
+            </div>
+
+            {/* Achievements Section */}
+            <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
+                <div className='space-y-6'>
+                    <AchievementsSection
+                        completedCourses={completedCourses}
+                        totalProgress={totalProgress}
+                    />
+                </div>
             </div>
 
             {/* Recent Activities Modal */}
