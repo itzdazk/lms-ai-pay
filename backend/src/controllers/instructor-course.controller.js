@@ -49,6 +49,7 @@ class InstructorCourseController {
     getInstructorCourseById = asyncHandler(async (req, res) => {
         const { id } = req.params
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -57,7 +58,8 @@ class InstructorCourseController {
 
         const course = await instructorCourseService.getInstructorCourseById(
             courseId,
-            instructorId
+            instructorId,
+            isAdmin
         )
 
         return ApiResponse.success(res, course, 'Course retrieved successfully')
@@ -88,6 +90,7 @@ class InstructorCourseController {
     updateCourse = asyncHandler(async (req, res) => {
         const { id } = req.params
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -99,7 +102,8 @@ class InstructorCourseController {
         const course = await instructorCourseService.updateCourse(
             courseId,
             instructorId,
-            updateData
+            updateData,
+            isAdmin
         )
 
         return ApiResponse.success(res, course, 'Course updated successfully')
@@ -113,13 +117,14 @@ class InstructorCourseController {
     deleteCourse = asyncHandler(async (req, res) => {
         const { id } = req.params
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
             return ApiResponse.badRequest(res, 'Invalid course ID')
         }
 
-        await instructorCourseService.deleteCourse(courseId, instructorId)
+        await instructorCourseService.deleteCourse(courseId, instructorId, isAdmin)
 
         return ApiResponse.success(res, null, 'Course deleted successfully')
     })
@@ -133,6 +138,7 @@ class InstructorCourseController {
         const { id } = req.params
         const { status } = req.body
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -146,7 +152,8 @@ class InstructorCourseController {
         const course = await instructorCourseService.changeCourseStatus(
             courseId,
             instructorId,
-            status
+            status,
+            isAdmin
         )
 
         return ApiResponse.success(
@@ -183,6 +190,7 @@ class InstructorCourseController {
         const { id } = req.params
         const instructorId = req.user.id
         const userRole = req.user.role
+        const isAdmin = userRole === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -197,7 +205,8 @@ class InstructorCourseController {
             courseId,
             instructorId,
             req.file,
-            userRole
+            userRole,
+            isAdmin
         )
 
         return ApiResponse.success(
@@ -216,6 +225,7 @@ class InstructorCourseController {
         const { id } = req.params
         const instructorId = req.user.id
         const userRole = req.user.role
+        const isAdmin = userRole === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -230,7 +240,8 @@ class InstructorCourseController {
             courseId,
             instructorId,
             req.file,
-            userRole
+            userRole,
+            isAdmin
         )
 
         return ApiResponse.success(
@@ -249,6 +260,7 @@ class InstructorCourseController {
         const { id } = req.params
         const { tagIds } = req.body
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -265,7 +277,8 @@ class InstructorCourseController {
         const course = await instructorCourseService.addTagsToCourse(
             courseId,
             instructorId,
-            tagIds
+            tagIds,
+            isAdmin
         )
 
         return ApiResponse.success(res, course, 'Tags added successfully')
@@ -279,6 +292,7 @@ class InstructorCourseController {
     removeTagFromCourse = asyncHandler(async (req, res) => {
         const { id, tagId } = req.params
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
         const tagIdInt = parseInt(tagId)
 
@@ -293,7 +307,8 @@ class InstructorCourseController {
         const course = await instructorCourseService.removeTagFromCourse(
             courseId,
             instructorId,
-            tagIdInt
+            tagIdInt,
+            isAdmin
         )
 
         return ApiResponse.success(res, course, 'Tag removed successfully')
@@ -307,6 +322,7 @@ class InstructorCourseController {
     getCourseAnalytics = asyncHandler(async (req, res) => {
         const { id } = req.params
         const instructorId = req.user.id
+        const isAdmin = req.user.role === 'ADMIN'
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
@@ -315,7 +331,8 @@ class InstructorCourseController {
 
         const analytics = await instructorCourseService.getCourseAnalytics(
             courseId,
-            instructorId
+            instructorId,
+            isAdmin
         )
 
         return ApiResponse.success(

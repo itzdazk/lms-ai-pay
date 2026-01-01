@@ -154,11 +154,11 @@ class InstructorCourseService {
      * @param {number} instructorId - Instructor user ID
      * @returns {Promise<object>} Course with full details
      */
-    async getInstructorCourseById(courseId, instructorId) {
+    async getInstructorCourseById(courseId, instructorId, isAdmin = false) {
         const course = await prisma.course.findFirst({
             where: {
                 id: courseId,
-                instructorId,
+                ...(isAdmin ? {} : { instructorId }),
             },
             select: {
                 id: true,
@@ -391,7 +391,7 @@ class InstructorCourseService {
      * @param {object} data - Course data to update
      * @returns {Promise<object>} Updated course
      */
-    async updateCourse(courseId, instructorId, data) {
+    async updateCourse(courseId, instructorId, data, isAdmin = false) {
         // Check if course exists and belongs to instructor
         const existingCourse = await prisma.course.findUnique({
             where: { id: courseId },
@@ -411,8 +411,8 @@ class InstructorCourseService {
             throw error
         }
 
-        // Check ownership
-        if (existingCourse.instructorId !== instructorId) {
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (existingCourse.instructorId !== instructorId && !isAdmin) {
             const error = new Error(
                 'You do not have permission to manage this course'
             )
@@ -654,7 +654,7 @@ class InstructorCourseService {
      * @param {number} instructorId - Instructor user ID
      * @returns {Promise<boolean>}
      */
-    async deleteCourse(courseId, instructorId) {
+    async deleteCourse(courseId, instructorId, isAdmin = false) {
         // Check if course exists and belongs to instructor
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -676,8 +676,8 @@ class InstructorCourseService {
             throw error
         }
 
-        // Check ownership
-        if (course.instructorId !== instructorId) {
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
             const error = new Error(
                 'You do not have permission to manage this course'
             )
@@ -713,7 +713,7 @@ class InstructorCourseService {
      * @param {string} status - New status (draft, published, archived)
      * @returns {Promise<object>} Updated course
      */
-    async changeCourseStatus(courseId, instructorId, status) {
+    async changeCourseStatus(courseId, instructorId, status, isAdmin = false) {
         // Validate status
         if (!Object.values(COURSE_STATUS).includes(status)) {
             const error = new Error('Invalid status')
@@ -748,8 +748,8 @@ class InstructorCourseService {
             throw error
         }
 
-        // Check ownership FIRST before any validation
-        if (course.instructorId !== instructorId) {
+        // Check ownership FIRST before any validation - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
             const error = new Error(
                 'You do not have permission to manage this course'
             )
@@ -908,7 +908,8 @@ class InstructorCourseService {
         courseId,
         instructorId,
         file,
-        userRole = USER_ROLES.INSTRUCTOR
+        userRole = USER_ROLES.INSTRUCTOR,
+        isAdmin = false
     ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -923,6 +924,15 @@ class InstructorCourseService {
         if (!course) {
             const error = new Error('Course not found')
             error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -1025,7 +1035,8 @@ class InstructorCourseService {
         courseId,
         instructorId,
         file,
-        userRole = USER_ROLES.INSTRUCTOR
+        userRole = USER_ROLES.INSTRUCTOR,
+        isAdmin = false
     ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1040,6 +1051,15 @@ class InstructorCourseService {
         if (!course) {
             const error = new Error('Course not found')
             error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
+            const error = new Error(
+                'You do not have permission to manage this course'
+            )
+            error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
@@ -1104,7 +1124,7 @@ class InstructorCourseService {
      * @param {array} tagIds - Array of tag IDs to add
      * @returns {Promise<object>} Updated course with tags
      */
-    async addTagsToCourse(courseId, instructorId, tagIds) {
+    async addTagsToCourse(courseId, instructorId, tagIds, isAdmin = false) {
         // Check if course exists and belongs to instructor
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1121,8 +1141,8 @@ class InstructorCourseService {
             throw error
         }
 
-        // Check ownership
-        if (course.instructorId !== instructorId) {
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
             const error = new Error(
                 'You do not have permission to manage this course'
             )
@@ -1213,7 +1233,7 @@ class InstructorCourseService {
      * @param {number} tagId - Tag ID to remove
      * @returns {Promise<object>} Updated course with tags
      */
-    async removeTagFromCourse(courseId, instructorId, tagId) {
+    async removeTagFromCourse(courseId, instructorId, tagId, isAdmin = false) {
         // Check if course exists and belongs to instructor
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1230,8 +1250,8 @@ class InstructorCourseService {
             throw error
         }
 
-        // Check ownership
-        if (course.instructorId !== instructorId) {
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
             const error = new Error(
                 'You do not have permission to manage this course'
             )
@@ -1303,7 +1323,7 @@ class InstructorCourseService {
      * @param {number} instructorId - Instructor user ID
      * @returns {Promise<object>} Course analytics
      */
-    async getCourseAnalytics(courseId, instructorId) {
+    async getCourseAnalytics(courseId, instructorId, isAdmin = false) {
         // Check if course exists and belongs to instructor
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1322,8 +1342,8 @@ class InstructorCourseService {
             throw error
         }
 
-        // Check ownership
-        if (course.instructorId !== instructorId) {
+        // Check ownership - allow if instructor is the owner OR if user is admin
+        if (course.instructorId !== instructorId && !isAdmin) {
             const error = new Error(
                 'You do not have permission to manage this course'
             )
