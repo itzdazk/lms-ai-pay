@@ -19,6 +19,7 @@ import {
     CourseTable,
     CourseDialogs,
 } from '../../components/admin/courses'
+import { CourseStudentsDialog } from '../../components/admin/courses/CourseStudentsDialog'
 
 export function CoursesPage() {
     const { user: currentUser, loading: authLoading } = useAuth()
@@ -76,6 +77,7 @@ export function CoursesPage() {
     const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false)
+    const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false)
     const [selectedCourse, setSelectedCourse] = useState<AdminCourse | null>(
         null
     )
@@ -593,6 +595,11 @@ export function CoursesPage() {
         setIsAnalyticsDialogOpen(true)
     }
 
+    const handleViewStudents = (course: AdminCourse) => {
+        setSelectedCourse(course)
+        setIsStudentsDialogOpen(true)
+    }
+
     const handleChangeStatus = (course: AdminCourse) => {
         setSelectedCourse(course)
         setIsStatusDialogOpen(true)
@@ -726,6 +733,7 @@ export function CoursesPage() {
                         onViewCourse={handleViewCourse}
                         onEditCourse={handleEditCourse}
                         onViewAnalytics={handleViewAnalytics}
+                        onViewStudents={handleViewStudents}
                         onChangeStatus={handleChangeStatus}
                         onDeleteCourse={handleDeleteCourse}
                         onRowSelect={setSelectedRowId}
@@ -759,6 +767,15 @@ export function CoursesPage() {
                         onConfirmToggleFeatured={confirmToggleFeatured}
                         onConfirmChangeStatus={confirmChangeStatus}
                         onConfirmDelete={confirmDeleteCourse}
+                    />
+
+                    <CourseStudentsDialog
+                        open={isStudentsDialogOpen}
+                        onOpenChange={(open) => {
+                            setIsStudentsDialogOpen(open)
+                            if (!open) setSelectedCourse(null)
+                        }}
+                        course={selectedCourse}
                     />
                 </div>
             </div>

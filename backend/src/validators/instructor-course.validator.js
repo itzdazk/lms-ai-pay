@@ -4,6 +4,37 @@ import { validate } from '../middlewares/validate.middleware.js'
 import { COURSE_STATUS, COURSE_LEVEL } from '../config/constants.js'
 
 /**
+ * Validator for getting course enrollments
+ */
+export const getCourseEnrollmentsValidator = [
+    param('id')
+        .isInt({ min: 1 })
+        .withMessage('Course ID must be a positive integer'),
+    query('page')
+        .optional()
+        .isInt({ min: 1 })
+        .withMessage('Page must be a positive integer'),
+    query('limit')
+        .optional()
+        .isInt({ min: 1, max: 100 })
+        .withMessage('Limit must be between 1 and 100'),
+    query('search')
+        .optional()
+        .trim()
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Search query must be between 1 and 100 characters'),
+    query('status')
+        .optional()
+        .isIn(['ACTIVE', 'COMPLETED', 'DROPPED', 'EXPIRED'])
+        .withMessage('Invalid enrollment status'),
+    query('sort')
+        .optional()
+        .isIn(['newest', 'oldest', 'progress', 'lastAccessed'])
+        .withMessage('Sort must be one of: newest, oldest, progress, lastAccessed'),
+    validate,
+]
+
+/**
  * Validator for getting instructor courses
  */
 export const getInstructorCoursesValidator = [

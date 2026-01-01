@@ -6,28 +6,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
 import { DarkOutlineButton } from '@/components/ui/buttons'
 import { DarkOutlineInput } from '@/components/ui/dark-outline-input'
-import {
-    DarkOutlineTable,
-    DarkOutlineTableBody,
-    DarkOutlineTableCell,
-    DarkOutlineTableHead,
-    DarkOutlineTableHeader,
-    DarkOutlineTableRow,
-} from '@/components/ui/dark-outline-table'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Loader2, Search, BookOpen } from 'lucide-react'
+import { Loader2, Search, BookOpen, GraduationCap, Calendar, TrendingUp, CheckCircle, Trash2, User as UserIcon } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { Enrollment, EnrollmentStatus, User } from '@/lib/api/types'
 
@@ -118,238 +103,256 @@ export function UserEnrollmentsDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 wide
-                className='bg-[#1A1A1A] border-[#2D2D2D] text-white w-[92vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-y-auto px-4 py-3 sm:px-5 sm:py-4'
+                className='bg-[#0A0A0A] border-[#2D2D2D] text-white w-[95vw] max-w-7xl h-[92vh] max-h-[92vh] p-0 overflow-hidden flex flex-col'
             >
-                <DialogHeader className='pb-1 space-y-0.5'>
-                    <DialogTitle className='flex items-center gap-2 text-base sm:text-lg'>
-                        <BookOpen className='h-5 w-5 text-blue-400' />
-                        Khóa học đã đăng ký
-                    </DialogTitle>
-                    <DialogDescription className='text-gray-400 text-[11px] sm:text-xs'>
-                        Xem danh sách khóa học mà {user?.fullName} đã đăng ký
-                    </DialogDescription>
-                </DialogHeader>
-
-                <Card className='bg-[#141414] border-[#2D2D2D] shadow-lg'>
-                    <CardHeader className='pb-2 pt-2 px-2 sm:px-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                        <div className='flex items-center gap-2'>
-                            <Avatar className='h-8 w-8'>
+                {/* Header Section */}
+                <div className='px-6 py-4 border-b border-[#2D2D2D] bg-gradient-to-r from-[#1A1A1A] to-[#141414] flex-shrink-0'>
+                    <div className='flex items-start justify-between gap-4'>
+                        {/* User Info */}
+                        <div className='flex items-start gap-3 flex-1'>
+                            <Avatar className='h-16 w-16 border-2 border-[#2D2D2D]'>
                                 <AvatarImage src={user?.avatarUrl || user?.avatar} />
-                                <AvatarFallback className='bg-blue-600 text-white'>
+                                <AvatarFallback className='bg-gradient-to-br from-blue-600 to-blue-700 text-white text-lg font-semibold'>
                                     {initials || 'U'}
                                 </AvatarFallback>
                             </Avatar>
-                            <div className='min-w-0'>
-                                <CardTitle className='text-white text-sm sm:text-base leading-tight truncate'>
-                                    {user?.fullName}
-                                </CardTitle>
-                                <CardDescription className='text-[11px] sm:text-xs text-gray-400 truncate leading-tight'>
+                            <div className='flex-1 min-w-0'>
+                                <DialogTitle className='flex items-center gap-2 text-xl font-semibold mb-2'>
+                                    <UserIcon className='h-6 w-6 text-blue-400 flex-shrink-0' />
+                                    <span className='truncate'>{user?.fullName}</span>
+                                </DialogTitle>
+                                <DialogDescription className='text-gray-400 text-sm mb-2'>
                                     @{user?.userName} • {user?.email}
-                                </CardDescription>
-                                <div className='flex items-center gap-2 mt-1 text-[10px] sm:text-[11px] text-gray-400'>
+                                </DialogDescription>
+                                <div className='flex items-center gap-2'>
                                     <Badge
                                         variant='outline'
                                         className={getRoleBadgeClass(user?.role)}
                                     >
                                         {getRoleLabel(user?.role)}
                                     </Badge>
-                                    <span className='text-gray-500'>
+                                    <span className='text-xs text-gray-500'>
                                         Tham gia từ {user ? formatDate(user.createdAt) : '--'}
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <div className='flex flex-col items-start sm:items-end text-[11px] sm:text-xs text-gray-400 gap-0.5'>
-                            <span>Tổng: {totalEnrollments ?? pagination.total} khóa đăng ký</span>
-                            <span>Trang {pagination.page}/{pagination.totalPages}</span>
-                        </div>
-                    </CardHeader>
-
-                    <CardContent className='space-y-3 pt-0 px-2 sm:px-3 pb-3'>
-                        <div className='flex items-center gap-2'>
-                            <div className='relative flex-1'>
-                                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
-                                <DarkOutlineInput
-                                    value={search}
-                                    onChange={(e) => onSearchChange(e.target.value)}
-                                    placeholder='Tìm theo tên khóa học...'
-                                    className='pl-10 pr-4'
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            onSearch()
-                                        }
-                                    }}
-                                />
+                        
+                        {/* Stats Cards */}
+                        <div className='flex gap-3 flex-shrink-0'>
+                            <div className='bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg px-4 py-2.5 min-w-[120px]'>
+                                <div className='flex items-center gap-2 mb-1'>
+                                    <BookOpen className='h-4 w-4 text-blue-400' />
+                                    <span className='text-xs text-gray-400'>Tổng khóa học</span>
+                                </div>
+                                <div className='text-2xl font-bold text-white'>{totalEnrollments ?? pagination.total}</div>
                             </div>
-                            <Button
-                                onClick={onSearch}
-                                className='bg-blue-600 hover:bg-blue-700 text-white'
-                                disabled={loading}
-                            >
-                                Tìm kiếm
-                            </Button>
+                            <div className='bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg px-4 py-2.5 min-w-[120px]'>
+                                <div className='flex items-center gap-2 mb-1'>
+                                    <TrendingUp className='h-4 w-4 text-green-400' />
+                                    <span className='text-xs text-gray-400'>Đang học</span>
+                                </div>
+                                <div className='text-2xl font-bold text-white'>
+                                    {enrollments.filter(e => e.status === 'ACTIVE').length}
+                                </div>
+                            </div>
+                            <div className='bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg px-4 py-2.5 min-w-[120px]'>
+                                <div className='flex items-center gap-2 mb-1'>
+                                    <CheckCircle className='h-4 w-4 text-emerald-400' />
+                                    <span className='text-xs text-gray-400'>Hoàn thành</span>
+                                </div>
+                                <div className='text-2xl font-bold text-white'>
+                                    {enrollments.filter(e => e.status === 'COMPLETED').length}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filters Section */}
+                <div className='px-6 py-4 bg-[#141414] border-b border-[#2D2D2D] flex-shrink-0'>
+                    <div className='flex items-center gap-3'>
+                        <div className='relative flex-1'>
+                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                            <DarkOutlineInput
+                                value={search}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                placeholder='Tìm kiếm theo tên khóa học...'
+                                className='pl-10 pr-4 h-10'
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        onSearch()
+                                    }
+                                }}
+                            />
                         </div>
 
-                        <div className='border border-[#2D2D2D] rounded-lg overflow-hidden'>
-                            <DarkOutlineTable>
-                                <DarkOutlineTableHeader>
-                                    <DarkOutlineTableRow>
-                                        <DarkOutlineTableHead className='text-left'>Khóa học</DarkOutlineTableHead>
-                                        <DarkOutlineTableHead className='text-left'>Trạng thái</DarkOutlineTableHead>
-                                        <DarkOutlineTableHead className='text-left'>Tiến độ</DarkOutlineTableHead>
-                                        <DarkOutlineTableHead className='text-left'>Đăng ký</DarkOutlineTableHead>
-                                        <DarkOutlineTableHead className='text-left'>Truy cập gần nhất</DarkOutlineTableHead>
-                                        <DarkOutlineTableHead className='text-right'>Thao tác</DarkOutlineTableHead>
-                                    </DarkOutlineTableRow>
-                                </DarkOutlineTableHeader>
-                                <DarkOutlineTableBody>
-                                    {loading ? (
-                                        <DarkOutlineTableRow>
-                                            <DarkOutlineTableCell colSpan={6}>
-                                                <div className='flex items-center justify-center py-8 text-gray-400 gap-2'>
-                                                    <Loader2 className='h-5 w-5 animate-spin' />
-                                                    Đang tải danh sách đăng ký...
+                        <Button
+                            onClick={onSearch}
+                            className='bg-blue-600 hover:bg-blue-700 text-white h-10 px-6'
+                            disabled={loading}
+                        >
+                            {loading ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Tìm'}
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Content Section */}
+                <div className='flex-1 overflow-y-auto px-6 py-4'>
+                    {loading ? (
+                        <div className='flex items-center justify-center h-full'>
+                            <div className='text-center space-y-3'>
+                                <Loader2 className='h-10 w-10 animate-spin text-blue-400 mx-auto' />
+                                <p className='text-gray-400'>Đang tải danh sách khóa học...</p>
+                            </div>
+                        </div>
+                    ) : enrollments.length === 0 ? (
+                        <div className='flex items-center justify-center h-full'>
+                            <div className='text-center space-y-3'>
+                                <BookOpen className='h-16 w-16 text-gray-600 mx-auto' />
+                                <p className='text-gray-400 text-lg'>Chưa có khóa học nào</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className='grid gap-4'>
+                            {enrollments.map((enrollment) => (
+                                <div
+                                    key={enrollment.id}
+                                    className='bg-[#141414] border border-[#2D2D2D] rounded-lg p-4 hover:border-[#3D3D3D] transition-all'
+                                >
+                                    <div className='flex items-center gap-4'>
+                                        {/* Course Thumbnail */}
+                                        {enrollment.course?.thumbnailUrl ? (
+                                            <img
+                                                src={enrollment.course.thumbnailUrl}
+                                                alt={enrollment.course.title}
+                                                className='h-20 w-32 rounded-lg object-cover border-2 border-[#2D2D2D] flex-shrink-0'
+                                            />
+                                        ) : (
+                                            <div className='h-20 w-32 rounded-lg bg-[#242424] border-2 border-[#2D2D2D] flex items-center justify-center flex-shrink-0'>
+                                                <BookOpen className='h-8 w-8 text-gray-600' />
+                                            </div>
+                                        )}
+
+                                        {/* Course Info */}
+                                        <div className='flex-1 min-w-0'>
+                                            <div className='flex items-center gap-2 mb-1'>
+                                                <h4 className='font-semibold text-white text-base truncate'>
+                                                    {enrollment.course?.title || 'Không xác định'}
+                                                </h4>
+                                                <Badge variant={getStatusBadge(enrollment.status)} className='text-xs flex-shrink-0'>
+                                                    {enrollment.status === 'COMPLETED'
+                                                        ? 'Hoàn thành'
+                                                        : enrollment.status === 'ACTIVE'
+                                                        ? 'Đang học'
+                                                        : 'Đã hủy'}
+                                                </Badge>
+                                            </div>
+                                            <p className='text-sm text-gray-400 mb-2 flex items-center gap-2'>
+                                                <GraduationCap className='h-3.5 w-3.5' />
+                                                {enrollment.course?.instructor?.fullName || 'Giảng viên ẩn danh'}
+                                            </p>
+
+                                            {/* Progress Bar */}
+                                            <div className='mb-2'>
+                                                <div className='flex items-center justify-between mb-1.5'>
+                                                    <span className='text-xs text-gray-400'>Tiến độ học tập</span>
+                                                    <span className='text-sm font-semibold text-white'>
+                                                        {Math.round(enrollment.progressPercentage)}%
+                                                    </span>
                                                 </div>
-                                            </DarkOutlineTableCell>
-                                        </DarkOutlineTableRow>
-                                    ) : enrollments.length === 0 ? (
-                                        <DarkOutlineTableRow>
-                                            <DarkOutlineTableCell colSpan={6}>
-                                                <div className='text-center py-8 text-gray-400'>
-                                                    Chưa có khóa học nào
-                                                </div>
-                                            </DarkOutlineTableCell>
-                                        </DarkOutlineTableRow>
-                                    ) : (
-                                        enrollments.map((enrollment) => (
-                                            <DarkOutlineTableRow key={enrollment.id}>
-                                                <DarkOutlineTableCell>
-                                                    <div className='flex items-center gap-3'>
-                                                        {enrollment.course?.thumbnailUrl ? (
-                                                            <img
-                                                                src={enrollment.course.thumbnailUrl}
-                                                                alt={enrollment.course.title}
-                                                                className='h-12 w-20 rounded object-cover border border-[#2D2D2D]'
-                                                            />
-                                                        ) : (
-                                                            <div className='h-12 w-20 rounded bg-[#242424] border border-[#2D2D2D] flex items-center justify-center text-xs text-gray-500'>
-                                                                No image
-                                                            </div>
-                                                        )}
-                                                        <div className='min-w-0'>
-                                                            <p className='font-medium text-white truncate'>
-                                                                {enrollment.course?.title || 'Không xác định'}
-                                                            </p>
-                                                            <p className='text-sm text-gray-400 truncate'>
-                                                                {enrollment.course?.instructor?.fullName || 'Giảng viên ẩn danh'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </DarkOutlineTableCell>
-                                                <DarkOutlineTableCell>
-                                                    <Badge variant={getStatusBadge(enrollment.status)}>
-                                                        {enrollment.status === 'COMPLETED'
-                                                            ? 'Hoàn thành'
-                                                            : enrollment.status === 'ACTIVE'
-                                                            ? 'Đang học'
-                                                            : 'Đã hủy'}
-                                                    </Badge>
-                                                </DarkOutlineTableCell>
-                                                <DarkOutlineTableCell>
-                                                    <div className='space-y-2'>
-                                                        <div className='flex items-center justify-between text-xs text-gray-400'>
-                                                            <span>Tiến độ</span>
-                                                            <span className='text-white'>
-                                                                {Math.round(enrollment.progressPercentage)}%
-                                                            </span>
-                                                        </div>
-                                                        <Progress value={enrollment.progressPercentage} className='h-2 bg-[#242424]' />
-                                                    </div>
-                                                </DarkOutlineTableCell>
-                                                <DarkOutlineTableCell>
-                                                    <div className='text-gray-300 text-sm'>
+                                                <Progress 
+                                                    value={enrollment.progressPercentage} 
+                                                    className='h-2 bg-[#242424]'
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Dates & Action */}
+                                        <div className='flex flex-col gap-3 min-w-[180px] flex-shrink-0'>
+                                            <div className='flex flex-col gap-2'>
+                                                <div className='flex items-center gap-2 text-xs'>
+                                                    <Calendar className='h-3.5 w-3.5 text-gray-500' />
+                                                    <span className='text-gray-400'>Đăng ký:</span>
+                                                    <span className='text-gray-300'>
                                                         {formatDate(enrollment.enrolledAt)}
-                                                    </div>
-                                                </DarkOutlineTableCell>
-                                                <DarkOutlineTableCell>
-                                                    <div className='text-gray-300 text-sm'>
+                                                    </span>
+                                                </div>
+                                                <div className='flex items-center gap-2 text-xs'>
+                                                    <Calendar className='h-3.5 w-3.5 text-gray-500' />
+                                                    <span className='text-gray-400'>Truy cập:</span>
+                                                    <span className='text-gray-300'>
                                                         {enrollment.lastAccessedAt
                                                             ? formatDate(enrollment.lastAccessedAt)
                                                             : 'Chưa truy cập'}
-                                                    </div>
-                                                </DarkOutlineTableCell>
-                                                <DarkOutlineTableCell className='text-right'>
-                                                    <Button
-                                                        variant='default'
-                                                        size='sm'
-                                                        className='bg-red-600 text-white hover:bg-red-700'
-                                                        onClick={() =>
-                                                            setPendingRemoval(
-                                                                enrollment
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            removingEnrollmentId ===
-                                                                enrollment.id ||
-                                                            loading
-                                                        }
-                                                    >
-                                                        {removingEnrollmentId ===
-                                                        enrollment.id ? (
-                                                            <Loader2 className='h-4 w-4 animate-spin' />
-                                                        ) : (
-                                                            'Xóa khỏi khóa'
-                                                        )}
-                                                    </Button>
-                                                </DarkOutlineTableCell>
-                                            </DarkOutlineTableRow>
-                                        ))
-                                    )}
-                                </DarkOutlineTableBody>
-                            </DarkOutlineTable>
-                        </div>
-                    </CardContent>
-                </Card>
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                {pagination.totalPages > 1 && (
-                    <div className='flex items-center justify-center gap-2 pt-2'>
-                        <DarkOutlineButton
-                            size='sm'
-                            onClick={() => onPageChange(1)}
-                            disabled={pagination.page === 1 || loading}
-                        >
-                            &lt;&lt;
-                        </DarkOutlineButton>
-                        <DarkOutlineButton
-                            size='sm'
-                            onClick={() => onPageChange(pagination.page - 1)}
-                            disabled={pagination.page === 1 || loading}
-                        >
-                            &lt;
-                        </DarkOutlineButton>
+                                            {/* Delete Button */}
+                                            <Button
+                                                variant='default'
+                                                size='sm'
+                                                className='bg-red-600 text-white hover:bg-red-700 w-full'
+                                                onClick={() => setPendingRemoval(enrollment)}
+                                                disabled={removingEnrollmentId === enrollment.id || loading}
+                                            >
+                                                {removingEnrollmentId === enrollment.id ? (
+                                                    <Loader2 className='h-4 w-4 animate-spin' />
+                                                ) : (
+                                                    <>
+                                                        <Trash2 className='h-4 w-4 mr-1' />
+                                                        Xóa
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer Pagination */}
+                {pagination.totalPages > 1 && !loading && (
+                    <div className='px-6 py-4 border-t border-[#2D2D2D] bg-[#141414] flex items-center justify-between flex-shrink-0'>
                         <span className='text-sm text-gray-400'>
-                            Trang {pagination.page} / {pagination.totalPages}
+                            Hiển thị {enrollments.length} / {totalEnrollments ?? pagination.total} khóa học
                         </span>
-                        <DarkOutlineButton
-                            size='sm'
-                            onClick={() => onPageChange(pagination.page + 1)}
-                            disabled={
-                                pagination.page === pagination.totalPages ||
-                                loading
-                            }
-                        >
-                            &gt;
-                        </DarkOutlineButton>
-                        <DarkOutlineButton
-                            size='sm'
-                            onClick={() => onPageChange(pagination.totalPages)}
-                            disabled={
-                                pagination.page === pagination.totalPages ||
-                                loading
-                            }
-                        >
-                            &gt;&gt;
-                        </DarkOutlineButton>
+                        <div className='flex items-center gap-2'>
+                            <DarkOutlineButton
+                                size='sm'
+                                onClick={() => onPageChange(1)}
+                                disabled={pagination.page === 1}
+                            >
+                                Đầu
+                            </DarkOutlineButton>
+                            <DarkOutlineButton
+                                size='sm'
+                                onClick={() => onPageChange(pagination.page - 1)}
+                                disabled={pagination.page === 1}
+                            >
+                                Trước
+                            </DarkOutlineButton>
+                            <span className='text-sm text-white px-3'>
+                                Trang {pagination.page} / {pagination.totalPages}
+                            </span>
+                            <DarkOutlineButton
+                                size='sm'
+                                onClick={() => onPageChange(pagination.page + 1)}
+                                disabled={pagination.page === pagination.totalPages}
+                            >
+                                Sau
+                            </DarkOutlineButton>
+                            <DarkOutlineButton
+                                size='sm'
+                                onClick={() => onPageChange(pagination.totalPages)}
+                                disabled={pagination.page === pagination.totalPages}
+                            >
+                                Cuối
+                            </DarkOutlineButton>
+                        </div>
                     </div>
                 )}
 
@@ -367,7 +370,7 @@ export function UserEnrollmentsDialog({
                             </DialogTitle>
                             <DialogDescription className='text-gray-400'>
                                 Hành động này sẽ hủy đăng ký và xóa tiến độ học liên quan của học viên cho khóa
-                                {pendingRemoval?.course?.title ? ` “${pendingRemoval.course.title}”` : ''}. Bạn chắc chắn?
+                                {pendingRemoval?.course?.title ? ` "${pendingRemoval.course.title}"` : ''}. Bạn chắc chắn?
                             </DialogDescription>
                         </DialogHeader>
 
@@ -380,6 +383,12 @@ export function UserEnrollmentsDialog({
                                 <span>Khóa học</span>
                                 <span className='text-white font-medium'>
                                     {pendingRemoval?.course?.title || '---'}
+                                </span>
+                            </div>
+                            <div className='flex items-center justify-between'>
+                                <span>Tiến độ hiện tại</span>
+                                <span className='text-white font-medium'>
+                                    {pendingRemoval ? Math.round(pendingRemoval.progressPercentage) : 0}%
                                 </span>
                             </div>
                         </div>

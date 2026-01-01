@@ -36,6 +36,7 @@ interface CourseRowProps {
     onViewCourse: (course: AdminCourse) => void
     onEditCourse: (course: AdminCourse) => void
     onViewAnalytics: (course: AdminCourse) => void
+    onViewStudents: (course: AdminCourse) => void
     onChangeStatus: (course: AdminCourse) => void
     onDeleteCourse: (course: AdminCourse) => void
     isSelected: boolean
@@ -48,6 +49,7 @@ export function CourseRow({
     onViewCourse,
     onEditCourse,
     onViewAnalytics,
+    onViewStudents,
     onChangeStatus,
     onDeleteCourse,
     isSelected,
@@ -448,6 +450,16 @@ export function CourseRow({
                         >
                             <RefreshCw className='h-4 w-4' />
                             Đổi trạng thái
+                        </div>
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onViewStudents(course)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <Users className='h-4 w-4' />
+                            Xem danh sách học viên
                         </div>
                         <div className='h-px bg-[#2D2D2D] my-1' />
                         <div

@@ -27,6 +27,7 @@ interface CourseTableProps {
   onViewCourse: (course: AdminCourse) => void;
   onEditCourse: (course: AdminCourse) => void;
   onViewAnalytics: (course: AdminCourse) => void;
+  onViewStudents: (course: AdminCourse) => void;
   onChangeStatus: (course: AdminCourse) => void;
   onDeleteCourse: (course: AdminCourse) => void;
   onRowSelect: (courseId: number | null) => void;
@@ -48,6 +49,7 @@ export function CourseTable({
   onViewCourse,
   onEditCourse,
   onViewAnalytics,
+  onViewStudents,
   onChangeStatus,
   onDeleteCourse,
   onRowSelect,
@@ -132,6 +134,7 @@ export function CourseTable({
                     onViewCourse={onViewCourse}
                     onEditCourse={onEditCourse}
                     onViewAnalytics={onViewAnalytics}
+                    onViewStudents={onViewStudents}
                     onChangeStatus={onChangeStatus}
                     onDeleteCourse={onDeleteCourse}
                     isSelected={selectedRowId === course.id}

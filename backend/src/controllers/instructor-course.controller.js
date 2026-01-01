@@ -2,6 +2,7 @@
 import instructorCourseService from '../services/instructor-course.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
+import { USER_ROLES } from '../config/constants.js'
 
 class InstructorCourseController {
     /**
@@ -339,6 +340,43 @@ class InstructorCourseController {
             res,
             analytics,
             'Course analytics retrieved successfully'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/instructor/courses/:id/enrollments
+     * @desc    Get enrollments (students) for a specific course
+     * @access  Private (Instructor/Admin - course owner or admin)
+     */
+    getCourseEnrollments = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const instructorId = req.user.id
+        const isAdmin = req.user.role === USER_ROLES.ADMIN
+        const courseId = parseInt(id)
+
+        if (isNaN(courseId)) {
+            return ApiResponse.badRequest(res, 'Invalid course ID')
+        }
+
+        const filters = {
+            page: parseInt(req.query.page) || 1,
+            limit: parseInt(req.query.limit) || 20,
+            search: req.query.search || '',
+            status: req.query.status || undefined,
+            sort: req.query.sort || 'newest',
+        }
+
+        const result = await instructorCourseService.getCourseEnrollments(
+            courseId,
+            instructorId,
+            isAdmin,
+            filters
+        )
+
+        return ApiResponse.success(
+            res,
+            result,
+            'Course enrollments retrieved successfully'
         )
     })
 }

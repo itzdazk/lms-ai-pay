@@ -214,5 +214,36 @@ export const instructorCoursesApi = {
         )
         return response.data.data
     },
+
+    // Get course enrollments
+    async getCourseEnrollments(
+        courseId: string,
+        filters?: {
+            page?: number
+            limit?: number
+            search?: string
+            status?: string
+            sort?: 'newest' | 'oldest' | 'progress' | 'lastAccessed'
+        }
+    ): Promise<any> {
+        const params = new URLSearchParams()
+
+        if (filters?.page) params.append('page', filters.page.toString())
+        if (filters?.limit) params.append('limit', filters.limit.toString())
+        if (filters?.search && filters.search.trim())
+            params.append('search', filters.search.trim())
+        if (filters?.status) params.append('status', filters.status)
+        if (filters?.sort) params.append('sort', filters.sort)
+
+        const queryString = params.toString()
+        const url = queryString
+            ? `/instructor/courses/${courseId}/enrollments?${queryString}`
+            : `/instructor/courses/${courseId}/enrollments`
+
+        const response = await apiClient.get<any>(url)
+        
+        // Backend returns: { success: true, message, data: { enrollments, totalEnrollments, pagination } }
+        return response.data.data
+    },
 }
 

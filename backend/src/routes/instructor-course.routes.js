@@ -14,6 +14,7 @@ import {
     getCourseAnalyticsValidator,
     addTagsToCourseValidator,
     removeTagFromCourseValidator,
+    getCourseEnrollmentsValidator,
 } from '../validators/instructor-course.validator.js'
 import { uploadThumbnail, uploadVideoPreview } from '../config/multer.config.js'
 
@@ -150,6 +151,18 @@ router.patch(
     '/:id/status',
     changeCourseStatusValidator,
     instructorCourseController.changeCourseStatus
+)
+
+/**
+ * @route   GET /api/v1/instructor/courses/:id/enrollments
+ * @desc    Get enrollments (students) for a specific course
+ * @access  Private (Instructor/Admin - course owner or admin)
+ * @query   page, limit, search, status, sort
+ */
+router.get(
+    '/:id/enrollments',
+    getCourseEnrollmentsValidator,
+    instructorCourseController.getCourseEnrollments
 )
 
 export default router

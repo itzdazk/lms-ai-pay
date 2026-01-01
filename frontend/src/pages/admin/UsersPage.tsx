@@ -445,7 +445,7 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
             setTotalEnrollments(response.totalEnrollments || 0)
         } catch (error) {
             console.error('Error loading enrollments:', error)
-            toast.error('Không thể tải khóa đã đăng ký của người dùng')
+            toast.error('Không thể tải khóa học đã đăng ký của người dùng')
         } finally {
             setEnrollmentLoading(false)
         }

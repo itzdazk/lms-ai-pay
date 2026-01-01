@@ -1542,6 +1542,133 @@ class InstructorCourseService {
             topStudents,
         }
     }
+
+    /**
+     * Get enrollments (students) for a specific course
+     * @param {number} courseId - Course ID
+     * @param {number} instructorId - Instructor user ID
+     * @param {boolean} isAdmin - Whether the user is an admin
+     * @param {object} filters - Filters and pagination options
+     * @returns {Promise<{enrollments: Array, pagination: object, totalEnrollments: number}>}
+     */
+    async getCourseEnrollments(courseId, instructorId, isAdmin, filters) {
+        const {
+            page = 1,
+            limit = 20,
+            search = '',
+            status,
+            sort = 'newest',
+        } = filters
+
+        const skip = (page - 1) * limit
+
+        // Verify course exists and user has access
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: { id: true, instructorId: true, title: true },
+        })
+
+        if (!course) {
+            const error = new Error('Course not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check authorization (admin can access all, instructor only their own)
+        if (!isAdmin && course.instructorId !== instructorId) {
+            const error = new Error(
+                'You do not have permission to view enrollments for this course'
+            )
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
+        }
+
+        // Build where clause
+        const where = {
+            courseId,
+        }
+
+        // Filter by status
+        if (status) {
+            where.status = status
+        }
+
+        // Search in user name/email
+        if (search) {
+            where.user = {
+                OR: [
+                    { fullName: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } },
+                    { userName: { contains: search, mode: 'insensitive' } },
+                ],
+            }
+        }
+
+        // Build orderBy clause
+        let orderBy = {}
+        switch (sort) {
+            case 'oldest':
+                orderBy = { enrolledAt: 'asc' }
+                break
+            case 'progress':
+                orderBy = { progressPercentage: 'desc' }
+                break
+            case 'lastAccessed':
+                orderBy = { lastAccessedAt: 'desc' }
+                break
+            case 'newest':
+            default:
+                orderBy = { enrolledAt: 'desc' }
+        }
+
+        // Execute query
+        const [enrollments, total] = await Promise.all([
+            prisma.enrollment.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                select: {
+                    id: true,
+                    userId: true,
+                    courseId: true,
+                    enrolledAt: true,
+                    startedAt: true,
+                    completedAt: true,
+                    progressPercentage: true,
+                    lastAccessedAt: true,
+                    expiresAt: true,
+                    status: true,
+                    user: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            userName: true,
+                            email: true,
+                            avatarUrl: true,
+                            role: true,
+                        },
+                    },
+                },
+            }),
+            prisma.enrollment.count({ where }),
+        ])
+
+        logger.info(
+            `Retrieved ${enrollments.length} enrollments for course ${courseId} (Instructor: ${instructorId})`
+        )
+
+        return {
+            enrollments,
+            totalEnrollments: total,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        }
+    }
 }
 
 export default new InstructorCourseService()
