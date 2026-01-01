@@ -104,7 +104,7 @@ export function CourseDialogs({
                 open={isAnalyticsDialogOpen}
                 onOpenChange={setIsAnalyticsDialogOpen}
             >
-                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-6xl max-h-[90vh] overflow-y-auto custom-scrollbar'>
+                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white w-[96vw] sm:max-w-[96vw] md:max-w-[1400px] lg:max-w-[1600px] max-h-[90vh] overflow-y-auto custom-scrollbar'>
                     <DialogHeader>
                         <DialogTitle className='text-white'>
                             Phân tích khóa học

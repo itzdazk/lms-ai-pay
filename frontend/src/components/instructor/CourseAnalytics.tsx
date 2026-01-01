@@ -1,6 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Loader2, Users, DollarSign, TrendingUp, Star, Eye, BookOpen, CheckCircle2, Clock } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+} from 'recharts';
 import { instructorCoursesApi } from '../../lib/api/instructor-courses';
 import { toast } from 'sonner';
 
@@ -16,8 +28,8 @@ interface AnalyticsData {
   totalViews: number;
   totalLessons: number;
   completedLessons: number;
-  revenueOverTime?: Array<{ date: string; revenue: number }>;
-  enrollmentsOverTime?: Array<{ date: string; count: number }>;
+  revenueOverTime?: Array<{ date: string; revenue?: number; amount?: number }>;
+  enrollmentsOverTime?: Array<{ date: string; enrollments?: number; count?: number }>;
   lessonAnalytics?: Array<{
     lessonId: number;
     lessonTitle: string;
@@ -28,6 +40,13 @@ interface AnalyticsData {
   recentEnrollments?: Array<{
     studentName: string;
     enrolledAt: string;
+  }>;
+  topStudents?: Array<{
+    name: string;
+    progress: number;
+    enrolledAt?: string;
+    lastAccessedAt?: string;
+    avatarUrl?: string;
   }>;
 }
 
@@ -51,6 +70,24 @@ export function CourseAnalytics({ courseId }: CourseAnalyticsProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const revenueSeries = useMemo(
+    () =>
+      (analytics?.revenueOverTime || []).map((item) => ({
+        date: item.date,
+        revenue: Number(item.revenue ?? item.amount ?? 0),
+      })),
+    [analytics?.revenueOverTime]
+  );
+
+  const enrollmentSeries = useMemo(
+    () =>
+      (analytics?.enrollmentsOverTime || []).map((item) => ({
+        date: item.date,
+        enrollments: Number(item.enrollments ?? item.count ?? 0),
+      })),
+    [analytics?.enrollmentsOverTime]
+  );
+
   useEffect(() => {
     loadAnalytics();
   }, [courseId]);
@@ -58,10 +95,48 @@ export function CourseAnalytics({ courseId }: CourseAnalyticsProps) {
   const loadAnalytics = async () => {
     try {
       setLoading(true);
+      console.log('Loading analytics for course:', courseId);
       const data = await instructorCoursesApi.getCourseAnalytics(courseId);
-      setAnalytics(data);
+      console.log('Analytics data received:', data);
+
+      // Normalize backend response (admin/instructor share same component)
+      // Backend returns nested structure: overview, revenue, enrollments, studentProgress, courseInfo
+      const recentEnrollmentsRaw =
+        Array.isArray(data?.enrollments?.recentEnrollments)
+          ? data.enrollments.recentEnrollments
+          : []
+
+      const normalized: AnalyticsData = {
+        totalEnrollments: data?.overview?.totalEnrollments ?? 0,
+        totalRevenue: data?.revenue?.totalRevenue ?? 0,
+        completionRate: data?.overview?.completionRate ?? 0,
+        averageRating: data?.overview?.averageRating ?? 0,
+        totalViews: data?.overview?.totalViews ?? 0,
+        totalLessons: data?.overview?.totalLessons ?? 0,
+        completedLessons: data?.studentProgress?.completed ?? 0,
+        revenueOverTime: data?.revenue?.trend ?? data?.revenueOverTime ?? [],
+        enrollmentsOverTime: data?.enrollments?.trend ?? data?.enrollmentsOverTime ?? [],
+        lessonAnalytics: data?.lessonAnalytics ?? [],
+        recentEnrollments: recentEnrollmentsRaw.map((item: any) => ({
+          studentName: item?.user?.fullName || item?.user?.email || 'Học viên',
+          enrolledAt: item?.enrolledAt,
+        })),
+        topStudents: Array.isArray(data?.topStudents)
+          ? data.topStudents.map((s: any) => ({
+              name: s?.user?.fullName || s?.user?.userName || 'Học viên',
+              progress: Number(s?.progressPercentage ?? 0),
+              enrolledAt: s?.enrolledAt,
+              lastAccessedAt: s?.lastAccessedAt,
+              avatarUrl: s?.user?.avatarUrl,
+            }))
+          : [],
+      };
+
+      setAnalytics(normalized);
     } catch (error: any) {
       console.error('Error loading analytics:', error);
+      console.error('Error status:', error?.response?.status);
+      console.error('Error data:', error?.response?.data);
       toast.error('Không thể tải dữ liệu phân tích');
     } finally {
       setLoading(false);
@@ -261,36 +336,70 @@ export function CourseAnalytics({ courseId }: CourseAnalyticsProps) {
         </Card>
       )}
 
-      {/* Charts Placeholder */}
-      {(analytics.revenueOverTime || analytics.enrollmentsOverTime) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {analytics.revenueOverTime && analytics.revenueOverTime.length > 0 && (
-            <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
+      {/* Enrollment Chart and Top Students */}
+      {(enrollmentSeries.length > 0 || (analytics.topStudents && analytics.topStudents.length > 0)) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {enrollmentSeries.length > 0 && (
+            <Card className="bg-[#1A1A1A] border-[#2D2D2D] lg:col-span-2">
               <CardHeader>
-                <CardTitle className="text-white">Doanh thu theo thời gian</CardTitle>
+                <CardTitle className="text-white">Đăng ký 7 ngày gần nhất</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Biểu đồ doanh thu trong khoảng thời gian
+                  Số lượng đăng ký mới theo ngày (7 ngày gần đây)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center text-gray-400">
-                  <p className="text-sm">Chart sẽ được tích hợp sau (Recharts/Chart.js)</p>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={enrollmentSeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2D2D2D" />
+                      <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 12 }} tickLine={false} axisLine={{ stroke: '#2D2D2D' }} interval="preserveStartEnd" />
+                      <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickLine={false} axisLine={{ stroke: '#2D2D2D' }} width={50} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', color: '#E5E7EB' }}
+                        labelStyle={{ color: '#E5E7EB' }}
+                      />
+                      <Legend wrapperStyle={{ color: '#9CA3AF' }} />
+                      <Bar dataKey="enrollments" fill="#3B82F6" name="Đăng ký" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {analytics.enrollmentsOverTime && analytics.enrollmentsOverTime.length > 0 && (
+          {analytics.topStudents && analytics.topStudents.length > 0 && (
             <Card className="bg-[#1A1A1A] border-[#2D2D2D]">
               <CardHeader>
-                <CardTitle className="text-white">Đăng ký theo thời gian</CardTitle>
+                <CardTitle className="text-white">Top 10 học viên</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Biểu đồ số lượng đăng ký theo thời gian
+                  Xếp hạng theo tiến độ hoàn thành
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center text-gray-400">
-                  <p className="text-sm">Chart sẽ được tích hợp sau (Recharts/Chart.js)</p>
+                <div className="space-y-3 max-h-[280px] overflow-y-auto custom-scrollbar">
+                  {analytics.topStudents.slice(0, 10).map((student, idx) => {
+                    const initial = student.name?.charAt(0)?.toUpperCase() || 'H';
+                    return (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-[#1F1F1F] rounded-lg border border-[#2D2D2D]">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {initial}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium text-sm truncate">{student.name}</p>
+                            {student.enrolledAt && (
+                              <p className="text-xs text-gray-400">
+                                {formatDate(student.enrolledAt)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-200 font-semibold ml-2">
+                          {student.progress.toFixed(0)}%
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
