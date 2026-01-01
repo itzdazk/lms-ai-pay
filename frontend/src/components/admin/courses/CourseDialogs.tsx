@@ -1,19 +1,29 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { DarkOutlineButton } from '@/components/ui/buttons';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { CourseAnalytics } from '../../../components/instructor/CourseAnalytics';
 import type { AdminCourse } from '@/lib/api/admin-courses';
 
 interface CourseDialogsProps {
   isFeaturedDialogOpen: boolean;
   isStatusDialogOpen: boolean;
   isDeleteDialogOpen: boolean;
+  isAnalyticsDialogOpen: boolean;
   selectedCourse: AdminCourse | null;
   actionLoading: boolean;
   onCloseFeaturedDialog: () => void;
   onCloseStatusDialog: () => void;
   onCloseDeleteDialog: () => void;
+  onCloseAnalyticsDialog: () => void;
   onConfirmToggleFeatured: () => void;
   onConfirmChangeStatus: (newStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') => void;
   onConfirmDelete: () => void;
@@ -23,11 +33,13 @@ export function CourseDialogs({
   isFeaturedDialogOpen,
   isStatusDialogOpen,
   isDeleteDialogOpen,
+  isAnalyticsDialogOpen,
   selectedCourse,
   actionLoading,
   onCloseFeaturedDialog,
   onCloseStatusDialog,
   onCloseDeleteDialog,
+  onCloseAnalyticsDialog,
   onConfirmToggleFeatured,
   onConfirmChangeStatus,
   onConfirmDelete,
@@ -86,45 +98,55 @@ export function CourseDialogs({
       <Dialog open={isStatusDialogOpen} onOpenChange={onCloseStatusDialog}>
         <DialogContent className="bg-[#1A1A1A] border-[#2D2D2D] text-white">
           <DialogHeader>
-            <DialogTitle>Đổi trạng thái khóa học</DialogTitle>
+            <DialogTitle>Thay đổi trạng thái</DialogTitle>
             <DialogDescription className="text-gray-400">
               Chọn trạng thái mới cho khóa học <strong className="text-white">{selectedCourse?.title}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-2">
-            <label className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#1F1F1F]">
-              <input
-                type="radio"
-                name="status"
-                value="DRAFT"
-                checked={selectedStatus === 'DRAFT'}
-                onChange={(e) => setSelectedStatus(e.target.value as 'DRAFT')}
-                className="text-blue-600"
-              />
-              <span>Bản nháp</span>
-            </label>
-            <label className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#1F1F1F]">
-              <input
-                type="radio"
-                name="status"
-                value="PUBLISHED"
-                checked={selectedStatus === 'PUBLISHED'}
-                onChange={(e) => setSelectedStatus(e.target.value as 'PUBLISHED')}
-                className="text-blue-600"
-              />
-              <span>Đã xuất bản</span>
-            </label>
-            <label className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#1F1F1F]">
-              <input
-                type="radio"
-                name="status"
-                value="ARCHIVED"
-                checked={selectedStatus === 'ARCHIVED'}
-                onChange={(e) => setSelectedStatus(e.target.value as 'ARCHIVED')}
-                className="text-blue-600"
-              />
-              <span>Đã lưu trữ</span>
-            </label>
+          <div className="space-y-4">
+            <Select
+              value={selectedStatus}
+              onValueChange={(value: any) => setSelectedStatus(value)}
+            >
+              <SelectTrigger className="bg-[#1F1F1F] border-[#2D2D2D] text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1A1A1A] border-[#2D2D2D] z-[9999]">
+                <SelectItem
+                  value="DRAFT"
+                  className="text-white focus:bg-[#2D2D2D]"
+                >
+                  <div className="flex flex-col">
+                    <span>Bản nháp</span>
+                    <span className="text-xs text-gray-400 mt-0.5">
+                      Khóa học chưa được công khai, chỉ bạn có thể xem
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="PUBLISHED"
+                  className="text-white focus:bg-[#2D2D2D]"
+                >
+                  <div className="flex flex-col">
+                    <span>Xuất bản</span>
+                    <span className="text-xs text-gray-400 mt-0.5">
+                      Khóa học đã được công khai, học viên có thể đăng ký
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="ARCHIVED"
+                  className="text-white focus:bg-[#2D2D2D]"
+                >
+                  <div className="flex flex-col">
+                    <span>Lưu trữ</span>
+                    <span className="text-xs text-gray-400 mt-0.5">
+                      Khóa học đã được lưu trữ, không còn hiển thị công khai
+                    </span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <DarkOutlineButton
@@ -134,17 +156,17 @@ export function CourseDialogs({
               Hủy
             </DarkOutlineButton>
             <Button
-              onClick={() => onConfirmChangeStatus(selectedStatus)}
+              onClick={() => onConfirmChangeStatus(selectedStatus as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED')}
               disabled={actionLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {actionLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang xử lý...
+                  Đang cập nhật...
                 </>
               ) : (
-                'Xác nhận'
+                'Cập nhật'
               )}
             </Button>
           </DialogFooter>
@@ -185,6 +207,30 @@ export function CourseDialogs({
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Analytics Dialog */}
+      <Dialog
+        open={isAnalyticsDialogOpen}
+        onOpenChange={onCloseAnalyticsDialog}
+      >
+        <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-6xl max-h-[90vh] overflow-y-auto custom-scrollbar'>
+          <DialogHeader>
+            <DialogTitle className='text-white'>
+              Phân tích khóa học
+            </DialogTitle>
+            <DialogDescription className='text-gray-400'>
+              {selectedCourse?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='mt-4'>
+            {selectedCourse && (
+              <CourseAnalytics
+                courseId={String(selectedCourse.id)}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

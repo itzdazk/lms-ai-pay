@@ -75,6 +75,7 @@ export function CoursesPage() {
     const [isFeaturedDialogOpen, setIsFeaturedDialogOpen] = useState(false)
     const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+    const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false)
     const [selectedCourse, setSelectedCourse] = useState<AdminCourse | null>(
         null
     )
@@ -588,7 +589,8 @@ export function CoursesPage() {
     }
 
     const handleViewAnalytics = (course: AdminCourse) => {
-        navigate(`/instructor/courses/${course.id}/analytics`)
+        setSelectedCourse(course)
+        setIsAnalyticsDialogOpen(true)
     }
 
     const handleChangeStatus = (course: AdminCourse) => {
@@ -735,6 +737,7 @@ export function CoursesPage() {
                         isFeaturedDialogOpen={isFeaturedDialogOpen}
                         isStatusDialogOpen={isStatusDialogOpen}
                         isDeleteDialogOpen={isDeleteDialogOpen}
+                        isAnalyticsDialogOpen={isAnalyticsDialogOpen}
                         selectedCourse={selectedCourse}
                         actionLoading={actionLoading}
                         onCloseFeaturedDialog={() => {
@@ -747,6 +750,10 @@ export function CoursesPage() {
                         }}
                         onCloseDeleteDialog={() => {
                             setIsDeleteDialogOpen(false)
+                            setSelectedCourse(null)
+                        }}
+                        onCloseAnalyticsDialog={() => {
+                            setIsAnalyticsDialogOpen(false)
                             setSelectedCourse(null)
                         }}
                         onConfirmToggleFeatured={confirmToggleFeatured}
