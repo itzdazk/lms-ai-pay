@@ -25,14 +25,14 @@ import { Loader2, Search, Users, GraduationCap, Calendar, TrendingUp, ArrowUpDow
 import { formatDate } from '@/lib/utils'
 import { instructorCoursesApi } from '@/lib/api/instructor-courses'
 import { usersApi } from '@/lib/api/users'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import type { Enrollment, EnrollmentStatus } from '@/lib/api/types'
-import type { AdminCourse } from '@/lib/api/admin-courses'
+import type { Enrollment, EnrollmentStatus, Course } from '@/lib/api/types'
 
 interface CourseStudentsDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    course: AdminCourse | null
+    course: Course | null
 }
 
 interface CourseEnrollmentsResponse {
@@ -90,6 +90,8 @@ export function CourseStudentsDialog({
     onOpenChange,
     course,
 }: CourseStudentsDialogProps) {
+    const { user } = useAuth()
+    const isAdmin = user?.role === 'ADMIN'
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
     const [loading, setLoading] = useState(false)
     const [searchInput, setSearchInput] = useState('')
@@ -220,7 +222,7 @@ export function CourseStudentsDialog({
                                 </DialogTitle>
                                 <DialogDescription className='text-gray-400 text-sm flex items-center gap-2'>
                                     <GraduationCap className='h-4 w-4 flex-shrink-0' />
-                                    Giảng viên: {course?.instructor?.fullName || 'N/A'}
+                                    Giảng viên: {course?.instructor?.fullName || user?.fullName || 'N/A'}
                                 </DialogDescription>
                             </div>
                         </div>
@@ -415,25 +417,27 @@ export function CourseStudentsDialog({
                                             </div>
                                         </div>
 
-                                        {/* Delete Button */}
-                                        <div className='flex-shrink-0'>
-                                            <Button
-                                                variant='default'
-                                                size='sm'
-                                                className='bg-red-600 text-white hover:bg-red-700'
-                                                onClick={() => setPendingRemoval(enrollment)}
-                                                disabled={removingEnrollmentId === enrollment.id || loading}
-                                            >
-                                                {removingEnrollmentId === enrollment.id ? (
-                                                    <Loader2 className='h-4 w-4 animate-spin' />
-                                                ) : (
-                                                    <>
-                                                        <Trash2 className='h-4 w-4 mr-1' />
-                                                        Xóa
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
+                                        {/* Delete Button - Only for Admin */}
+                                        {isAdmin && (
+                                            <div className='flex-shrink-0'>
+                                                <Button
+                                                    variant='default'
+                                                    size='sm'
+                                                    className='bg-red-600 text-white hover:bg-red-700'
+                                                    onClick={() => setPendingRemoval(enrollment)}
+                                                    disabled={removingEnrollmentId === enrollment.id || loading}
+                                                >
+                                                    {removingEnrollmentId === enrollment.id ? (
+                                                        <Loader2 className='h-4 w-4 animate-spin' />
+                                                    ) : (
+                                                        <>
+                                                            <Trash2 className='h-4 w-4 mr-1' />
+                                                            Xóa
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

@@ -27,6 +27,7 @@ interface CourseRowProps {
     onDelete: (course: Course) => void
     onChangeStatus: (course: Course) => void
     onViewAnalytics: (course: Course) => void
+    onViewStudents: (course: Course) => void
     isSelected: boolean
     onSelect: (courseId: number | null) => void
 }
@@ -37,6 +38,7 @@ export function CourseRow({
     onDelete,
     onChangeStatus,
     onViewAnalytics,
+    onViewStudents,
     isSelected,
     onSelect,
 }: CourseRowProps) {
@@ -407,6 +409,16 @@ export function CourseRow({
                         >
                             <BarChart3 className='h-4 w-4' />
                             Đổi trạng thái
+                        </div>
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onViewStudents(course)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <Users className='h-4 w-4' />
+                            Xem danh sách học viên
                         </div>
                         <div
                             className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-400 hover:bg-[#1F1F1F] cursor-pointer'

@@ -5,6 +5,7 @@ import { instructorCoursesApi } from '../../lib/api/instructor-courses'
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { CourseFilters, CourseTable, CourseDialogs } from '../../components/instructor/courses';
+import { CourseStudentsDialog } from '../../components/instructor/courses/CourseStudentsDialog';
 import type { Course, Category } from '../../lib/api/types';
 
 
@@ -34,6 +35,7 @@ export function CoursesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false);
+  const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
@@ -360,6 +362,11 @@ export function CoursesPage() {
     setFilters({ ...filters, page: newPage });
   };
 
+  const handleViewStudents = (course: Course) => {
+    setSelectedCourse(course);
+    setIsStudentsDialogOpen(true);
+  };
+
 
   return (
     <div className="space-y-4">
@@ -431,6 +438,7 @@ export function CoursesPage() {
                         setSelectedCourse(c);
                         setIsAnalyticsDialogOpen(true);
                       }}
+                      onViewStudents={handleViewStudents}
         selectedRowId={selectedRowId}
         onSelectRow={setSelectedRowId}
         onPageChange={handlePageChange}
@@ -449,6 +457,12 @@ export function CoursesPage() {
         setNewStatus={setNewStatus}
         onChangeStatus={handleChangeStatus}
         actionLoading={actionLoading}
+      />
+
+      <CourseStudentsDialog
+        open={isStudentsDialogOpen}
+        onOpenChange={setIsStudentsDialogOpen}
+        course={selectedCourse}
       />
     </div>
   );

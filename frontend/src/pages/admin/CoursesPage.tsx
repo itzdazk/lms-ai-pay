@@ -19,7 +19,7 @@ import {
     CourseTable,
     CourseDialogs,
 } from '../../components/admin/courses'
-import { CourseStudentsDialog } from '../../components/admin/courses/CourseStudentsDialog'
+import { CourseStudentsDialog } from '../../components/instructor/courses/CourseStudentsDialog'
 
 export function CoursesPage() {
     const { user: currentUser, loading: authLoading } = useAuth()
