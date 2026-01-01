@@ -24,6 +24,11 @@ interface CourseTableProps {
   onSearchKeyPress: (e: React.KeyboardEvent) => void;
   onClearSearch: () => void;
   onToggleFeatured: (course: AdminCourse) => void;
+  onViewCourse: (course: AdminCourse) => void;
+  onEditCourse: (course: AdminCourse) => void;
+  onViewAnalytics: (course: AdminCourse) => void;
+  onChangeStatus: (course: AdminCourse) => void;
+  onDeleteCourse: (course: AdminCourse) => void;
   onRowSelect: (courseId: number | null) => void;
   onPageChange: (newPage: number) => void;
   renderPagination: () => JSX.Element;
@@ -40,6 +45,11 @@ export function CourseTable({
   onSearchKeyPress,
   onClearSearch,
   onToggleFeatured,
+  onViewCourse,
+  onEditCourse,
+  onViewAnalytics,
+  onChangeStatus,
+  onDeleteCourse,
   onRowSelect,
   onPageChange,
   renderPagination,
@@ -119,6 +129,11 @@ export function CourseTable({
                     key={course.id}
                     course={course}
                     onToggleFeatured={onToggleFeatured}
+                    onViewCourse={onViewCourse}
+                    onEditCourse={onEditCourse}
+                    onViewAnalytics={onViewAnalytics}
+                    onChangeStatus={onChangeStatus}
+                    onDeleteCourse={onDeleteCourse}
                     isSelected={selectedRowId === course.id}
                     onSelect={onRowSelect}
                   />

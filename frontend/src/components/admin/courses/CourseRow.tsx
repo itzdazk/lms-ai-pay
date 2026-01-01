@@ -14,6 +14,10 @@ import {
     MoreVertical,
     Eye,
     Star as StarIcon,
+    BarChart3,
+    Edit,
+    RefreshCw,
+    Trash2,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { formatDuration } from '@/components/instructor/courses/courseFormatters'
@@ -29,6 +33,11 @@ function formatPrice(price: number): string {
 interface CourseRowProps {
     course: AdminCourse
     onToggleFeatured: (course: AdminCourse) => void
+    onViewCourse: (course: AdminCourse) => void
+    onEditCourse: (course: AdminCourse) => void
+    onViewAnalytics: (course: AdminCourse) => void
+    onChangeStatus: (course: AdminCourse) => void
+    onDeleteCourse: (course: AdminCourse) => void
     isSelected: boolean
     onSelect: (courseId: number | null) => void
 }
@@ -36,6 +45,11 @@ interface CourseRowProps {
 export function CourseRow({
     course,
     onToggleFeatured,
+    onViewCourse,
+    onEditCourse,
+    onViewAnalytics,
+    onChangeStatus,
+    onDeleteCourse,
     isSelected,
     onSelect,
 }: CourseRowProps) {
@@ -376,21 +390,23 @@ export function CourseRow({
                 createPortal(
                     <div
                         ref={menuRef}
-                        className='fixed z-50 min-w-[8rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
+                        className='fixed z-50 min-w-[12rem] rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
                         style={{
                             left: `${adjustedPosition.x}px`,
                             top: `${adjustedPosition.y}px`,
                             transform: adjustedPosition.transform,
                         }}
                     >
-                        <Link
-                            to={`/courses/${course.slug}`}
+                        <div
                             className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
-                            onClick={() => setMenuOpen(false)}
+                            onClick={() => {
+                                onViewCourse(course)
+                                setMenuOpen(false)
+                            }}
                         >
                             <Eye className='h-4 w-4' />
                             Xem
-                        </Link>
+                        </div>
                         <div
                             className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
                             onClick={() => {
@@ -402,6 +418,47 @@ export function CourseRow({
                             {course.isFeatured
                                 ? 'Bỏ đánh dấu nổi bật'
                                 : 'Đánh dấu nổi bật'}
+                        </div>
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onViewAnalytics(course)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <BarChart3 className='h-4 w-4' />
+                            Phân tích
+                        </div>
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onEditCourse(course)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <Edit className='h-4 w-4' />
+                            Chỉnh sửa
+                        </div>
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onChangeStatus(course)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <RefreshCw className='h-4 w-4' />
+                            Đổi trạng thái
+                        </div>
+                        <div className='h-px bg-[#2D2D2D] my-1' />
+                        <div
+                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-400 hover:bg-[#1F1F1F] cursor-pointer'
+                            onClick={() => {
+                                onDeleteCourse(course)
+                                setMenuOpen(false)
+                            }}
+                        >
+                            <Trash2 className='h-4 w-4' />
+                            Xóa
                         </div>
                     </div>,
                     document.body

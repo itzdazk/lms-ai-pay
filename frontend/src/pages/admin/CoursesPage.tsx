@@ -73,6 +73,8 @@ export function CoursesPage() {
     )
     const [priceType, setPriceType] = useState<'all' | 'free' | 'paid'>('all')
     const [isFeaturedDialogOpen, setIsFeaturedDialogOpen] = useState(false)
+    const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [selectedCourse, setSelectedCourse] = useState<AdminCourse | null>(
         null
     )
@@ -577,6 +579,87 @@ export function CoursesPage() {
         }
     }
 
+    const handleViewCourse = (course: AdminCourse) => {
+        navigate(`/courses/${course.slug}`)
+    }
+
+    const handleEditCourse = (course: AdminCourse) => {
+        navigate(`/instructor/courses/${course.id}/edit`)
+    }
+
+    const handleViewAnalytics = (course: AdminCourse) => {
+        navigate(`/instructor/courses/${course.id}/analytics`)
+    }
+
+    const handleChangeStatus = (course: AdminCourse) => {
+        setSelectedCourse(course)
+        setIsStatusDialogOpen(true)
+    }
+
+    const confirmChangeStatus = async (newStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') => {
+        if (!selectedCourse) return
+
+        try {
+            setActionLoading(true)
+            const { instructorCoursesApi } = await import('../../lib/api/instructor-courses')
+            await instructorCoursesApi.changeCourseStatus(
+                selectedCourse.id.toString(),
+                newStatus.toLowerCase() as 'draft' | 'published' | 'archived'
+            )
+            toast.success(`Đã đổi trạng thái khóa học thành ${
+                newStatus === 'PUBLISHED' ? 'Đã xuất bản' : 
+                newStatus === 'DRAFT' ? 'Bản nháp' : 'Đã lưu trữ'
+            }`)
+            setIsStatusDialogOpen(false)
+            setSelectedCourse(null)
+            // Update local state
+            setCourses((prev) =>
+                prev.map((course) =>
+                    course.id === selectedCourse.id
+                        ? { ...course, status: newStatus }
+                        : course
+                )
+            )
+        } catch (error: any) {
+            console.error('Error changing status:', error)
+            setIsStatusDialogOpen(false)
+            setSelectedCourse(null)
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
+    const handleDeleteCourse = (course: AdminCourse) => {
+        setSelectedCourse(course)
+        setIsDeleteDialogOpen(true)
+    }
+
+    const confirmDeleteCourse = async () => {
+        if (!selectedCourse) return
+
+        try {
+            setActionLoading(true)
+            const { instructorCoursesApi } = await import('../../lib/api/instructor-courses')
+            await instructorCoursesApi.deleteInstructorCourse(selectedCourse.id.toString())
+            toast.success('Đã xóa khóa học thành công')
+            setIsDeleteDialogOpen(false)
+            setSelectedCourse(null)
+            // Remove from local state
+            setCourses((prev) => prev.filter((course) => course.id !== selectedCourse.id))
+            // Update pagination
+            setPagination((prev) => ({
+                ...prev,
+                total: prev.total - 1,
+            }))
+        } catch (error: any) {
+            console.error('Error deleting course:', error)
+            setIsDeleteDialogOpen(false)
+            setSelectedCourse(null)
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
     // Loading state
     if (authLoading || loading) {
         return (
@@ -638,6 +721,11 @@ export function CoursesPage() {
                             setSelectedCourse(course)
                             setIsFeaturedDialogOpen(true)
                         }}
+                        onViewCourse={handleViewCourse}
+                        onEditCourse={handleEditCourse}
+                        onViewAnalytics={handleViewAnalytics}
+                        onChangeStatus={handleChangeStatus}
+                        onDeleteCourse={handleDeleteCourse}
                         onRowSelect={setSelectedRowId}
                         onPageChange={handlePageChange}
                         renderPagination={renderPagination}
@@ -645,13 +733,25 @@ export function CoursesPage() {
 
                     <CourseDialogs
                         isFeaturedDialogOpen={isFeaturedDialogOpen}
+                        isStatusDialogOpen={isStatusDialogOpen}
+                        isDeleteDialogOpen={isDeleteDialogOpen}
                         selectedCourse={selectedCourse}
                         actionLoading={actionLoading}
                         onCloseFeaturedDialog={() => {
                             setIsFeaturedDialogOpen(false)
                             setSelectedCourse(null)
                         }}
+                        onCloseStatusDialog={() => {
+                            setIsStatusDialogOpen(false)
+                            setSelectedCourse(null)
+                        }}
+                        onCloseDeleteDialog={() => {
+                            setIsDeleteDialogOpen(false)
+                            setSelectedCourse(null)
+                        }}
                         onConfirmToggleFeatured={confirmToggleFeatured}
+                        onConfirmChangeStatus={confirmChangeStatus}
+                        onConfirmDelete={confirmDeleteCourse}
                     />
                 </div>
             </div>
