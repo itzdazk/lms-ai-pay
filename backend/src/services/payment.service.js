@@ -694,6 +694,31 @@ class PaymentService {
             throw error
         }
 
+        // Log refund parameters for debugging
+        logger.info('=== REFUND REQUEST PARAMETERS ===')
+        logger.info('Order ID:', order.id)
+        logger.info('Order Payment Gateway:', order.paymentGateway)
+        logger.info('Order Payment Status:', order.paymentStatus)
+        logger.info('Order Amount:', order.amount)
+        logger.info(
+            'Successful Transaction ID:',
+            successfulTransaction?.transactionId
+        )
+        logger.info(
+            'Successful Transaction Amount:',
+            successfulTransaction?.amount
+        )
+        logger.info('Admin User ID:', adminUser?.id)
+        logger.info('Admin User Email:', adminUser?.email)
+        logger.info('Refund Amount Input:', amountInput)
+        logger.info('Refund Reason:', reason)
+        logger.info('Full Order Object:', JSON.stringify(order, null, 2))
+        logger.info(
+            'Full Successful Transaction:',
+            JSON.stringify(successfulTransaction, null, 2)
+        )
+        logger.info('================================')
+
         // Route to appropriate refund handler
         if (order.paymentGateway === PAYMENT_GATEWAY.MOMO) {
             return this.#refundMoMoOrder(
@@ -877,6 +902,31 @@ class PaymentService {
             responseBody = await response.json()
 
             if (!response.ok || responseBody.resultCode !== 0) {
+                // Log detailed error information for debugging
+                logger.error('=== MoMo Refund API Error Response ===')
+                logger.error('Order ID:', order.id)
+                logger.error('Order Code:', order.orderCode)
+                logger.error('Request ID:', requestId)
+                logger.error('Refund Order ID:', refundOrderId)
+                logger.error('Gateway Transaction ID:', gatewayTransId)
+                logger.error('Requested Amount:', requestedAmount)
+                logger.error(
+                    'HTTP Status:',
+                    response.status,
+                    response.statusText
+                )
+                logger.error('MoMo Result Code:', responseBody?.resultCode)
+                logger.error('MoMo Message:', responseBody?.message)
+                logger.error(
+                    'Full MoMo Response:',
+                    JSON.stringify(responseBody, null, 2)
+                )
+                logger.error(
+                    'Request Payload:',
+                    JSON.stringify(payload, null, 2)
+                )
+                logger.error('=======================================')
+
                 await prisma.$transaction(async (tx) => {
                     // Convert transId to string if it exists (Prisma requirement)
                     const failedTransactionId = responseBody?.transId
@@ -910,14 +960,44 @@ class PaymentService {
                     })
                 })
 
-                throw new Error(
-                    responseBody?.message || 'Failed to process MoMo refund'
-                )
+                // Create detailed error message
+                const errorMessage = responseBody?.message
+                    ? `${responseBody.message} (ResultCode: ${responseBody.resultCode || 'N/A'})`
+                    : `MoMo refund failed (ResultCode: ${responseBody?.resultCode || 'N/A'})`
+
+                const error = new Error(errorMessage)
+                // Attach details for error handler to include in response
+                error.details = {
+                    resultCode: responseBody?.resultCode,
+                    momoMessage: responseBody?.message,
+                    orderCode: order.orderCode,
+                    gatewayTransactionId: gatewayTransId,
+                    requestedAmount: requestedAmount,
+                    fullResponse: responseBody,
+                }
+
+                throw error
             }
         } catch (error) {
-            logger.error(
-                `MoMo refund failed for order ${order.orderCode}: ${error.message}`
-            )
+            // Log detailed error information
+            logger.error('=== MoMo Refund Error (Catch Block) ===')
+            logger.error('Order ID:', order.id)
+            logger.error('Order Code:', order.orderCode)
+            logger.error('Request ID:', requestId)
+            logger.error('Error Message:', error.message)
+            logger.error('Error Stack:', error.stack)
+
+            // If we have responseBody, log it
+            if (responseBody) {
+                logger.error(
+                    'MoMo Response Body:',
+                    JSON.stringify(responseBody, null, 2)
+                )
+            }
+
+            // Log request payload for debugging
+            logger.error('Request Payload:', JSON.stringify(payload, null, 2))
+            logger.error('========================================')
 
             // Update order status to REFUND_FAILED if not already updated
             try {
@@ -941,6 +1021,18 @@ class PaymentService {
                 logger.error(
                     `Failed to update order status to REFUND_FAILED: ${updateError.message}`
                 )
+            }
+
+            // Enhance error with details if not already present
+            if (!error.details && responseBody) {
+                error.details = {
+                    resultCode: responseBody?.resultCode,
+                    momoMessage: responseBody?.message,
+                    orderCode: order.orderCode,
+                    gatewayTransactionId: gatewayTransId,
+                    requestedAmount: requestedAmount,
+                    fullResponse: responseBody,
+                }
             }
 
             throw error
