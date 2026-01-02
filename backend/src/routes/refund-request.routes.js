@@ -61,22 +61,6 @@ router.get(
 )
 
 /**
- * @route   POST /api/v1/refund-requests/:id/accept-offer
- * @desc    Accept refund offer (for partial refunds)
- * @access  Private (Student)
- * @note    Must be defined BEFORE /:id to avoid route conflict
- */
-router.post('/:id/accept-offer', refundRequestController.acceptRefundOffer)
-
-/**
- * @route   POST /api/v1/refund-requests/:id/reject-offer
- * @desc    Reject refund offer (for partial refunds)
- * @access  Private (Student)
- * @note    Must be defined BEFORE /:id to avoid route conflict
- */
-router.post('/:id/reject-offer', refundRequestController.rejectRefundOffer)
-
-/**
  * @route   POST /api/v1/refund-requests/:id/process
  * @desc    Process refund request (Admin only)
  * @access  Private (Admin)

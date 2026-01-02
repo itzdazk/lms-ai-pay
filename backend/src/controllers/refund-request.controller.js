@@ -58,56 +58,6 @@ class RefundRequestController {
     })
 
     /**
-     * @route   POST /api/v1/refund-requests/:id/accept-offer
-     * @desc    Accept refund offer (for partial refunds)
-     * @access  Private (Student)
-     */
-    acceptRefundOffer = asyncHandler(async (req, res) => {
-        const userId = req.user.id
-        const requestId = parseInt(req.params.id)
-
-        if (isNaN(requestId)) {
-            return ApiResponse.badRequest(res, 'Invalid request ID')
-        }
-
-        const refundRequest = await refundRequestService.acceptRefundOffer(
-            requestId,
-            userId
-        )
-
-        return ApiResponse.success(
-            res,
-            refundRequest,
-            'Refund offer accepted successfully'
-        )
-    })
-
-    /**
-     * @route   POST /api/v1/refund-requests/:id/reject-offer
-     * @desc    Reject refund offer (for partial refunds)
-     * @access  Private (Student)
-     */
-    rejectRefundOffer = asyncHandler(async (req, res) => {
-        const userId = req.user.id
-        const requestId = parseInt(req.params.id)
-
-        if (isNaN(requestId)) {
-            return ApiResponse.badRequest(res, 'Invalid request ID')
-        }
-
-        const refundRequest = await refundRequestService.rejectRefundOffer(
-            requestId,
-            userId
-        )
-
-        return ApiResponse.success(
-            res,
-            refundRequest,
-            'Refund offer rejected successfully'
-        )
-    })
-
-    /**
      * @route   POST /api/v1/refund-requests/:id/process
      * @desc    Process refund request (Admin only)
      * @access  Private (Admin)

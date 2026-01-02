@@ -269,16 +269,6 @@ class RefundRequestService {
         let adminNotes = null
         let refundType = eligibility.type
         let suggestedRefundAmount = eligibility.suggestedAmount
-        let offerExpiresAt = null
-
-        // If PARTIAL refund, set offer expiry
-        if (refundType === REFUND_TYPES.PARTIAL) {
-            const expiryDate = new Date()
-            expiryDate.setHours(
-                expiryDate.getHours() + REFUND_POLICY.OFFER_EXPIRY_HOURS
-            )
-            offerExpiresAt = expiryDate
-        }
 
         // Create refund request and update order status
         const refundRequest = await prisma.$transaction(async (tx) => {
@@ -305,7 +295,6 @@ class RefundRequestService {
                     suggestedRefundAmount,
                     requestedRefundAmount: suggestedRefundAmount, // Initially same as suggested
                     adminNotes,
-                    offerExpiresAt,
                 },
                 include: {
                     order: {
@@ -384,26 +373,6 @@ class RefundRequestService {
                         emailError
                     )
                     // Don't throw error, just log it
-                }
-
-                // For PARTIAL refunds, send offer email immediately
-                if (refundType === REFUND_TYPES.PARTIAL) {
-                    try {
-                        await emailService.sendRefundOfferEmail(
-                            refundRequest.student,
-                            refundRequest,
-                            order
-                        )
-                        logger.info(
-                            `Sent refund offer email to student ${refundRequest.studentId} for request ${refundRequest.id}`
-                        )
-                    } catch (emailError) {
-                        logger.error(
-                            'Error sending refund offer email:',
-                            emailError
-                        )
-                        // Don't throw error, just log it
-                    }
                 }
             } catch (error) {
                 logger.error(
@@ -756,130 +725,6 @@ class RefundRequestService {
     }
 
     /**
-     * Accept refund offer (for student)
-     * @param {number} requestId - Refund request ID
-     * @param {number} userId - Student ID
-     * @returns {Promise<Object>} Updated refund request
-     */
-    async acceptRefundOffer(requestId, userId) {
-        const refundRequest = await prisma.refundRequest.findUnique({
-            where: { id: requestId },
-        })
-
-        if (!refundRequest) {
-            const error = new Error('Refund request not found')
-            error.statusCode = HTTP_STATUS.NOT_FOUND
-            throw error
-        }
-
-        if (refundRequest.studentId !== userId) {
-            const error = new Error('Unauthorized')
-            error.statusCode = HTTP_STATUS.FORBIDDEN
-            throw error
-        }
-
-        if (refundRequest.status !== 'PENDING') {
-            const error = new Error(
-                'Only pending refund requests can have offers accepted'
-            )
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
-
-        if (refundRequest.refundType !== REFUND_TYPES.PARTIAL) {
-            const error = new Error(
-                'Offer acceptance only applies to partial refunds'
-            )
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
-
-        if (
-            refundRequest.offerExpiresAt &&
-            new Date() > refundRequest.offerExpiresAt
-        ) {
-            const error = new Error('Refund offer has expired')
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
-
-        const updated = await prisma.refundRequest.update({
-            where: { id: requestId },
-            data: {
-                studentAcceptedOffer: true,
-                studentRejectedOffer: false,
-            },
-        })
-
-        logger.info(
-            `Student ${userId} accepted refund offer for request ${requestId}`
-        )
-
-        return updated
-    }
-
-    /**
-     * Reject refund offer (for student)
-     * @param {number} requestId - Refund request ID
-     * @param {number} userId - Student ID
-     * @returns {Promise<Object>} Updated refund request
-     */
-    async rejectRefundOffer(requestId, userId) {
-        const refundRequest = await prisma.refundRequest.findUnique({
-            where: { id: requestId },
-        })
-
-        if (!refundRequest) {
-            const error = new Error('Refund request not found')
-            error.statusCode = HTTP_STATUS.NOT_FOUND
-            throw error
-        }
-
-        if (refundRequest.studentId !== userId) {
-            const error = new Error('Unauthorized')
-            error.statusCode = HTTP_STATUS.FORBIDDEN
-            throw error
-        }
-
-        if (refundRequest.status !== 'PENDING') {
-            const error = new Error(
-                'Only pending refund requests can have offers rejected'
-            )
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
-
-        const updated = await prisma.$transaction(async (tx) => {
-            // Update refund request
-            const refundRequestUpdated = await tx.refundRequest.update({
-                where: { id: requestId },
-                data: {
-                    studentRejectedOffer: true,
-                    studentAcceptedOffer: false,
-                    status: 'REJECTED',
-                    adminNotes: 'Học viên đã từ chối offer hoàn tiền một phần',
-                },
-            })
-
-            // Revert order status back to PAID
-            await tx.order.update({
-                where: { id: refundRequest.orderId },
-                data: {
-                    paymentStatus: PAYMENT_STATUS.PAID,
-                },
-            })
-
-            return refundRequestUpdated
-        })
-
-        logger.info(
-            `Student ${userId} rejected refund offer for request ${requestId}`
-        )
-
-        return updated
-    }
-
-    /**
      * Process refund request (Admin only)
      * @param {number} requestId - Refund request ID
      * @param {number} adminUserId - Admin user ID
@@ -918,28 +763,6 @@ class RefundRequestService {
             const error = new Error(
                 `Cannot process refund request with status: ${refundRequest.status}`
             )
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
-
-        // For PARTIAL refunds, check if student has accepted offer
-        if (
-            refundRequest.refundType === REFUND_TYPES.PARTIAL &&
-            !refundRequest.studentAcceptedOffer &&
-            !refundRequest.studentRejectedOffer
-        ) {
-            const error = new Error(
-                'Student must accept or reject the refund offer before processing'
-            )
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
-
-        if (
-            refundRequest.refundType === REFUND_TYPES.PARTIAL &&
-            refundRequest.studentRejectedOffer
-        ) {
-            const error = new Error('Student has rejected the refund offer')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
