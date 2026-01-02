@@ -158,31 +158,9 @@ export const refundRequestsApi = {
     /**
      * Check refund eligibility for an order
      */
-    async getRefundEligibility(
-        orderId: number
-    ): Promise<RefundEligibility> {
+    async getRefundEligibility(orderId: number): Promise<RefundEligibility> {
         const response = await apiClient.get<ApiResponse<RefundEligibility>>(
             `/refund-requests/eligibility/${orderId}`
-        )
-        return response.data.data
-    },
-
-    /**
-     * Accept refund offer (for partial refunds)
-     */
-    async acceptRefundOffer(requestId: number): Promise<RefundRequest> {
-        const response = await apiClient.post<ApiResponse<RefundRequest>>(
-            `/refund-requests/${requestId}/accept-offer`
-        )
-        return response.data.data
-    },
-
-    /**
-     * Reject refund offer (for partial refunds)
-     */
-    async rejectRefundOffer(requestId: number): Promise<RefundRequest> {
-        const response = await apiClient.post<ApiResponse<RefundRequest>>(
-            `/refund-requests/${requestId}/reject-offer`
         )
         return response.data.data
     },
@@ -230,4 +208,3 @@ export const refundRequestsApi = {
         return response.data
     },
 }
-

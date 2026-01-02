@@ -156,23 +156,9 @@ export function RefundRequestDetailDialog({
     const order = refundRequest.order
     const course = order.course as Course | undefined
 
-    const canProcess =
-        refundRequest.status === 'PENDING' &&
-        (refundRequest.refundType === 'FULL' ||
-            (refundRequest.refundType === 'PARTIAL' &&
-                refundRequest.studentAcceptedOffer))
+    const canProcess = refundRequest.status === 'PENDING'
 
-    const cannotProcessReason =
-        refundRequest.status === 'PENDING' &&
-        refundRequest.refundType === 'PARTIAL' &&
-        !refundRequest.studentAcceptedOffer &&
-        !refundRequest.studentRejectedOffer
-            ? 'Học viên chưa chấp nhận đề xuất hoàn tiền'
-            : refundRequest.status === 'PENDING' &&
-              refundRequest.refundType === 'PARTIAL' &&
-              refundRequest.studentRejectedOffer
-            ? 'Học viên đã từ chối đề xuất hoàn tiền'
-            : null
+    const cannotProcessReason = null
 
     const handleProcessClick = (action: 'APPROVE' | 'REJECT') => {
         setProcessAction(action)
@@ -347,72 +333,6 @@ export function RefundRequestDetailDialog({
                                 </>
                             )}
 
-                            {refundRequest.refundType === 'PARTIAL' && (
-                                <>
-                                    <Separator className='bg-[#2D2D2D]' />
-                                    <div className='space-y-2'>
-                                        <p className='text-sm text-gray-400 mb-2'>
-                                            Trạng thái đề xuất hoàn tiền:
-                                        </p>
-                                        {refundRequest.offerExpiresAt && (
-                                            <div className='flex items-center justify-between text-sm'>
-                                                <span className='text-gray-400'>
-                                                    Hết hạn vào:
-                                                </span>
-                                                <span className='text-white'>
-                                                    {formatDateTime(
-                                                        refundRequest.offerExpiresAt
-                                                    )}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {refundRequest.studentAcceptedOffer && (
-                                            <div className='p-2 bg-green-600/20 border border-green-500/40 rounded-lg'>
-                                                <p className='text-sm text-green-300 flex items-center gap-2'>
-                                                    <CheckCircle className='h-4 w-4' />
-                                                    Học viên đã chấp nhận đề
-                                                    xuất
-                                                </p>
-                                            </div>
-                                        )}
-                                        {refundRequest.studentRejectedOffer && (
-                                            <div className='p-2 bg-red-600/20 border border-red-500/40 rounded-lg'>
-                                                <p className='text-sm text-red-300 flex items-center gap-2'>
-                                                    <XCircle className='h-4 w-4' />
-                                                    Học viên đã từ chối đề xuất
-                                                </p>
-                                            </div>
-                                        )}
-                                        {!refundRequest.studentAcceptedOffer &&
-                                            !refundRequest.studentRejectedOffer &&
-                                            refundRequest.offerExpiresAt &&
-                                            new Date(
-                                                refundRequest.offerExpiresAt
-                                            ) > new Date() && (
-                                                <div className='p-2 bg-yellow-600/20 border border-yellow-500/40 rounded-lg'>
-                                                    <p className='text-sm text-yellow-300 flex items-center gap-2'>
-                                                        <Clock className='h-4 w-4' />
-                                                        Đang chờ học viên phản
-                                                        hồi
-                                                    </p>
-                                                </div>
-                                            )}
-                                        {!refundRequest.studentAcceptedOffer &&
-                                            !refundRequest.studentRejectedOffer &&
-                                            refundRequest.offerExpiresAt &&
-                                            new Date(
-                                                refundRequest.offerExpiresAt
-                                            ) <= new Date() && (
-                                                <div className='p-2 bg-red-600/20 border border-red-500/40 rounded-lg'>
-                                                    <p className='text-sm text-red-300 flex items-center gap-2'>
-                                                        <XCircle className='h-4 w-4' />
-                                                        Đề xuất đã hết hạn
-                                                    </p>
-                                                </div>
-                                            )}
-                                    </div>
-                                </>
-                            )}
 
                             {refundRequest.adminNotes && (
                                 <>

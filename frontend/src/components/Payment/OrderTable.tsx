@@ -4,13 +4,9 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { DarkOutlineButton } from '../ui/buttons'
 import { RefundRequestDialog } from './RefundRequestDialog'
-import { RefundOfferDialog } from './RefundOfferDialog'
-import {
-    refundRequestsApi,
-    type RefundRequest,
-} from '../../lib/api/refund-requests'
+import { refundRequestsApi } from '../../lib/api/refund-requests'
 import { toast } from 'sonner'
-import { RotateCcw, AlertCircle } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -128,14 +124,6 @@ export function OrderTable({
     const [ordersWithRefundRequests, setOrdersWithRefundRequests] = useState<
         Set<number>
     >(new Set())
-    const [refundRequestsMap, setRefundRequestsMap] = useState<
-        Map<number, RefundRequest>
-    >(new Map())
-
-    // Refund offer dialog state
-    const [refundOfferDialogOpen, setRefundOfferDialogOpen] = useState(false)
-    const [refundRequestForOffer, setRefundRequestForOffer] =
-        useState<RefundRequest | null>(null)
 
     // Check refund requests for PAID and REFUND_PENDING orders
     useEffect(() => {
@@ -166,11 +154,9 @@ export function OrderTable({
                 )
 
                 const orderIdsWithRequests = new Set<number>()
-                const requestsMap = new Map<number, RefundRequest>()
 
                 requests.forEach(({ orderId, request }) => {
                     if (request) {
-                        requestsMap.set(orderId, request)
                         if (
                             request.status === 'PENDING' ||
                             request.status === 'APPROVED'
@@ -188,7 +174,6 @@ export function OrderTable({
                 })
 
                 setOrdersWithRefundRequests(orderIdsWithRequests)
-                setRefundRequestsMap(requestsMap)
             } catch (error) {
                 console.error('Error checking refund requests:', error)
             }
@@ -225,13 +210,6 @@ export function OrderTable({
                         reason: reason,
                         reasonType: reasonType,
                     })
-
-                // Update refund requests map
-                setRefundRequestsMap((prev) => {
-                    const next = new Map(prev)
-                    next.set(orderForRefund.id, refundRequest)
-                    return next
-                })
 
                 if (refundRequest.status === 'REJECTED') {
                     toast.warning(
@@ -306,9 +284,6 @@ export function OrderTable({
                                 Khóa học
                             </DarkOutlineTableHead>
                             <DarkOutlineTableHead>
-                                Học viên
-                            </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
                                 Trạng thái
                             </DarkOutlineTableHead>
                             <DarkOutlineTableHead>
@@ -332,9 +307,6 @@ export function OrderTable({
                             <DarkOutlineTableRow key={i}>
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-24' />
-                                </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
-                                    <Skeleton className='h-4 w-32' />
                                 </DarkOutlineTableCell>
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-32' />
@@ -382,7 +354,6 @@ export function OrderTable({
                     <DarkOutlineTableRow>
                         <DarkOutlineTableHead>Mã đơn</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Khóa học</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Học viên</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Phương thức</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Tổng tiền</DarkOutlineTableHead>
@@ -413,26 +384,6 @@ export function OrderTable({
                                 </div>
                             </DarkOutlineTableCell>
                             <DarkOutlineTableCell>
-                                <div className='max-w-xs'>
-                                    {order.user ? (
-                                        <>
-                                            <p className='text-white font-medium line-clamp-1'>
-                                                {order.user.fullName || 'N/A'}
-                                            </p>
-                                            {order.user.email && (
-                                                <p className='text-xs text-gray-400 mt-1 line-clamp-1'>
-                                                    {order.user.email}
-                                                </p>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <span className='text-gray-400'>
-                                            N/A
-                                        </span>
-                                    )}
-                                </div>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
                                 {getStatusBadge(order.paymentStatus)}
                             </DarkOutlineTableCell>
                             <DarkOutlineTableCell>
@@ -458,45 +409,6 @@ export function OrderTable({
                                                 Xem
                                             </Link>
                                         </DarkOutlineButton>
-
-                                        {/* Refund Offer Button - For orders with pending offer */}
-                                        {(() => {
-                                            const refundRequest =
-                                                refundRequestsMap.get(order.id)
-                                            const hasPendingOffer =
-                                                refundRequest &&
-                                                refundRequest.status ===
-                                                    'PENDING' &&
-                                                refundRequest.refundType ===
-                                                    'PARTIAL' &&
-                                                refundRequest.offerExpiresAt &&
-                                                !refundRequest.studentAcceptedOffer &&
-                                                !refundRequest.studentRejectedOffer &&
-                                                new Date(
-                                                    refundRequest.offerExpiresAt
-                                                ) > new Date()
-
-                                            if (hasPendingOffer) {
-                                                return (
-                                                    <DarkOutlineButton
-                                                        size='sm'
-                                                        className='h-8 px-3 whitespace-nowrap border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-400/60 hover:text-yellow-300 transition-colors'
-                                                        onClick={() => {
-                                                            setRefundRequestForOffer(
-                                                                refundRequest
-                                                            )
-                                                            setRefundOfferDialogOpen(
-                                                                true
-                                                            )
-                                                        }}
-                                                    >
-                                                        <AlertCircle className='h-3.5 w-3.5 mr-1.5' />
-                                                        Xem đề xuất
-                                                    </DarkOutlineButton>
-                                                )
-                                            }
-                                            return null
-                                        })()}
 
                                         {/* Refund Request Button - Only for PAID orders without existing request */}
                                         {(order.paymentStatus === 'PAID' ||
@@ -602,31 +514,6 @@ export function OrderTable({
                 order={orderForRefund}
                 onSubmit={handleRefundRequestSubmit}
                 loading={refundRequestLoading}
-            />
-
-            {/* Refund Offer Dialog */}
-            <RefundOfferDialog
-                isOpen={refundOfferDialogOpen}
-                setIsOpen={setRefundOfferDialogOpen}
-                refundRequest={refundRequestForOffer}
-                onActionComplete={() => {
-                    // Refresh refund requests
-                    if (orderForRefund) {
-                        refundRequestsApi
-                            .getRefundRequestByOrderId(orderForRefund.id)
-                            .then((req) => {
-                                if (req) {
-                                    setRefundRequestsMap((prev) => {
-                                        const next = new Map(prev)
-                                        next.set(orderForRefund.id, req)
-                                        return next
-                                    })
-                                }
-                            })
-                            .catch(() => {})
-                    }
-                    onRefundRequestCreated?.()
-                }}
             />
         </div>
     )
