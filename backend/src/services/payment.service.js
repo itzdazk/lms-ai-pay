@@ -960,23 +960,9 @@ class PaymentService {
                     })
                 })
 
-                // Create detailed error message
-                const errorMessage = responseBody?.message
-                    ? `${responseBody.message} (ResultCode: ${responseBody.resultCode || 'N/A'})`
-                    : `MoMo refund failed (ResultCode: ${responseBody?.resultCode || 'N/A'})`
-
-                const error = new Error(errorMessage)
-                // Attach details for error handler to include in response
-                error.details = {
-                    resultCode: responseBody?.resultCode,
-                    momoMessage: responseBody?.message,
-                    orderCode: order.orderCode,
-                    gatewayTransactionId: gatewayTransId,
-                    requestedAmount: requestedAmount,
-                    fullResponse: responseBody,
-                }
-
-                throw error
+                throw new Error(
+                    responseBody?.message || 'Failed to process MoMo refund'
+                )
             }
         } catch (error) {
             // Log detailed error information
@@ -1021,18 +1007,6 @@ class PaymentService {
                 logger.error(
                     `Failed to update order status to REFUND_FAILED: ${updateError.message}`
                 )
-            }
-
-            // Enhance error with details if not already present
-            if (!error.details && responseBody) {
-                error.details = {
-                    resultCode: responseBody?.resultCode,
-                    momoMessage: responseBody?.message,
-                    orderCode: order.orderCode,
-                    gatewayTransactionId: gatewayTransId,
-                    requestedAmount: requestedAmount,
-                    fullResponse: responseBody,
-                }
             }
 
             throw error
