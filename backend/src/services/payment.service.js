@@ -157,6 +157,44 @@ const parseVNPayRawQuery = (rawUrlOrQuery) => {
 const buildRefundUnenrollmentReason = (orderCode, gateway) =>
     `Refund processed via ${gateway} for order ${orderCode}`
 
+// MoMo result code to error message mapping
+const MOMO_REFUND_ERROR_MESSAGES = {
+    40: 'RequestId bị trùng. Vui lòng thử lại sau vài giây.',
+    41: 'OrderId bị trùng. Vui lòng thử lại sau vài giây.',
+    42: 'OrderId không hợp lệ hoặc không được tìm thấy.',
+    43: 'Yêu cầu bị từ chối vì xung đột trong quá trình xử lý giao dịch. Vui lòng thử lại sau.',
+    99: 'Giao dịch đang được xử lý bởi MoMo. Vui lòng đợi và thử lại sau vài giây.',
+    1080: 'Giao dịch hoàn tiền đang được xử lý. Vui lòng thử lại sau một giờ.',
+    1081: 'Giao dịch hoàn tiền bị từ chối. Giao dịch thanh toán ban đầu có thể đã được hoàn.',
+    1088: 'Giao dịch hoàn tiền bị từ chối. Giao dịch thanh toán ban đầu không được hỗ trợ hoàn tiền.',
+    7000: 'Giao dịch đang được xử lý. Vui lòng đợi và thử lại sau.',
+    7002: 'Giao dịch đang được xử lý bởi nhà cung cấp. Vui lòng đợi và thử lại sau.',
+}
+
+// Result codes that can be retried (transient errors)
+const RETRYABLE_RESULT_CODES = ['99', '7000', '7002', '1080']
+
+const isRetryableError = (resultCode) => {
+    if (resultCode === undefined || resultCode === null) {
+        return false
+    }
+    return RETRYABLE_RESULT_CODES.includes(String(resultCode))
+}
+
+const getMoMoRefundErrorMessage = (resultCode) => {
+    if (resultCode === undefined || resultCode === null) {
+        return 'Lỗi không xác định. Vui lòng liên hệ MoMo để biết thêm chi tiết.'
+    }
+    const code = String(resultCode)
+    return (
+        MOMO_REFUND_ERROR_MESSAGES[code] ||
+        `Lỗi không xác định (mã ${code}). Vui lòng liên hệ MoMo để biết thêm chi tiết.`
+    )
+}
+
+// Sleep utility for delays
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 const ERROR_MESSAGES = {
     supersededByNewRequest: (gateway) =>
         `${gateway} payment attempt superseded by a newer request`,
@@ -168,12 +206,16 @@ const ERROR_MESSAGES = {
                 ? ` (resultCode: ${resultCode})`
                 : ''
         }`,
-    refundFailed: (gateway, resultCode) =>
-        `${gateway} refund failed${
+    refundFailed: (gateway, resultCode) => {
+        if (gateway === PAYMENT_GATEWAY.MOMO) {
+            return getMoMoRefundErrorMessage(resultCode)
+        }
+        return `${gateway} refund failed${
             resultCode !== undefined && resultCode !== null
                 ? ` (resultCode: ${resultCode})`
                 : ''
-        }`,
+        }`
+    },
 }
 
 const buildSignatureInput = (payload, keys) => {
@@ -694,31 +736,6 @@ class PaymentService {
             throw error
         }
 
-        // Log refund parameters for debugging
-        logger.info('=== REFUND REQUEST PARAMETERS ===')
-        logger.info('Order ID:', order.id)
-        logger.info('Order Payment Gateway:', order.paymentGateway)
-        logger.info('Order Payment Status:', order.paymentStatus)
-        logger.info('Order Amount:', order.amount)
-        logger.info(
-            'Successful Transaction ID:',
-            successfulTransaction?.transactionId
-        )
-        logger.info(
-            'Successful Transaction Amount:',
-            successfulTransaction?.amount
-        )
-        logger.info('Admin User ID:', adminUser?.id)
-        logger.info('Admin User Email:', adminUser?.email)
-        logger.info('Refund Amount Input:', amountInput)
-        logger.info('Refund Reason:', reason)
-        logger.info('Full Order Object:', JSON.stringify(order, null, 2))
-        logger.info(
-            'Full Successful Transaction:',
-            JSON.stringify(successfulTransaction, null, 2)
-        )
-        logger.info('================================')
-
         // Route to appropriate refund handler
         if (order.paymentGateway === PAYMENT_GATEWAY.MOMO) {
             return this.#refundMoMoOrder(
@@ -802,9 +819,25 @@ class PaymentService {
         successfulTransaction,
         adminUser,
         amountInput,
-        reason
+        reason,
+        retryCount = 0,
+        maxRetries = 2
     ) {
         ensureMoMoConfig()
+
+        // Add small delay before refund to ensure transaction is fully processed by MoMo
+        // This helps prevent resultCode 99 (unknown error) which often occurs when
+        // refund is attempted too quickly after payment
+        if (retryCount === 0) {
+            const timeSincePayment = order.paidAt
+                ? Date.now() - new Date(order.paidAt).getTime()
+                : Infinity
+
+            // If payment was made less than 5 seconds ago, wait a bit
+            if (timeSincePayment < 5000) {
+                await sleep(2000)
+            }
+        }
 
         const orderAmount = normalizeAmount(order.finalPrice)
         const existingRefundAmount = normalizeAmount(order.refundAmount)
@@ -842,8 +875,10 @@ class PaymentService {
         }
 
         const timestamp = Date.now()
-        const requestId = `refund-${order.orderCode}-${timestamp}`
-        const refundOrderId = `${order.orderCode}-refund-${timestamp}`
+        // Add random component to ensure unique requestId even with rapid clicks
+        const randomSuffix = Math.random().toString(36).substring(2, 9)
+        const requestId = `refund-${order.orderCode}-${timestamp}-${randomSuffix}`
+        const refundOrderId = `${order.orderCode}-refund-${timestamp}-${randomSuffix}`
         const refundTransactionId = generateTransactionId(
             order.orderCode,
             PAYMENT_GATEWAY.MOMO,
@@ -893,40 +928,43 @@ class PaymentService {
 
         let responseBody = null
         try {
+            // Add timeout to prevent hanging requests
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 seconds timeout
+
             const response = await fetch(momoConfig.refundEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
+                signal: controller.signal,
             })
 
-            responseBody = await response.json()
+            clearTimeout(timeoutId)
 
-            if (!response.ok || responseBody.resultCode !== 0) {
-                // Log detailed error information for debugging
-                logger.error('=== MoMo Refund API Error Response ===')
-                logger.error('Order ID:', order.id)
-                logger.error('Order Code:', order.orderCode)
-                logger.error('Request ID:', requestId)
-                logger.error('Refund Order ID:', refundOrderId)
-                logger.error('Gateway Transaction ID:', gatewayTransId)
-                logger.error('Requested Amount:', requestedAmount)
+            // Parse response body with error handling
+            try {
+                const responseText = await response.text()
+                responseBody = responseText ? JSON.parse(responseText) : null
+            } catch (parseError) {
                 logger.error(
-                    'HTTP Status:',
-                    response.status,
-                    response.statusText
+                    'Failed to parse MoMo response as JSON:',
+                    parseError
                 )
-                logger.error('MoMo Result Code:', responseBody?.resultCode)
-                logger.error('MoMo Message:', responseBody?.message)
-                logger.error(
-                    'Full MoMo Response:',
-                    JSON.stringify(responseBody, null, 2)
+                throw new Error(
+                    'MoMo API returned invalid response. Please try again.'
                 )
-                logger.error(
-                    'Request Payload:',
-                    JSON.stringify(payload, null, 2)
-                )
-                logger.error('=======================================')
+            }
 
+            // Check resultCode (can be number 0 or string "0" for success)
+            const resultCode = responseBody?.resultCode
+            const isSuccess =
+                resultCode === 0 ||
+                resultCode === '0' ||
+                resultCode === '00' ||
+                resultCode === null ||
+                resultCode === undefined
+
+            if (!response.ok || (responseBody && !isSuccess)) {
                 await prisma.$transaction(async (tx) => {
                     // Convert transId to string if it exists (Prisma requirement)
                     const failedTransactionId = responseBody?.transId
@@ -960,32 +998,53 @@ class PaymentService {
                     })
                 })
 
-                throw new Error(
-                    responseBody?.message || 'Failed to process MoMo refund'
-                )
+                // Check if error is retryable (resultCode 99, 7000, 7002, 1080)
+                const resultCode = responseBody?.resultCode
+                if (retryCount < maxRetries && isRetryableError(resultCode)) {
+                    const retryDelay = Math.min(
+                        1000 * Math.pow(2, retryCount),
+                        5000
+                    ) // Exponential backoff, max 5s
+                    logger.warn(
+                        `MoMo refund failed with retryable error (resultCode: ${resultCode}). Retrying in ${retryDelay}ms... (Attempt ${retryCount + 1}/${maxRetries})`
+                    )
+                    await sleep(retryDelay)
+
+                    // Retry with new requestId to avoid duplicate
+                    return this.#refundMoMoOrder(
+                        order,
+                        successfulTransaction,
+                        adminUser,
+                        amountInput,
+                        reason,
+                        retryCount + 1,
+                        maxRetries
+                    )
+                }
+
+                // Use mapped error message based on resultCode (prioritize resultCode mapping)
+                // Only use responseBody.message if resultCode mapping doesn't exist
+                let errorMessage = getMoMoRefundErrorMessage(resultCode)
+                // If the mapped message is generic and we have a specific message from MoMo, use it
+                if (
+                    errorMessage.includes('Lỗi không xác định') &&
+                    responseBody?.message &&
+                    !responseBody.message.includes('Lỗi không xác định')
+                ) {
+                    errorMessage = responseBody.message
+                }
+                throw new Error(errorMessage)
             }
         } catch (error) {
-            // Log detailed error information
-            logger.error('=== MoMo Refund Error (Catch Block) ===')
-            logger.error('Order ID:', order.id)
-            logger.error('Order Code:', order.orderCode)
-            logger.error('Request ID:', requestId)
-            logger.error('Error Message:', error.message)
-            logger.error('Error Stack:', error.stack)
-
-            // If we have responseBody, log it
-            if (responseBody) {
-                logger.error(
-                    'MoMo Response Body:',
-                    JSON.stringify(responseBody, null, 2)
-                )
+            // Check if it's a timeout or network error
+            if (error.name === 'AbortError') {
+                logger.error('MoMo refund request timed out after 30 seconds')
+            } else if (error.message?.includes('fetch')) {
+                logger.error('Network error when calling MoMo API')
             }
 
-            // Log request payload for debugging
-            logger.error('Request Payload:', JSON.stringify(payload, null, 2))
-            logger.error('========================================')
-
-            // Update order status to REFUND_FAILED if not already updated
+            // Only update order status to REFUND_FAILED if it's still REFUND_PENDING
+            // This prevents overwriting status if another request already updated it
             try {
                 const currentOrder = await prisma.order.findUnique({
                     where: { id: order.id },
@@ -1009,7 +1068,33 @@ class PaymentService {
                 )
             }
 
-            throw error
+            // Provide more specific error message
+            let errorMessage = 'Failed to process MoMo refund'
+            if (error.name === 'AbortError') {
+                errorMessage =
+                    'MoMo refund request timed out. Please try again. The request may still be processing on MoMo side.'
+            } else if (responseBody?.resultCode !== undefined) {
+                // Prioritize resultCode mapping
+                errorMessage = getMoMoRefundErrorMessage(
+                    responseBody.resultCode
+                )
+                // If the mapped message is generic and we have a specific message from MoMo, use it
+                if (
+                    errorMessage.includes('Lỗi không xác định') &&
+                    responseBody?.message &&
+                    !responseBody.message.includes('Lỗi không xác định')
+                ) {
+                    errorMessage = responseBody.message
+                }
+            } else if (responseBody?.message) {
+                errorMessage = responseBody.message
+            } else if (error.message) {
+                errorMessage = error.message
+            }
+
+            const refundError = new Error(errorMessage)
+            refundError.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw refundError
         }
 
         const newRefundTotal = existingRefundAmount + requestedAmount

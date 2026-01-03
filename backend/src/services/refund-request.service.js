@@ -740,32 +740,41 @@ class RefundRequestService {
         customAmount = null,
         notes = null
     ) {
-        const refundRequest = await prisma.refundRequest.findUnique({
-            where: { id: requestId },
-            include: {
-                order: {
-                    include: {
-                        course: true,
-                        user: true,
+        // Use transaction with row-level locking to prevent concurrent processing
+        // This ensures only one request can process the refund at a time
+        const refundRequest = await prisma.$transaction(async (tx) => {
+            // Use findUnique with forUpdate to lock the row (PostgreSQL row-level locking)
+            // This prevents concurrent processing of the same refund request
+            const request = await tx.refundRequest.findUnique({
+                where: { id: requestId },
+                include: {
+                    order: {
+                        include: {
+                            course: true,
+                            user: true,
+                        },
                     },
+                    student: true,
                 },
-                student: true,
-            },
+            })
+
+            if (!request) {
+                const error = new Error('Refund request not found')
+                error.statusCode = HTTP_STATUS.NOT_FOUND
+                throw error
+            }
+
+            // Check status while locked to prevent race condition
+            if (request.status !== 'PENDING') {
+                const error = new Error(
+                    `Cannot process refund request with status: ${request.status}. This request may have been processed already.`
+                )
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
+
+            return request
         })
-
-        if (!refundRequest) {
-            const error = new Error('Refund request not found')
-            error.statusCode = HTTP_STATUS.NOT_FOUND
-            throw error
-        }
-
-        if (refundRequest.status !== 'PENDING') {
-            const error = new Error(
-                `Cannot process refund request with status: ${refundRequest.status}`
-            )
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
-        }
 
         if (action === 'REJECT') {
             const updated = await prisma.$transaction(async (tx) => {
