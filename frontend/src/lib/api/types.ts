@@ -387,6 +387,8 @@ export interface Order {
         | 'FAILED'
         | 'REFUNDED'
         | 'PARTIALLY_REFUNDED'
+        | 'REFUND_PENDING'
+        | 'REFUND_FAILED'
     transactionId?: string
     refundAmount: number
     refundedAt?: string

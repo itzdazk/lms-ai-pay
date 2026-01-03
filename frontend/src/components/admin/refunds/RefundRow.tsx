@@ -7,7 +7,7 @@ import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import { MoreVertical, Eye, RotateCcw } from 'lucide-react'
 import { formatDateTime } from '../../../lib/utils'
-import type { Order } from '../../../lib/api/types'
+import type { RefundRequest } from '../../../lib/api/refund-requests'
 
 function formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -17,15 +17,15 @@ function formatPrice(price: number): string {
 }
 
 interface RefundRowProps {
-    order: Order
+    refundRequest: RefundRequest
     isSelected: boolean
     onRowSelect: (id: number | null) => void
-    onViewDetail: (order: Order) => void
-    onRefund: (order: Order) => void
+    onViewDetail: (refundRequest: RefundRequest) => void
+    onRefund: (refundRequest: RefundRequest) => void
 }
 
 export function RefundRow({
-    order,
+    refundRequest,
     isSelected,
     onRowSelect,
     onViewDetail,
@@ -48,7 +48,7 @@ export function RefundRow({
         if (isCurrentlySelected) {
             onRowSelect(null)
         } else {
-            onRowSelect(order.id)
+            onRowSelect(refundRequest.id)
             setMenuPosition({ x: e.clientX, y: e.clientY })
             setMenuOpen(true)
         }
@@ -110,33 +110,37 @@ export function RefundRow({
         }
     }, [menuOpen])
 
-    const getStatusBadge = (status: Order['paymentStatus']) => {
+    const getStatusBadge = (status: RefundRequest['status']) => {
         const statusMap = {
-            PAID: {
-                label: 'Đã thanh toán',
+            PENDING: {
+                label: 'Đang chờ xử lý',
+                className:
+                    'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40',
+            },
+            APPROVED: {
+                label: 'Đã hoàn tiền',
                 className:
                     'bg-green-600/20 text-green-300 border border-green-500/40',
             },
-            PARTIALLY_REFUNDED: {
-                label: 'Hoàn tiền một phần',
+            REJECTED: {
+                label: 'Đã từ chối',
                 className:
-                    'bg-orange-600/20 text-orange-300 border border-orange-500/40',
-            },
-            REFUNDED: {
-                label: 'Đã hoàn tiền',
-                className:
-                    'bg-purple-600/20 text-purple-300 border border-purple-500/40',
+                    'bg-red-600/20 text-red-300 border border-red-500/40',
             },
         }
-        const statusInfo = statusMap[status as keyof typeof statusMap]
+        const statusInfo = statusMap[status]
         if (!statusInfo) return null
         return (
             <Badge className={statusInfo.className}>{statusInfo.label}</Badge>
         )
     }
 
-    const maxRefundAmount = order.finalPrice - order.refundAmount
-    const canRefund = maxRefundAmount > 0
+    const order = refundRequest.order
+    if (!order) return null
+
+    const refundAmount = (order as any).refundAmount || 0
+    const maxRefundAmount = order.finalPrice - refundAmount
+    const canRefund = maxRefundAmount > 0 && refundRequest.status === 'PENDING'
 
     return (
         <>
@@ -150,9 +154,9 @@ export function RefundRow({
                         <span className='font-medium text-white'>
                             {order.orderCode}
                         </span>
-                        {order.user && (
+                        {refundRequest.student && (
                             <span className='text-xs text-gray-400'>
-                                {order.user.fullName}
+                                {refundRequest.student.fullName}
                             </span>
                         )}
                     </div>
@@ -163,18 +167,13 @@ export function RefundRow({
                             <span className='text-white font-medium'>
                                 {order.course.title}
                             </span>
-                            {order.course.instructor && (
-                                <span className='text-xs text-gray-400'>
-                                    {order.course.instructor.fullName}
-                                </span>
-                            )}
                         </div>
                     ) : (
                         <span className='text-gray-400'>N/A</span>
                     )}
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[140px]'>
-                    {getStatusBadge(order.paymentStatus)}
+                    {getStatusBadge(refundRequest.status)}
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[130px]'>
                     <span className='text-white font-medium'>
@@ -183,17 +182,20 @@ export function RefundRow({
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[130px]'>
                     <span className='text-orange-400 font-medium'>
-                        {formatPrice(order.refundAmount)}
+                        {formatPrice(refundAmount)}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[130px]'>
                     <span className='text-green-400 font-medium'>
-                        {formatPrice(maxRefundAmount)}
+                        {formatPrice(
+                            refundRequest.suggestedRefundAmount ||
+                                maxRefundAmount
+                        )}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='w-[150px]'>
                     <span className='text-gray-300'>
-                        {formatDateTime(order.createdAt)}
+                        {formatDateTime(refundRequest.createdAt)}
                     </span>
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='text-right w-[100px]'>
@@ -204,7 +206,7 @@ export function RefundRow({
                         onClick={(e) => {
                             e.stopPropagation()
                             if (!isSelected) {
-                                onRowSelect(order.id)
+                                onRowSelect(refundRequest.id)
                             }
                             setMenuPosition({ x: e.clientX, y: e.clientY })
                             setMenuOpen(true)
@@ -228,7 +230,7 @@ export function RefundRow({
                     <div
                         className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
                         onClick={() => {
-                            onViewDetail(order)
+                            onViewDetail(refundRequest)
                             setMenuOpen(false)
                         }}
                     >
@@ -239,7 +241,7 @@ export function RefundRow({
                         <div
                             className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer'
                             onClick={() => {
-                                onRefund(order)
+                                onRefund(refundRequest)
                                 setMenuOpen(false)
                             }}
                         >

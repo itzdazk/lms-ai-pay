@@ -12,6 +12,12 @@ export const createRefundRequestValidator = [
         .withMessage('Reason is required')
         .isLength({ min: 10, max: 1000 })
         .withMessage('Reason must be between 10 and 1000 characters'),
+    body('reasonType')
+        .optional()
+        .isIn(['MEDICAL', 'FINANCIAL_EMERGENCY', 'DISSATISFACTION', 'OTHER'])
+        .withMessage(
+            'Reason type must be one of: MEDICAL, FINANCIAL_EMERGENCY, DISSATISFACTION, OTHER'
+        ),
     validate,
 ]
 

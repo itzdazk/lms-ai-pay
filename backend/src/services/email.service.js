@@ -215,6 +215,97 @@ class EmailService {
             text,
         })
     }
+
+    /**
+     * Send refund request submitted email
+     */
+    async sendRefundRequestSubmittedEmail(user, refundRequest, order) {
+        const formattedAmount = new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+        }).format(parseFloat(refundRequest.suggestedRefundAmount || 0))
+
+        const refundTypeText =
+            refundRequest.refundType === 'FULL'
+                ? 'toàn bộ'
+                : refundRequest.refundType === 'PARTIAL'
+                  ? 'một phần'
+                  : ''
+
+        const text = `Xin chào ${user.fullName},\n\nYêu cầu hoàn tiền của bạn đã được gửi thành công!\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nLoại hoàn tiền: ${refundTypeText}\nSố tiền đề xuất: ${formattedAmount}\nLý do: ${refundRequest.reason}\n\nYêu cầu của bạn đang được xem xét bởi quản trị viên. Chúng tôi sẽ thông báo cho bạn khi có kết quả.\n\nCảm ơn bạn đã sử dụng dịch vụ của chúng tôi!`
+
+        return this.sendEmail({
+            to: user.email,
+            subject: 'Yêu cầu Hoàn tiền đã được Gửi - LMS AI Pay',
+            html: text.replace(/\n/g, '<br>'),
+            text,
+        })
+    }
+
+    /**
+     * Send refund offer email (for partial refunds)
+     */
+    async sendRefundOfferEmail(user, refundRequest, order) {
+        const formattedAmount = new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+        }).format(parseFloat(refundRequest.suggestedRefundAmount || 0))
+
+        const offerExpiresAt = refundRequest.offerExpiresAt
+            ? new Date(refundRequest.offerExpiresAt).toLocaleString('vi-VN')
+            : 'N/A'
+
+        const offerUrl = `${config.CLIENT_URL}/orders/${order.id}`
+
+        const text = `Xin chào ${user.fullName},\n\nChúng tôi đã xem xét yêu cầu hoàn tiền của bạn và đề xuất hoàn tiền một phần.\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nSố tiền đề xuất: ${formattedAmount}\nThời hạn phản hồi: ${offerExpiresAt}\n\nVui lòng truy cập ${offerUrl} để chấp nhận hoặc từ chối đề xuất này.\n\nLưu ý: Bạn có 48 giờ để phản hồi. Sau thời hạn này, đề xuất sẽ tự động hết hạn.`
+
+        return this.sendEmail({
+            to: user.email,
+            subject: 'Đề Xuất Hoàn Tiền Một Phần - LMS AI Pay',
+            html: text.replace(/\n/g, '<br>'),
+            text,
+        })
+    }
+
+    /**
+     * Send refund approved email
+     */
+    async sendRefundApprovedEmail(user, refundRequest, order, refundAmount) {
+        const formattedAmount = new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+        }).format(parseFloat(refundAmount || 0))
+
+        const refundTypeText =
+            refundRequest.refundType === 'FULL'
+                ? 'toàn bộ'
+                : refundRequest.refundType === 'PARTIAL'
+                  ? 'một phần'
+                  : ''
+
+        const text = `Xin chào ${user.fullName},\n\nYêu cầu hoàn tiền của bạn đã được chấp nhận!\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nLoại hoàn tiền: ${refundTypeText}\nSố tiền hoàn: ${formattedAmount}\n\nSố tiền sẽ được hoàn về tài khoản của bạn trong vòng 5-7 ngày làm việc.\n\nLưu ý: Quyền truy cập khóa học đã bị thu hồi.\n\nCảm ơn bạn đã sử dụng dịch vụ của chúng tôi!`
+
+        return this.sendEmail({
+            to: user.email,
+            subject: 'Yêu cầu Hoàn tiền đã được Chấp nhận - LMS AI Pay',
+            html: text.replace(/\n/g, '<br>'),
+            text,
+        })
+    }
+
+    /**
+     * Send refund rejected email
+     */
+    async sendRefundRejectedEmail(user, refundRequest, order, reason) {
+        const text = `Xin chào ${user.fullName},\n\nRất tiếc, yêu cầu hoàn tiền của bạn đã bị từ chối.\n\nMã đơn hàng: ${order.orderCode}\nKhóa học: ${order.course?.title || 'N/A'}\nLý do từ chối: ${reason || refundRequest.adminNotes || 'Không đủ điều kiện hoàn tiền'}\n\nNếu bạn có thắc mắc, vui lòng liên hệ với bộ phận hỗ trợ của chúng tôi.\n\nCảm ơn bạn đã sử dụng dịch vụ của chúng tôi!`
+
+        return this.sendEmail({
+            to: user.email,
+            subject: 'Yêu cầu Hoàn tiền đã bị Từ chối - LMS AI Pay',
+            html: text.replace(/\n/g, '<br>'),
+            text,
+        })
+    }
 }
 
 export default new EmailService()

@@ -1,7 +1,7 @@
 // src/services/lesson-notes.service.js
-import { prisma } from '../config/database.config.js';
-import logger from '../config/logger.config.js';
-import { HTTP_STATUS } from '../config/constants.js';
+import { prisma } from '../config/database.config.js'
+import logger from '../config/logger.config.js'
+import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js'
 
 class LessonNotesService {
     /**
@@ -15,28 +15,29 @@ class LessonNotesService {
             include: {
                 course: true,
             },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Get note
@@ -47,7 +48,7 @@ class LessonNotesService {
                     lessonId,
                 },
             },
-        });
+        })
 
         return {
             lesson: {
@@ -63,7 +64,7 @@ class LessonNotesService {
                       updatedAt: note.updatedAt,
                   }
                 : null,
-        };
+        }
     }
 
     /**
@@ -77,28 +78,29 @@ class LessonNotesService {
             include: {
                 course: true,
             },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Upsert note
@@ -118,11 +120,11 @@ class LessonNotesService {
             update: {
                 content: content || '',
             },
-        });
+        })
 
         logger.info(
             `Note ${note.id ? 'updated' : 'created'} for user ${userId}, lesson ${lessonId}`
-        );
+        )
 
         return {
             note: {
@@ -131,7 +133,7 @@ class LessonNotesService {
                 createdAt: note.createdAt,
                 updatedAt: note.updatedAt,
             },
-        };
+        }
     }
 
     /**
@@ -142,28 +144,29 @@ class LessonNotesService {
         // Get lesson
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Delete note
@@ -172,11 +175,11 @@ class LessonNotesService {
                 userId,
                 lessonId,
             },
-        });
+        })
 
-        logger.info(`Note deleted for user ${userId}, lesson ${lessonId}`);
+        logger.info(`Note deleted for user ${userId}, lesson ${lessonId}`)
 
-        return { success: true };
+        return { success: true }
     }
 
     /**
@@ -195,12 +198,12 @@ class LessonNotesService {
             include: {
                 course: true,
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Get all notes for this course
@@ -224,7 +227,7 @@ class LessonNotesService {
                     lessonOrder: 'asc',
                 },
             },
-        });
+        })
 
         return {
             course: {
@@ -238,10 +241,8 @@ class LessonNotesService {
                 createdAt: note.createdAt,
                 updatedAt: note.updatedAt,
             })),
-        };
+        }
     }
 }
 
-export default new LessonNotesService();
-
-
+export default new LessonNotesService()

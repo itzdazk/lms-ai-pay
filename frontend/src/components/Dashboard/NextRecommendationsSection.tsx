@@ -155,99 +155,130 @@ export function NextRecommendationsSection({
 
     if (loading) {
         return (
-            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                <CardHeader>
-                    <CardTitle className='text-white flex items-center gap-2'>
-                        <BookOpen className='h-4 w-4 text-blue-400' />
+            <div className='mb-8'>
+                <div className='flex items-center justify-between mb-4'>
+                    <h2 className='text-2xl font-bold text-black dark:text-white'>
                         Khóa học liên quan
-                    </CardTitle>
-                    <CardDescription className='text-gray-400'>
-                        Những khóa học phù hợp với các khóa học bạn đang học
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className='flex items-center justify-center py-8'>
-                        <Loader2 className='h-5 w-5 animate-spin text-blue-500' />
-                    </div>
-                </CardContent>
-            </Card>
+                    </h2>
+                </div>
+                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                    <CardHeader>
+                        <CardTitle className='text-white flex items-center gap-2'>
+                            <BookOpen className='h-4 w-4 text-blue-400' />
+                            Khóa học liên quan
+                        </CardTitle>
+                        <CardDescription className='text-gray-400'>
+                            Những khóa học phù hợp với các khóa học bạn đang học
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className='flex items-center justify-center py-8'>
+                            <Loader2 className='h-5 w-5 animate-spin text-blue-500' />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         )
     }
 
     if (error) {
         return (
-            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                <CardHeader>
-                    <CardTitle className='text-white flex items-center gap-2'>
-                        <BookOpen className='h-4 w-4 text-blue-400' />
+            <div className='mb-8'>
+                <div className='flex items-center justify-between mb-4'>
+                    <h2 className='text-2xl font-bold text-black dark:text-white'>
                         Khóa học liên quan
-                    </CardTitle>
-                    <CardDescription className='text-gray-400'>
-                        Những khóa học phù hợp với các khóa học bạn đang học
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className='text-red-400 text-sm'>{error}</p>
-                </CardContent>
-            </Card>
+                    </h2>
+                </div>
+                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                    <CardHeader>
+                        <CardTitle className='text-white flex items-center gap-2'>
+                            <BookOpen className='h-4 w-4 text-blue-400' />
+                            Khóa học liên quan
+                        </CardTitle>
+                        <CardDescription className='text-gray-400'>
+                            Những khóa học phù hợp với các khóa học bạn đang học
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className='text-red-400 text-sm'>{error}</p>
+                    </CardContent>
+                </Card>
+            </div>
         )
     }
 
     if (courses.length === 0) {
         return (
+            <div className='mb-8'>
+                <div className='flex items-center justify-between mb-4'>
+                    <h2 className='text-2xl font-bold text-black dark:text-white'>
+                        Khóa học liên quan
+                    </h2>
+                </div>
+                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
+                    <CardHeader>
+                        <CardTitle className='text-white flex items-center gap-2'>
+                            <BookOpen className='h-4 w-4 text-blue-400' />
+                            Khóa học liên quan
+                        </CardTitle>
+                        <CardDescription className='text-gray-400'>
+                            Những khóa học phù hợp với các khóa học bạn đang học
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className='text-gray-400 text-sm text-center py-4'>
+                            Chưa có khóa học liên quan. Hãy đăng ký một số khóa
+                            học để xem các khóa học tương tự!
+                        </p>
+                        <div className='pt-2'>
+                            <DarkOutlineButton asChild className='w-full'>
+                                <Link to='/courses'>
+                                    Khám phá khóa học
+                                    <ArrowRight className='ml-2 h-4 w-4' />
+                                </Link>
+                            </DarkOutlineButton>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    return (
+        <div className='mb-8'>
+            <div className='flex items-center justify-between mb-4'>
+                <h2 className='text-2xl font-bold text-black dark:text-white'>
+                    Khóa học liên quan
+                </h2>
+            </div>
             <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                 <CardHeader>
                     <CardTitle className='text-white flex items-center gap-2'>
                         <BookOpen className='h-4 w-4 text-blue-400' />
-                        Khóa học liên quan
+                        Gợi ý cho bạn
                     </CardTitle>
                     <CardDescription className='text-gray-400'>
                         Những khóa học phù hợp với các khóa học bạn đang học
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <p className='text-gray-400 text-sm text-center py-4'>
-                        Chưa có khóa học liên quan. Hãy đăng ký một số khóa học
-                        để xem các khóa học tương tự!
-                    </p>
+                <CardContent className='space-y-3'>
+                    {courses.map((course) => (
+                        <RecommendedCourseItem
+                            key={course.id}
+                            course={course}
+                        />
+                    ))}
                     <div className='pt-2'>
                         <DarkOutlineButton asChild className='w-full'>
                             <Link to='/courses'>
-                                Khám phá khóa học
+                                Xem tất cả khóa học
                                 <ArrowRight className='ml-2 h-4 w-4' />
                             </Link>
                         </DarkOutlineButton>
                     </div>
                 </CardContent>
             </Card>
-        )
-    }
-
-    return (
-        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-            <CardHeader>
-                <CardTitle className='text-white flex items-center gap-2'>
-                    <BookOpen className='h-4 w-4 text-blue-400' />
-                    Khóa học liên quan
-                </CardTitle>
-                <CardDescription className='text-gray-400'>
-                    Những khóa học phù hợp với các khóa học bạn đang học
-                </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-3'>
-                {courses.map((course) => (
-                    <RecommendedCourseItem key={course.id} course={course} />
-                ))}
-                <div className='pt-2'>
-                    <DarkOutlineButton asChild className='w-full'>
-                        <Link to='/courses'>
-                            Xem tất cả khóa học
-                            <ArrowRight className='ml-2 h-4 w-4' />
-                        </Link>
-                    </DarkOutlineButton>
-                </div>
-            </CardContent>
-        </Card>
+        </div>
     )
 }
 

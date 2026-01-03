@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DarkOutlineButton } from '../components/ui/buttons'
 import { Progress } from '../components/ui/progress'
@@ -8,29 +9,23 @@ import {
     PlayCircle,
     CheckCircle,
     Flame,
-    Compass,
     Target,
     Loader2,
     BookOpen,
+    History,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useStudentDashboard } from '../hooks/useStudentDashboard'
 import { useEnrolledCourses } from '../hooks/useEnrolledCourses'
-import { useContinueWatching } from '../hooks/useContinueWatching'
 import { useStudyTime } from '../hooks/useStudyTime'
 import { useLearningStreak } from '../hooks/useLearningStreak'
 import {
-    RecentActivities,
-    QuizPerformanceSummary,
-    StudyTimeChart,
-    RecommendedCourses,
-    LearningStreakCard,
-    CalendarHeatmap,
+    StudyTimeAnalytics,
     StatCard,
-    ContinueWatchingSection,
     MyCoursesSection,
     AchievementsSection,
     NextRecommendationsSection,
+    RecentActivitiesModal,
 } from '../components/Dashboard'
 
 export function StudentDashboard() {
@@ -38,9 +33,9 @@ export function StudentDashboard() {
     const { dashboard, loading: dashboardLoading } = useStudentDashboard()
     const { courses: enrolledCourses, loading: coursesLoading } =
         useEnrolledCourses(10)
-    const { lessons: continueWatching } = useContinueWatching(5)
     const { analytics: studyTime } = useStudyTime()
     const { streak, loading: streakLoading } = useLearningStreak()
+    const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false)
 
     const activeCourses = enrolledCourses.filter(
         (enrollment) => enrollment.progressPercentage < 100
@@ -92,17 +87,15 @@ export function StudentDashboard() {
             description: 'Quay lại bài giảng gần nhất',
             icon: PlayCircle,
             href:
-                continueWatching.length > 0
-                    ? `/courses/${continueWatching[0].course.slug}/lessons/${continueWatching[0].slug}`
-                    : activeCourses.length > 0
+                activeCourses.length > 0
                     ? `/courses/${activeCourses[0].course.slug}/lessons`
                     : '/courses',
         },
         {
-            label: 'Khám phá lộ trình',
-            description: 'Hãy chọn khóa học phù hợp với bạn',
-            icon: Compass,
-            href: '/courses',
+            label: 'Hoạt động gần đây',
+            description: 'Xem lịch sử học tập của bạn',
+            icon: History,
+            onClick: () => setIsActivitiesModalOpen(true),
         },
         {
             label: 'Xem chứng chỉ',
@@ -168,20 +161,35 @@ export function StudentDashboard() {
                                 {quickActions.map((action) => (
                                     <DarkOutlineButton
                                         key={action.label}
-                                        asChild
+                                        asChild={!!action.href}
+                                        onClick={action.onClick || undefined}
                                         className='justify-start gap-3 bg-black! py-8'
                                     >
-                                        <Link to={action.href}>
-                                            <action.icon className='h-4 w-4 text-blue-400' />
-                                            <div className='text-left'>
-                                                <p className='text-sm font-semibold text-white'>
-                                                    {action.label}
-                                                </p>
-                                                <p className='text-xs text-gray-400'>
-                                                    {action.description}
-                                                </p>
+                                        {action.href ? (
+                                            <Link to={action.href}>
+                                                <action.icon className='h-4 w-4 text-blue-400' />
+                                                <div className='text-left'>
+                                                    <p className='text-sm font-semibold text-white'>
+                                                        {action.label}
+                                                    </p>
+                                                    <p className='text-xs text-gray-400'>
+                                                        {action.description}
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                        ) : (
+                                            <div className='flex items-center gap-3 w-full'>
+                                                <action.icon className='h-4 w-4 text-blue-400' />
+                                                <div className='text-left'>
+                                                    <p className='text-sm font-semibold text-white'>
+                                                        {action.label}
+                                                    </p>
+                                                    <p className='text-xs text-gray-400'>
+                                                        {action.description}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </Link>
+                                        )}
                                     </DarkOutlineButton>
                                 ))}
                             </div>
@@ -237,12 +245,25 @@ export function StudentDashboard() {
                 </div>
             </div>
 
-            {/* Continue Watching */}
-            <ContinueWatchingSection lessons={continueWatching} />
-
             {/* My Courses & Achievements */}
             <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
                 <MyCoursesSection enrollments={enrolledCourses} />
+                {/* Recommended Courses */}
+                <NextRecommendationsSection enrolledCourses={enrolledCourses} />
+            </div>
+
+            {/* Analytics Section */}
+            <div className='space-y-6 mb-10'>
+                <h2 className='text-2xl font-bold text-black dark:text-white'>
+                    Phân tích & Thống kê
+                </h2>
+
+                {/* Study Time Analytics */}
+                <StudyTimeAnalytics />
+            </div>
+
+            {/* Achievements Section */}
+            <div className='grid lg:grid-cols-[2fr,1fr] gap-6 mb-10'>
                 <div className='space-y-6'>
                     <AchievementsSection
                         completedCourses={completedCourses}
@@ -251,32 +272,11 @@ export function StudentDashboard() {
                 </div>
             </div>
 
-            {/* Phase 1: New Features */}
-            <div className='space-y-6 mb-10'>
-                <h2 className='text-2xl font-bold text-black dark:text-white'>
-                    Phân tích & Thống kê
-                </h2>
-
-                {/* Recent Activities & Quiz Performance */}
-                <div className='grid lg:grid-cols-2 gap-6'>
-                    <RecentActivities />
-                    <QuizPerformanceSummary />
-                </div>
-
-                {/* Study Time Analytics */}
-                <StudyTimeChart />
-            </div>
-
-            {/* Phase 2: Learning Streak & Calendar */}
-            <div className='space-y-6 mb-10'>
-                <LearningStreakCard />
-                <CalendarHeatmap />
-            </div>
-
-            {/* Recommended Courses */}
-            <div className='mb-10'>
-                <NextRecommendationsSection enrolledCourses={enrolledCourses} />
-            </div>
+            {/* Recent Activities Modal */}
+            <RecentActivitiesModal
+                open={isActivitiesModalOpen}
+                onOpenChange={setIsActivitiesModalOpen}
+            />
         </div>
     )
 }

@@ -36,13 +36,23 @@ type OrderFiltersProps = {
 const paymentStatuses = [
     { value: 'all', label: 'Tất cả', color: 'default' },
     { value: 'PAID', label: 'Đã thanh toán', color: 'green' },
-    { value: 'PENDING', label: 'Đang chờ', color: 'yellow' },
-    { value: 'FAILED', label: 'Thất bại', color: 'red' },
+    { value: 'PENDING', label: 'Đang chờ thanh toán', color: 'yellow' },
+    { value: 'FAILED', label: 'Thanh toán thất bại', color: 'red' },
     { value: 'REFUNDED', label: 'Đã hoàn tiền', color: 'purple' },
     {
         value: 'PARTIALLY_REFUNDED',
         label: 'Hoàn tiền một phần',
         color: 'purple',
+    },
+    {
+        value: 'REFUND_PENDING',
+        label: 'Đang chờ hoàn tiền',
+        color: 'yellow',
+    },
+    {
+        value: 'REFUND_FAILED',
+        label: 'Hoàn tiền thất bại',
+        color: 'red',
     },
 ]
 
@@ -131,6 +141,10 @@ export function OrderFilters({
                 return 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
             case 'PARTIALLY_REFUNDED':
                 return 'bg-orange-600/20 text-orange-300 border border-orange-500/40'
+            case 'REFUND_PENDING':
+                return 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'
+            case 'REFUND_FAILED':
+                return 'bg-red-600/20 text-red-300 border border-red-500/40'
             default:
                 return ''
         }

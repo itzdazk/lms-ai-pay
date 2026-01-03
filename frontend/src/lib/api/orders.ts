@@ -16,6 +16,7 @@ export interface OrderStats {
     pending: number
     failed: number
     refunded: number
+    partiallyRefunded: number
     totalSpent: number
 }
 

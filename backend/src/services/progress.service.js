@@ -1,54 +1,55 @@
 // src/services/progress.service.js
-import { prisma } from '../config/database.config.js';
-import logger from '../config/logger.config.js';
-import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js';
-import notificationsService from './notifications.service.js';
+import { prisma } from '../config/database.config.js'
+import logger from '../config/logger.config.js'
+import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js'
+import notificationsService from './notifications.service.js'
 
 class ProgressService {
-        /**
-         * Get progress status for all lessons in a course (for LessonList UI)
-         * Returns: [{ lessonId, isCompleted, quizCompleted }]
-         */
-        async getCourseLessonProgressList(userId, courseId) {
-            // Lấy tất cả lesson thuộc course, có lessonOrder
-            const lessons = await prisma.lesson.findMany({
-                where: { courseId, isPublished: true },
-                select: { id: true, lessonOrder: true },
-                orderBy: { lessonOrder: 'asc' },
-            });
+    /**
+     * Get progress status for all lessons in a course (for LessonList UI)
+     * Returns: [{ lessonId, isCompleted, quizCompleted }]
+     */
+    async getCourseLessonProgressList(userId, courseId) {
+        // Lấy tất cả lesson thuộc course, có lessonOrder
+        const lessons = await prisma.lesson.findMany({
+            where: { courseId, isPublished: true },
+            select: { id: true, lessonOrder: true },
+            orderBy: { lessonOrder: 'asc' },
+        })
 
-            // Lấy progress của user cho các lesson này
-            const progresses = await prisma.progress.findMany({
-                where: {
-                    userId,
-                    lessonId: { in: lessons.map(l => l.id) },
-                },
-                select: { lessonId: true, isCompleted: true, quizCompleted: true },
-            });
-            const progressMap = new Map(progresses.map(p => [p.lessonId, p]));
+        // Lấy progress của user cho các lesson này
+        const progresses = await prisma.progress.findMany({
+            where: {
+                userId,
+                lessonId: { in: lessons.map((l) => l.id) },
+            },
+            select: { lessonId: true, isCompleted: true, quizCompleted: true },
+        })
+        const progressMap = new Map(progresses.map((p) => [p.lessonId, p]))
 
-            // Kết hợp lesson và progress, trả về lessonOrder và sort sẵn
-            return lessons.map(lesson => {
-                const p = progressMap.get(lesson.id);
-                return {
-                    lessonId: lesson.id,
-                    lessonOrder: lesson.lessonOrder,
-                    isCompleted: p ? p.isCompleted : false,
-                    quizCompleted: p ? (p.quizCompleted ?? false) : false,
-                };
-            });
-        }
+        // Kết hợp lesson và progress, trả về lessonOrder và sort sẵn
+        return lessons.map((lesson) => {
+            const p = progressMap.get(lesson.id)
+            return {
+                lessonId: lesson.id,
+                lessonOrder: lesson.lessonOrder,
+                isCompleted: p ? p.isCompleted : false,
+                quizCompleted: p ? (p.quizCompleted ?? false) : false,
+            }
+        })
+    }
     /**
      * Get course progress for a user
      * Auto-calculates progress percentage based on completed lessons
      */
     async getCourseProgress(userId, courseId) {
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId,
+                userId,
+                courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
             include: {
@@ -61,12 +62,12 @@ class ProgressService {
                     },
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Get all progress records for this course
@@ -91,25 +92,25 @@ class ProgressService {
                     lessonOrder: 'asc',
                 },
             },
-        });
+        })
 
-        const totalLessons = enrollment.course.lessons.length;
+        const totalLessons = enrollment.course.lessons.length
         const completedLessons = progressRecords.filter(
             (p) => p.isCompleted
-        ).length;
+        ).length
 
         // Calculate progress percentage
         const progressPercentage =
             totalLessons > 0
                 ? Math.round((completedLessons / totalLessons) * 100 * 100) /
                   100
-                : 0;
+                : 0
 
         // Get lessons with progress
         const lessonsWithProgress = enrollment.course.lessons.map((lesson) => {
             const progress = progressRecords.find(
                 (p) => p.lessonId === lesson.id
-            );
+            )
             return {
                 ...lesson,
                 progress: progress
@@ -131,8 +132,8 @@ class ProgressService {
                           lastPosition: 0,
                           attemptsCount: 0,
                       },
-            };
-        });
+            }
+        })
 
         return {
             enrollment: {
@@ -154,7 +155,7 @@ class ProgressService {
                 progressPercentage,
             },
             lessons: lessonsWithProgress,
-        };
+        }
     }
 
     /**
@@ -167,28 +168,29 @@ class ProgressService {
             include: {
                 course: true,
             },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Get progress record
@@ -199,7 +201,7 @@ class ProgressService {
                     lessonId,
                 },
             },
-        });
+        })
 
         return {
             lesson: {
@@ -226,7 +228,7 @@ class ProgressService {
                       lastPosition: 0,
                       attemptsCount: 0,
                   },
-        };
+        }
     }
 
     /**
@@ -240,28 +242,29 @@ class ProgressService {
             include: {
                 course: true,
             },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Update enrollment startedAt if not set
@@ -272,7 +275,7 @@ class ProgressService {
                     startedAt: new Date(),
                     lastAccessedAt: new Date(),
                 },
-            });
+            })
         } else {
             // Update lastAccessedAt
             await prisma.enrollment.update({
@@ -280,7 +283,7 @@ class ProgressService {
                 data: {
                     lastAccessedAt: new Date(),
                 },
-            });
+            })
         }
 
         // Get or create progress record
@@ -302,7 +305,7 @@ class ProgressService {
                     increment: 1,
                 },
             },
-        });
+        })
 
         return {
             progress: {
@@ -312,40 +315,41 @@ class ProgressService {
                 lastPosition: progress.lastPosition,
                 attemptsCount: progress.attemptsCount,
             },
-        };
+        }
     }
 
     /**
      * Update lesson progress (video position, watch duration)
      */
     async updateProgress(userId, lessonId, data) {
-        const { position } = data;
+        const { position } = data
 
         // Get lesson
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Lấy progress hiện tại (nếu có)
@@ -356,33 +360,41 @@ class ProgressService {
                     lessonId,
                 },
             },
-        });
+        })
 
-        const updateData = {};
+        const updateData = {}
         if (position !== undefined) {
-            updateData.lastPosition = position;
+            updateData.lastPosition = position
             // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
-            let newWatchDuration = currentProgress === null || position > (currentProgress.watchDuration ?? 0)
-                ? position
-                : currentProgress.watchDuration;
-            if (currentProgress === null || position > (currentProgress.watchDuration ?? 0)) {
-                updateData.watchDuration = position;
+            let newWatchDuration =
+                currentProgress === null ||
+                position > (currentProgress.watchDuration ?? 0)
+                    ? position
+                    : currentProgress.watchDuration
+            if (
+                currentProgress === null ||
+                position > (currentProgress.watchDuration ?? 0)
+            ) {
+                updateData.watchDuration = position
             }
-                        // Tự động đánh dấu completed nếu đã xem >= 70% video
-                        if (lesson.videoDuration && newWatchDuration >= lesson.videoDuration * 0.50) {
-                                updateData.isCompleted = true;
-                                updateData.completedAt = new Date();
-                                // Đảm bảo watchedDuration = videoDuration khi hoàn thành
-                                updateData.watchDuration = lesson.videoDuration;
+            // Tự động đánh dấu completed nếu đã xem >= 70% video
+            if (
+                lesson.videoDuration &&
+                newWatchDuration >= lesson.videoDuration * 0.5
+            ) {
+                updateData.isCompleted = true
+                updateData.completedAt = new Date()
+                // Đảm bảo watchedDuration = videoDuration khi hoàn thành
+                updateData.watchDuration = lesson.videoDuration
 
-                                // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
-                                const quiz = await prisma.quiz.findUnique({
-                                    where: { lessonId: lesson.id },
-                                });
-                                if (!quiz || quiz.isPublished === false) {
-                                    updateData.quizCompleted = true;
-                                }
-                        }
+                // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
+                const quiz = await prisma.quiz.findUnique({
+                    where: { lessonId: lesson.id },
+                })
+                if (!quiz || quiz.isPublished === false) {
+                    updateData.quizCompleted = true
+                }
+            }
         }
 
         const progress = await prisma.progress.upsert({
@@ -401,7 +413,7 @@ class ProgressService {
                 isCompleted: false,
             },
             update: updateData,
-        });
+        })
 
         // Update enrollment lastAccessedAt
         await prisma.enrollment.update({
@@ -409,7 +421,7 @@ class ProgressService {
             data: {
                 lastAccessedAt: new Date(),
             },
-        });
+        })
 
         return {
             progress: {
@@ -418,7 +430,7 @@ class ProgressService {
                 lastPosition: progress.lastPosition,
                 attemptsCount: progress.attemptsCount,
             },
-        };
+        }
     }
 
     /**
@@ -438,36 +450,39 @@ class ProgressService {
                     },
                 },
             },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Bỏ kiểm tra điều kiện xem >= 70% video khi đánh dấu hoàn thành bài học
         // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
-        let quizCompleted = false;
-        const quiz = await prisma.quiz.findUnique({ where: { lessonId: lesson.id } });
+        let quizCompleted = false
+        const quiz = await prisma.quiz.findUnique({
+            where: { lessonId: lesson.id },
+        })
         if (!quiz || quiz.isPublished === false) {
-            quizCompleted = true;
+            quizCompleted = true
         }
         // Update or create progress record as completed
         // Nếu lesson có videoDuration thì set luôn watchDuration = videoDuration khi hoàn thành
@@ -491,12 +506,14 @@ class ProgressService {
                 isCompleted: true,
                 completedAt: new Date(),
                 quizCompleted,
-                ...(lesson.videoDuration ? { watchDuration: lesson.videoDuration } : {}),
+                ...(lesson.videoDuration
+                    ? { watchDuration: lesson.videoDuration }
+                    : {}),
             },
-        });
+        })
 
         // Auto-calculate course progress percentage
-        await this.updateCourseProgress(userId, lesson.courseId);
+        await this.updateCourseProgress(userId, lesson.courseId)
 
         // Create notification for lesson completed
         await notificationsService.notifyLessonCompleted(
@@ -505,7 +522,7 @@ class ProgressService {
             lesson.courseId,
             lesson.title,
             lesson.course.title
-        );
+        )
 
         return {
             progress: {
@@ -516,7 +533,7 @@ class ProgressService {
                 lastPosition: progress.lastPosition,
                 attemptsCount: progress.attemptsCount,
             },
-        };
+        }
     }
 
     /**
@@ -526,28 +543,29 @@ class ProgressService {
         // Get lesson
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
-        });
+        })
 
         if (!lesson) {
-            const error = new Error('Lesson not found');
-            error.statusCode = HTTP_STATUS.NOT_FOUND;
-            throw error;
+            const error = new Error('Lesson not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
         }
 
-        // Check if user is enrolled
-        const enrollment = await prisma.enrollment.findUnique({
+        // Check if user is enrolled (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId: lesson.courseId,
+                userId,
+                courseId: lesson.courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course');
-            error.statusCode = HTTP_STATUS.FORBIDDEN;
-            throw error;
+            const error = new Error('You are not enrolled in this course')
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
         }
 
         // Get progress record
@@ -558,14 +576,14 @@ class ProgressService {
                     lessonId,
                 },
             },
-        });
+        })
 
         return {
             lessonId: lesson.id,
             videoDuration: lesson.videoDuration,
             resumePosition: progress?.lastPosition || 0,
             isCompleted: progress?.isCompleted || false,
-        };
+        }
     }
 
     /**
@@ -573,12 +591,13 @@ class ProgressService {
      * Called when lesson is completed
      */
     async updateCourseProgress(userId, courseId) {
-        // Get enrollment
-        const enrollment = await prisma.enrollment.findUnique({
+        // Get enrollment (not DROPPED)
+        const enrollment = await prisma.enrollment.findFirst({
             where: {
-                userId_courseId: {
-                    userId,
-                    courseId,
+                userId,
+                courseId,
+                status: {
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
             include: {
@@ -590,10 +609,10 @@ class ProgressService {
                     },
                 },
             },
-        });
+        })
 
         if (!enrollment) {
-            return;
+            return
         }
 
         // Get all completed lessons
@@ -603,43 +622,43 @@ class ProgressService {
                 courseId,
                 isCompleted: true,
             },
-        });
+        })
 
-        const totalLessons = enrollment.course.lessons.length;
-        const completedLessons = completedProgress.length;
+        const totalLessons = enrollment.course.lessons.length
+        const completedLessons = completedProgress.length
 
         // Calculate progress percentage
         const progressPercentage =
             totalLessons > 0
                 ? Math.round((completedLessons / totalLessons) * 100 * 100) /
                   100
-                : 0;
+                : 0
 
         // Update enrollment
         const updateData = {
             progressPercentage,
             lastAccessedAt: new Date(),
-        };
+        }
 
         // If 100% completed, mark enrollment as completed
         if (progressPercentage >= 100 && !enrollment.completedAt) {
-            updateData.completedAt = new Date();
-            updateData.status = ENROLLMENT_STATUS.COMPLETED;
+            updateData.completedAt = new Date()
+            updateData.status = ENROLLMENT_STATUS.COMPLETED
 
             // Create notification for course completed (student)
             await notificationsService.notifyCourseCompleted(
                 userId,
                 courseId,
                 enrollment.course.title
-            );
+            )
 
             // Notify instructor about student completing course
             try {
                 const student = await prisma.user.findUnique({
                     where: { id: userId },
                     select: { fullName: true },
-                });
-                const instructorId = enrollment.course.instructorId;
+                })
+                const instructorId = enrollment.course.instructorId
                 if (instructorId && student) {
                     await notificationsService.notifyInstructorStudentCompletedCourse(
                         instructorId,
@@ -647,12 +666,12 @@ class ProgressService {
                         enrollment.course.title,
                         student.fullName,
                         userId
-                    );
+                    )
                 }
             } catch (error) {
                 logger.error(
                     `Failed to notify instructor about course completion: ${error.message}`
-                );
+                )
                 // Don't fail progress update if notification fails
             }
         }
@@ -660,11 +679,11 @@ class ProgressService {
         await prisma.enrollment.update({
             where: { id: enrollment.id },
             data: updateData,
-        });
+        })
 
         logger.info(
             `Updated course progress for user ${userId}, course ${courseId}: ${progressPercentage}%`
-        );
+        )
     }
 
     /**
@@ -697,7 +716,7 @@ class ProgressService {
                 updatedAt: 'desc',
             },
             take: limit,
-        });
+        })
 
         return progressRecords.map((p) => ({
             lesson: {
@@ -712,7 +731,7 @@ class ProgressService {
                 watchDuration: p.watchDuration,
                 updatedAt: p.updatedAt,
             },
-        }));
+        }))
     }
 
     /**
@@ -741,7 +760,7 @@ class ProgressService {
                 updatedAt: 'desc',
             },
             take: limit,
-        });
+        })
 
         return progressRecords.map((p) => ({
             lesson: {
@@ -756,7 +775,7 @@ class ProgressService {
                 completedAt: p.completedAt,
                 updatedAt: p.updatedAt,
             },
-        }));
+        }))
     }
 
     /**
@@ -767,34 +786,45 @@ class ProgressService {
      * @returns {{mergedSegments: Array<{start:number,end:number}>, totalWatched: number, isCompleted: boolean}}
      */
     calculateLessonCompletion(segments, videoDuration, threshold = 0.75) {
-        if (!Array.isArray(segments) || segments.length === 0 || !videoDuration) {
-            return { mergedSegments: [], totalWatched: 0, isCompleted: false };
+        if (
+            !Array.isArray(segments) ||
+            segments.length === 0 ||
+            !videoDuration
+        ) {
+            return { mergedSegments: [], totalWatched: 0, isCompleted: false }
         }
         // Sort segments by start
         segments = segments
-            .filter(s => typeof s.start === 'number' && typeof s.end === 'number' && s.end > s.start)
-            .sort((a, b) => a.start - b.start);
-        const merged = [];
+            .filter(
+                (s) =>
+                    typeof s.start === 'number' &&
+                    typeof s.end === 'number' &&
+                    s.end > s.start
+            )
+            .sort((a, b) => a.start - b.start)
+        const merged = []
         for (const seg of segments) {
             if (merged.length === 0) {
-                merged.push({ ...seg });
+                merged.push({ ...seg })
             } else {
-                const last = merged[merged.length - 1];
+                const last = merged[merged.length - 1]
                 if (seg.start <= last.end) {
                     // Overlap or adjacent: merge
-                    last.end = Math.max(last.end, seg.end);
+                    last.end = Math.max(last.end, seg.end)
                 } else {
-                    merged.push({ ...seg });
+                    merged.push({ ...seg })
                 }
             }
         }
         // Calculate total watched time
-        const totalWatched = merged.reduce((sum, seg) => sum + (seg.end - seg.start), 0);
+        const totalWatched = merged.reduce(
+            (sum, seg) => sum + (seg.end - seg.start),
+            0
+        )
         // Completion: watched >= threshold * videoDuration
-        const isCompleted = totalWatched >= videoDuration * threshold;
-        return { mergedSegments: merged, totalWatched, isCompleted };
+        const isCompleted = totalWatched >= videoDuration * threshold
+        return { mergedSegments: merged, totalWatched, isCompleted }
     }
 }
 
-export default new ProgressService();
-
+export default new ProgressService()

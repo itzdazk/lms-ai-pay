@@ -70,6 +70,18 @@ function getStatusBadge(status: Order['paymentStatus']) {
                     Hoàn tiền một phần
                 </Badge>
             )
+        case 'REFUND_PENDING':
+            return (
+                <Badge className='bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'>
+                    Đang chờ hoàn tiền
+                </Badge>
+            )
+        case 'REFUND_FAILED':
+            return (
+                <Badge className='bg-red-600/20 text-red-300 border border-red-500/40'>
+                    Hoàn tiền thất bại
+                </Badge>
+            )
         default:
             return (
                 <Badge className='bg-gray-600/20 text-gray-300 border border-gray-500/40'>
@@ -113,11 +125,14 @@ export function OrderTable({
         Set<number>
     >(new Set())
 
-    // Check refund requests for PAID orders
+    // Check refund requests for PAID and REFUND_PENDING orders
     useEffect(() => {
         const checkRefundRequests = async () => {
             const paidOrders = orders.filter(
-                (order) => order.paymentStatus === 'PAID'
+                (order) =>
+                    order.paymentStatus === 'PAID' ||
+                    order.paymentStatus === 'REFUND_PENDING' ||
+                    order.paymentStatus === 'REFUND_FAILED'
             )
 
             if (paidOrders.length === 0) return
@@ -139,13 +154,22 @@ export function OrderTable({
                 )
 
                 const orderIdsWithRequests = new Set<number>()
+
                 requests.forEach(({ orderId, request }) => {
-                    if (
-                        request &&
-                        (request.status === 'PENDING' ||
-                            request.status === 'APPROVED')
-                    ) {
-                        orderIdsWithRequests.add(orderId)
+                    if (request) {
+                        if (
+                            request.status === 'PENDING' ||
+                            request.status === 'APPROVED'
+                        ) {
+                            orderIdsWithRequests.add(orderId)
+                        }
+                    }
+                })
+
+                // Also add orders with REFUND_PENDING status
+                orders.forEach((order) => {
+                    if (order.paymentStatus === 'REFUND_PENDING') {
+                        orderIdsWithRequests.add(order.id)
                     }
                 })
 
@@ -168,7 +192,14 @@ export function OrderTable({
 
     // Handle refund request submit
     const handleRefundRequestSubmit = useCallback(
-        async (reason: string) => {
+        async (
+            reason: string,
+            reasonType?:
+                | 'MEDICAL'
+                | 'FINANCIAL_EMERGENCY'
+                | 'DISSATISFACTION'
+                | 'OTHER'
+        ) => {
             if (!orderForRefund) return
 
             try {
@@ -176,7 +207,8 @@ export function OrderTable({
                 const refundRequest =
                     await refundRequestsApi.createRefundRequest({
                         orderId: orderForRefund.id,
-                        reason,
+                        reason: reason,
+                        reasonType: reasonType,
                     })
 
                 if (refundRequest.status === 'REJECTED') {
@@ -252,9 +284,6 @@ export function OrderTable({
                                 Khóa học
                             </DarkOutlineTableHead>
                             <DarkOutlineTableHead>
-                                Học viên
-                            </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
                                 Trạng thái
                             </DarkOutlineTableHead>
                             <DarkOutlineTableHead>
@@ -278,9 +307,6 @@ export function OrderTable({
                             <DarkOutlineTableRow key={i}>
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-24' />
-                                </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
-                                    <Skeleton className='h-4 w-32' />
                                 </DarkOutlineTableCell>
                                 <DarkOutlineTableCell>
                                     <Skeleton className='h-4 w-32' />
@@ -328,7 +354,6 @@ export function OrderTable({
                     <DarkOutlineTableRow>
                         <DarkOutlineTableHead>Mã đơn</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Khóa học</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Học viên</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Phương thức</DarkOutlineTableHead>
                         <DarkOutlineTableHead>Tổng tiền</DarkOutlineTableHead>
@@ -355,26 +380,6 @@ export function OrderTable({
                                         <p className='text-xs text-gray-400 mt-1'>
                                             {order.course.instructor.fullName}
                                         </p>
-                                    )}
-                                </div>
-                            </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                                <div className='max-w-xs'>
-                                    {order.user ? (
-                                        <>
-                                            <p className='text-white font-medium line-clamp-1'>
-                                                {order.user.fullName || 'N/A'}
-                                            </p>
-                                            {order.user.email && (
-                                                <p className='text-xs text-gray-400 mt-1 line-clamp-1'>
-                                                    {order.user.email}
-                                                </p>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <span className='text-gray-400'>
-                                            N/A
-                                        </span>
                                     )}
                                 </div>
                             </DarkOutlineTableCell>
@@ -406,7 +411,9 @@ export function OrderTable({
                                         </DarkOutlineButton>
 
                                         {/* Refund Request Button - Only for PAID orders without existing request */}
-                                        {order.paymentStatus === 'PAID' &&
+                                        {(order.paymentStatus === 'PAID' ||
+                                            order.paymentStatus ===
+                                                'REFUND_FAILED') &&
                                             !ordersWithRefundRequests.has(
                                                 order.id
                                             ) && (
