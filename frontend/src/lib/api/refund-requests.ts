@@ -200,7 +200,11 @@ export const refundRequestsApi = {
         limit?: number
         status?: RefundRequestStatus
         search?: string
-        sort?: 'newest' | 'oldest'
+        sort?: 'newest' | 'oldest' | 'amount_asc' | 'amount_desc'
+        startDate?: string
+        endDate?: string
+        minAmount?: number
+        maxAmount?: number
     }): Promise<PaginatedApiResponse<RefundRequest>> {
         const response = await apiClient.get<
             PaginatedApiResponse<RefundRequest>

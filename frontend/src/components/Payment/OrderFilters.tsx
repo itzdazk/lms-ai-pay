@@ -15,6 +15,28 @@ import {
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 
+// Format number to currency string without VNĐ suffix (for input display)
+function formatPriceInput(price: number | undefined | string): string {
+    if (!price) return ''
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(numPrice)) return ''
+    return new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(numPrice)
+}
+
+// Parse currency string to number (remove dots and spaces)
+function parsePriceInput(value: string): number | undefined {
+    if (!value || value.trim() === '') return undefined
+    // Remove all dots, spaces, and non-numeric characters except digits
+    const cleaned = value.replace(/[^\d]/g, '')
+    if (cleaned === '') return undefined
+    const parsed = parseFloat(cleaned)
+    // Return the parsed number (including 0) if valid, undefined if NaN
+    return isNaN(parsed) ? undefined : parsed
+}
+
 export type OrderFilters = {
     page?: number
     limit?: number
@@ -24,6 +46,8 @@ export type OrderFilters = {
     endDate?: string
     sort?: string
     search?: string
+    minAmount?: number
+    maxAmount?: number
 }
 
 type OrderFiltersProps = {
@@ -79,6 +103,14 @@ export function OrderFilters({
     const [endDate, setEndDate] = useState<Date>()
     const [showAdvanced, setShowAdvanced] = useState(false)
 
+    // Local state for formatted display values
+    const [minAmountDisplay, setMinAmountDisplay] = useState<string>(
+        filters.minAmount ? formatPriceInput(filters.minAmount) : ''
+    )
+    const [maxAmountDisplay, setMaxAmountDisplay] = useState<string>(
+        filters.maxAmount ? formatPriceInput(filters.maxAmount) : ''
+    )
+
     // Initialize dates from filters
     useEffect(() => {
         if (filters.startDate) {
@@ -93,12 +125,27 @@ export function OrderFilters({
         }
     }, [filters.startDate, filters.endDate])
 
+    // Sync display values when filters change externally (e.g., clear filters)
+    useEffect(() => {
+        setMinAmountDisplay(
+            filters.minAmount ? formatPriceInput(filters.minAmount) : ''
+        )
+    }, [filters.minAmount])
+
+    useEffect(() => {
+        setMaxAmountDisplay(
+            filters.maxAmount ? formatPriceInput(filters.maxAmount) : ''
+        )
+    }, [filters.maxAmount])
+
     const hasActiveFilters =
         filters.paymentStatus ||
         filters.paymentGateway ||
         filters.startDate ||
         filters.endDate ||
         filters.search ||
+        filters.minAmount !== undefined ||
+        filters.maxAmount !== undefined ||
         (filters.sort && filters.sort !== 'newest')
 
     const activeFilterCount = [
@@ -107,8 +154,66 @@ export function OrderFilters({
         filters.startDate,
         filters.endDate,
         filters.search,
+        filters.minAmount,
+        filters.maxAmount,
         filters.sort && filters.sort !== 'newest' ? filters.sort : null,
     ].filter(Boolean).length
+
+    const handleMinAmountChange = (value: string) => {
+        setMinAmountDisplay(value)
+        const parsedValue = parsePriceInput(value)
+
+        if (parsedValue === undefined) {
+            onFilterChange('minAmount', undefined)
+            return
+        }
+
+        // Validation: >= 0
+        if (parsedValue < 0) {
+            return
+        }
+
+        // Validation: minAmount <= maxAmount (if maxAmount exists)
+        if (
+            filters.maxAmount !== undefined &&
+            parsedValue > filters.maxAmount
+        ) {
+            return
+        }
+
+        // Update display with formatted value
+        setMinAmountDisplay(formatPriceInput(parsedValue))
+        // Save numeric value to state
+        onFilterChange('minAmount', parsedValue)
+    }
+
+    const handleMaxAmountChange = (value: string) => {
+        setMaxAmountDisplay(value)
+        const parsedValue = parsePriceInput(value)
+
+        if (parsedValue === undefined) {
+            onFilterChange('maxAmount', undefined)
+            return
+        }
+
+        // Validation: >= 0
+        if (parsedValue < 0) {
+            return
+        }
+
+        // Validation: maxAmount >= minAmount (if minAmount exists)
+        if (
+            filters.minAmount !== undefined &&
+            parsedValue < filters.minAmount
+        ) {
+            return
+        }
+
+        // Update display with formatted value
+        setMaxAmountDisplay(formatPriceInput(parsedValue))
+        // Save numeric value to state
+        onFilterChange('maxAmount', parsedValue)
+    }
 
     const handleDateSelect = (
         type: 'start' | 'end',
@@ -309,8 +414,8 @@ export function OrderFilters({
                         {/* Date Range */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
-                                <CalendarIcon className='h-4 w-4 text-gray-400' />
-                                <span className='text-sm font-medium text-gray-400'>
+                                <CalendarIcon className='h-4 w-4 text-gray-400 dark:text-gray-400' />
+                                <span className='text-sm font-medium text-gray-400 dark:text-gray-400'>
                                     Khoảng thời gian:
                                 </span>
                             </div>
@@ -319,9 +424,9 @@ export function OrderFilters({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant='outline'
-                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
+                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f] dark:border-[#2d2d2d] dark:text-gray-300 dark:hover:bg-[#1f1f1f]'
                                         >
-                                            <CalendarIcon className='mr-2 h-4 w-4' />
+                                            <CalendarIcon className='mr-2 h-4 w-4 text-gray-600 dark:text-gray-300' />
                                             {startDate ? (
                                                 format(
                                                     startDate,
@@ -358,9 +463,9 @@ export function OrderFilters({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant='outline'
-                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
+                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f] dark:border-[#2d2d2d] dark:text-gray-300 dark:hover:bg-[#1f1f1f]'
                                         >
-                                            <CalendarIcon className='mr-2 h-4 w-4' />
+                                            <CalendarIcon className='mr-2 h-4 w-4 text-gray-600 dark:text-gray-300' />
                                             {endDate ? (
                                                 format(endDate, 'dd/MM/yyyy', {
                                                     locale: vi,
@@ -406,6 +511,83 @@ export function OrderFilters({
                                         Xóa
                                     </Button>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* Amount Range */}
+                        <div>
+                            <div className='flex items-center gap-2 mb-3'>
+                                <span className='text-sm font-medium text-gray-400'>
+                                    Khoảng giá trị (VND):
+                                </span>
+                            </div>
+                            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                <div className='space-y-2'>
+                                    <label className='text-xs text-gray-500'>
+                                        Giá trị tối thiểu
+                                    </label>
+                                    <Input
+                                        type='text'
+                                        inputMode='numeric'
+                                        placeholder='0'
+                                        value={minAmountDisplay}
+                                        onChange={(e) => {
+                                            handleMinAmountChange(
+                                                e.target.value
+                                            )
+                                        }}
+                                        onBlur={(e) => {
+                                            // Format on blur to ensure proper display
+                                            const parsed = parsePriceInput(
+                                                e.target.value
+                                            )
+                                            if (parsed !== undefined) {
+                                                setMinAmountDisplay(
+                                                    formatPriceInput(parsed)
+                                                )
+                                            } else {
+                                                setMinAmountDisplay('')
+                                            }
+                                        }}
+                                        className='bg-[#1f1f1f] border-[#2d2d2d] text-white placeholder:text-gray-500'
+                                        spellCheck={false}
+                                        autoCorrect='off'
+                                        autoCapitalize='off'
+                                    />
+                                </div>
+                                <div className='space-y-2'>
+                                    <label className='text-xs text-gray-500'>
+                                        Giá trị tối đa
+                                    </label>
+                                    <Input
+                                        type='text'
+                                        inputMode='numeric'
+                                        placeholder='Không giới hạn'
+                                        value={maxAmountDisplay}
+                                        onChange={(e) => {
+                                            handleMaxAmountChange(
+                                                e.target.value
+                                            )
+                                        }}
+                                        onBlur={(e) => {
+                                            // Format on blur to ensure proper display
+                                            const parsed = parsePriceInput(
+                                                e.target.value
+                                            )
+                                            if (parsed !== undefined) {
+                                                setMaxAmountDisplay(
+                                                    formatPriceInput(parsed)
+                                                )
+                                            } else {
+                                                setMaxAmountDisplay('')
+                                            }
+                                        }}
+                                        className='bg-[#1f1f1f] border-[#2d2d2d] text-white placeholder:text-gray-500'
+                                        spellCheck={false}
+                                        autoCorrect='off'
+                                        autoCapitalize='off'
+                                    />
+                                </div>
                             </div>
                         </div>
 

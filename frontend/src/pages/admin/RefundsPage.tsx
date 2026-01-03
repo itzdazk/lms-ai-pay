@@ -10,7 +10,8 @@ import {
     RefundsFilters,
     RefundsTable,
     RefundsPagination,
-    RefundRequestDetailDialog,
+    OrderDetailsDialog,
+    RefundRequestDetailsDialog,
     type RefundFilters,
 } from '../../components/admin/refunds'
 import { toast } from 'sonner'
@@ -58,7 +59,9 @@ export function RefundsPage() {
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
     const [selectedRefundRequest, setSelectedRefundRequest] =
         useState<RefundRequest | null>(null)
-    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
+    const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false)
+    const [isRefundRequestDialogOpen, setIsRefundRequestDialogOpen] =
+        useState(false)
     const [searchInput, setSearchInput] = useState<string>(filters.search || '')
     const scrollPositionRef = useRef<number>(0)
     const isPageChangingRef = useRef<boolean>(false)
@@ -135,9 +138,16 @@ export function RefundsPage() {
                     | undefined,
                 search: filters.search,
                 sort:
-                    filters.sort === 'newest' || filters.sort === 'oldest'
+                    filters.sort === 'newest' ||
+                    filters.sort === 'oldest' ||
+                    filters.sort === 'amount_asc' ||
+                    filters.sort === 'amount_desc'
                         ? filters.sort
                         : 'oldest',
+                startDate: filters.startDate,
+                endDate: filters.endDate,
+                minAmount: filters.minAmount,
+                maxAmount: filters.maxAmount,
             })
 
             setRefundRequests(result.data)
@@ -218,16 +228,14 @@ export function RefundsPage() {
         setFilters((prev) => ({ ...prev, page: newPage }))
     }, [])
 
-    const handleViewDetail = (refundRequest: RefundRequest) => {
-        // Open detail dialog instead of navigating
+    const handleViewOrder = (refundRequest: RefundRequest) => {
         setSelectedRefundRequest(refundRequest)
-        setIsDetailDialogOpen(true)
+        setIsOrderDialogOpen(true)
     }
 
-    const handleRefund = (refundRequest: RefundRequest) => {
-        // Open detail dialog which now has process buttons
+    const handleViewRefundRequest = (refundRequest: RefundRequest) => {
         setSelectedRefundRequest(refundRequest)
-        setIsDetailDialogOpen(true)
+        setIsRefundRequestDialogOpen(true)
     }
 
     const handleProcessRefundRequest = async (
@@ -252,7 +260,7 @@ export function RefundsPage() {
                     : 'Yêu cầu hoàn tiền đã bị từ chối'
             )
 
-            setIsDetailDialogOpen(false)
+            setIsRefundRequestDialogOpen(false)
             setSelectedRefundRequest(null)
 
             // Reload refund requests
@@ -352,16 +360,23 @@ export function RefundsPage() {
                     onSearchExecute={handleSearch}
                     onSearchKeyPress={handleSearchKeyPress}
                     onClearSearch={handleClearSearch}
-                    onViewDetail={handleViewDetail}
-                    onRefund={handleRefund}
+                    onViewOrder={handleViewOrder}
+                    onViewRefundRequest={handleViewRefundRequest}
                     onRowSelect={setSelectedRowId}
                     renderPagination={renderPagination}
                 />
 
-                {/* Refund Request Detail Dialog */}
-                <RefundRequestDetailDialog
-                    isOpen={isDetailDialogOpen}
-                    setIsOpen={setIsDetailDialogOpen}
+                {/* Order Details Dialog */}
+                <OrderDetailsDialog
+                    isOpen={isOrderDialogOpen}
+                    setIsOpen={setIsOrderDialogOpen}
+                    refundRequest={selectedRefundRequest}
+                />
+
+                {/* Refund Request Details Dialog */}
+                <RefundRequestDetailsDialog
+                    isOpen={isRefundRequestDialogOpen}
+                    setIsOpen={setIsRefundRequestDialogOpen}
                     refundRequest={selectedRefundRequest}
                     onProcessRequest={handleProcessRefundRequest}
                     processing={actionLoading}

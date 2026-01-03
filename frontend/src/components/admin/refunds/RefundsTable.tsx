@@ -26,8 +26,8 @@ interface RefundsTableProps {
     onSearchExecute: () => void
     onSearchKeyPress: (e: React.KeyboardEvent) => void
     onClearSearch: () => void
-    onViewDetail: (refundRequest: RefundRequest) => void
-    onRefund: (refundRequest: RefundRequest) => void
+    onViewOrder: (refundRequest: RefundRequest) => void
+    onViewRefundRequest: (refundRequest: RefundRequest) => void
     onRowSelect: (id: number | null) => void
     renderPagination: () => React.ReactNode
 }
@@ -42,8 +42,8 @@ export function RefundsTable({
     onSearchExecute,
     onSearchKeyPress,
     onClearSearch,
-    onViewDetail,
-    onRefund,
+    onViewOrder,
+    onViewRefundRequest,
     onRowSelect,
     renderPagination,
 }: RefundsTableProps) {
@@ -152,8 +152,10 @@ export function RefundsTable({
                                                 refundRequest.id
                                             }
                                             onRowSelect={onRowSelect}
-                                            onViewDetail={onViewDetail}
-                                            onRefund={onRefund}
+                                            onViewOrder={onViewOrder}
+                                            onViewRefundRequest={
+                                                onViewRefundRequest
+                                            }
                                         />
                                     ))
                                 )}

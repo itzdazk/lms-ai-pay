@@ -448,6 +448,10 @@ class RefundRequestService {
             status,
             search,
             sort = 'oldest',
+            startDate,
+            endDate,
+            minAmount,
+            maxAmount,
         } = filters
 
         const where = {}
@@ -457,9 +461,23 @@ class RefundRequestService {
             where.status = status
         }
 
-        // Search by order code, student name, or course title
+        // Filter by date range (refund request creation date)
+        if (startDate || endDate) {
+            where.createdAt = {}
+            if (startDate) {
+                where.createdAt.gte = new Date(startDate)
+            }
+            if (endDate) {
+                const end = new Date(endDate)
+                end.setHours(23, 59, 59, 999)
+                where.createdAt.lte = end
+            }
+        }
+
+        // Build search conditions
+        const searchConditions = []
         if (search) {
-            where.OR = [
+            searchConditions.push(
                 {
                     order: {
                         orderCode: {
@@ -493,16 +511,50 @@ class RefundRequestService {
                             },
                         },
                     },
+                }
+            )
+        }
+
+        // Filter by amount range (order finalPrice)
+        const amountFilter = {}
+        if (minAmount !== undefined || maxAmount !== undefined) {
+            amountFilter.finalPrice = {}
+            if (minAmount !== undefined) {
+                amountFilter.finalPrice.gte = new Prisma.Decimal(minAmount)
+            }
+            if (maxAmount !== undefined) {
+                amountFilter.finalPrice.lte = new Prisma.Decimal(maxAmount)
+            }
+        }
+
+        // Combine filters: if we have both search and amount, use AND
+        if (searchConditions.length > 0 && Object.keys(amountFilter).length > 0) {
+            where.AND = [
+                {
+                    order: amountFilter,
+                },
+                {
+                    OR: searchConditions,
                 },
             ]
+        } else if (searchConditions.length > 0) {
+            // Only search
+            where.OR = searchConditions
+        } else if (Object.keys(amountFilter).length > 0) {
+            // Only amount filter
+            where.order = amountFilter
         }
 
         // Sort order
-        let orderBy = { createdAt: 'desc' }
+        let orderBy = { createdAt: 'asc' } // Default to oldest
         if (sort === 'oldest') {
             orderBy = { createdAt: 'asc' }
         } else if (sort === 'newest') {
             orderBy = { createdAt: 'desc' }
+        } else if (sort === 'amount_asc') {
+            orderBy = { order: { finalPrice: 'asc' } }
+        } else if (sort === 'amount_desc') {
+            orderBy = { order: { finalPrice: 'desc' } }
         }
 
         const [refundRequests, total] = await Promise.all([

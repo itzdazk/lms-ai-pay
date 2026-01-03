@@ -5,7 +5,7 @@ import {
 } from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
-import { MoreVertical, Eye, RotateCcw } from 'lucide-react'
+import { MoreVertical, Eye, Receipt } from 'lucide-react'
 import { formatDateTime } from '../../../lib/utils'
 import type { RefundRequest } from '../../../lib/api/refund-requests'
 
@@ -20,16 +20,16 @@ interface RefundRowProps {
     refundRequest: RefundRequest
     isSelected: boolean
     onRowSelect: (id: number | null) => void
-    onViewDetail: (refundRequest: RefundRequest) => void
-    onRefund: (refundRequest: RefundRequest) => void
+    onViewOrder: (refundRequest: RefundRequest) => void
+    onViewRefundRequest: (refundRequest: RefundRequest) => void
 }
 
 export function RefundRow({
     refundRequest,
     isSelected,
     onRowSelect,
-    onViewDetail,
-    onRefund,
+    onViewOrder,
+    onViewRefundRequest,
 }: RefundRowProps) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
@@ -139,8 +139,6 @@ export function RefundRow({
     if (!order) return null
 
     const refundAmount = (order as any).refundAmount || 0
-    const maxRefundAmount = order.finalPrice - refundAmount
-    const canRefund = maxRefundAmount > 0 && refundRequest.status === 'PENDING'
 
     return (
         <>
@@ -189,7 +187,7 @@ export function RefundRow({
                     <span className='text-green-400 font-medium'>
                         {formatPrice(
                             refundRequest.suggestedRefundAmount ||
-                                maxRefundAmount
+                                order.finalPrice - refundAmount
                         )}
                     </span>
                 </DarkOutlineTableCell>
@@ -220,7 +218,7 @@ export function RefundRow({
             {menuOpen && (
                 <div
                     ref={menuRef}
-                    className='fixed z-50 min-w-32 rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
+                    className='fixed z-50 min-w-40 rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
                     style={{
                         left: `${adjustedPosition.x}px`,
                         top: `${adjustedPosition.y}px`,
@@ -230,25 +228,23 @@ export function RefundRow({
                     <div
                         className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
                         onClick={() => {
-                            onViewDetail(refundRequest)
+                            onViewOrder(refundRequest)
+                            setMenuOpen(false)
+                        }}
+                    >
+                        <Receipt className='h-4 w-4' />
+                        Xem đơn hàng
+                    </div>
+                    <div
+                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                        onClick={() => {
+                            onViewRefundRequest(refundRequest)
                             setMenuOpen(false)
                         }}
                     >
                         <Eye className='h-4 w-4' />
-                        Xem chi tiết
+                        Xem yêu cầu hoàn tiền
                     </div>
-                    {canRefund && (
-                        <div
-                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer'
-                            onClick={() => {
-                                onRefund(refundRequest)
-                                setMenuOpen(false)
-                            }}
-                        >
-                            <RotateCcw className='h-4 w-4' />
-                            Hoàn tiền
-                        </div>
-                    )}
                 </div>
             )}
         </>

@@ -168,7 +168,17 @@ class RefundRequestController {
      * @access  Private (Admin)
      */
     getAllRefundRequests = asyncHandler(async (req, res) => {
-        const { page, limit, status, search, sort } = req.query
+        const {
+            page,
+            limit,
+            status,
+            search,
+            sort,
+            startDate,
+            endDate,
+            minAmount,
+            maxAmount,
+        } = req.query
 
         const filters = {
             page: parseInt(page) || 1,
@@ -176,6 +186,10 @@ class RefundRequestController {
             status: status || undefined,
             search: search || undefined,
             sort: sort || 'oldest',
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            minAmount: minAmount ? parseFloat(minAmount) : undefined,
+            maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
         }
 
         const result = await refundRequestService.getAllRefundRequests(filters)
