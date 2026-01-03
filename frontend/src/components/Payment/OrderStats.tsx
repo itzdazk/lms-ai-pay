@@ -16,6 +16,7 @@ export type OrderStats = {
     pending: number
     failed: number
     refunded: number
+    partiallyRefunded: number
     totalSpent: number
 }
 
@@ -75,7 +76,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
                     : null,
         },
         {
-            label: 'Đang chờ',
+            label: 'Đang chờ thanh toán',
             value: stats.pending,
             icon: Clock,
             color: 'text-yellow-400',
@@ -85,7 +86,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             change: null,
         },
         {
-            label: 'Thất bại',
+            label: 'Thanh toán thất bại',
             value: stats.failed,
             icon: XCircle,
             color: 'text-red-400',
@@ -96,7 +97,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
         },
         {
             label: 'Đã hoàn tiền',
-            value: stats.refunded,
+            value: stats.refunded + (stats.partiallyRefunded || 0),
             icon: RefreshCw,
             color: 'text-purple-400',
             bgColor: 'bg-purple-950/30',

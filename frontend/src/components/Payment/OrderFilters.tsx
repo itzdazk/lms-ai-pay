@@ -36,8 +36,8 @@ type OrderFiltersProps = {
 const paymentStatuses = [
     { value: 'all', label: 'Tất cả', color: 'default' },
     { value: 'PAID', label: 'Đã thanh toán', color: 'green' },
-    { value: 'PENDING', label: 'Đang chờ', color: 'yellow' },
-    { value: 'FAILED', label: 'Thất bại', color: 'red' },
+    { value: 'PENDING', label: 'Đang chờ thanh toán', color: 'yellow' },
+    { value: 'FAILED', label: 'Thanh toán thất bại', color: 'red' },
     { value: 'REFUNDED', label: 'Đã hoàn tiền', color: 'purple' },
     {
         value: 'PARTIALLY_REFUNDED',
