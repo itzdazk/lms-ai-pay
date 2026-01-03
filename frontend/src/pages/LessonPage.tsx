@@ -130,6 +130,12 @@ export function LessonPage() {
     const [seekTo, setSeekTo] = useState<number | undefined>(undefined)
     const [watchedDuration, setWatchedDuration] = useState(0) // tổng thời lượng đã xem lấy từ backend
 
+    const isCurrentLessonCompleted = useMemo(() => {
+        if (!selectedLesson) return false
+        if (completedLessonIds.includes(selectedLesson.id)) return true
+        return lessonQuizProgress[selectedLesson.id]?.isCompleted === true
+    }, [selectedLesson, completedLessonIds, lessonQuizProgress])
+
     // Quiz state
     const [showQuiz, setShowQuiz] = useState(false)
     const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null)
@@ -290,14 +296,17 @@ export function LessonPage() {
                             isCompleted: boolean
                             quizCompleted: boolean
                         }> = {}
+                        const completedIds: number[] = []
                         progressList.forEach((p) => {
                             progressMap[p.lessonId] = {
                                 lessonId: p.lessonId,
                                 isCompleted: p.isCompleted,
                                 quizCompleted: p.quizCompleted,
                             }
+                            if (p.isCompleted) completedIds.push(p.lessonId)
                         })
                         setLessonQuizProgress(progressMap)
+                        setCompletedLessonIds(completedIds)
 
                         // Set quizzes
                         const quizzesMap: Record<number, Quiz[]> = {}
@@ -445,7 +454,11 @@ export function LessonPage() {
                 setInitialVideoTime(0)
 
                 // Load video URL and lesson details (to get both transcriptUrl and transcriptJsonUrl) in parallel
-                let videoData = { videoUrl: '' }
+                let videoData: {
+                    videoUrl: string
+                    hlsUrl?: string | null
+                    hlsStatus?: string | null
+                } = { videoUrl: '' }
                 let videoError = false
                 const [videoResult, lessonDetails] = await Promise.all([
                     lessonsApi
@@ -469,7 +482,12 @@ export function LessonPage() {
                     )
                     navigate(-1) // Quay lại trang trước nếu bài học bị khóa
                 } else {
-                    setVideoUrl(videoData.videoUrl || '')
+                    const hlsCompleted = (videoData.hlsStatus || '').toLowerCase() === 'completed'
+                    const preferredUrl = hlsCompleted && videoData.hlsUrl
+                        ? videoData.hlsUrl
+                        : videoData.videoUrl
+
+                    setVideoUrl(preferredUrl || '')
                 }
 
                 // Update selectedLesson with transcriptJsonUrl only if it's different
@@ -569,7 +587,8 @@ export function LessonPage() {
                             selectedLesson.id
                         )
                         if (isMounted) {
-                            setInitialVideoTime(progress.lastPosition || 0)
+                            const unlocked = progress?.isCompleted === true
+                            setInitialVideoTime(unlocked ? 0 : progress.lastPosition || 0)
                             setWatchedDuration(progress.watchDuration || 0)
                             // Log watchedDuration từ backend
                             // eslint-disable-next-line no-console
@@ -714,7 +733,7 @@ export function LessonPage() {
         if (progressSaveIntervalRef.current)
             clearInterval(progressSaveIntervalRef.current)
         progressSaveIntervalRef.current = setInterval(async () => {
-            if (selectedLesson && enrollment) {
+            if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
                 try {
                     const position = videoCurrentTimeRef.current
                         ? videoCurrentTimeRef.current()
@@ -739,6 +758,7 @@ export function LessonPage() {
                     // If lesson is completed, refresh progress immediately to unlock next lesson
                     if (updatedProgress?.isCompleted === true) {
                         await refreshLessonQuizProgress()
+                        await refreshEnrollmentProgress()
                         if (!completedLessonIds.includes(selectedLesson.id)) {
                             setCompletedLessonIds([
                                 ...completedLessonIds,
@@ -753,7 +773,7 @@ export function LessonPage() {
 
     // Debounced update progress khi pause
     const debouncedUpdateProgress = debounceAsync(async () => {
-        if (selectedLesson && enrollment) {
+        if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             try {
                 const position = videoCurrentTimeRef.current
                     ? videoCurrentTimeRef.current()
@@ -774,6 +794,7 @@ export function LessonPage() {
                 // If lesson is completed, refresh progress immediately to unlock next lesson
                 if (updatedProgress?.isCompleted === true) {
                     await refreshLessonQuizProgress()
+                    await refreshEnrollmentProgress()
                     if (!completedLessonIds.includes(selectedLesson.id)) {
                         setCompletedLessonIds([
                             ...completedLessonIds,
@@ -799,6 +820,19 @@ export function LessonPage() {
         debouncedUpdateProgress()
     }
 
+    const refreshEnrollmentProgress = async () => {
+        if (!courseId) return
+        try {
+            const enrollments = await coursesApi.getEnrollments()
+            const updated = enrollments.find(
+                (e) => e.courseId === courseId && e.userId === Number(user?.id)
+            )
+            if (updated) setEnrollment(updated)
+        } catch (err) {
+            // Ignore enrollment refresh errors
+        }
+    }
+
     // Helper function to refresh lesson/quiz progress when lesson is completed
     const refreshLessonQuizProgress = async () => {
         if (!courseId) return
@@ -814,15 +848,19 @@ export function LessonPage() {
                     quizCompleted: boolean
                 }
             > = {}
+            const completedIds: number[] = []
             progressList.forEach((p) => {
                 progressMap[p.lessonId] = {
                     lessonId: p.lessonId,
                     isCompleted: p.isCompleted,
                     quizCompleted: p.quizCompleted,
                 }
+                if (p.isCompleted) completedIds.push(p.lessonId)
             })
             setLessonQuizProgress(progressMap)
             setProgressUpdateKey((prev) => prev + 1) // Force LessonList re-render
+            setCompletedLessonIds(completedIds)
+            await refreshEnrollmentProgress()
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to refresh lesson/quiz progress:', err)
@@ -831,11 +869,12 @@ export function LessonPage() {
 
     // Handle video ended
     const handleVideoEnded = async () => {
-        if (selectedLesson && enrollment) {
+        if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             try {
                 await progressApi.completeLesson(selectedLesson.id)
                 // Refresh lesson/quiz progress to update unlock status
                 await refreshLessonQuizProgress()
+                await refreshEnrollmentProgress()
             } catch (err) {}
             if (!completedLessonIds.includes(selectedLesson.id)) {
                 setCompletedLessonIds([
@@ -855,7 +894,7 @@ export function LessonPage() {
     // Debounced update progress khi seek
     const debouncedUpdateProgressOnSeek = debounceAsync(
         async (seekTime: number) => {
-            if (selectedLesson && enrollment) {
+            if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
                 try {
                     const payload: any = {
                         position: seekTime,
@@ -877,6 +916,7 @@ export function LessonPage() {
                     // If lesson is completed, refresh progress immediately to unlock next lesson
                     if (updatedProgress?.isCompleted === true) {
                         await refreshLessonQuizProgress()
+                        await refreshEnrollmentProgress()
                         if (!completedLessonIds.includes(selectedLesson.id)) {
                             setCompletedLessonIds([
                                 ...completedLessonIds,

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import Hls from 'hls.js';
 import {
   Play,
   Pause,
@@ -68,6 +69,7 @@ export function VideoPlayer({
   // Log mỗi lần watchedDuration prop thay đổi
   // eslint-disable-next-line no-console
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   // Hàm lấy currentTime trực tiếp từ video element
   const getCurrentTimeFn = () => videoRef.current?.currentTime ?? currentTime;
 
@@ -174,6 +176,70 @@ export function VideoPlayer({
       videoRef.current.volume = volume;
     }
   }, [volume, videoUrl]);
+
+  // Attach video source with HLS support
+  useEffect(() => {
+    if (!videoRef.current || !videoUrl) return;
+
+    const video = videoRef.current;
+    const isHls = videoUrl.includes('.m3u8');
+    const onLoadedMeta = () => setIsLoading(false);
+
+    setIsLoading(true);
+    setVideoError(null);
+    console.log('[VideoPlayer] Source type:', isHls ? 'HLS' : 'MP4', videoUrl);
+
+    if (isHls && Hls.isSupported()) {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: false, startLevel: -1 });
+      hlsRef.current = hls;
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => setIsLoading(false));
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              setVideoError('Không thể tải video');
+              hls.destroy();
+              hlsRef.current = null;
+              break;
+          }
+        }
+      });
+
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    }
+
+    if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoUrl;
+      video.addEventListener('loadedmetadata', onLoadedMeta);
+      return () => {
+        video.removeEventListener('loadedmetadata', onLoadedMeta);
+      };
+    }
+
+    // Fallback: MP4 or unsupported HLS
+    video.src = videoUrl;
+    video.addEventListener('loadedmetadata', onLoadedMeta);
+    return () => {
+      video.removeEventListener('loadedmetadata', onLoadedMeta);
+    };
+  }, [videoUrl]);
 
   // Handle mute toggle
   const toggleMute = () => {

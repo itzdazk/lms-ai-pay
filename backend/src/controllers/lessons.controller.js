@@ -47,6 +47,8 @@ class LessonsController {
                 id: result.id,
                 title: result.title,
                 videoUrl: result.videoUrl,
+                hlsUrl: result.hlsUrl,
+                hlsStatus: result.hlsStatus,
                 videoDuration: result.videoDuration,
             },
             'Video URL retrieved successfully'

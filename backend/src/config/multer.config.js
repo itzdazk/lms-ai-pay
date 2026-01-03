@@ -34,6 +34,7 @@ const uploadsDir = path.join(__dirname, '../../uploads')
 const avatarsDir = path.join(uploadsDir, 'avatars')
 const videosDir = path.join(uploadsDir, 'videos')
 const transcriptsDir = path.join(uploadsDir, 'transcripts')
+const hlsDir = path.join(uploadsDir, 'hls')
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails') // MỚI
 const videoPreviewsDir = path.join(uploadsDir, 'video-previews') // MỚI
 const categoriesDir = path.join(uploadsDir, 'categories')
@@ -44,6 +45,7 @@ const categoriesDir = path.join(uploadsDir, 'categories')
     avatarsDir,
     videosDir,
     transcriptsDir,
+    hlsDir,
     thumbnailsDir,
     videoPreviewsDir,
     categoriesDir
@@ -272,6 +274,7 @@ export {
     avatarsDir,
     videosDir,
     transcriptsDir,
+    hlsDir,
     thumbnailsDir,
     videoPreviewsDir,
     categoriesDir

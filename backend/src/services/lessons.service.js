@@ -1,14 +1,15 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS } from '../config/constants.js'
+import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS, HLS_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import path from 'path'
 import fs from 'fs'
 import transcriptionService from './transcription.service.js'
-import { videosDir, transcriptsDir } from '../config/multer.config.js'
+import { videosDir, transcriptsDir, hlsDir } from '../config/multer.config.js'
 import slugify from '../utils/slugify.util.js'
 import { getVideoDuration } from '../utils/video.util.js'
+import { enqueueHlsJob } from '../queues/hls.queue.js'
 
 class LessonsService {
     async _recalcCourseDuration(courseId) {
@@ -48,6 +49,18 @@ class LessonsService {
                 `Error deleting transcript artifacts: ${error.message}`,
                 { error: error.stack }
             )
+        }
+    }
+
+    async _deleteHlsArtifacts(lessonId) {
+        if (!lessonId) return
+
+        const lessonHlsDir = path.join(hlsDir, String(lessonId))
+        try {
+            await fs.promises.rm(lessonHlsDir, { recursive: true, force: true })
+            logger.info(`Deleted HLS artifacts for lesson ${lessonId} at ${lessonHlsDir}`)
+        } catch (error) {
+            logger.error(`Error deleting HLS artifacts for lesson ${lessonId}: ${error.message}`)
         }
     }
 
@@ -157,6 +170,8 @@ class LessonsService {
                 id: true,
                 title: true,
                 videoUrl: true,
+                hlsUrl: true,
+                hlsStatus: true,
                 videoDuration: true,
                 isPublished: true,
                 course: {
@@ -625,6 +640,9 @@ class LessonsService {
             }
         }
 
+        // Delete HLS artifacts if present
+        await this._deleteHlsArtifacts(lessonId)
+
         // Delete transcript files (both SRT and JSON)
         if (lesson.transcriptUrl) {
             const filename = path.basename(lesson.transcriptUrl)
@@ -719,6 +737,9 @@ class LessonsService {
             }
         }
 
+        // Delete old HLS outputs if exist (video changed)
+        await this._deleteHlsArtifacts(lessonId)
+
         // Delete old transcript because video changed
         if (lesson.transcriptUrl) {
             const transcriptFilename = path.basename(lesson.transcriptUrl)
@@ -759,6 +780,8 @@ class LessonsService {
             data: {
                 videoUrl,
                 videoDuration,
+                hlsUrl: null,
+                hlsStatus: HLS_STATUS.PROCESSING,
                 transcriptUrl: null,
                 transcriptJsonUrl: null,
                 transcriptStatus: shouldTranscribe
@@ -797,6 +820,26 @@ class LessonsService {
                     })
             })
         }
+
+        // Enqueue HLS conversion in the background (non-blocking)
+        setImmediate(() => {
+            enqueueHlsJob({ lessonId, videoPath: file.path }).catch((error) => {
+                logger.error(`Failed to enqueue HLS job for lesson ${lessonId}: ${error.message}`)
+                prisma.lesson
+                    .update({
+                        where: { id: lessonId },
+                        data: {
+                            hlsStatus: HLS_STATUS.FAILED,
+                            hlsUrl: null,
+                        },
+                    })
+                    .catch((updateError) =>
+                        logger.error(
+                            `Failed to update HLS status for lesson ${lessonId}: ${updateError.message}`
+                        )
+                    )
+            })
+        })
 
         logger.info(`Video uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`)
 
