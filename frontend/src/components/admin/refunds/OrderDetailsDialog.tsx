@@ -9,8 +9,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card'
 import { Badge } from '../../ui/badge'
 import { Separator } from '../../ui/separator'
-import { OrderSummary } from '../../Payment/OrderSummary'
-import { TransactionList } from '../../Payment/TransactionList'
 import { Skeleton } from '../../ui/skeleton'
 import { formatPrice } from '../../../lib/courseUtils'
 import { formatDateTime } from '../../../lib/utils'
@@ -30,7 +28,6 @@ import {
     Mail,
     Phone,
     Receipt,
-    Loader2,
 } from 'lucide-react'
 
 function getStatusBadge(status: string) {
@@ -365,34 +362,45 @@ export function OrderDetailsDialog({
                             </CardContent>
                         </Card>
 
-                        {/* Course Details */}
+                        {/* Course Details - Only course info, no pricing */}
                         {course && (
-                            <OrderSummary
-                                course={course as any}
-                                loading={false}
-                            />
-                        )}
-
-                        {/* Payment Transactions */}
-                        {displayOrder.paymentTransactions &&
-                            displayOrder.paymentTransactions.length > 0 && (
-                                <Card className='bg-[#1F1F1F] border-[#2D2D2D]'>
-                                    <CardHeader>
-                                        <CardTitle className='text-white text-lg flex items-center gap-2'>
-                                            <Receipt className='h-5 w-5' />
-                                            Lịch sử giao dịch
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <TransactionList
-                                            transactions={
-                                                displayOrder.paymentTransactions
+                            <Card className='bg-[#1F1F1F] border-[#2D2D2D]'>
+                                <CardHeader>
+                                    <CardTitle className='text-white text-lg'>
+                                        Thông tin khóa học
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className='space-y-4'>
+                                    {(course.thumbnailUrl ||
+                                        (course as any).thumbnail) && (
+                                        <img
+                                            src={
+                                                course.thumbnailUrl ||
+                                                (course as any).thumbnail
                                             }
-                                            onTransactionClick={() => {}}
+                                            alt={course.title}
+                                            className='w-full h-48 object-cover rounded-lg'
                                         />
-                                    </CardContent>
-                                </Card>
-                            )}
+                                    )}
+                                    <div>
+                                        <h3 className='font-semibold text-lg mb-2 text-white'>
+                                            {course.title}
+                                        </h3>
+                                        {course.instructor?.fullName && (
+                                            <p className='text-sm text-gray-400 mb-4'>
+                                                Giảng viên:{' '}
+                                                {course.instructor.fullName}
+                                            </p>
+                                        )}
+                                        {course.description && (
+                                            <p className='text-sm text-gray-300 line-clamp-3'>
+                                                {course.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 )}
             </DialogContent>

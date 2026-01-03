@@ -17,7 +17,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../ui/select'
-import { Loader2, AlertCircle, CheckCircle2, XCircle, Info } from 'lucide-react'
+import {
+    Loader2,
+    AlertCircle,
+    CheckCircle2,
+    XCircle,
+    Info,
+    ChevronDown,
+    ChevronUp,
+} from 'lucide-react'
 import type { Order } from '../../lib/api/types'
 import {
     refundRequestsApi,
@@ -57,6 +65,7 @@ export function RefundRequestDialog({
         null
     )
     const [checkingEligibility, setCheckingEligibility] = useState(false)
+    const [showRefundRules, setShowRefundRules] = useState(false)
 
     // Check eligibility when dialog opens
     useEffect(() => {
@@ -68,6 +77,7 @@ export function RefundRequestDialog({
             setReasonType('OTHER')
             setError(null)
             setEligibility(null)
+            setShowRefundRules(false)
         }
     }, [isOpen, order])
 
@@ -129,14 +139,15 @@ export function RefundRequestDialog({
             setReasonType('OTHER')
             setError(null)
             setEligibility(null)
+            setShowRefundRules(false)
             setIsOpen(false)
         }
     }
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white sm:max-w-[500px]'>
-                <DialogHeader>
+            <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white sm:max-w-[500px] max-h-[90vh] flex flex-col'>
+                <DialogHeader className='shrink-0'>
                     <DialogTitle className='text-xl font-semibold'>
                         Yêu cầu hoàn tiền
                     </DialogTitle>
@@ -146,7 +157,7 @@ export function RefundRequestDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className='space-y-4 py-4'>
+                <div className='space-y-4 py-4 overflow-y-auto flex-1 min-h-0'>
                     {order && (
                         <div className='rounded-lg bg-[#1F1F1F] border border-[#2D2D2D] p-4'>
                             <div className='space-y-2'>
@@ -208,12 +219,12 @@ export function RefundRequestDialog({
                             <div className='flex items-start gap-3'>
                                 {eligibility.eligible ? (
                                     eligibility.type === 'FULL' ? (
-                                        <CheckCircle2 className='h-5 w-5 text-green-400 mt-0.5 flex-shrink-0' />
+                                        <CheckCircle2 className='h-5 w-5 text-green-400 mt-0.5 shrink-0' />
                                     ) : (
-                                        <Info className='h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0' />
+                                        <Info className='h-5 w-5 text-yellow-400 mt-0.5 shrink-0' />
                                     )
                                 ) : (
-                                    <XCircle className='h-5 w-5 text-red-400 mt-0.5 flex-shrink-0' />
+                                    <XCircle className='h-5 w-5 text-red-400 mt-0.5 shrink-0' />
                                 )}
                                 <div className='flex-1 space-y-2'>
                                     <p
@@ -293,6 +304,147 @@ export function RefundRequestDialog({
                             </div>
                         </div>
                     )}
+                    {/* Refund Rules Section - Collapsible */}
+                    <div className='rounded-lg bg-[#1F1F1F] border border-[#2D2D2D] overflow-hidden'>
+                        <button
+                            type='button'
+                            onClick={() => setShowRefundRules(!showRefundRules)}
+                            className='w-full flex items-center justify-between gap-2 p-4 hover:bg-[#252525] transition-colors'
+                            disabled={loading || checkingEligibility}
+                        >
+                            <div className='flex items-center gap-2'>
+                                <Info className='h-5 w-5 text-blue-400 shrink-0' />
+                                <h3 className='text-base font-semibold text-white text-left'>
+                                    Quy định hoàn tiền
+                                </h3>
+                            </div>
+                            {showRefundRules ? (
+                                <ChevronUp className='h-4 w-4 text-gray-400 shrink-0' />
+                            ) : (
+                                <ChevronDown className='h-4 w-4 text-gray-400 shrink-0' />
+                            )}
+                        </button>
+
+                        {showRefundRules && (
+                            <div className='px-4 pb-4 space-y-4 border-t border-[#2D2D2D] pt-4'>
+                                <div className='space-y-3 text-sm'>
+                                    {/* Full Refund Rule */}
+                                    <div className='rounded-md bg-green-600/10 border border-green-500/30 p-3'>
+                                        <div className='flex items-start gap-2 mb-2'>
+                                            <CheckCircle2 className='h-4 w-4 text-green-400 mt-0.5 shrink-0' />
+                                            <div className='flex-1'>
+                                                <p className='font-semibold text-green-300 mb-1'>
+                                                    Hoàn tiền 100%
+                                                </p>
+                                                <ul className='text-gray-300 space-y-1 text-xs list-disc list-inside ml-1'>
+                                                    <li>
+                                                        Tiến độ học tập{' '}
+                                                        <span className='font-semibold text-white'>
+                                                            &lt; 20%
+                                                        </span>
+                                                    </li>
+                                                    <li>
+                                                        Trong vòng{' '}
+                                                        <span className='font-semibold text-white'>
+                                                            7 ngày
+                                                        </span>{' '}
+                                                        kể từ khi thanh toán
+                                                    </li>
+                                                </ul>
+                                                <div className='mt-2 pt-2 border-t border-green-500/20'>
+                                                    <p className='text-xs text-gray-400'>
+                                                        <span className='font-semibold text-green-300'>
+                                                            Công thức:
+                                                        </span>{' '}
+                                                        <span className='font-mono text-white'>
+                                                            Số tiền hoàn = Giá
+                                                            trị đơn hàng
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Partial Refund Rule */}
+                                    <div className='rounded-md bg-yellow-600/10 border border-yellow-500/30 p-3'>
+                                        <div className='flex items-start gap-2 mb-2'>
+                                            <Info className='h-4 w-4 text-yellow-400 mt-0.5 shrink-0' />
+                                            <div className='flex-1'>
+                                                <p className='font-semibold text-yellow-300 mb-1'>
+                                                    Hoàn tiền một phần
+                                                </p>
+                                                <ul className='text-gray-300 space-y-1 text-xs list-disc list-inside ml-1'>
+                                                    <li>
+                                                        Tiến độ học tập{' '}
+                                                        <span className='font-semibold text-white'>
+                                                            &lt; 50%
+                                                        </span>
+                                                    </li>
+                                                    <li>
+                                                        Trừ{' '}
+                                                        <span className='font-semibold text-white'>
+                                                            20% phí xử lý
+                                                        </span>
+                                                    </li>
+                                                </ul>
+                                                <div className='mt-2 pt-2 border-t border-yellow-500/20'>
+                                                    <p className='text-xs text-gray-400'>
+                                                        <span className='font-semibold text-yellow-300'>
+                                                            Công thức:
+                                                        </span>{' '}
+                                                        <span className='font-mono text-white'>
+                                                            Số tiền hoàn = (Giá
+                                                            trị đơn hàng × (1 -
+                                                            Tiến độ học)) × 80%
+                                                        </span>
+                                                    </p>
+                                                    <p className='text-xs text-gray-500 mt-1 ml-1'>
+                                                        * 80% = 100% - 20% phí
+                                                        xử lý
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* No Refund Rule */}
+                                    <div className='rounded-md bg-red-600/10 border border-red-500/30 p-3'>
+                                        <div className='flex items-start gap-2 mb-2'>
+                                            <XCircle className='h-4 w-4 text-red-400 mt-0.5 shrink-0' />
+                                            <div className='flex-1'>
+                                                <p className='font-semibold text-red-300 mb-1'>
+                                                    Không được hoàn tiền
+                                                </p>
+                                                <ul className='text-gray-300 space-y-1 text-xs list-disc list-inside ml-1'>
+                                                    <li>
+                                                        Tiến độ học tập{' '}
+                                                        <span className='font-semibold text-white'>
+                                                            ≥ 50%
+                                                        </span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className='pt-3 border-t border-[#2D2D2D]'>
+                                        <p className='text-xs text-gray-400'>
+                                            <strong className='text-gray-300'>
+                                                Lưu ý:
+                                            </strong>{' '}
+                                            Yêu cầu hoàn tiền của bạn sẽ được
+                                            gửi đến quản trị viên để xem xét.
+                                            Đối với hoàn tiền một phần, quản trị
+                                            viên có thể gửi cho bạn một đề xuất
+                                            số tiền khác dựa trên tình hình cụ
+                                            thể.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Reason Type Select */}
                     <div className='space-y-2'>
@@ -309,7 +461,7 @@ export function RefundRequestDialog({
                             <SelectTrigger className='bg-[#1F1F1F] border-[#2D2D2D] text-white'>
                                 <SelectValue placeholder='Chọn loại lý do' />
                             </SelectTrigger>
-                            <SelectContent className='bg-[#1F1F1F] border-[#2D2D2D] z-[110]'>
+                            <SelectContent className='bg-[#1F1F1F] border-[#2D2D2D] z-110'>
                                 {REASON_TYPE_OPTIONS.map((option) => (
                                     <SelectItem
                                         key={option.value}
@@ -352,30 +504,9 @@ export function RefundRequestDialog({
                             <span>{reason.length}/1000 ký tự</span>
                         </div>
                     </div>
-
-                    {eligibility && !eligibility.eligible && (
-                        <div className='rounded-lg bg-red-600/20 border border-red-500/40 p-3'>
-                            <p className='text-xs text-red-300'>
-                                <strong>Lưu ý:</strong> Đơn hàng này không đủ
-                                điều kiện để hoàn tiền. Bạn không thể gửi yêu
-                                cầu hoàn tiền cho đơn hàng này.
-                            </p>
-                        </div>
-                    )}
-
-                    {eligibility && eligibility.eligible && (
-                        <div className='rounded-lg bg-yellow-600/20 border border-yellow-500/40 p-3'>
-                            <p className='text-xs text-yellow-300'>
-                                <strong>Lưu ý:</strong> Yêu cầu hoàn tiền của
-                                bạn sẽ được gửi đến quản trị viên để xem xét.
-                                {eligibility.type === 'PARTIAL' &&
-                                    ' Đối với hoàn tiền một phần, quản trị viên có thể gửi cho bạn một đề xuất số tiền khác.'}
-                            </p>
-                        </div>
-                    )}
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className='shrink-0 border-t border-[#2D2D2D] pt-4 mt-4'>
                     <Button
                         variant='outline'
                         onClick={handleClose}
