@@ -85,7 +85,7 @@ export function RefundsFilters({
                                 Sắp xếp
                             </Label>
                             <Select
-                                value={filters.sort || 'newest'}
+                                value={filters.sort || 'oldest'}
                                 onValueChange={(value) =>
                                     onFilterChange('sort', value)
                                 }

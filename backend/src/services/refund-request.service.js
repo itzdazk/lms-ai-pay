@@ -447,7 +447,7 @@ class RefundRequestService {
             limit = 10,
             status,
             search,
-            sort = 'newest',
+            sort = 'oldest',
         } = filters
 
         const where = {}

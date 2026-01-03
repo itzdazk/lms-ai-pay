@@ -175,7 +175,7 @@ class RefundRequestController {
             limit: parseInt(limit) || 10,
             status: status || undefined,
             search: search || undefined,
-            sort: sort || 'newest',
+            sort: sort || 'oldest',
         }
 
         const result = await refundRequestService.getAllRefundRequests(filters)

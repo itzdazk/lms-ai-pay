@@ -31,7 +31,7 @@ export function RefundsPage() {
         limit: 10,
         search: '',
         status: undefined,
-        sort: 'newest',
+        sort: 'oldest',
         startDate: undefined,
         endDate: undefined,
         minAmount: undefined,
@@ -137,7 +137,7 @@ export function RefundsPage() {
                 sort:
                     filters.sort === 'newest' || filters.sort === 'oldest'
                         ? filters.sort
-                        : 'newest',
+                        : 'oldest',
             })
 
             setRefundRequests(result.data)
@@ -285,7 +285,7 @@ export function RefundsPage() {
             limit: 10,
             search: '',
             status: undefined,
-            sort: 'newest',
+            sort: 'oldest',
             startDate: undefined,
             endDate: undefined,
             minAmount: undefined,
