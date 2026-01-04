@@ -5,7 +5,7 @@ import {
 } from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
-import { MoreVertical, Eye, Receipt } from 'lucide-react'
+import { MoreVertical, Eye, Receipt, BookOpen } from 'lucide-react'
 import { formatDateTime } from '../../../lib/utils'
 import type { RefundRequest } from '../../../lib/api/refund-requests'
 
@@ -161,10 +161,30 @@ export function RefundRow({
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='min-w-[200px]'>
                     {order.course ? (
-                        <div className='flex flex-col gap-1'>
-                            <span className='text-white font-medium'>
-                                {order.course.title}
-                            </span>
+                        <div className='flex items-start gap-3'>
+                            {order.course.thumbnailUrl ? (
+                                <img
+                                    src={order.course.thumbnailUrl}
+                                    alt={
+                                        order.course.title || 'Course thumbnail'
+                                    }
+                                    className='w-16 h-10 object-cover rounded shrink-0'
+                                />
+                            ) : (
+                                <div className='w-16 h-10 bg-[#2D2D2D] rounded flex items-center justify-center shrink-0'>
+                                    <BookOpen className='h-5 w-5 text-gray-400' />
+                                </div>
+                            )}
+                            <div className='min-w-0 flex-1'>
+                                <span className='text-white font-medium line-clamp-1 block'>
+                                    {order.course.title}
+                                </span>
+                                {order.course.instructor?.fullName && (
+                                    <span className='text-xs text-gray-400 block mt-1'>
+                                        {order.course.instructor?.fullName}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <span className='text-gray-400'>N/A</span>

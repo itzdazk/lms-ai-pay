@@ -1,12 +1,20 @@
-import { useState, useCallback, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { DarkOutlineButton } from '../ui/buttons'
 import { RefundRequestDialog } from './RefundRequestDialog'
 import { refundRequestsApi } from '../../lib/api/refund-requests'
 import { toast } from 'sonner'
-import { RotateCcw } from 'lucide-react'
+import {
+    CreditCard,
+    RefreshCw,
+    RotateCcw,
+    Wallet,
+    MoreVertical,
+    Eye,
+    X,
+    BookOpen,
+} from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -27,7 +35,6 @@ import { Skeleton } from '../ui/skeleton'
 import type { Order } from '../../lib/api/types'
 import { formatPrice } from '../../lib/courseUtils'
 import { formatDateTime } from '../../lib/utils'
-import { Eye, X } from 'lucide-react'
 
 type OrderTableProps = {
     orders: Order[]
@@ -90,13 +97,23 @@ function getStatusBadge(status: Order['paymentStatus']) {
             )
     }
 }
-
+function getGatewayIcon(gateway: Order['paymentGateway']) {
+    switch (gateway) {
+        case 'VNPay':
+            return <CreditCard className='h-4 w-4' />
+        case 'MoMo':
+            return <Wallet className='h-4 w-4' />
+        default:
+            return <CreditCard className='h-4 w-4' />
+    }
+}
 function getGatewayBadge(gateway: Order['paymentGateway']) {
     return (
         <Badge
             variant='outline'
             className='border-[#2D2D2D] text-gray-300 text-xs'
         >
+            {getGatewayIcon(gateway)}
             {gateway}
         </Badge>
     )
@@ -110,6 +127,8 @@ export function OrderTable({
     showActions = true,
     onRefundRequestCreated,
 }: OrderTableProps) {
+    const navigate = useNavigate()
+
     // Cancel order dialog state
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
     const [orderToCancel, setOrderToCancel] = useState<{
@@ -131,6 +150,16 @@ export function OrderTable({
     const [cancellingRefundRequestId, setCancellingRefundRequestId] = useState<
         number | null
     >(null)
+
+    // Context menu state
+    const [menuOpen, setMenuOpen] = useState<number | null>(null) // orderId when menu is open
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
+    const [adjustedPosition, setAdjustedPosition] = useState({
+        x: 0,
+        y: 0,
+        transform: 'translate(-100%, 0)',
+    })
+    const menuRef = useRef<HTMLDivElement>(null)
 
     // Check refund requests for PAID and REFUND_PENDING orders
     useEffect(() => {
@@ -327,30 +356,102 @@ export function OrderTable({
         [pendingRefundRequestIds, onRefundRequestCreated]
     )
 
+    // Handle menu toggle
+    const handleMenuToggle = useCallback(
+        (orderId: number, e: React.MouseEvent) => {
+            e.stopPropagation()
+            if (menuOpen === orderId) {
+                setMenuOpen(null)
+            } else {
+                setMenuPosition({ x: e.clientX, y: e.clientY })
+                setMenuOpen(orderId)
+            }
+        },
+        [menuOpen]
+    )
+
+    // Adjust menu position to stay within viewport
+    useEffect(() => {
+        if (menuOpen === null || !menuRef.current) return
+
+        const menu = menuRef.current
+        const menuRect = menu.getBoundingClientRect()
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+
+        let left = menuPosition.x
+        let top = menuPosition.y
+        let transform = 'translate(-100%, 0)'
+
+        if (left - menuRect.width < 0) {
+            transform = 'translate(0, 0)'
+            left = menuPosition.x
+        }
+
+        if (left + menuRect.width > viewportWidth) {
+            transform = 'translate(-100%, 0)'
+            left = menuPosition.x
+            if (left - menuRect.width < 0) {
+                left = viewportWidth - menuRect.width - 8
+            }
+        }
+
+        if (top + menuRect.height > viewportHeight) {
+            top = menuPosition.y - menuRect.height
+            if (top < 0) {
+                top = 8
+            }
+        }
+
+        setAdjustedPosition({ x: left, y: top, transform })
+    }, [menuOpen, menuPosition])
+
+    // Close menu on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
+                setMenuOpen(null)
+            }
+        }
+
+        if (menuOpen !== null) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [menuOpen])
+
     if (loading) {
         return (
             <div className='rounded-lg border border-[#2D2D2D] overflow-hidden'>
                 <DarkOutlineTable>
                     <DarkOutlineTableHeader>
                         <DarkOutlineTableRow>
-                            <DarkOutlineTableHead>Mã đơn</DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='w-[140px]'>
+                                Mã đơn
+                            </DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='min-w-[250px]'>
                                 Khóa học
                             </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='w-[140px]'>
                                 Trạng thái
                             </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='w-[140px]'>
                                 Phương thức
                             </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='w-[130px]'>
                                 Tổng tiền
                             </DarkOutlineTableHead>
-                            <DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='w-[150px]'>
                                 Ngày tạo
                             </DarkOutlineTableHead>
                             {showActions && (
-                                <DarkOutlineTableHead>
+                                <DarkOutlineTableHead className='w-[100px] text-right'>
                                     Thao tác
                                 </DarkOutlineTableHead>
                             )}
@@ -359,27 +460,33 @@ export function OrderTable({
                     <DarkOutlineTableBody>
                         {[1, 2, 3, 4, 5].map((i) => (
                             <DarkOutlineTableRow key={i}>
-                                <DarkOutlineTableCell>
+                                <DarkOutlineTableCell className='w-[140px]'>
                                     <Skeleton className='h-4 w-24' />
                                 </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
-                                    <Skeleton className='h-4 w-32' />
+                                <DarkOutlineTableCell className='min-w-[250px]'>
+                                    <div className='flex items-center gap-3'>
+                                        <Skeleton className='h-10 w-16 shrink-0' />
+                                        <div className='flex-1'>
+                                            <Skeleton className='h-4 w-32 mb-2' />
+                                            <Skeleton className='h-3 w-24' />
+                                        </div>
+                                    </div>
                                 </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
+                                <DarkOutlineTableCell className='w-[140px]'>
                                     <Skeleton className='h-6 w-20' />
                                 </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
-                                    <Skeleton className='h-6 w-16' />
+                                <DarkOutlineTableCell className='w-[140px]'>
+                                    <Skeleton className='h-6 w-20' />
                                 </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
+                                <DarkOutlineTableCell className='w-[130px]'>
                                     <Skeleton className='h-4 w-20' />
                                 </DarkOutlineTableCell>
-                                <DarkOutlineTableCell>
+                                <DarkOutlineTableCell className='w-[150px]'>
                                     <Skeleton className='h-4 w-28' />
                                 </DarkOutlineTableCell>
                                 {showActions && (
-                                    <DarkOutlineTableCell>
-                                        <Skeleton className='h-8 w-20' />
+                                    <DarkOutlineTableCell className='w-[100px] text-right'>
+                                        <Skeleton className='h-8 w-8 ml-auto' />
                                     </DarkOutlineTableCell>
                                 )}
                             </DarkOutlineTableRow>
@@ -406,14 +513,26 @@ export function OrderTable({
             <DarkOutlineTable>
                 <DarkOutlineTableHeader>
                     <DarkOutlineTableRow>
-                        <DarkOutlineTableHead>Mã đơn</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Khóa học</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Trạng thái</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Phương thức</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Tổng tiền</DarkOutlineTableHead>
-                        <DarkOutlineTableHead>Ngày tạo</DarkOutlineTableHead>
+                        <DarkOutlineTableHead className='w-[250px]'>
+                            Mã đơn
+                        </DarkOutlineTableHead>
+                        <DarkOutlineTableHead className='min-w-[250px]'>
+                            Khóa học
+                        </DarkOutlineTableHead>
+                        <DarkOutlineTableHead className='w-[140px]'>
+                            Trạng thái
+                        </DarkOutlineTableHead>
+                        <DarkOutlineTableHead className='w-[140px]'>
+                            Phương thức
+                        </DarkOutlineTableHead>
+                        <DarkOutlineTableHead className='w-[130px]'>
+                            Tổng tiền
+                        </DarkOutlineTableHead>
+                        <DarkOutlineTableHead className='w-[150px]'>
+                            Ngày tạo
+                        </DarkOutlineTableHead>
                         {showActions && (
-                            <DarkOutlineTableHead>
+                            <DarkOutlineTableHead className='w-[100px] text-right'>
                                 Thao tác
                             </DarkOutlineTableHead>
                         )}
@@ -422,146 +541,218 @@ export function OrderTable({
                 <DarkOutlineTableBody>
                     {orders.map((order) => (
                         <DarkOutlineTableRow key={order.id}>
-                            <DarkOutlineTableCell className='font-mono text-sm'>
+                            <DarkOutlineTableCell className='font-mono text-sm w-[140px]'>
                                 {order.orderCode}
                             </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
-                                <div className='max-w-xs'>
-                                    <p className='text-white font-medium line-clamp-1'>
-                                        {order.course?.title || 'N/A'}
-                                    </p>
-                                    {order.course?.instructor?.fullName && (
-                                        <p className='text-xs text-gray-400 mt-1'>
-                                            {order.course.instructor.fullName}
-                                        </p>
+                            <DarkOutlineTableCell className='min-w-[250px]'>
+                                <div className='flex items-start gap-3'>
+                                    {order.course?.thumbnailUrl ? (
+                                        <img
+                                            src={order.course.thumbnailUrl}
+                                            alt={
+                                                order.course.title ||
+                                                'Course thumbnail'
+                                            }
+                                            className='w-16 h-10 object-cover rounded shrink-0'
+                                        />
+                                    ) : (
+                                        <div className='w-16 h-10 bg-[#2D2D2D] rounded flex items-center justify-center shrink-0'>
+                                            <BookOpen className='h-5 w-5 text-gray-400' />
+                                        </div>
                                     )}
+                                    <div className='min-w-0 flex-1'>
+                                        <p className='text-white font-medium line-clamp-1'>
+                                            {order.course?.title || 'N/A'}
+                                        </p>
+                                        {order.course?.instructor?.fullName && (
+                                            <p className='text-xs text-gray-400 mt-1'>
+                                                {
+                                                    order.course.instructor
+                                                        .fullName
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
+                            <DarkOutlineTableCell className='w-[140px]'>
                                 {getStatusBadge(order.paymentStatus)}
                             </DarkOutlineTableCell>
-                            <DarkOutlineTableCell>
+                            <DarkOutlineTableCell className='w-[140px]'>
                                 {getGatewayBadge(order.paymentGateway)}
                             </DarkOutlineTableCell>
-                            <DarkOutlineTableCell className='font-semibold text-white'>
+                            <DarkOutlineTableCell className='font-semibold text-white w-[130px]'>
                                 {formatPrice(order.finalPrice)}
                             </DarkOutlineTableCell>
-                            <DarkOutlineTableCell className='text-sm text-gray-400'>
+                            <DarkOutlineTableCell className='text-sm text-gray-400 w-[150px]'>
                                 {formatDateTime(order.createdAt)}
                             </DarkOutlineTableCell>
                             {showActions && (
-                                <DarkOutlineTableCell>
-                                    <div className='flex items-center gap-2'>
-                                        {/* View Button */}
-                                        <DarkOutlineButton
-                                            size='sm'
-                                            asChild
-                                            className='h-8 px-3 whitespace-nowrap'
-                                        >
-                                            <Link to={`/orders/${order.id}`}>
-                                                <Eye className='h-3.5 w-3.5 mr-1.5' />
-                                                Xem
-                                            </Link>
-                                        </DarkOutlineButton>
-
-                                        {/* Refund Request Button - Only for PAID orders without existing request */}
-                                        {(order.paymentStatus === 'PAID' ||
-                                            order.paymentStatus ===
-                                                'REFUND_FAILED') &&
-                                            !ordersWithRefundRequests.has(
-                                                order.id
-                                            ) && (
-                                                <DarkOutlineButton
-                                                    size='sm'
-                                                    className='h-8 px-3 whitespace-nowrap border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400/60 hover:text-blue-300 transition-colors'
-                                                    onClick={() =>
-                                                        handleRefundRequestClick(
-                                                            order
-                                                        )
-                                                    }
-                                                >
-                                                    <RotateCcw className='h-3.5 w-3.5 mr-1.5' />
-                                                    Hoàn tiền
-                                                </DarkOutlineButton>
-                                            )}
-
-                                        {/* Cancel Refund Request Button - Only for orders with pending refund request */}
-                                        {ordersWithRefundRequests.has(
-                                            order.id
-                                        ) &&
-                                            pendingRefundRequestIds.has(
-                                                order.id
-                                            ) && (
-                                                <DarkOutlineButton
-                                                    size='sm'
-                                                    className='h-8 px-3 whitespace-nowrap border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:border-orange-400/60 hover:text-orange-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                                                    onClick={() =>
-                                                        handleCancelRefundRequest(
-                                                            order.id
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        cancellingRefundRequestId ===
-                                                        pendingRefundRequestIds.get(
-                                                            order.id
-                                                        )
-                                                    }
-                                                >
-                                                    {cancellingRefundRequestId ===
-                                                    pendingRefundRequestIds.get(
-                                                        order.id
-                                                    ) ? (
-                                                        <>
-                                                            <div className='animate-spin rounded-full h-3.5 w-3.5 border-2 border-orange-400 border-t-transparent mr-1.5' />
-                                                            Đang hủy...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <X className='h-3.5 w-3.5 mr-1.5' />
-                                                            Hủy hoàn tiền
-                                                        </>
-                                                    )}
-                                                </DarkOutlineButton>
-                                            )}
-
-                                        {/* Cancel Button - Only for PENDING orders */}
-                                        {order.paymentStatus === 'PENDING' &&
-                                            onCancel && (
-                                                <DarkOutlineButton
-                                                    size='sm'
-                                                    className='h-8 px-3 whitespace-nowrap border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400/60 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                                                    onClick={() =>
-                                                        handleCancelClick(
-                                                            order.id,
-                                                            order.orderCode
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        cancelLoading ===
-                                                        order.id
-                                                    }
-                                                >
-                                                    {cancelLoading ===
-                                                    order.id ? (
-                                                        <>
-                                                            <div className='animate-spin rounded-full h-3.5 w-3.5 border-2 border-red-400 border-t-transparent mr-1.5' />
-                                                            Đang hủy...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <X className='h-3.5 w-3.5 mr-1.5' />
-                                                            Hủy
-                                                        </>
-                                                    )}
-                                                </DarkOutlineButton>
-                                            )}
-                                    </div>
+                                <DarkOutlineTableCell className='text-right w-[100px]'>
+                                    <Button
+                                        variant='ghost'
+                                        size='icon'
+                                        className='text-gray-400 hover:text-white hover:bg-[#1F1F1F]'
+                                        onClick={(e) =>
+                                            handleMenuToggle(order.id, e)
+                                        }
+                                    >
+                                        <MoreVertical className='h-4 w-4' />
+                                    </Button>
                                 </DarkOutlineTableCell>
                             )}
                         </DarkOutlineTableRow>
                     ))}
                 </DarkOutlineTableBody>
             </DarkOutlineTable>
+
+            {/* Context Menu */}
+            {menuOpen !== null && (
+                <div
+                    ref={menuRef}
+                    className='fixed z-50 min-w-40 rounded-md border bg-[#1A1A1A] border-[#2D2D2D] p-1 shadow-md'
+                    style={{
+                        left: `${adjustedPosition.x}px`,
+                        top: `${adjustedPosition.y}px`,
+                        transform: adjustedPosition.transform,
+                    }}
+                >
+                    {(() => {
+                        const order = orders.find((o) => o.id === menuOpen)
+                        if (!order) return null
+
+                        const hasPendingRefundRequest =
+                            ordersWithRefundRequests.has(order.id) &&
+                            pendingRefundRequestIds.has(order.id)
+                        const canRequestRefund =
+                            (order.paymentStatus === 'PAID' ||
+                                order.paymentStatus === 'REFUND_FAILED') &&
+                            !ordersWithRefundRequests.has(order.id)
+                        const canRetryPayment =
+                            order.paymentStatus === 'FAILED' &&
+                            order.course?.slug
+                        const canCancel =
+                            order.paymentStatus === 'PENDING' && onCancel
+                        const isCancellingRefund =
+                            hasPendingRefundRequest &&
+                            cancellingRefundRequestId ===
+                                pendingRefundRequestIds.get(order.id)
+                        const isCancellingOrder =
+                            canCancel && cancelLoading === order.id
+
+                        return (
+                            <>
+                                {/* View Order - Always available */}
+                                <div
+                                    className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                                    onClick={() => {
+                                        navigate(`/orders/${order.id}`)
+                                        setMenuOpen(null)
+                                    }}
+                                >
+                                    <Eye className='h-4 w-4' />
+                                    Xem chi tiết
+                                </div>
+
+                                {/* Refund Request - For PAID/REFUND_FAILED orders without existing request */}
+                                {canRequestRefund && (
+                                    <div
+                                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-blue-400 hover:bg-[#1F1F1F] cursor-pointer'
+                                        onClick={() => {
+                                            handleRefundRequestClick(order)
+                                            setMenuOpen(null)
+                                        }}
+                                    >
+                                        <RotateCcw className='h-4 w-4' />
+                                        Hoàn tiền
+                                    </div>
+                                )}
+
+                                {/* Cancel Refund Request - For orders with pending refund request */}
+                                {hasPendingRefundRequest && (
+                                    <div
+                                        className={`flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-orange-400 hover:bg-[#1F1F1F] ${
+                                            isCancellingRefund
+                                                ? 'opacity-50 cursor-not-allowed'
+                                                : 'cursor-pointer'
+                                        }`}
+                                        onClick={() => {
+                                            if (!isCancellingRefund) {
+                                                handleCancelRefundRequest(
+                                                    order.id
+                                                )
+                                                setMenuOpen(null)
+                                            }
+                                        }}
+                                    >
+                                        {isCancellingRefund ? (
+                                            <>
+                                                <div className='animate-spin rounded-full h-4 w-4 border-2 border-orange-400 border-t-transparent' />
+                                                Đang hủy...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <X className='h-4 w-4' />
+                                                Hủy hoàn tiền
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Retry Payment - For FAILED orders */}
+                                {canRetryPayment && (
+                                    <div
+                                        className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
+                                        onClick={() => {
+                                            navigate(
+                                                `/checkout/${
+                                                    order.course!.slug
+                                                }`
+                                            )
+                                            setMenuOpen(null)
+                                        }}
+                                    >
+                                        <RefreshCw className='h-4 w-4' />
+                                        Thanh toán lại
+                                    </div>
+                                )}
+
+                                {/* Cancel Order - For PENDING orders */}
+                                {canCancel && (
+                                    <div
+                                        className={`flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-400 hover:bg-[#1F1F1F] ${
+                                            isCancellingOrder
+                                                ? 'opacity-50 cursor-not-allowed'
+                                                : 'cursor-pointer'
+                                        }`}
+                                        onClick={() => {
+                                            if (!isCancellingOrder) {
+                                                handleCancelClick(
+                                                    order.id,
+                                                    order.orderCode
+                                                )
+                                                setMenuOpen(null)
+                                            }
+                                        }}
+                                    >
+                                        {isCancellingOrder ? (
+                                            <>
+                                                <div className='animate-spin rounded-full h-4 w-4 border-2 border-red-400 border-t-transparent' />
+                                                Đang hủy...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <X className='h-4 w-4' />
+                                                Hủy đơn hàng
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )
+                    })()}
+                </div>
+            )}
 
             {/* Cancel Order Dialog */}
             <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
