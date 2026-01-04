@@ -425,7 +425,7 @@ export function SearchBar({
                     className={cn(
                         'absolute top-full left-0 right-0 mt-2 z-50 rounded-lg shadow-xl border overflow-hidden',
                         theme === 'dark'
-                            ? 'bg-gray-800 border-gray-700'
+                            ? 'bg-[#1A1A1A]  border-gray-800'
                             : 'bg-white border-gray-200'
                     )}
                 >
