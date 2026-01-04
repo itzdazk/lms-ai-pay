@@ -90,12 +90,15 @@ export function OrderSummary({
                         <img
                             src={thumbnail}
                             alt={course.title}
-                            className='w-full h-32 object-cover rounded-lg mb-3'
+                            className='w-full h-50 object-cover rounded-lg mb-3'
                         />
                     )}
-                    <h3 className='font-semibold mb-2 line-clamp-2 text-white'>
+                    <h3 className='font-semibold text-xl mb-2 line-clamp-2 text-white'>
                         {course.title}
                     </h3>
+                    <p className='mb-2 text-gray-400 line-clamp-2'>
+                        {course.description}
+                    </p>
                     {course.instructor?.fullName && (
                         <p className='text-sm text-gray-400 mb-3'>
                             {course.instructor.fullName}
