@@ -52,3 +52,12 @@ export type {
 } from './admin-courses'
 export type { CategoryFilters, CategoryCoursesFilters } from './categories'
 export { progressApi } from './progress'
+export { searchApi } from './search'
+export type {
+    SearchCoursesFilters,
+    SearchInstructorsFilters,
+    SearchSuggestions,
+    InstructorSearchResult,
+    VoiceSearchRequest,
+    VoiceSearchResponse,
+} from './search'

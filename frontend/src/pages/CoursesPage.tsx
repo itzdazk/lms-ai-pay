@@ -58,6 +58,9 @@ export function CoursesPage() {
                   .map((id) => parseInt(id))
                   .filter((id) => !isNaN(id))
             : undefined,
+        instructorId: searchParams.get('instructorId')
+            ? parseInt(searchParams.get('instructorId')!)
+            : undefined,
     })
 
     // Fetch categories
@@ -128,6 +131,7 @@ export function CoursesPage() {
                     maxPrice: filters.maxPrice,
                     sort: sortBy,
                     tagIds: filters.tagIds,
+                    instructorId: filters.instructorId,
                 })
 
                 console.log('CoursesPage.tsx: ', response)
@@ -170,6 +174,8 @@ export function CoursesPage() {
         if (filters.priceType) params.priceType = filters.priceType
         if (filters.tagIds && filters.tagIds.length > 0)
             params.tagIds = filters.tagIds.join(',')
+        if (filters.instructorId)
+            params.instructorId = filters.instructorId.toString()
 
         setSearchParams(params, { replace: true })
     }, [debouncedSearchQuery, sortBy, filters, setSearchParams])
@@ -219,7 +225,7 @@ export function CoursesPage() {
                         <div className='flex gap-4'>
                             <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-200 shadow-lg hover:shadow-blue-500/10 group min-w-[100px]'>
                                 <div className='text-2xl font-bold text-white dark:text-white group-hover:text-blue-400 dark:group-hover:text-blue-400 transition-colors'>
-                                    {totalCourses} 
+                                    {totalCourses}
                                 </div>
                                 <div className='text-xs text-gray-400 dark:text-gray-400 group-hover:text-gray-300 dark:group-hover:text-gray-300 transition-colors mt-1'>
                                     Khóa học
@@ -261,7 +267,9 @@ export function CoursesPage() {
                             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
                                 <p className='text-sm text-gray-300'>
                                     {isLoading ? (
-                                        <span className='animate-pulse'>Đang tải...</span>
+                                        <span className='animate-pulse'>
+                                            Đang tải...
+                                        </span>
                                     ) : (
                                         <>
                                             Hiển thị{' '}

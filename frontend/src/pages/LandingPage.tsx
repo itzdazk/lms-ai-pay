@@ -505,7 +505,7 @@ export function LandingPage() {
                     )}
                 </div>
             </section>
-            
+
             {/* AI Advisor - Floating Button */}
             <AdvisorCard />
         </div>
