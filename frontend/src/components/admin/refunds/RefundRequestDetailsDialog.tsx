@@ -145,7 +145,7 @@ export function RefundRequestDetailsDialog({
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent
                     wide
-                    className='bg-[#1A1A1A] border-[#2D2D2D] text-white !max-w-[30vw] !w-[30vw] max-h-[90vh] overflow-y-auto'
+                    className='bg-[#1A1A1A] border-[#2D2D2D] text-white !max-w-[30vw] !w-[30vw] max-h-[90vh] overflow-y-auto overflow-x-hidden'
                 >
                     <DialogHeader>
                         <DialogTitle className='text-xl font-semibold'>
@@ -270,7 +270,13 @@ export function RefundRequestDetailsDialog({
                                                 <FileText className='h-4 w-4' />
                                                 Lý do hoàn tiền
                                             </p>
-                                            <p className='text-sm text-white mt-2 bg-[#1A1A1A] p-3 rounded border border-[#2D2D2D]'>
+                                            <p
+                                                className='text-sm text-white mt-2 bg-[#1A1A1A] p-3 rounded border border-[#2D2D2D] break-words whitespace-pre-wrap max-w-full overflow-hidden'
+                                                style={{
+                                                    wordBreak: 'break-word',
+                                                    overflowWrap: 'anywhere',
+                                                }}
+                                            >
                                                 {refundRequest.reason}
                                             </p>
                                         </div>
@@ -285,7 +291,13 @@ export function RefundRequestDetailsDialog({
                                                 <FileText className='h-4 w-4' />
                                                 Ghi chú từ admin
                                             </p>
-                                            <p className='text-sm text-white mt-2 bg-[#1A1A1A] p-3 rounded border border-[#2D2D2D]'>
+                                            <p
+                                                className='text-sm text-white mt-2 bg-[#1A1A1A] p-3 rounded border border-[#2D2D2D] break-words whitespace-pre-wrap max-w-full overflow-hidden'
+                                                style={{
+                                                    wordBreak: 'break-word',
+                                                    overflowWrap: 'anywhere',
+                                                }}
+                                            >
                                                 {refundRequest.adminNotes}
                                             </p>
                                         </div>
