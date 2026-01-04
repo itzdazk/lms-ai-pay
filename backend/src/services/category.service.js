@@ -577,7 +577,7 @@ class CategoryService {
             }
 
             // Generate image URL
-            const imageUrl = `/uploads/categories/${file.filename}`
+            const imageUrl = `/uploads/shared/categories/${file.filename}`
 
             // Update category with new image URL
             const updatedCategory = await prisma.category.update({

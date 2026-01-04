@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url'
 import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
 import { convertToHLS } from '../services/hls.service.js'
-import { hlsDir } from '../config/multer.config.js'
 import { prisma } from '../config/database.config.js'
 import { HLS_STATUS } from '../config/constants.js'
+import pathUtil from '../utils/path.util.js'
 
 const connection = {
     host: config.REDIS_HOST,
@@ -19,16 +19,16 @@ const connection = {
 const worker = new Worker(
     'hls-conversion',
     async (job) => {
-        const { lessonId, videoPath } = job.data
-        if (!lessonId || !videoPath) {
-            throw new Error('Invalid job data: lessonId and videoPath are required')
+        const { lessonId, videoPath, courseId } = job.data
+        if (!lessonId || !videoPath || !courseId) {
+            throw new Error('Invalid job data: lessonId, videoPath, and courseId are required')
         }
 
-        const outputDir = path.join(hlsDir, String(lessonId))
-        logger.info(`[HLS][Job ${job.id}] Start convert lesson ${lessonId}`)
+        const outputDir = path.join(pathUtil.getHlsDir(courseId), String(lessonId))
+        logger.info(`[HLS][Job ${job.id}] Start convert lesson ${lessonId} in course ${courseId}`)
 
         const masterPath = await convertToHLS({ inputPath: videoPath, outputDir })
-        const masterUrl = `/uploads/hls/${lessonId}/master.m3u8`
+        const masterUrl = pathUtil.getHlsPlaylistUrl(courseId, lessonId)
 
         await prisma.lesson.update({
             where: { id: lessonId },

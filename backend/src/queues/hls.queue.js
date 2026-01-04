@@ -22,6 +22,6 @@ export const hlsQueue = new Queue('hls-conversion', {
     },
 })
 
-export async function enqueueHlsJob({ lessonId, videoPath }) {
-    return hlsQueue.add('convert', { lessonId, videoPath })
+export async function enqueueHlsJob({ lessonId, videoPath, courseId }) {
+    return hlsQueue.add('convert', { lessonId, videoPath, courseId })
 }

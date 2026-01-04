@@ -8,6 +8,22 @@ import { toast } from 'sonner'
 const API_BASE_URL =
     import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
 
+// Get base server URL (without /api/v1)
+export const getServerBaseUrl = () => {
+    return API_BASE_URL.replace(/\/api\/v1\/?$/, '')
+}
+
+// Convert relative URL to absolute URL
+export const getAbsoluteUrl = (relativeUrl: string | null | undefined): string => {
+    if (!relativeUrl) return ''
+    if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+        return relativeUrl
+    }
+    const baseUrl = getServerBaseUrl()
+    const cleanUrl = relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
+    return `${baseUrl}${cleanUrl}`
+}
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
     baseURL: API_BASE_URL,

@@ -1,4 +1,4 @@
-import apiClient from './client'
+import apiClient, { getAbsoluteUrl } from './client'
 import type {
     ApiResponse,
     Lesson,
@@ -25,7 +25,13 @@ export const lessonsApi = {
         const response = await apiClient.get<
             ApiResponse<{ videoUrl: string; hlsUrl?: string | null; hlsStatus?: string | null }>
         >(`/lessons/${lessonId}/video`)
-        return response.data.data
+        const data = response.data.data
+        // Convert relative URLs to absolute URLs
+        return {
+            videoUrl: getAbsoluteUrl(data.videoUrl),
+            hlsUrl: data.hlsUrl ? getAbsoluteUrl(data.hlsUrl) : null,
+            hlsStatus: data.hlsStatus
+        }
     },
 
     // Get lesson transcript URL

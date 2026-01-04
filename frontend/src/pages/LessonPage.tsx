@@ -487,6 +487,8 @@ export function LessonPage() {
                         ? videoData.hlsUrl
                         : videoData.videoUrl
 
+                    console.log('[LessonPage] Video data:', videoData)
+                    console.log('[LessonPage] Preferred URL:', preferredUrl)
                     setVideoUrl(preferredUrl || '')
                 }
 

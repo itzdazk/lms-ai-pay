@@ -370,7 +370,18 @@ class TranscriptionService {
                         return resolve(null)
                     }
 
-                    const transcriptUrl = `/uploads/transcripts/${transcriptFilename}`
+                    // Query courseId from lessonId to use course-based paths
+                    const lesson = await prisma.lesson.findUnique({
+                        where: { id: lessonId },
+                        select: { courseId: true },
+                    })
+
+                    if (!lesson) {
+                        logger.error(`Lesson ${lessonId} not found for transcript save`)
+                        return resolve(null)
+                    }
+
+                    const transcriptUrl = `/uploads/courses/${lesson.courseId}/transcripts/${transcriptFilename}`
                     let transcriptJsonUrl = null
 
                     await prisma.lesson.update({
@@ -391,7 +402,7 @@ class TranscriptionService {
                             JSON.stringify(segments, null, 2),
                             'utf-8'
                         )
-                        transcriptJsonUrl = `/uploads/transcripts/${jsonFilename}`
+                        transcriptJsonUrl = `/uploads/courses/${lesson.courseId}/transcripts/${jsonFilename}`
                         
                         // Update database with JSON URL after successful creation
                         await prisma.lesson.update({

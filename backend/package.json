@@ -8,6 +8,8 @@
         "start": "node src/server.js",
         "dev": "nodemon src/server.js",
         "worker:hls": "node src/workers/hls.worker.js",
+        "worker:hls:dev": "nodemon src/workers/hls.worker.js",
+        "dev:all": "concurrently \"npm run dev\" \"npm run worker:hls:dev\"",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
         "prisma:seed": "node prisma/seed.js",
@@ -34,6 +36,7 @@
     "dependencies": {
         "@prisma/client": "^6.18.0",
         "bcryptjs": "^3.0.3",
+        "bullmq": "^5.7.10",
         "compression": "^1.8.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
@@ -45,6 +48,7 @@
         "fluent-ffmpeg": "^2.1.2",
         "helmet": "^8.1.0",
         "hpp": "^0.2.3",
+        "ioredis": "^5.4.1",
         "joi": "^18.0.1",
         "jsonwebtoken": "^9.0.2",
         "morgan": "^1.10.1",
@@ -53,8 +57,6 @@
         "node-webvtt": "^1.9.4",
         "nodemailer": "^7.0.10",
         "openai": "^6.8.0",
-        "bullmq": "^5.7.10",
-        "ioredis": "^5.4.1",
         "qs": "^6.14.0",
         "sharp": "^0.34.4",
         "slick-carousel": "^1.8.1",
@@ -66,6 +68,7 @@
         "winston-daily-rotate-file": "^5.0.0"
     },
     "devDependencies": {
+        "concurrently": "^9.2.1",
         "eslint": "^9.39.1",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
