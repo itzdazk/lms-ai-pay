@@ -124,6 +124,13 @@ export function OrderTable({
     const [ordersWithRefundRequests, setOrdersWithRefundRequests] = useState<
         Set<number>
     >(new Set())
+    // Map orderId -> refundRequestId for pending requests
+    const [pendingRefundRequestIds, setPendingRefundRequestIds] = useState<
+        Map<number, number>
+    >(new Map())
+    const [cancellingRefundRequestId, setCancellingRefundRequestId] = useState<
+        number | null
+    >(null)
 
     // Check refund requests for PAID and REFUND_PENDING orders
     useEffect(() => {
@@ -154,6 +161,7 @@ export function OrderTable({
                 )
 
                 const orderIdsWithRequests = new Set<number>()
+                const pendingRequestIds = new Map<number, number>()
 
                 requests.forEach(({ orderId, request }) => {
                     if (request) {
@@ -162,6 +170,10 @@ export function OrderTable({
                             request.status === 'APPROVED'
                         ) {
                             orderIdsWithRequests.add(orderId)
+                        }
+                        // Store refund request ID for pending requests
+                        if (request.status === 'PENDING') {
+                            pendingRequestIds.set(orderId, request.id)
                         }
                     }
                 })
@@ -174,6 +186,7 @@ export function OrderTable({
                 })
 
                 setOrdersWithRefundRequests(orderIdsWithRequests)
+                setPendingRefundRequestIds(pendingRequestIds)
             } catch (error) {
                 console.error('Error checking refund requests:', error)
             }
@@ -272,6 +285,47 @@ export function OrderTable({
             // Keep dialog open so user can retry
         }
     }, [orderToCancel, onCancel])
+
+    // Handle cancel refund request
+    const handleCancelRefundRequest = useCallback(
+        async (orderId: number) => {
+            const refundRequestId = pendingRefundRequestIds.get(orderId)
+            if (!refundRequestId) return
+
+            try {
+                setCancellingRefundRequestId(refundRequestId)
+                await refundRequestsApi.cancelRefundRequest(refundRequestId)
+                toast.success('Đã hủy yêu cầu hoàn tiền thành công')
+
+                // Remove from sets
+                setOrdersWithRefundRequests((prev) => {
+                    const next = new Set(prev)
+                    next.delete(orderId)
+                    return next
+                })
+                setPendingRefundRequestIds((prev) => {
+                    const next = new Map(prev)
+                    next.delete(orderId)
+                    return next
+                })
+
+                // Call callback if provided
+                if (onRefundRequestCreated) {
+                    onRefundRequestCreated()
+                }
+            } catch (error: any) {
+                console.error('Error cancelling refund request:', error)
+                toast.error(
+                    error.response?.data?.message ||
+                        error.message ||
+                        'Không thể hủy yêu cầu hoàn tiền'
+                )
+            } finally {
+                setCancellingRefundRequestId(null)
+            }
+        },
+        [pendingRefundRequestIds, onRefundRequestCreated]
+    )
 
     if (loading) {
         return (
@@ -428,6 +482,45 @@ export function OrderTable({
                                                 >
                                                     <RotateCcw className='h-3.5 w-3.5 mr-1.5' />
                                                     Hoàn tiền
+                                                </DarkOutlineButton>
+                                            )}
+
+                                        {/* Cancel Refund Request Button - Only for orders with pending refund request */}
+                                        {ordersWithRefundRequests.has(
+                                            order.id
+                                        ) &&
+                                            pendingRefundRequestIds.has(
+                                                order.id
+                                            ) && (
+                                                <DarkOutlineButton
+                                                    size='sm'
+                                                    className='h-8 px-3 whitespace-nowrap border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:border-orange-400/60 hover:text-orange-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                                    onClick={() =>
+                                                        handleCancelRefundRequest(
+                                                            order.id
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        cancellingRefundRequestId ===
+                                                        pendingRefundRequestIds.get(
+                                                            order.id
+                                                        )
+                                                    }
+                                                >
+                                                    {cancellingRefundRequestId ===
+                                                    pendingRefundRequestIds.get(
+                                                        order.id
+                                                    ) ? (
+                                                        <>
+                                                            <div className='animate-spin rounded-full h-3.5 w-3.5 border-2 border-orange-400 border-t-transparent mr-1.5' />
+                                                            Đang hủy...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <X className='h-3.5 w-3.5 mr-1.5' />
+                                                            Hủy hoàn tiền
+                                                        </>
+                                                    )}
                                                 </DarkOutlineButton>
                                             )}
 

@@ -211,4 +211,14 @@ export const refundRequestsApi = {
         >('/admin/refund-requests', { params })
         return response.data
     },
+
+    /**
+     * Cancel refund request (Student only)
+     */
+    async cancelRefundRequest(requestId: number): Promise<RefundRequest> {
+        const response = await apiClient.delete<ApiResponse<RefundRequest>>(
+            `/refund-requests/${requestId}/cancel`
+        )
+        return response.data.data
+    },
 }

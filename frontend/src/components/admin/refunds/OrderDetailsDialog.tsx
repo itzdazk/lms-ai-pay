@@ -425,6 +425,7 @@ export function OrderDetailsDialog({
                                                             {course.instructor
                                                                 ?.fullName && (
                                                                 <p className='text-sm text-gray-400 mb-3'>
+                                                                    Giảng viên:{' '}
                                                                     {
                                                                         course
                                                                             .instructor

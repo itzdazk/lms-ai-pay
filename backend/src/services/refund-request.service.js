@@ -528,7 +528,10 @@ class RefundRequestService {
         }
 
         // Combine filters: if we have both search and amount, use AND
-        if (searchConditions.length > 0 && Object.keys(amountFilter).length > 0) {
+        if (
+            searchConditions.length > 0 &&
+            Object.keys(amountFilter).length > 0
+        ) {
             where.AND = [
                 {
                     order: amountFilter,
@@ -970,6 +973,70 @@ class RefundRequestService {
             refundTransaction: refundResult.refundTransaction,
             order: refundResult.order,
         }
+    }
+
+    /**
+     * Cancel refund request (Student only)
+     * @param {number} requestId - Refund request ID
+     * @param {number} userId - Student ID (for authorization)
+     * @returns {Promise<Object>} Cancelled refund request
+     */
+    async cancelRefundRequest(requestId, userId) {
+        // Get refund request
+        const refundRequest = await prisma.refundRequest.findUnique({
+            where: { id: requestId },
+            include: {
+                order: true,
+            },
+        })
+
+        if (!refundRequest) {
+            const error = new Error('Refund request not found')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Check if user is authorized (must be the student who created the request)
+        if (refundRequest.studentId !== userId) {
+            const error = new Error(
+                'You can only cancel your own refund requests'
+            )
+            error.statusCode = HTTP_STATUS.FORBIDDEN
+            throw error
+        }
+
+        // Only allow cancellation if status is PENDING
+        if (refundRequest.status !== 'PENDING') {
+            const error = new Error(
+                `Cannot cancel refund request with status: ${refundRequest.status}. Only pending requests can be cancelled.`
+            )
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        // Cancel refund request and revert order status
+        const result = await prisma.$transaction(async (tx) => {
+            // Delete the refund request
+            const deletedRequest = await tx.refundRequest.delete({
+                where: { id: requestId },
+            })
+
+            // Revert order status back to PAID
+            await tx.order.update({
+                where: { id: refundRequest.orderId },
+                data: {
+                    paymentStatus: PAYMENT_STATUS.PAID,
+                },
+            })
+
+            return deletedRequest
+        })
+
+        logger.info(
+            `Student ${userId} cancelled refund request ${requestId} for order ${refundRequest.order.orderCode}`
+        )
+
+        return result
     }
 }
 

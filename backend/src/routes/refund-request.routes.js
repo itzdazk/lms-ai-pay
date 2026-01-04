@@ -73,6 +73,18 @@ router.post(
 )
 
 /**
+ * @route   DELETE /api/v1/refund-requests/:id/cancel
+ * @desc    Cancel refund request (Student only)
+ * @access  Private (Student)
+ * @note    Must be defined BEFORE /:id to avoid route conflict
+ */
+router.delete(
+    '/:id/cancel',
+    getRefundRequestByIdValidator,
+    refundRequestController.cancelRefundRequest
+)
+
+/**
  * @route   GET /api/v1/refund-requests/:id
  * @desc    Get refund request by ID
  * @access  Private (Student, Admin)

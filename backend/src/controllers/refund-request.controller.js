@@ -201,6 +201,31 @@ class RefundRequestController {
             'Refund requests retrieved successfully'
         )
     })
+
+    /**
+     * @route   DELETE /api/v1/refund-requests/:id/cancel
+     * @desc    Cancel refund request (Student only)
+     * @access  Private (Student)
+     */
+    cancelRefundRequest = asyncHandler(async (req, res) => {
+        const userId = req.user.id
+        const requestId = parseInt(req.params.id)
+
+        if (isNaN(requestId)) {
+            return ApiResponse.badRequest(res, 'Invalid refund request ID')
+        }
+
+        const refundRequest = await refundRequestService.cancelRefundRequest(
+            requestId,
+            userId
+        )
+
+        return ApiResponse.success(
+            res,
+            refundRequest,
+            'Refund request cancelled successfully'
+        )
+    })
 }
 
 export default new RefundRequestController()
