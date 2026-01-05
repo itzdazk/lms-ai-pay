@@ -569,49 +569,7 @@ model LessonNote {
 }
 
 // =====================================================
-// 17. LEARNING GOALS
-// =====================================================
-model LearningGoal {
-  id           Int       @id @default(autoincrement())
-  userId       Int       @map("user_id")
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         String    @db.VarChar(50) // 'DAILY_LESSONS', 'WEEKLY_LESSONS', 'MONTHLY_LESSONS', 'COURSE_COMPLETION'
-  targetValue  Int       @map("target_value")
-  currentValue Int       @default(0) @map("current_value")
-  courseId     Int?      @map("course_id")
-  course       Course?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  deadline     DateTime? @db.Timestamptz
-  status       String    @default("IN_PROGRESS") @db.VarChar(20) // 'IN_PROGRESS', 'COMPLETED', 'FAILED'
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@index([userId])
-  @@index([userId, status])
-  @@map("learning_goals")
-}
-
-// =====================================================
-// 18. BOOKMARKS
-// =====================================================
-model Bookmark {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId  Int?     @map("course_id")
-  course    Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessonId  Int?     @map("lesson_id")
-  lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  type      String   @db.VarChar(20) // 'COURSE', 'LESSON'
-  note      String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  @@index([userId])
-  @@index([userId, type])
-  @@map("bookmarks")
-}
-
-// =====================================================
-// 19. REFUND REQUESTS
+// 17. REFUND REQUESTS
 // =====================================================
 model RefundRequest {
   id                    Int       @id @default(autoincrement())
