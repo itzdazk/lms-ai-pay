@@ -380,21 +380,21 @@ model Notification {
 // 11. QUIZZES
 // =====================================================
 model Quiz {
-  id               Int      @id @default(autoincrement())
-  lessonId         Int?     @map("lesson_id")
-  lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  courseId         Int?     @map("course_id")
-  course           Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title            String   @db.VarChar(200)
-  description      String?  @db.Text
-  questions        Json     @default("[]") // Deprecated - kept for backward compatibility, will be migrated to Question model
-  passingScore     Int      @default(70) @map("passing_score")
-  isPublished      Boolean  @default(true) @map("is_published")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id           Int      @id @default(autoincrement())
+  lessonId     Int?     @map("lesson_id")
+  lesson       Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  courseId     Int?     @map("course_id")
+  course       Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String   @db.VarChar(200)
+  description  String?  @db.Text
+  questions    Json     @default("[]") // Deprecated - kept for backward compatibility, will be migrated to Question model
+  passingScore Int      @default(70) @map("passing_score")
+  isPublished  Boolean  @default(true) @map("is_published")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  submissions QuizSubmission[]
-  questionItems Question[] @relation("QuizQuestions")
+  submissions   QuizSubmission[]
+  questionItems Question[]       @relation("QuizQuestions")
 
   @@unique([lessonId])
   @@index([lessonId])
@@ -407,17 +407,17 @@ model Quiz {
 // 11.0.5. QUIZ QUESTIONS (normalized)
 // =====================================================
 model Question {
-  id              Int      @id @default(autoincrement())
-  quizId          Int      @map("quiz_id")
-  quiz            Quiz     @relation("QuizQuestions", fields: [quizId], references: [id], onDelete: Cascade)
-  question        String   @db.Text
-  type            String   @default("multiple_choice") @db.VarChar(50) // multiple_choice, true_false, short_answer, etc.
-  options         Json?    @default("[]") // For multiple choice: ["A", "B", "C", "D"] or {"A": "Option A", "B": "Option B", ...}
-  correctAnswer   String?  @map("correct_answer") @db.VarChar(255) // The correct answer (could be "A", "true", or text)
-  explanation     String?  @db.Text
-  questionOrder   Int      @default(0) @map("question_order") // Order of question in quiz
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id            Int      @id @default(autoincrement())
+  quizId        Int      @map("quiz_id")
+  quiz          Quiz     @relation("QuizQuestions", fields: [quizId], references: [id], onDelete: Cascade)
+  question      String   @db.Text
+  type          String   @default("multiple_choice") @db.VarChar(50) // multiple_choice, true_false, short_answer, etc.
+  options       Json?    @default("[]") // For multiple choice: ["A", "B", "C", "D"] or {"A": "Option A", "B": "Option B", ...}
+  correctAnswer String?  @map("correct_answer") @db.VarChar(255) // The correct answer (could be "A", "true", or text)
+  explanation   String?  @db.Text
+  questionOrder Int      @default(0) @map("question_order") // Order of question in quiz
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([quizId])
   @@index([questionOrder])
@@ -569,68 +569,34 @@ model LessonNote {
 }
 
 // =====================================================
-// 17. LEARNING GOALS
-// =====================================================
-model LearningGoal {
-  id           Int       @id @default(autoincrement())
-  userId       Int       @map("user_id")
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         String    @db.VarChar(50) // 'DAILY_LESSONS', 'WEEKLY_LESSONS', 'MONTHLY_LESSONS', 'COURSE_COMPLETION'
-  targetValue  Int       @map("target_value")
-  currentValue Int       @default(0) @map("current_value")
-  courseId     Int?      @map("course_id")
-  course       Course?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  deadline     DateTime? @db.Timestamptz
-  status       String    @default("IN_PROGRESS") @db.VarChar(20) // 'IN_PROGRESS', 'COMPLETED', 'FAILED'
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@index([userId])
-  @@index([userId, status])
-  @@map("learning_goals")
-}
-
-// =====================================================
-// 18. BOOKMARKS
-// =====================================================
-model Bookmark {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId  Int?     @map("course_id")
-  course    Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessonId  Int?     @map("lesson_id")
-  lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  type      String   @db.VarChar(20) // 'COURSE', 'LESSON'
-  note      String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  @@index([userId])
-  @@index([userId, type])
-  @@map("bookmarks")
-}
-
-// =====================================================
-// 19. REFUND REQUESTS
+// 17. REFUND REQUESTS
 // =====================================================
 model RefundRequest {
-  id                 Int       @id @default(autoincrement())
-  orderId            Int       @map("order_id")
-  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  studentId          Int       @map("student_id")
-  student            User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  reason             String    @db.Text
-  status             String    @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
-  progressPercentage Decimal   @map("progress_percentage") @db.Decimal(5, 2)
-  adminNotes         String?   @map("admin_notes") @db.Text
-  processedAt        DateTime? @map("processed_at") @db.Timestamptz
-  processedBy        Int?      @map("processed_by")
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                    Int       @id @default(autoincrement())
+  orderId               Int       @map("order_id")
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  studentId             Int       @map("student_id")
+  student               User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reason                String    @db.Text
+  reasonType            String?   @map("reason_type") @db.VarChar(50) // MEDICAL, FINANCIAL_EMERGENCY, DISSATISFACTION, OTHER
+  status                String    @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
+  refundType            String?   @map("refund_type") @db.VarChar(20) // FULL, PARTIAL
+  progressPercentage    Decimal   @map("progress_percentage") @db.Decimal(5, 2)
+  suggestedRefundAmount Decimal?  @map("suggested_refund_amount") @db.Decimal(10, 2)
+  requestedRefundAmount Decimal?  @map("requested_refund_amount") @db.Decimal(10, 2)
+  adminNotes            String?   @map("admin_notes") @db.Text
+  offerExpiresAt        DateTime? @map("offer_expires_at") @db.Timestamptz
+  studentAcceptedOffer  Boolean   @default(false) @map("student_accepted_offer")
+  studentRejectedOffer  Boolean   @default(false) @map("student_rejected_offer")
+  processedAt           DateTime? @map("processed_at") @db.Timestamptz
+  processedBy           Int?      @map("processed_by")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([orderId])
   @@index([studentId])
   @@index([status])
+  @@index([refundType])
   @@index([createdAt])
   @@map("refund_requests")
 }

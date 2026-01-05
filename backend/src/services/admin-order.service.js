@@ -124,6 +124,13 @@ class AdminOrderService {
                             slug: true,
                             thumbnailUrl: true,
                             price: true,
+                            instructorId: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
+                            },
                         },
                     },
                     user: {

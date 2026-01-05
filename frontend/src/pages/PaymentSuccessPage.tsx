@@ -25,6 +25,30 @@ import { OrderSummary } from '../components/Payment/OrderSummary'
 type GatewayResult = 'success' | 'failed' | 'pending' | 'unknown'
 
 /**
+ * Translate payment status to Vietnamese
+ */
+const translatePaymentStatus = (status: Order['paymentStatus']): string => {
+    switch (status) {
+        case 'PAID':
+            return 'Đã thanh toán'
+        case 'PENDING':
+            return 'Đang chờ thanh toán'
+        case 'FAILED':
+            return 'Thanh toán thất bại'
+        case 'REFUNDED':
+            return 'Đã hoàn tiền'
+        case 'PARTIALLY_REFUNDED':
+            return 'Hoàn tiền một phần'
+        case 'REFUND_PENDING':
+            return 'Đang chờ hoàn tiền'
+        case 'REFUND_FAILED':
+            return 'Hoàn tiền thất bại'
+        default:
+            return status
+    }
+}
+
+/**
  * Strip gateway suffix from order code
  * VNPay/MoMo append "-<Gateway>-<random>" after the orderCode
  */
@@ -265,7 +289,9 @@ export function PaymentSuccessPage() {
                                         Trạng thái
                                     </span>
                                     <span className='text-sm font-medium text-white'>
-                                        {order.paymentStatus}
+                                        {translatePaymentStatus(
+                                            order.paymentStatus
+                                        )}
                                     </span>
                                     <span className='text-xs text-gray-400'>
                                         Tổng:{' '}
@@ -310,7 +336,12 @@ export function PaymentSuccessPage() {
                                         course={order.course || null}
                                     />
                                     <div className='mt-3 pt-3 border-t border-[#2D2D2D] lg:hidden text-xs text-gray-300 space-y-1'>
-                                        <p>Trạng thái: {order.paymentStatus}</p>
+                                        <p>
+                                            Trạng thái:{' '}
+                                            {translatePaymentStatus(
+                                                order.paymentStatus
+                                            )}
+                                        </p>
                                         <p>
                                             Tổng:{' '}
                                             {order.finalPrice.toLocaleString(

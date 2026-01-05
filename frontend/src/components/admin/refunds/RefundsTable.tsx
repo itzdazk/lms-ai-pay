@@ -9,10 +9,10 @@ import { DarkOutlineInput } from '../../ui/dark-outline-input'
 import { DarkOutlineButton } from '../../ui/buttons'
 import { Search, X, Loader2 } from 'lucide-react'
 import { RefundRow } from './RefundRow'
-import type { Order } from '../../../lib/api/types'
+import type { RefundRequest } from '../../../lib/api/refund-requests'
 
 interface RefundsTableProps {
-    orders: Order[]
+    refundRequests: RefundRequest[]
     loading: boolean
     pagination: {
         page: number
@@ -26,14 +26,14 @@ interface RefundsTableProps {
     onSearchExecute: () => void
     onSearchKeyPress: (e: React.KeyboardEvent) => void
     onClearSearch: () => void
-    onViewDetail: (order: Order) => void
-    onRefund: (order: Order) => void
+    onViewOrder: (refundRequest: RefundRequest) => void
+    onViewRefundRequest: (refundRequest: RefundRequest) => void
     onRowSelect: (id: number | null) => void
     renderPagination: () => React.ReactNode
 }
 
 export function RefundsTable({
-    orders,
+    refundRequests,
     loading,
     pagination,
     searchInput,
@@ -42,8 +42,8 @@ export function RefundsTable({
     onSearchExecute,
     onSearchKeyPress,
     onClearSearch,
-    onViewDetail,
-    onRefund,
+    onViewOrder,
+    onViewRefundRequest,
     onRowSelect,
     renderPagination,
 }: RefundsTableProps) {
@@ -52,7 +52,7 @@ export function RefundsTable({
             <CardHeader>
                 <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
                     <CardTitle className='text-white'>
-                        Danh sách đơn hàng có thể hoàn tiền
+                        Danh sách đơn hàng được yêu cầu hoàn tiền
                     </CardTitle>
                     <div className='flex items-center gap-2 w-full sm:w-auto'>
                         <div className='relative flex-1 sm:flex-initial sm:w-[300px]'>
@@ -131,28 +131,31 @@ export function RefundsTable({
                                             </div>
                                         </td>
                                     </tr>
-                                ) : orders.length === 0 ? (
+                                ) : refundRequests.length === 0 ? (
                                     <tr>
                                         <td
                                             colSpan={8}
                                             className='text-center py-12'
                                         >
                                             <p className='text-gray-400'>
-                                                Không tìm thấy đơn hàng nào
+                                                Không có yêu cầu hoàn tiền nào
                                             </p>
                                         </td>
                                     </tr>
                                 ) : (
-                                    orders.map((order) => (
+                                    refundRequests.map((refundRequest) => (
                                         <RefundRow
-                                            key={order.id}
-                                            order={order}
+                                            key={refundRequest.id}
+                                            refundRequest={refundRequest}
                                             isSelected={
-                                                selectedRowId === order.id
+                                                selectedRowId ===
+                                                refundRequest.id
                                             }
                                             onRowSelect={onRowSelect}
-                                            onViewDetail={onViewDetail}
-                                            onRefund={onRefund}
+                                            onViewOrder={onViewOrder}
+                                            onViewRefundRequest={
+                                                onViewRefundRequest
+                                            }
                                         />
                                     ))
                                 )}
@@ -170,8 +173,8 @@ export function RefundsTable({
 
                 {/* Results Summary */}
                 <div className='mt-4 text-sm text-gray-400 text-center'>
-                    Hiển thị {orders.length} trong tổng số {pagination.total}{' '}
-                    đơn hàng
+                    Hiển thị {refundRequests.length} trong tổng số{' '}
+                    {pagination.total} yêu cầu hoàn tiền
                 </div>
             </CardContent>
         </Card>

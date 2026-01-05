@@ -31,6 +31,7 @@ export interface CourseFiltersState {
     maxPrice?: number
     priceType?: 'all' | 'free' | 'paid'
     tagIds?: number[]
+    instructorId?: number
 }
 
 interface CourseFiltersProps {
@@ -278,25 +279,25 @@ export function CourseFilters({
                             </button>
                         )}
                     </div>
-                        <div className='relative'>
-                            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400 z-10' />
-                            <DarkOutlineInput
-                                type='text'
-                                placeholder='Tìm kiếm danh mục...'
-                                value={categorySearch}
-                                onChange={(e) => setCategorySearch(e.target.value)}
-                                className='pl-9 pr-9 h-9'
-                            />
-                            {categorySearch && (
-                                <button
-                                    type='button'
-                                    onClick={() => setCategorySearch('')}
-                                    className='absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
-                                >
-                                    <X className='h-4 w-4' />
-                                </button>
-                            )}
-                        </div>
+                    <div className='relative'>
+                        <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-400 z-10' />
+                        <DarkOutlineInput
+                            type='text'
+                            placeholder='Tìm kiếm danh mục...'
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            className='pl-9 pr-9 h-9'
+                        />
+                        {categorySearch && (
+                            <button
+                                type='button'
+                                onClick={() => setCategorySearch('')}
+                                className='absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
+                            >
+                                <X className='h-4 w-4' />
+                            </button>
+                        )}
+                    </div>
                     <div className='space-y-2 max-h-64 overflow-y-auto custom-scrollbar'>
                         <div className='flex items-center space-x-2 group'>
                             <Checkbox
@@ -322,7 +323,9 @@ export function CourseFilters({
                                 >
                                     <Checkbox
                                         id={`cat-${category.id}`}
-                                        checked={filters.categoryId === category.id}
+                                        checked={
+                                            filters.categoryId === category.id
+                                        }
                                         onCheckedChange={() =>
                                             handleCategoryChange(category.id)
                                         }
@@ -334,10 +337,12 @@ export function CourseFilters({
                                     >
                                         <div className='flex items-center justify-between gap-2'>
                                             <span>{category.name}</span>
-                                            {category.coursesCount !== undefined &&
+                                            {category.coursesCount !==
+                                                undefined &&
                                                 category.coursesCount > 0 && (
                                                     <span className='text-xs text-gray-400 whitespace-nowrap'>
-                                                        ({category.coursesCount})
+                                                        ({category.coursesCount}
+                                                        )
                                                     </span>
                                                 )}
                                         </div>
@@ -472,16 +477,19 @@ export function CourseFilters({
                                     Giá
                                 </Label>
                             </div>
-                            {filters.priceType && filters.priceType !== 'all' && (
-                                <button
-                                    type='button'
-                                    onClick={() => handlePriceTypeChange('all')}
-                                    className='text-gray-400 hover:text-green-400 transition-colors p-1 rounded hover:bg-green-500/10'
-                                    title='Xóa lọc giá'
-                                >
-                                    <X className='h-4 w-4' />
-                                </button>
-                            )}
+                            {filters.priceType &&
+                                filters.priceType !== 'all' && (
+                                    <button
+                                        type='button'
+                                        onClick={() =>
+                                            handlePriceTypeChange('all')
+                                        }
+                                        className='text-gray-400 hover:text-green-400 transition-colors p-1 rounded hover:bg-green-500/10'
+                                        title='Xóa lọc giá'
+                                    >
+                                        <X className='h-4 w-4' />
+                                    </button>
+                                )}
                         </div>
                         <div className='space-y-2'>
                             <div className='flex items-center space-x-2 group'>
@@ -617,42 +625,49 @@ export function CourseFilters({
                             </div>
                             {filteredTags.length > 0 ? (
                                 filteredTags.map((tag) => {
-                                const isActive =
-                                    filters.tagIds?.includes(tag.id) || false
+                                    const isActive =
+                                        filters.tagIds?.includes(tag.id) ||
+                                        false
 
-                                return (
-                                    <div
-                                        key={tag.id}
-                                        className='flex items-start space-x-2 group'
-                                    >
-                                        <Checkbox
-                                            id={`tag-${tag.id}`}
-                                            checked={isActive}
-                                            onCheckedChange={(checked) =>
-                                                handleTagChange(
-                                                    tag.id,
-                                                    checked as boolean
-                                                )
-                                            }
-                                            className='border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 group-hover:border-purple-500/50 transition-colors mt-0.5'
-                                        />
-                                        <label
-                                            htmlFor={`tag-${tag.id}`}
-                                            className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
+                                    return (
+                                        <div
+                                            key={tag.id}
+                                            className='flex items-start space-x-2 group'
                                         >
-                                            <div className='flex items-center justify-between gap-2'>
-                                                <span>{tag.name}</span>
-                                                {tag._count &&
-                                                    tag._count.courses > 0 && (
-                                                        <span className='text-xs text-gray-400 whitespace-nowrap'>
-                                                            ({tag._count.courses})
-                                                        </span>
-                                                    )}
-                                            </div>
-                                        </label>
-                                    </div>
-                                )
-                            })
+                                            <Checkbox
+                                                id={`tag-${tag.id}`}
+                                                checked={isActive}
+                                                onCheckedChange={(checked) =>
+                                                    handleTagChange(
+                                                        tag.id,
+                                                        checked as boolean
+                                                    )
+                                                }
+                                                className='border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 group-hover:border-purple-500/50 transition-colors mt-0.5'
+                                            />
+                                            <label
+                                                htmlFor={`tag-${tag.id}`}
+                                                className='text-sm cursor-pointer text-gray-300 group-hover:text-white transition-colors flex-1'
+                                            >
+                                                <div className='flex items-center justify-between gap-2'>
+                                                    <span>{tag.name}</span>
+                                                    {tag._count &&
+                                                        tag._count.courses >
+                                                            0 && (
+                                                            <span className='text-xs text-gray-400 whitespace-nowrap'>
+                                                                (
+                                                                {
+                                                                    tag._count
+                                                                        .courses
+                                                                }
+                                                                )
+                                                            </span>
+                                                        )}
+                                                </div>
+                                            </label>
+                                        </div>
+                                    )
+                                })
                             ) : (
                                 <p className='text-sm text-gray-400 text-center py-2'>
                                     Không tìm thấy tag

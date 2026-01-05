@@ -809,7 +809,14 @@ class OrdersService {
      * @returns {Promise<object>} Order statistics
      */
     async getUserOrderStats(userId) {
-        const [total, paid, pending, failed, refunded] = await Promise.all([
+        const [
+            total,
+            paid,
+            pending,
+            failed,
+            refunded,
+            partiallyRefunded,
+        ] = await Promise.all([
             prisma.order.count({ where: { userId } }),
             prisma.order.count({
                 where: { userId, paymentStatus: PAYMENT_STATUS.PAID },
@@ -823,12 +830,13 @@ class OrdersService {
             prisma.order.count({
                 where: {
                     userId,
-                    paymentStatus: {
-                        in: [
-                            PAYMENT_STATUS.REFUNDED,
-                            PAYMENT_STATUS.PARTIALLY_REFUNDED,
-                        ],
-                    },
+                    paymentStatus: PAYMENT_STATUS.REFUNDED,
+                },
+            }),
+            prisma.order.count({
+                where: {
+                    userId,
+                    paymentStatus: PAYMENT_STATUS.PARTIALLY_REFUNDED,
                 },
             }),
         ])
@@ -850,6 +858,7 @@ class OrdersService {
             pending,
             failed,
             refunded,
+            partiallyRefunded,
             totalSpent: parseFloat(totalSpent._sum.finalPrice || 0),
         }
     }

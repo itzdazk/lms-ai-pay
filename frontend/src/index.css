@@ -367,3 +367,53 @@ html {
     min-width: 0;
     width: 100%;
 }
+
+/* Date Input Calendar Icon Styling - Light and Dark Mode Support */
+/* Webkit browsers (Chrome, Safari, Edge) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 1;
+    filter: brightness(0) saturate(100%);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* Light mode - dark icon for contrast */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(0%);
+    opacity: 0.7;
+}
+
+input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+/* Dark mode - light icon for contrast */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(100%);
+    opacity: 0.8;
+}
+
+.dark input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+/* Firefox - uses different pseudo-element */
+input[type="date"]::-moz-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    filter: brightness(0) saturate(100%);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+input[type="date"]:hover::-moz-calendar-picker-indicator {
+    opacity: 1;
+}
+
+.dark input[type="date"]::-moz-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(100%);
+    opacity: 0.8;
+}
+
+.dark input[type="date"]:hover::-moz-calendar-picker-indicator {
+    opacity: 1;
+}

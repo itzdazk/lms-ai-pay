@@ -272,8 +272,8 @@ export function TransactionFilters({
                         {/* Date Range */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
-                                <CalendarIcon className='h-4 w-4 text-gray-400' />
-                                <span className='text-sm font-medium text-gray-400'>
+                                <CalendarIcon className='h-4 w-4 text-gray-400 dark:text-gray-400' />
+                                <span className='text-sm font-medium text-gray-400 dark:text-gray-400'>
                                     Khoảng thời gian:
                                 </span>
                             </div>
@@ -282,9 +282,9 @@ export function TransactionFilters({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant='outline'
-                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
+                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f] dark:border-[#2d2d2d] dark:text-gray-300 dark:hover:bg-[#1f1f1f]'
                                         >
-                                            <CalendarIcon className='mr-2 h-4 w-4' />
+                                            <CalendarIcon className='mr-2 h-4 w-4 text-gray-600 dark:text-gray-300' />
                                             {startDate ? (
                                                 format(
                                                     startDate,
@@ -321,9 +321,9 @@ export function TransactionFilters({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant='outline'
-                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f]'
+                                            className='justify-start text-left font-normal border-[#2d2d2d] text-gray-300 hover:bg-[#1f1f1f] dark:border-[#2d2d2d] dark:text-gray-300 dark:hover:bg-[#1f1f1f]'
                                         >
-                                            <CalendarIcon className='mr-2 h-4 w-4' />
+                                            <CalendarIcon className='mr-2 h-4 w-4 text-gray-600 dark:text-gray-300' />
                                             {endDate ? (
                                                 format(endDate, 'dd/MM/yyyy', {
                                                     locale: vi,

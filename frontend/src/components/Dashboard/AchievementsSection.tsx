@@ -20,6 +20,11 @@ export function AchievementsSection({
 }: AchievementsSectionProps) {
     return (
         <div className='space-y-6'>
+            <div className='flex items-center justify-between mb-4'>
+                <h2 className='text-2xl font-bold text-black dark:text-white'>
+                    Thành tích
+                </h2>
+            </div>
             <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                 <CardHeader>
                     <CardTitle className='text-white flex items-center gap-2'>

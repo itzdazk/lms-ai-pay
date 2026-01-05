@@ -19,14 +19,12 @@ import {
     SheetTrigger,
 } from './ui/sheet'
 import {
-    Search,
     BookOpen,
     User,
     Settings,
     LogOut,
     LayoutDashboard,
     Menu,
-    Mic,
     MessageCircle,
     Sun,
     Moon,
@@ -34,63 +32,21 @@ import {
     GraduationCap,
     ReceiptText,
     UserRoundCog,
-    LibraryBig,
 } from 'lucide-react'
-import { Input } from './ui/input'
 import { Badge } from './ui/badge'
 import { useTheme } from '../contexts/ThemeContext'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'sonner'
 import { NotificationBell } from './Notifications/NotificationBell'
+import { SearchBar } from './Search/SearchBar'
 
 export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [isListening, setIsListening] = useState(false)
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
     const { theme, toggleTheme } = useTheme()
     const { user, logout, isAuthenticated } = useAuth()
-
-    const handleVoiceSearch = () => {
-        if (
-            !(
-                'webkitSpeechRecognition' in window ||
-                'SpeechRecognition' in window
-            )
-        ) {
-            alert('Trình duyệt không hỗ trợ nhận diện giọng nói')
-            return
-        }
-
-        const SpeechRecognition =
-            (window as any).webkitSpeechRecognition ||
-            (window as any).SpeechRecognition
-        const recognition = new SpeechRecognition()
-        recognition.lang = 'vi-VN'
-        recognition.continuous = false
-
-        recognition.onstart = () => {
-            setIsListening(true)
-        }
-
-        recognition.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript
-            console.log('Voice search:', transcript)
-            setIsListening(false)
-        }
-
-        recognition.onerror = () => {
-            setIsListening(false)
-            alert('Không thể nhận diện giọng nói. Vui lòng thử lại.')
-        }
-
-        recognition.onend = () => {
-            setIsListening(false)
-        }
-
-        recognition.start()
-    }
 
     const handleLogout = async () => {
         if (isLoggingOut) return
@@ -366,27 +322,10 @@ export function Navbar() {
 
                 {/* Search Bar - Desktop */}
                 <div className='hidden md:flex flex-1 max-w-xl mx-8'>
-                    <div className='relative w-full'>
-                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
-                        <Input
-                            type='search'
-                            placeholder='Tìm kiếm khóa học...'
-                            className='w-full pl-10 pr-20 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
-                        />
-                        <Button
-                            size='icon'
-                            variant='ghost'
-                            className={`absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 ${
-                                isListening
-                                    ? 'text-red-500 animate-pulse'
-                                    : 'text-gray-400 hover:text-white'
-                            }`}
-                            onClick={handleVoiceSearch}
-                            title='Tìm kiếm bằng giọng nói'
-                        >
-                            <Mic className='h-4 w-4' />
-                        </Button>
-                    </div>
+                    <SearchBar
+                        placeholder='Tìm kiếm khóa học, giảng viên, công nghệ...'
+                        showSuggestions={true}
+                    />
                 </div>
 
                 {/* Right Side Actions */}
@@ -604,26 +543,10 @@ export function Navbar() {
                             </SheetHeader>
                             <div className='mt-8 space-y-4'>
                                 {/* Mobile Search */}
-                                <div className='relative'>
-                                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
-                                    <Input
-                                        type='search'
-                                        placeholder='Tìm kiếm...'
-                                        className='w-full pl-10 pr-20 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500'
-                                    />
-                                    <Button
-                                        size='icon'
-                                        variant='ghost'
-                                        className={`absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 ${
-                                            isListening
-                                                ? 'text-red-500'
-                                                : 'text-gray-400'
-                                        }`}
-                                        onClick={handleVoiceSearch}
-                                    >
-                                        <Mic className='h-4 w-4' />
-                                    </Button>
-                                </div>
+                                <SearchBar
+                                    placeholder='Tìm kiếm khóa học, giảng viên, công nghệ...'
+                                    showSuggestions={true}
+                                />
 
                                 {/* Mobile Theme Toggle */}
                                 <DarkOutlineButton

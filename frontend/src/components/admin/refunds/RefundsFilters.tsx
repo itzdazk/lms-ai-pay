@@ -9,11 +9,34 @@ import {
 } from '../../ui/dark-outline-select-trigger'
 import { DarkOutlineInput } from '../../ui/dark-outline-input'
 import { Filter } from 'lucide-react'
+import { useState, useEffect } from 'react'
+
+// Format number to currency string without VNĐ suffix (for input display)
+function formatPriceInput(price: number | undefined | string): string {
+    if (!price) return ''
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(numPrice)) return ''
+    return new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(numPrice)
+}
+
+// Parse currency string to number (remove dots and spaces)
+function parsePriceInput(value: string): number | undefined {
+    if (!value || value.trim() === '') return undefined
+    // Remove all dots, spaces, and non-numeric characters except digits
+    const cleaned = value.replace(/[^\d]/g, '')
+    if (cleaned === '') return undefined
+    const parsed = parseFloat(cleaned)
+    // Return the parsed number (including 0) if valid, undefined if NaN
+    return isNaN(parsed) ? undefined : parsed
+}
 
 export interface RefundFilters {
     page?: number
     limit?: number
-    paymentStatus?: 'PAID' | 'PARTIALLY_REFUNDED' | 'REFUNDED'
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED'
     search?: string
     sort?: 'newest' | 'oldest' | 'amount_asc' | 'amount_desc'
     startDate?: string
@@ -33,6 +56,83 @@ export function RefundsFilters({
     onFilterChange,
     onClearFilters,
 }: RefundsFiltersProps) {
+    // Local state for formatted display values
+    const [minAmountDisplay, setMinAmountDisplay] = useState<string>(
+        filters.minAmount ? formatPriceInput(filters.minAmount) : ''
+    )
+    const [maxAmountDisplay, setMaxAmountDisplay] = useState<string>(
+        filters.maxAmount ? formatPriceInput(filters.maxAmount) : ''
+    )
+
+    // Sync display values when filters change externally (e.g., clear filters)
+    useEffect(() => {
+        setMinAmountDisplay(
+            filters.minAmount ? formatPriceInput(filters.minAmount) : ''
+        )
+    }, [filters.minAmount])
+
+    useEffect(() => {
+        setMaxAmountDisplay(
+            filters.maxAmount ? formatPriceInput(filters.maxAmount) : ''
+        )
+    }, [filters.maxAmount])
+
+    const handleMinAmountChange = (value: string) => {
+        setMinAmountDisplay(value)
+        const parsedValue = parsePriceInput(value)
+
+        if (parsedValue === undefined) {
+            onFilterChange('minAmount', undefined)
+            return
+        }
+
+        // Validation: >= 0
+        if (parsedValue < 0) {
+            return
+        }
+
+        // Validation: minAmount <= maxAmount (if maxAmount exists)
+        if (
+            filters.maxAmount !== undefined &&
+            parsedValue > filters.maxAmount
+        ) {
+            return
+        }
+
+        // Update display with formatted value
+        setMinAmountDisplay(formatPriceInput(parsedValue))
+        // Save numeric value to state
+        onFilterChange('minAmount', parsedValue)
+    }
+
+    const handleMaxAmountChange = (value: string) => {
+        setMaxAmountDisplay(value)
+        const parsedValue = parsePriceInput(value)
+
+        if (parsedValue === undefined) {
+            onFilterChange('maxAmount', undefined)
+            return
+        }
+
+        // Validation: >= 0
+        if (parsedValue < 0) {
+            return
+        }
+
+        // Validation: maxAmount >= minAmount (if minAmount exists)
+        if (
+            filters.minAmount !== undefined &&
+            parsedValue < filters.minAmount
+        ) {
+            return
+        }
+
+        // Update display with formatted value
+        setMaxAmountDisplay(formatPriceInput(parsedValue))
+        // Save numeric value to state
+        onFilterChange('maxAmount', parsedValue)
+    }
+
     return (
         <Card className='bg-[#1A1A1A] border-[#2D2D2D] mb-6'>
             <CardHeader>
@@ -45,16 +145,16 @@ export function RefundsFilters({
                 <div className='space-y-4'>
                     {/* First Row: 5 columns */}
                     <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
-                        {/* Payment Status Filter */}
+                        {/* Refund Request Status Filter */}
                         <div className='space-y-2'>
                             <Label className='text-sm font-medium text-gray-400'>
-                                Trạng thái hoàn tiền
+                                Trạng thái yêu cầu
                             </Label>
                             <Select
-                                value={filters.paymentStatus || 'all'}
+                                value={filters.status || 'all'}
                                 onValueChange={(value) =>
                                     onFilterChange(
-                                        'paymentStatus',
+                                        'status',
                                         value === 'all' ? undefined : value
                                     )
                                 }
@@ -66,14 +166,14 @@ export function RefundsFilters({
                                     <DarkOutlineSelectItem value='all'>
                                         Tất cả trạng thái
                                     </DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value='PAID'>
-                                        Đã thanh toán (Chưa hoàn)
+                                    <DarkOutlineSelectItem value='PENDING'>
+                                        Đang chờ xử lý
                                     </DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value='PARTIALLY_REFUNDED'>
-                                        Hoàn tiền một phần
-                                    </DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value='REFUNDED'>
+                                    <DarkOutlineSelectItem value='APPROVED'>
                                         Đã hoàn tiền
+                                    </DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value='REJECTED'>
+                                        Đã từ chối
                                     </DarkOutlineSelectItem>
                                 </DarkOutlineSelectContent>
                             </Select>
@@ -85,7 +185,7 @@ export function RefundsFilters({
                                 Sắp xếp
                             </Label>
                             <Select
-                                value={filters.sort || 'newest'}
+                                value={filters.sort || 'oldest'}
                                 onValueChange={(value) =>
                                     onFilterChange('sort', value)
                                 }
@@ -167,25 +267,29 @@ export function RefundsFilters({
                                 Giá trị tối thiểu (VND)
                             </Label>
                             <DarkOutlineInput
-                                type='number'
-                                min='0'
-                                step='1'
+                                type='text'
+                                inputMode='numeric'
                                 placeholder='0'
-                                value={filters.minAmount || ''}
+                                value={minAmountDisplay}
                                 onChange={(e) => {
-                                    const value = e.target.value
-                                    if (value === '') {
-                                        onFilterChange('minAmount', undefined)
+                                    handleMinAmountChange(e.target.value)
+                                }}
+                                onBlur={(e) => {
+                                    // Format on blur to ensure proper display
+                                    const parsed = parsePriceInput(
+                                        e.target.value
+                                    )
+                                    if (parsed !== undefined) {
+                                        setMinAmountDisplay(
+                                            formatPriceInput(parsed)
+                                        )
                                     } else {
-                                        const numValue = parseFloat(value)
-                                        if (!isNaN(numValue) && numValue >= 0) {
-                                            onFilterChange(
-                                                'minAmount',
-                                                numValue
-                                            )
-                                        }
+                                        setMinAmountDisplay('')
                                     }
                                 }}
+                                spellCheck={false}
+                                autoCorrect='off'
+                                autoCapitalize='off'
                             />
                         </div>
 
@@ -195,25 +299,29 @@ export function RefundsFilters({
                                 Giá trị tối đa (VND)
                             </Label>
                             <DarkOutlineInput
-                                type='number'
-                                min='0'
-                                step='1'
+                                type='text'
+                                inputMode='numeric'
                                 placeholder='Không giới hạn'
-                                value={filters.maxAmount || ''}
+                                value={maxAmountDisplay}
                                 onChange={(e) => {
-                                    const value = e.target.value
-                                    if (value === '') {
-                                        onFilterChange('maxAmount', undefined)
+                                    handleMaxAmountChange(e.target.value)
+                                }}
+                                onBlur={(e) => {
+                                    // Format on blur to ensure proper display
+                                    const parsed = parsePriceInput(
+                                        e.target.value
+                                    )
+                                    if (parsed !== undefined) {
+                                        setMaxAmountDisplay(
+                                            formatPriceInput(parsed)
+                                        )
                                     } else {
-                                        const numValue = parseFloat(value)
-                                        if (!isNaN(numValue) && numValue >= 0) {
-                                            onFilterChange(
-                                                'maxAmount',
-                                                numValue
-                                            )
-                                        }
+                                        setMaxAmountDisplay('')
                                     }
                                 }}
+                                spellCheck={false}
+                                autoCorrect='off'
+                                autoCapitalize='off'
                             />
                         </div>
 

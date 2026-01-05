@@ -197,47 +197,6 @@ export function StudyTimeChart() {
                 </CardContent>
             </Card>
 
-            {/* Study Time by Course */}
-            {analytics.byCourse.length > 0 && (
-                <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                    <CardHeader>
-                        <CardTitle className='text-white'>
-                            Thời gian học theo khóa học
-                        </CardTitle>
-                        <CardDescription className='text-gray-400'>
-                            Top 5 khóa học bạn dành nhiều thời gian nhất
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                        {analytics.byCourse.map((course) => (
-                            <div key={course.courseId} className='space-y-2'>
-                                <div className='flex items-center justify-between'>
-                                    <p className='text-sm text-white font-medium truncate flex-1'>
-                                        {course.courseTitle}
-                                    </p>
-                                    <div className='ml-3 text-right'>
-                                        <p className='text-sm text-white font-semibold'>
-                                            {course.formatted}
-                                        </p>
-                                        <p className='text-xs text-gray-400'>
-                                            {course.percentage.toFixed(1)}%
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className='w-full bg-[#2D2D2D] rounded-full h-2'>
-                                    <div
-                                        className='bg-blue-500 h-2 rounded-full transition-all'
-                                        style={{
-                                            width: `${course.percentage}%`,
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-
             {/* Trend Chart */}
             {analytics.trend.length > 0 && (
                 <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>

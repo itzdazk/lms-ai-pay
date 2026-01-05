@@ -29,6 +29,8 @@ import { categoriesApi } from '../lib/api'
 import type { Category } from '../lib/api'
 import { useTheme } from '../contexts/ThemeContext'
 import { AdvisorCard } from '../components/AI/AdvisorCard'
+import { CONTACT_INFO } from '../lib/constants'
+import { Mail } from 'lucide-react'
 
 // Custom Arrow Components
 function NextArrow(props: any) {
@@ -144,22 +146,39 @@ export function LandingPage() {
                             phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa
                             học chất lượng cao.
                         </p>
-                        <div className='flex flex-col sm:flex-row gap-4'>
-                            <Button
-                                size='lg'
-                                className='bg-black text-white hover:bg-gray-900'
-                                asChild
-                            >
-                                <Link to='/courses'>Khám phá khóa học</Link>
-                            </Button>
-                            <Button
-                                size='lg'
-                                variant='outline'
-                                className='border-border text-foreground hover:!bg-gray-300'
-                                asChild
-                            >
-                                <Link to='/register'>Đăng ký miễn phí</Link>
-                            </Button>
+                        <div className='flex flex-col gap-4'>
+                            <div className='flex flex-col sm:flex-row gap-4 items-center'>
+                                <Button
+                                    size='lg'
+                                    className='bg-black text-white hover:bg-gray-900'
+                                    asChild
+                                >
+                                    <Link to='/courses'>Khám phá khóa học</Link>
+                                </Button>
+                                <Button
+                                    size='lg'
+                                    variant='outline'
+                                    className='border-border text-foreground hover:!bg-gray-300'
+                                    asChild
+                                >
+                                    <Link to='/register'>Đăng ký miễn phí</Link>
+                                </Button>
+                            </div>
+                            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                                <Mail className='h-4 w-4' />
+                                <span>Cần hỗ trợ? Liên hệ:</span>
+                                <a
+                                    href={`mailto:${CONTACT_INFO.email}`}
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        window.location.href = `mailto:${CONTACT_INFO.email}`
+                                    }}
+                                    className='text-blue-500 hover:text-blue-400 underline font-medium'
+                                >
+                                    {CONTACT_INFO.email}
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -505,7 +524,7 @@ export function LandingPage() {
                     )}
                 </div>
             </section>
-            
+
             {/* AI Advisor - Floating Button */}
             <AdvisorCard />
         </div>

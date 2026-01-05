@@ -5,7 +5,7 @@ import {
 } from '../../../components/ui/dark-outline-table'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
-import { MoreVertical, Eye } from 'lucide-react'
+import { MoreVertical, Eye, BookOpen } from 'lucide-react'
 import { formatDateTime } from '../../../lib/utils'
 import type { Order } from '../../../lib/api/types'
 
@@ -109,7 +109,10 @@ export function OrderRow({
     }, [menuOpen])
 
     const getStatusBadge = (status: Order['paymentStatus']) => {
-        const statusMap = {
+        const statusMap: Record<
+            Order['paymentStatus'],
+            { label: string; className: string }
+        > = {
             PENDING: {
                 label: 'Đang chờ',
                 className:
@@ -134,6 +137,16 @@ export function OrderRow({
                 label: 'Hoàn tiền một phần',
                 className:
                     'bg-orange-600/20 text-orange-300 border border-orange-500/40',
+            },
+            REFUND_PENDING: {
+                label: 'Đang chờ hoàn tiền',
+                className:
+                    'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40',
+            },
+            REFUND_FAILED: {
+                label: 'Hoàn tiền thất bại',
+                className:
+                    'bg-red-600/20 text-red-300 border border-red-500/40',
             },
         }
         const statusInfo = statusMap[status] || statusMap.PENDING
@@ -163,15 +176,28 @@ export function OrderRow({
                 </DarkOutlineTableCell>
                 <DarkOutlineTableCell className='min-w-[200px]'>
                     {order.course ? (
-                        <div className='flex flex-col gap-1'>
-                            <span className='text-white font-medium'>
-                                {order.course.title}
-                            </span>
-                            {order.course.instructor && (
-                                <span className='text-xs text-gray-400'>
-                                    {order.course.instructor.fullName}
-                                </span>
+                        <div className='flex items-start gap-3'>
+                            {order.course.thumbnailUrl ? (
+                                <img
+                                    src={order.course.thumbnailUrl}
+                                    alt={
+                                        order.course.title || 'Course thumbnail'
+                                    }
+                                    className='w-16 h-10 object-cover rounded shrink-0'
+                                />
+                            ) : (
+                                <div className='w-16 h-10 bg-[#2D2D2D] rounded flex items-center justify-center shrink-0'>
+                                    <BookOpen className='h-5 w-5 text-gray-400' />
+                                </div>
                             )}
+                            <div className='min-w-0 flex-1'>
+                                <span className='text-white font-medium line-clamp-1 block'>
+                                    {order.course.title}
+                                </span>
+                                <span className='text-xs text-gray-400'>
+                                    {order.course.instructor?.fullName}
+                                </span>
+                            </div>
                         </div>
                     ) : (
                         <span className='text-gray-400'>N/A</span>

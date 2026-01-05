@@ -8,6 +8,7 @@ import {
     getRefundRequestByOrderIdValidator,
     getStudentRefundRequestsValidator,
 } from '../validators/refund-request.validator.js'
+import { isAdmin } from '../middlewares/role.middleware.js'
 
 const router = express.Router()
 
@@ -37,6 +38,17 @@ router.get(
 )
 
 /**
+ * @route   GET /api/v1/refund-requests/eligibility/:orderId
+ * @desc    Check refund eligibility for an order
+ * @access  Private (Student)
+ * @note    Must be defined BEFORE /:id to avoid route conflict
+ */
+router.get(
+    '/eligibility/:orderId',
+    refundRequestController.getRefundEligibility
+)
+
+/**
  * @route   GET /api/v1/refund-requests/order/:orderId
  * @desc    Get refund request for an order
  * @access  Private (Student)
@@ -46,6 +58,30 @@ router.get(
     '/order/:orderId',
     getRefundRequestByOrderIdValidator,
     refundRequestController.getRefundRequestByOrderId
+)
+
+/**
+ * @route   POST /api/v1/refund-requests/:id/process
+ * @desc    Process refund request (Admin only)
+ * @access  Private (Admin)
+ * @note    Must be defined BEFORE /:id to avoid route conflict
+ */
+router.post(
+    '/:id/process',
+    isAdmin,
+    refundRequestController.processRefundRequest
+)
+
+/**
+ * @route   DELETE /api/v1/refund-requests/:id/cancel
+ * @desc    Cancel refund request (Student only)
+ * @access  Private (Student)
+ * @note    Must be defined BEFORE /:id to avoid route conflict
+ */
+router.delete(
+    '/:id/cancel',
+    getRefundRequestByIdValidator,
+    refundRequestController.cancelRefundRequest
 )
 
 /**
@@ -60,4 +96,3 @@ router.get(
 )
 
 export default router
-
