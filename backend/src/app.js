@@ -209,6 +209,16 @@ app.use(`/api/${config.API_VERSION}`, routes)
 //     }
 // }
 
+// Start transcription worker (if enabled)
+if (config.WHISPER_ENABLED !== false && config.WORKER_MODE !== 'hls-only') {
+    try {
+        await import('./workers/transcription.worker.js')
+        logger.info('Transcription worker started')
+    } catch (err) {
+        logger.warn(`Failed to start transcription worker: ${err.message}`)
+    }
+}
+
 // 404 handler
 app.use(notFound)
 

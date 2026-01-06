@@ -2,8 +2,9 @@
 import app from './app.js'
 import config from './config/app.config.js'
 import logger from './config/logger.config.js'
-import { connectDB, disconnectDB } from './config/database.config.js'
+import { connectDB, disconnectDB, prisma } from './config/database.config.js'
 import paymentExpirationCron from './cron/payment-expiration.cron.js'
+import { TRANSCRIPT_STATUS } from './config/constants.js'
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -18,6 +19,15 @@ const startServer = async () => {
     try {
         // Connect to database
         await connectDB() // Wait until completion -> continue
+
+        // Clear stuck transcripts from previous server crash
+        const stuckTranscripts = await prisma.lesson.updateMany({
+            where: { transcriptStatus: TRANSCRIPT_STATUS.PROCESSING },
+            data: { transcriptStatus: TRANSCRIPT_STATUS.PENDING }
+        })
+        if (stuckTranscripts.modifiedCount > 0) {
+            logger.info(`Cleared ${stuckTranscripts.modifiedCount} stuck transcripts (from previous crash)`)
+        }
 
         // Start cron jobs (VNPay expiration handler)
         paymentExpirationCron.start()
