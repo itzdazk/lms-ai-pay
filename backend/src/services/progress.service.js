@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
 import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js'
+import config from '../config/app.config.js'
 import notificationsService from './notifications.service.js'
 
 class ProgressService {
@@ -377,10 +378,11 @@ class ProgressService {
             ) {
                 updateData.watchDuration = position
             }
-            // Tự động đánh dấu completed nếu đã xem >= 70% video
+            const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.1
+            // Tự động đánh dấu completed nếu đã xem >= threshold video
             if (
                 lesson.videoDuration &&
-                newWatchDuration >= lesson.videoDuration * 0.5
+                newWatchDuration >= lesson.videoDuration * threshold
             ) {
                 updateData.isCompleted = true
                 updateData.completedAt = new Date()
@@ -414,6 +416,14 @@ class ProgressService {
             },
             update: updateData,
         })
+
+        // If this update marked the lesson as completed, refresh course progress percentage
+        const shouldUpdateCourseProgress =
+            updateData.isCompleted === true ||
+            (!currentProgress?.isCompleted && progress.isCompleted === true);
+        if (shouldUpdateCourseProgress) {
+            await this.updateCourseProgress(userId, lesson.courseId);
+        }
 
         // Update enrollment lastAccessedAt
         await prisma.enrollment.update({

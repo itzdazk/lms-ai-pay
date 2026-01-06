@@ -94,7 +94,7 @@ class UsersService {
         })
 
         // Generate avatar URL (relative path from uploads directory)
-        const avatarUrl = `/uploads/avatars/${file.filename}`
+        const avatarUrl = `/uploads/shared/avatars/${file.filename}`
 
         // Update user with new avatar URL
         const user = await prisma.user.update({

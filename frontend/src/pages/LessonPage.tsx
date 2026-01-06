@@ -122,86 +122,19 @@ export function LessonPage() {
         >
     >({})
     const [progressUpdateKey, setProgressUpdateKey] = useState(0) // Force re-render when progress updates
-    const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>(
-        {}
-    )
-    // Fetch lesson/quiz progress for all lessons in course
-    useEffect(() => {
-        async function fetchLessonQuizProgress() {
-            if (!courseId) return
-            try {
-                const progressList =
-                    await progressApi.getCourseLessonProgressList(courseId)
-                const progressMap: Record<
-                    number,
-                    {
-                        lessonId: number
-                        isCompleted: boolean
-                        quizCompleted: boolean
-                    }
-                > = {}
-                progressList.forEach((p) => {
-                    progressMap[p.lessonId] = {
-                        lessonId: p.lessonId,
-                        isCompleted: p.isCompleted,
-                        quizCompleted: p.quizCompleted,
-                    }
-                })
-                setLessonQuizProgress(progressMap)
-            } catch (err) {
-                // eslint-disable-next-line no-console
-                console.error('Failed to fetch lesson/quiz progress:', err)
-            }
-        }
-        fetchLessonQuizProgress()
-    }, [courseId])
-
-    // Fetch quizzes for all lessons
-    useEffect(() => {
-        const fetchQuizzesForLessons = async () => {
-            const allLessons: Lesson[] = []
-            if (chapters.length > 0) {
-                chapters.forEach((chapter) => {
-                    if (chapter.lessons) {
-                        allLessons.push(...chapter.lessons)
-                    }
-                })
-            } else {
-                allLessons.push(...lessons)
-            }
-
-            if (allLessons.length === 0) return
-
-            for (const lesson of allLessons) {
-                try {
-                    const quizzes = await quizzesApi.getQuizzesByLesson(
-                        lesson.id.toString()
-                    )
-                    setLessonQuizzes((prev) => ({
-                        ...prev,
-                        [lesson.id]: quizzes,
-                    }))
-                } catch (error) {
-                    // eslint-disable-next-line no-console
-                    console.error(
-                        `Error fetching quizzes for lesson ${lesson.id}:`,
-                        error
-                    )
-                    setLessonQuizzes((prev) => ({ ...prev, [lesson.id]: [] }))
-                }
-            }
-        }
-
-        if (lessons.length > 0 || chapters.length > 0) {
-            fetchQuizzesForLessons()
-        }
-    }, [lessons, chapters])
+    const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({})
     const [loading, setLoading] = useState(true)
     const [lessonNotFound, setLessonNotFound] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [initialVideoTime, setInitialVideoTime] = useState(0)
     const [seekTo, setSeekTo] = useState<number | undefined>(undefined)
     const [watchedDuration, setWatchedDuration] = useState(0) // tổng thời lượng đã xem lấy từ backend
+
+    const isCurrentLessonCompleted = useMemo(() => {
+        if (!selectedLesson) return false
+        if (completedLessonIds.includes(selectedLesson.id)) return true
+        return lessonQuizProgress[selectedLesson.id]?.isCompleted === true
+    }, [selectedLesson, completedLessonIds, lessonQuizProgress])
 
     // Quiz state
     const [showQuiz, setShowQuiz] = useState(false)
@@ -287,6 +220,9 @@ export function LessonPage() {
 
     // Load course, lessons, and handle quiz param
     useEffect(() => {
+        const abortController = new AbortController()
+        let isMounted = true
+
         const loadData = async () => {
             if (!courseSlug) return
 
@@ -298,16 +234,22 @@ export function LessonPage() {
                 // Load course by slug first
                 const courseData = await coursesApi.getCourseBySlug(courseSlug)
                 const loadedCourseId = courseData.id
+                
+                if (!isMounted) return
+                
                 setCourseId(loadedCourseId)
                 const chaptersData = await chaptersApi.getChaptersByCourse(
                     loadedCourseId,
                     true
                 )
-                setChapters(chaptersData || [])
                 const lessonsData = await lessonsApi.getCourseLessons(
                     loadedCourseId
                 )
+                
+                if (!isMounted) return
+                
                 setCourse(courseData)
+                setChapters(chaptersData || [])
                 setLessons(lessonsData.lessons || [])
 
                 // Check enrollment
@@ -321,6 +263,60 @@ export function LessonPage() {
                     setEnrollment(userEnrollment || null)
                 } catch (error) {
                     setEnrollment(null)
+                }
+
+                // Fetch progress and quizzes in parallel for all lessons
+                const allLessons: Lesson[] = []
+                if (chaptersData && chaptersData.length > 0) {
+                    chaptersData.forEach((chapter) => {
+                        if (chapter.lessons) {
+                            allLessons.push(...chapter.lessons)
+                        }
+                    })
+                } else if (lessonsData.lessons) {
+                    allLessons.push(...lessonsData.lessons)
+                }
+
+                if (allLessons.length > 0) {
+                    try {
+                        // Fetch progress and all quizzes in parallel
+                        const [progressList, ...quizResults] = await Promise.all([
+                            progressApi.getCourseLessonProgressList(loadedCourseId),
+                            ...allLessons.map(lesson => 
+                                quizzesApi.getQuizzesByLesson(lesson.id.toString())
+                                    .catch(() => [])
+                            )
+                        ])
+
+                        if (!isMounted) return
+
+                        // Set progress
+                        const progressMap: Record<number, {
+                            lessonId: number
+                            isCompleted: boolean
+                            quizCompleted: boolean
+                        }> = {}
+                        const completedIds: number[] = []
+                        progressList.forEach((p) => {
+                            progressMap[p.lessonId] = {
+                                lessonId: p.lessonId,
+                                isCompleted: p.isCompleted,
+                                quizCompleted: p.quizCompleted,
+                            }
+                            if (p.isCompleted) completedIds.push(p.lessonId)
+                        })
+                        setLessonQuizProgress(progressMap)
+                        setCompletedLessonIds(completedIds)
+
+                        // Set quizzes
+                        const quizzesMap: Record<number, Quiz[]> = {}
+                        allLessons.forEach((lesson, index) => {
+                            quizzesMap[lesson.id] = quizResults[index]
+                        })
+                        setLessonQuizzes(quizzesMap)
+                    } catch (err) {
+                        console.error('Failed to fetch progress/quizzes:', err)
+                    }
                 }
 
                 // If quiz param is present, always show quiz (even if lessonSlug is invalid)
@@ -395,14 +391,22 @@ export function LessonPage() {
                     setSelectedLesson(initialLesson)
                 }
             } catch (error: any) {
-                if (!lessonNotFound) {
+                if (!lessonNotFound && !abortController.signal.aborted) {
                     toast.error('Không thể tải thông tin khóa học')
                 }
             } finally {
-                setLoading(false)
+                if (isMounted) {
+                    setLoading(false)
+                }
             }
         }
+        
         loadData()
+        
+        return () => {
+            isMounted = false
+            abortController.abort()
+        }
     }, [courseSlug, lessonSlug, user?.id])
 
     // Track previous lesson ID to prevent unnecessary reloads
@@ -421,6 +425,8 @@ export function LessonPage() {
 
     // Load video and transcript when lesson changes
     useEffect(() => {
+        let isMounted = true
+        
         const loadLessonData = async () => {
             if (!selectedLesson) return
 
@@ -448,7 +454,11 @@ export function LessonPage() {
                 setInitialVideoTime(0)
 
                 // Load video URL and lesson details (to get both transcriptUrl and transcriptJsonUrl) in parallel
-                let videoData = { videoUrl: '' }
+                let videoData: {
+                    videoUrl: string
+                    hlsUrl?: string | null
+                    hlsStatus?: string | null
+                } = { videoUrl: '' }
                 let videoError = false
                 const [videoResult, lessonDetails] = await Promise.all([
                     lessonsApi
@@ -462,6 +472,9 @@ export function LessonPage() {
                     }),
                 ])
                 videoData = videoResult
+                
+                if (!isMounted) return
+                
                 if (videoError) {
                     setVideoUrl('')
                     toast.error(
@@ -469,11 +482,18 @@ export function LessonPage() {
                     )
                     navigate(-1) // Quay lại trang trước nếu bài học bị khóa
                 } else {
-                    setVideoUrl(videoData.videoUrl || '')
+                    const hlsCompleted = (videoData.hlsStatus || '').toLowerCase() === 'completed'
+                    const preferredUrl = hlsCompleted && videoData.hlsUrl
+                        ? videoData.hlsUrl
+                        : videoData.videoUrl
+
+                    console.log('[LessonPage] Video data:', videoData)
+                    console.log('[LessonPage] Preferred URL:', preferredUrl)
+                    setVideoUrl(preferredUrl || '')
                 }
 
                 // Update selectedLesson with transcriptJsonUrl only if it's different
-                if (lessonDetails) {
+                if (lessonDetails && isMounted) {
                     setSelectedLesson((prev) => {
                         if (!prev) return null
                         // Only update if transcriptJsonUrl actually changed
@@ -543,15 +563,15 @@ export function LessonPage() {
                             }
 
                             // Convert to VTT and create blob URL
-                            if (items.length > 0) {
+                            if (items.length > 0 && isMounted) {
                                 const vttContent = convertTranscriptToVTT(items)
                                 const blobUrl = createVTTBlobURL(vttContent)
                                 subtitleBlobUrlRef.current = blobUrl
                                 setSubtitleUrl(blobUrl)
-                            } else {
+                            } else if (isMounted) {
                                 setSubtitleUrl(undefined)
                             }
-                        } else {
+                        } else if (isMounted) {
                             setSubtitleUrl(undefined)
                         }
                     } catch (error) {
@@ -563,39 +583,46 @@ export function LessonPage() {
                 }
 
                 // Load progress for this lesson (if enrolled)
-                if (enrollment) {
+                if (enrollment && isMounted) {
                     try {
                         const progress = await progressApi.getLessonProgress(
                             selectedLesson.id
                         )
-                        setInitialVideoTime(progress.lastPosition || 0)
-                        setWatchedDuration(progress.watchDuration || 0)
-                        // Log watchedDuration từ backend
-                        // eslint-disable-next-line no-console
-                        console.log(
-                            '[LessonPage] watchedDuration từ backend:',
-                            progress.watchDuration
-                        )
+                        if (isMounted) {
+                            const unlocked = progress?.isCompleted === true
+                            setInitialVideoTime(unlocked ? 0 : progress.lastPosition || 0)
+                            setWatchedDuration(progress.watchDuration || 0)
+                            // Log watchedDuration từ backend
+                            // eslint-disable-next-line no-console
+                            console.log(
+                                '[LessonPage] watchedDuration từ backend:',
+                                progress.watchDuration
+                            )
+                        }
                     } catch (error) {
                         // Ignore progress errors
                     }
                 }
 
                 // Load notes for this lesson
-                if (enrollment && user) {
+                if (enrollment && user && isMounted) {
                     try {
                         // setNotesLoading(true); // removed unused
                         const noteData = await lessonNotesApi.getLessonNote(
                             selectedLesson.id
                         )
-                        setLessonNotes(noteData.note?.content || '')
+                        if (isMounted) {
+                            setLessonNotes(noteData.note?.content || '')
+                        }
                     } catch (error: any) {
                         // If note doesn't exist (404), that's okay - just set empty
-                        setLessonNotes('')
+                        if (isMounted) {
+                            setLessonNotes('')
+                        }
                     } finally {
                         // setNotesLoading(false); // removed unused
                     }
-                } else {
+                } else if (isMounted) {
                     setLessonNotes('')
                 }
             } catch (error: any) {
@@ -606,7 +633,11 @@ export function LessonPage() {
         }
 
         loadLessonData()
-    }, [selectedLesson?.id, enrollment, showQuiz])
+        
+        return () => {
+            isMounted = false
+        }
+    }, [selectedLesson?.id, showQuiz])
 
     // Handle lesson selection
     const handleLessonSelect = (lesson: Lesson) => {
@@ -691,24 +722,6 @@ export function LessonPage() {
         }
     }
 
-    // On mount or when lesson changes, auto-open quiz from URL param if present
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search)
-        const qid = params.get('quiz')
-        if (qid) {
-            ;(async () => {
-                setShowQuiz(true)
-                setQuizState('taking')
-                await quizHook.fetchQuiz(qid)
-                await quizHook.fetchAttempts(qid)
-                // KHÔNG fetchLatestResult ở đây để không set kết quả cũ vào state
-                await quizHook.resetQuiz()
-                await quizHook.startQuiz()
-            })()
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedLesson?.id, courseSlug])
-
     // Handle video time update (auto-save progress)
     // Đã loại bỏ toàn bộ logic viewedSegments
     const videoCurrentTimeRef = useRef<(() => number) | null>(null)
@@ -722,7 +735,7 @@ export function LessonPage() {
         if (progressSaveIntervalRef.current)
             clearInterval(progressSaveIntervalRef.current)
         progressSaveIntervalRef.current = setInterval(async () => {
-            if (selectedLesson && enrollment) {
+            if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
                 try {
                     const position = videoCurrentTimeRef.current
                         ? videoCurrentTimeRef.current()
@@ -747,6 +760,7 @@ export function LessonPage() {
                     // If lesson is completed, refresh progress immediately to unlock next lesson
                     if (updatedProgress?.isCompleted === true) {
                         await refreshLessonQuizProgress()
+                        await refreshEnrollmentProgress()
                         if (!completedLessonIds.includes(selectedLesson.id)) {
                             setCompletedLessonIds([
                                 ...completedLessonIds,
@@ -761,7 +775,7 @@ export function LessonPage() {
 
     // Debounced update progress khi pause
     const debouncedUpdateProgress = debounceAsync(async () => {
-        if (selectedLesson && enrollment) {
+        if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             try {
                 const position = videoCurrentTimeRef.current
                     ? videoCurrentTimeRef.current()
@@ -782,6 +796,7 @@ export function LessonPage() {
                 // If lesson is completed, refresh progress immediately to unlock next lesson
                 if (updatedProgress?.isCompleted === true) {
                     await refreshLessonQuizProgress()
+                    await refreshEnrollmentProgress()
                     if (!completedLessonIds.includes(selectedLesson.id)) {
                         setCompletedLessonIds([
                             ...completedLessonIds,
@@ -807,6 +822,19 @@ export function LessonPage() {
         debouncedUpdateProgress()
     }
 
+    const refreshEnrollmentProgress = async () => {
+        if (!courseId) return
+        try {
+            const enrollments = await coursesApi.getEnrollments()
+            const updated = enrollments.find(
+                (e) => e.courseId === courseId && e.userId === Number(user?.id)
+            )
+            if (updated) setEnrollment(updated)
+        } catch (err) {
+            // Ignore enrollment refresh errors
+        }
+    }
+
     // Helper function to refresh lesson/quiz progress when lesson is completed
     const refreshLessonQuizProgress = async () => {
         if (!courseId) return
@@ -822,15 +850,19 @@ export function LessonPage() {
                     quizCompleted: boolean
                 }
             > = {}
+            const completedIds: number[] = []
             progressList.forEach((p) => {
                 progressMap[p.lessonId] = {
                     lessonId: p.lessonId,
                     isCompleted: p.isCompleted,
                     quizCompleted: p.quizCompleted,
                 }
+                if (p.isCompleted) completedIds.push(p.lessonId)
             })
             setLessonQuizProgress(progressMap)
             setProgressUpdateKey((prev) => prev + 1) // Force LessonList re-render
+            setCompletedLessonIds(completedIds)
+            await refreshEnrollmentProgress()
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to refresh lesson/quiz progress:', err)
@@ -839,11 +871,12 @@ export function LessonPage() {
 
     // Handle video ended
     const handleVideoEnded = async () => {
-        if (selectedLesson && enrollment) {
+        if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             try {
                 await progressApi.completeLesson(selectedLesson.id)
                 // Refresh lesson/quiz progress to update unlock status
                 await refreshLessonQuizProgress()
+                await refreshEnrollmentProgress()
             } catch (err) {}
             if (!completedLessonIds.includes(selectedLesson.id)) {
                 setCompletedLessonIds([
@@ -863,7 +896,7 @@ export function LessonPage() {
     // Debounced update progress khi seek
     const debouncedUpdateProgressOnSeek = debounceAsync(
         async (seekTime: number) => {
-            if (selectedLesson && enrollment) {
+            if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
                 try {
                     const payload: any = {
                         position: seekTime,
@@ -885,6 +918,7 @@ export function LessonPage() {
                     // If lesson is completed, refresh progress immediately to unlock next lesson
                     if (updatedProgress?.isCompleted === true) {
                         await refreshLessonQuizProgress()
+                        await refreshEnrollmentProgress()
                         if (!completedLessonIds.includes(selectedLesson.id)) {
                             setCompletedLessonIds([
                                 ...completedLessonIds,

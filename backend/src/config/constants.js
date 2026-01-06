@@ -39,6 +39,13 @@ const TRANSCRIPT_STATUS = {
     CANCELLED: 'cancelled',
 }
 
+const HLS_STATUS = {
+    IDLE: 'idle',
+    PROCESSING: 'processing',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+}
+
 const PAYMENT_STATUS = {
     PENDING: 'PENDING',
     PAID: 'PAID',
@@ -245,6 +252,7 @@ export {
     COURSE_STATUS,
     ENROLLMENT_STATUS,
     TRANSCRIPT_STATUS,
+    HLS_STATUS,
     PAYMENT_STATUS,
     TRANSACTION_STATUS,
     PAYMENT_GATEWAY,

@@ -212,6 +212,8 @@ model Lesson {
   content           String?  @db.Text
   videoUrl          String?  @map("video_url") @db.VarChar(255)
   videoDuration     Int?     @map("video_duration")
+  hlsUrl            String?  @map("hls_url") @db.VarChar(255)
+  hlsStatus         String   @default("idle") @map("hls_status") @db.VarChar(20)
   transcriptUrl     String?  @map("transcript_url") @db.VarChar(255)
   transcriptStatus  String   @default("idle") @map("transcript_status") @db.VarChar(20)
   transcriptJsonUrl String?  @map("transcript_json_url") @db.VarChar(255)

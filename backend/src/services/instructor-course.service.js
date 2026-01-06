@@ -993,7 +993,7 @@ class InstructorCourseService {
             // Continue with original file if processing fails
         }
 
-        const thumbnailUrl = `/uploads/thumbnails/${file.filename}`
+        const thumbnailUrl = `/uploads/shared/thumbnails/${file.filename}`
 
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
@@ -1063,7 +1063,7 @@ class InstructorCourseService {
             throw error
         }
 
-        const videoPreviewUrl = `/uploads/video-previews/${file.filename}`
+        const videoPreviewUrl = `/uploads/shared/previews/${file.filename}`
 
         // Get video duration
         let videoPreviewDuration = null

@@ -227,7 +227,7 @@ function CourseLayoutContent() {
                         >
                             <ChevronLeft className='h-4 w-4' />
                             <LayoutDashboard className='h-4 w-4' />
-                            <span>Dashboard</span>
+                            <span>Dashb</span>
                         </button>
 
                         {/* Navigation Buttons (always visible; use disabled for constraints) */}

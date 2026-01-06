@@ -4,6 +4,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
 import config from './app.config.js'
+import pathUtil from '../utils/path.util.js'
 import {
     ALLOWED_IMAGE_TYPES,
     ALLOWED_VIDEO_TYPES,
@@ -31,28 +32,49 @@ const sanitizeFilename = (value) => {
 
 // === ĐƯỜNG DẪN THƯ MỤC ===
 const uploadsDir = path.join(__dirname, '../../uploads')
-const avatarsDir = path.join(uploadsDir, 'avatars')
-const videosDir = path.join(uploadsDir, 'videos')
-const transcriptsDir = path.join(uploadsDir, 'transcripts')
-const thumbnailsDir = path.join(uploadsDir, 'thumbnails') // MỚI
-const videoPreviewsDir = path.join(uploadsDir, 'video-previews') // MỚI
-const categoriesDir = path.join(uploadsDir, 'categories')
+const sharedDir = path.join(uploadsDir, 'shared')
+const avatarsDir = path.join(sharedDir, 'avatars')
+const categoriesDir = path.join(sharedDir, 'categories')
+const tempDir = path.join(sharedDir, 'temp')
+const videosDir = path.join(uploadsDir, 'videos') // Legacy - for compatibility
+const transcriptsDir = path.join(uploadsDir, 'transcripts') // Legacy - for compatibility
+const hlsDir = path.join(uploadsDir, 'hls') // Legacy - for compatibility
+const thumbnailsDir = path.join(sharedDir, 'thumbnails')
+const videoPreviewsDir = path.join(sharedDir, 'previews')
 
-// === TỰ ĐỘNG TẠO THƯ MỤC ===
+// === TỰ ĐỘNG TẠO THƯ MỤC CHUNG ===
 ;[
     uploadsDir,
+    sharedDir,
     avatarsDir,
-    videosDir,
-    transcriptsDir,
+    categoriesDir,
+    tempDir,
     thumbnailsDir,
     videoPreviewsDir,
-    categoriesDir
 ].forEach((dir) => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
         console.log(`Created upload directory: ${dir}`)
     }
 })
+
+// Hàm tạo thư mục course khi cần
+const ensureCourseDir = (courseId) => {
+    const dirs = [
+        pathUtil.getCourseDir(courseId),
+        pathUtil.getVideoDir(courseId),
+        pathUtil.getHlsDir(courseId),
+        pathUtil.getTranscriptDir(courseId),
+        pathUtil.getPreviewDir(courseId),
+        pathUtil.getThumbnailDir(courseId),
+    ]
+    dirs.forEach((dir) => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+            console.log(`Created course directory: ${dir}`)
+        }
+    })
+}
 
 // ========================
 // 1. AVATAR UPLOAD
@@ -92,9 +114,17 @@ const uploadAvatar = multer({
 // 2. VIDEO LESSON UPLOAD
 // ========================
 const videoStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, videosDir),
+    destination: (req, file, cb) => {
+        const courseId = req.body.courseId || req.params.courseId
+        if (!courseId) {
+            return cb(new Error('courseId is required for video upload'))
+        }
+        ensureCourseDir(courseId)
+        const videoDir = pathUtil.getVideoDir(courseId)
+        cb(null, videoDir)
+    },
     filename: (req, file, cb) => {
-        const lessonId = req.params.id || 'temp'
+        const lessonId = req.params.id || req.body.lessonId || 'temp'
         const timestamp = Date.now()
         const ext = path.extname(file.originalname)
         const name = sanitizeFilename(path.basename(file.originalname, ext))
@@ -126,9 +156,17 @@ const uploadVideo = multer({
 // 3. TRANSCRIPT UPLOAD
 // ========================
 const transcriptStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, transcriptsDir),
+    destination: (req, file, cb) => {
+        const courseId = req.body.courseId || req.params.courseId
+        if (!courseId) {
+            return cb(new Error('courseId is required for transcript upload'))
+        }
+        ensureCourseDir(courseId)
+        const transcriptDir = pathUtil.getTranscriptDir(courseId)
+        cb(null, transcriptDir)
+    },
     filename: (req, file, cb) => {
-        const lessonId = req.params.id || 'temp'
+        const lessonId = req.params.id || req.body.lessonId || 'temp'
         const timestamp = Date.now()
         const ext = path.extname(file.originalname)
         const name = sanitizeFilename(path.basename(file.originalname, ext))
@@ -272,6 +310,7 @@ export {
     avatarsDir,
     videosDir,
     transcriptsDir,
+    hlsDir,
     thumbnailsDir,
     videoPreviewsDir,
     categoriesDir

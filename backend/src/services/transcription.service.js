@@ -8,6 +8,8 @@ import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
 import { prisma } from '../config/database.config.js'
 import { TRANSCRIPT_STATUS } from '../config/constants.js'
+import { enqueueTranscriptionJob } from '../queues/transcription.queue.js'
+import pathUtil from '../utils/path.util.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -25,11 +27,6 @@ class TranscriptionService {
             config.WHISPER_OUTPUT_DIR || path.join('uploads', 'transcripts')
         )
         this.activeJobs = new Map()
-        
-        // Queue system to limit concurrent transcriptions
-        this.maxConcurrent = config.WHISPER_MAX_CONCURRENT || 2
-        this.queue = [] // Queue of pending transcription jobs
-        this.running = new Set() // Set of lessonIds currently being transcribed
     }
 
     _resolveOutputDir(dirPath) {
@@ -46,85 +43,51 @@ class TranscriptionService {
     }
 
     /**
-     * Cancel transcription job (both running and queued)
+     * Cancel transcription job
      * Returns true if a job was cancelled, false otherwise
      */
     cancelTranscriptionJob(lessonId) {
-        let cancelled = false
-        
-        // Cancel running job
+        // In BullMQ, job cancellation is handled by worker
+        // Here we just remove from activeJobs tracking
         const job = this.activeJobs.get(lessonId)
         if (job) {
             try {
-                // Try graceful termination first
                 if (process.platform === 'win32') {
-                    // On Windows, use taskkill to forcefully kill the process tree
                     const killProcess = spawn('taskkill', ['/pid', job.pid.toString(), '/t', '/f'], {
                         stdio: 'ignore',
                         detached: true
                     })
-                    killProcess.unref() // Don't wait for it to finish
+                    killProcess.unref()
                 } else {
-                    // On Unix-like systems, try SIGTERM first, then SIGKILL if needed
                     try {
                         job.kill('SIGTERM')
-                        // If process doesn't terminate within 2 seconds, force kill
                         setTimeout(() => {
                             if (this.activeJobs.has(lessonId)) {
                                 try {
                                     job.kill('SIGKILL')
-                                    logger.warn(`Force killed Whisper job for lesson ${lessonId} after SIGTERM timeout`)
+                                    logger.warn(`Force killed transcription job for lesson ${lessonId} after SIGTERM timeout`)
                                 } catch (err) {
-                                    logger.error(`Failed to force kill Whisper job for lesson ${lessonId}: ${err.message}`)
+                                    logger.error(`Failed to force kill transcription job for lesson ${lessonId}: ${err.message}`)
                                 }
                             }
                         }, 2000)
                     } catch (err) {
-                        logger.error(`Failed to send SIGTERM to Whisper job for lesson ${lessonId}: ${err.message}`)
-                        // Try SIGKILL as fallback
+                        logger.error(`Failed to send SIGTERM to transcription job for lesson ${lessonId}: ${err.message}`)
                         try {
                             job.kill('SIGKILL')
                         } catch (killErr) {
-                            logger.error(`Failed to kill Whisper job for lesson ${lessonId}: ${killErr.message}`)
+                            logger.error(`Failed to kill transcription job for lesson ${lessonId}: ${killErr.message}`)
                         }
                     }
                 }
-                
-                logger.info(
-                    `Cancelled running Whisper job for lesson ${lessonId} (PID: ${job.pid})`
-                )
-                cancelled = true
+                logger.info(`Cancelled transcription job for lesson ${lessonId} (PID: ${job.pid})`)
             } catch (error) {
-                logger.error(
-                    `Failed to cancel Whisper job for lesson ${lessonId}: ${error.message}`
-                )
+                logger.error(`Failed to cancel transcription job for lesson ${lessonId}: ${error.message}`)
             } finally {
-                // Always remove from tracking, even if kill failed
                 this.activeJobs.delete(lessonId)
-                this.running.delete(lessonId)
             }
         }
-        
-        // Remove from queue if pending
-        const queueIndex = this.queue.findIndex(job => job.lessonId === lessonId)
-        if (queueIndex !== -1) {
-            const queuedJob = this.queue[queueIndex]
-            // Reject the promise if it exists
-            if (queuedJob.reject) {
-                try {
-                    queuedJob.reject(new Error('Transcription job cancelled: new video uploaded'))
-                } catch (err) {
-                    // Ignore if promise already resolved/rejected
-                }
-            }
-            this.queue.splice(queueIndex, 1)
-            logger.info(
-                `Removed lesson ${lessonId} from transcription queue`
-            )
-            cancelled = true
-        }
-        
-        return cancelled
+        return !!job
     }
 
     /**
@@ -132,97 +95,50 @@ class TranscriptionService {
      */
     getQueueStatus() {
         return {
-            queueLength: this.queue.length,
-            running: this.running.size,
-            maxConcurrent: this.maxConcurrent,
             activeJobs: Array.from(this.activeJobs.keys()),
         }
     }
 
     /**
-     * Process next job in queue
+     * Process next job in queue (DEPRECATED - using BullMQ now)
      */
     async _processQueue() {
-        // Don't process if at max capacity
-        if (this.running.size >= this.maxConcurrent) {
-            return
-        }
+        // Kept for backwards compatibility, but now handled by BullMQ worker
+    }
 
-        // Don't process if queue is empty
-        if (this.queue.length === 0) {
-            return
-        }
-
-        // Get next job from queue
-        const job = this.queue.shift()
-        const { videoPath, lessonId, userId, source, resolve, reject } = job
-
-        // Mark as running
-        this.running.add(lessonId)
-
-        logger.info(
-            `Processing transcription queue job for lesson ${lessonId} (${this.running.size}/${this.maxConcurrent} running, ${this.queue.length} queued)`
-        )
-
+    /**
+     * Queue transcription job via BullMQ
+     */
+    async queueTranscription({ videoPath, lessonId, userId, source = 'upload' }) {
         try {
-            // Execute transcription
-            // Note: _executeTranscription will remove from running set when process completes
-            const result = await this._executeTranscription({
-                videoPath,
+            const job = await enqueueTranscriptionJob({
                 lessonId,
+                videoPath,
                 userId,
-                source,
+                courseId: await this._getCourseId(lessonId),
             })
-            resolve(result)
+            logger.info(`Queued transcription job ${job.id} for lesson ${lessonId}`)
+            return job
         } catch (error) {
-            // On error, remove from running set and process next job
-            this.running.delete(lessonId)
-            reject(error)
-        } finally {
-            // Process next job in queue (only if not already processing)
-            // Note: running set is removed in _executeTranscription's close handler when process completes
-            setImmediate(() => this._processQueue())
+            logger.error(`Failed to queue transcription job for lesson ${lessonId}: ${error.message}`)
+            throw error
         }
     }
 
     /**
-     * Add transcription job to queue
+     * Get course ID from lesson ID
      */
-    async queueTranscription({ videoPath, lessonId, userId, source = 'upload' }) {
-        return new Promise((resolve, reject) => {
-            // Check if already in queue or running
-            const inQueue = this.queue.some(job => job.lessonId === lessonId)
-            const isRunning = this.running.has(lessonId)
-
-            if (inQueue || isRunning) {
-                logger.warn(
-                    `Transcription job for lesson ${lessonId} already queued or running. Skipping.`
-                )
-                return resolve(null)
-            }
-
-            // Add to queue
-            this.queue.push({
-                videoPath,
-                lessonId,
-                userId,
-                source,
-                resolve,
-                reject,
-            })
-
-            logger.info(
-                `Added transcription job to queue for lesson ${lessonId} (${this.queue.length} in queue, ${this.running.size}/${this.maxConcurrent} running)`
-            )
-
-            // Try to process immediately
-            setImmediate(() => this._processQueue())
+    async _getCourseId(lessonId) {
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: { courseId: true }
         })
+        return lesson?.courseId
     }
 
     /**
      * Public method: Queue transcription job
-     * This is the main entry point - jobs are queued and processed with concurrency limit
+     * This is the main entry point - jobs are queued via BullMQ
      */
     async transcribeLessonVideo({
         videoPath,
@@ -236,22 +152,22 @@ class TranscriptionService {
         }
 
         if (!videoPath || !lessonId) {
-            logger.warn(
-                'Missing videoPath or lessonId. Skip Whisper transcription.'
-            )
+            logger.warn('Missing videoPath or lessonId. Skip Whisper transcription.')
             return null
         }
 
         // Cancel any existing job for this lesson
         this.cancelTranscriptionJob(lessonId)
 
-        // Add to queue (will be processed with concurrency limit)
-        return this.queueTranscription({
+        // Queue job via BullMQ
+        const job = await this.queueTranscription({
             videoPath,
             lessonId,
             userId,
             source,
         })
+
+        return job
     }
 
     /**
@@ -319,7 +235,6 @@ class TranscriptionService {
 
             whisperProcess.on('close', async (code, signal) => {
                 this.activeJobs.delete(lessonId)
-                const wasRunning = this.running.delete(lessonId)
 
                 if (signal === 'SIGTERM' || signal === 'SIGKILL') {
                     logger.info(
@@ -331,11 +246,8 @@ class TranscriptionService {
                             transcriptStatus: TRANSCRIPT_STATUS.CANCELLED,
                         },
                     })
-                    // Process next job in queue after cancellation
-                    if (wasRunning) {
-                        setImmediate(() => this._processQueue())
-                    }
-                    return reject(new Error('Whisper transcription cancelled'))
+                    // Job cancelled, return early
+                    return reject(new Error('Transcription cancelled'))
                 }
 
                 if (code !== 0) {
@@ -349,10 +261,6 @@ class TranscriptionService {
                             transcriptStatus: TRANSCRIPT_STATUS.FAILED,
                         },
                     })
-                    // Process next job in queue after failure
-                    if (wasRunning) {
-                        setImmediate(() => this._processQueue())
-                    }
                     return reject(error)
                 }
 
@@ -370,7 +278,18 @@ class TranscriptionService {
                         return resolve(null)
                     }
 
-                    const transcriptUrl = `/uploads/transcripts/${transcriptFilename}`
+                    // Query courseId from lessonId to use course-based paths
+                    const lesson = await prisma.lesson.findUnique({
+                        where: { id: lessonId },
+                        select: { courseId: true },
+                    })
+
+                    if (!lesson) {
+                        logger.error(`Lesson ${lessonId} not found for transcript save`)
+                        return resolve(null)
+                    }
+
+                    const transcriptUrl = `/uploads/courses/${lesson.courseId}/transcripts/${transcriptFilename}`
                     let transcriptJsonUrl = null
 
                     await prisma.lesson.update({
@@ -391,7 +310,7 @@ class TranscriptionService {
                             JSON.stringify(segments, null, 2),
                             'utf-8'
                         )
-                        transcriptJsonUrl = `/uploads/transcripts/${jsonFilename}`
+                        transcriptJsonUrl = `/uploads/courses/${lesson.courseId}/transcripts/${jsonFilename}`
                         
                         // Update database with JSON URL after successful creation
                         await prisma.lesson.update({
@@ -419,11 +338,6 @@ class TranscriptionService {
                         transcriptPath,
                         source,
                     })
-                    
-                    // Process next job in queue after successful completion
-                    if (wasRunning) {
-                        setImmediate(() => this._processQueue())
-                    }
                 } catch (error) {
                     logger.error(
                         `Failed to finalize Whisper transcript for lesson ${lessonId}`,
@@ -436,11 +350,6 @@ class TranscriptionService {
                         },
                     })
                     reject(error)
-                    
-                    // Process next job in queue after error
-                    if (wasRunning) {
-                        setImmediate(() => this._processQueue())
-                    }
                 }
             })
         })
@@ -561,5 +470,7 @@ class TranscriptionService {
     }
 }
 
-export default new TranscriptionService()
+const transcriptionService = new TranscriptionService()
 
+export default transcriptionService
+export { transcriptionService }

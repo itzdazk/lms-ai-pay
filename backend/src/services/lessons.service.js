@@ -1,14 +1,15 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS } from '../config/constants.js'
+import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS, HLS_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import path from 'path'
 import fs from 'fs'
 import transcriptionService from './transcription.service.js'
-import { videosDir, transcriptsDir } from '../config/multer.config.js'
 import slugify from '../utils/slugify.util.js'
 import { getVideoDuration } from '../utils/video.util.js'
+import { enqueueHlsJob } from '../queues/hls.queue.js'
+import pathUtil from '../utils/path.util.js'
 
 class LessonsService {
     async _recalcCourseDuration(courseId) {
@@ -48,6 +49,18 @@ class LessonsService {
                 `Error deleting transcript artifacts: ${error.message}`,
                 { error: error.stack }
             )
+        }
+    }
+
+    async _deleteHlsArtifacts(lessonId, courseId) {
+        if (!lessonId || !courseId) return
+
+        const lessonHlsDir = path.join(pathUtil.getHlsDir(courseId), String(lessonId))
+        try {
+            await fs.promises.rm(lessonHlsDir, { recursive: true, force: true })
+            logger.info(`Deleted HLS artifacts for lesson ${lessonId} at ${lessonHlsDir}`)
+        } catch (error) {
+            logger.error(`Error deleting HLS artifacts for lesson ${lessonId}: ${error.message}`)
         }
     }
 
@@ -157,6 +170,8 @@ class LessonsService {
                 id: true,
                 title: true,
                 videoUrl: true,
+                hlsUrl: true,
+                hlsStatus: true,
                 videoDuration: true,
                 isPublished: true,
                 course: {
@@ -615,7 +630,7 @@ class LessonsService {
         if (lesson.videoUrl) {
             try {
                 const filename = path.basename(lesson.videoUrl)
-                const videoPath = path.join(videosDir, filename)
+                const videoPath = path.join(pathUtil.getVideoDir(courseId), filename)
                 if (fs.existsSync(videoPath)) {
                     fs.unlinkSync(videoPath)
                     logger.info(`Deleted video file: ${videoPath}`)
@@ -624,6 +639,9 @@ class LessonsService {
                 logger.error(`Error deleting video file: ${error.message}`)
             }
         }
+
+        // Delete HLS artifacts if present
+        await this._deleteHlsArtifacts(lessonId, lesson.courseId)
 
         // Delete transcript files (both SRT and JSON)
         if (lesson.transcriptUrl) {
@@ -703,9 +721,9 @@ class LessonsService {
         // Delete old video if exists
         if (lesson.videoUrl) {
             try {
-                // Extract filename from URL (e.g., /uploads/videos/filename.mp4 -> filename.mp4)
+                // Extract filename from URL (e.g., /uploads/courses/{courseId}/videos/filename.mp4 -> filename.mp4)
                 const filename = path.basename(lesson.videoUrl)
-                const oldVideoPath = path.join(videosDir, filename)
+                const oldVideoPath = path.join(pathUtil.getVideoDir(courseId), filename)
                 
                 if (fs.existsSync(oldVideoPath)) {
                     fs.unlinkSync(oldVideoPath)
@@ -719,14 +737,17 @@ class LessonsService {
             }
         }
 
+        // Delete old HLS outputs if exist (video changed)
+        await this._deleteHlsArtifacts(lessonId, courseId)
+
         // Delete old transcript because video changed
         if (lesson.transcriptUrl) {
             const transcriptFilename = path.basename(lesson.transcriptUrl)
             this._deleteTranscriptFiles(transcriptFilename)
         }
 
-        // Save new video URL
-        const videoUrl = `/uploads/videos/${file.filename}`
+        // Save new video URL (course-based path)
+        const videoUrl = `/uploads/courses/${courseId}/videos/${file.filename}`
 
         // Get video duration
         let videoDuration = null
@@ -759,6 +780,8 @@ class LessonsService {
             data: {
                 videoUrl,
                 videoDuration,
+                hlsUrl: null,
+                hlsStatus: HLS_STATUS.PROCESSING,
                 transcriptUrl: null,
                 transcriptJsonUrl: null,
                 transcriptStatus: shouldTranscribe
@@ -798,6 +821,27 @@ class LessonsService {
             })
         }
 
+        // Enqueue HLS conversion in the background (non-blocking)
+        // Pass courseId to the job so it can use course-based paths
+        setImmediate(() => {
+            enqueueHlsJob({ lessonId, videoPath: file.path, courseId }).catch((error) => {
+                logger.error(`Failed to enqueue HLS job for lesson ${lessonId}: ${error.message}`)
+                prisma.lesson
+                    .update({
+                        where: { id: lessonId },
+                        data: {
+                            hlsStatus: HLS_STATUS.FAILED,
+                            hlsUrl: null,
+                        },
+                    })
+                    .catch((updateError) =>
+                        logger.error(
+                            `Failed to update HLS status for lesson ${lessonId}: ${updateError.message}`
+                        )
+                    )
+            })
+        })
+
         logger.info(`Video uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`)
 
         // Recalculate course duration based on lesson video durations
@@ -835,8 +879,8 @@ class LessonsService {
             this._deleteTranscriptFiles(filename)
         }
 
-        // Save new transcript URL
-        const transcriptUrl = `/uploads/transcripts/${file.filename}`
+        // Save new transcript URL (course-based path)
+        const transcriptUrl = `/uploads/courses/${courseId}/transcripts/${file.filename}`
 
         const updatedLesson = await prisma.lesson.update({
             where: { id: lessonId },
@@ -899,7 +943,7 @@ class LessonsService {
 
         // Get video file path
         const videoFilename = path.basename(lesson.videoUrl)
-        const videoPath = path.join(videosDir, videoFilename)
+        const videoPath = path.join(pathUtil.getVideoDir(courseId), videoFilename)
 
         if (!fs.existsSync(videoPath)) {
             throw new Error('Video file not found')
