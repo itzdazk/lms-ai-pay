@@ -147,9 +147,18 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
   const CourseCard = ({ course }: { course: Course }) => {
     const finalPrice = course.discountPrice ? course.discountPrice : (course.price || 0);
     const priceDisplay = finalPrice > 0 ? `${Number(finalPrice).toLocaleString('vi-VN')}đ` : 'Miễn phí';
+    const courseLink = course.courseSlug ? `/courses/${course.courseSlug}` : `/courses/${course.courseId}`;
+    const instructorName = typeof course.instructor === 'string'
+      ? course.instructor
+      : (course.instructor?.fullName || course.instructor?.name || '');
     
     return (
-      <div className="bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg p-3 hover:border-blue-500/50 transition-colors cursor-pointer">
+      <a 
+        href={courseLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg p-3 cursor-pointer"
+      >
         <div className="flex gap-3">
           {course.thumbnail && (
             <div className="flex-shrink-0 w-16 h-16 rounded overflow-hidden bg-gray-700">
@@ -160,37 +169,55 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
               />
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-white truncate">{course.courseTitle}</h4>
-            {course.level && (
-              <p className="text-xs text-gray-400 mt-1">{course.level}</p>
-            )}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {course.rating && (
-                <div className="flex items-center gap-1 text-xs text-yellow-400">
-                  <Star className="h-3 w-3 fill-yellow-400" />
-                  <span>{course.rating}/5</span>
-                </div>
+          <div className="flex-1 min-w-0 flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-semibold text-white truncate">{course.courseTitle}</h4>
+              {course.level && (
+                <p className="text-xs text-gray-400 mt-1">{course.level}</p>
               )}
-              {course.enrolledCount && (
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Users className="h-3 w-3" />
-                  <span>{course.enrolledCount}</span>
-                </div>
+              {course.description && (
+                <p className="text-xs text-gray-400 mt-2 line-clamp-2">{course.description}</p>
               )}
-              {course.duration && (
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Clock className="h-3 w-3" />
-                  <span>{course.duration}h</span>
-                </div>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {course.rating && (
+                  <div className="flex items-center gap-1 text-xs text-yellow-400">
+                    <Star className="h-3 w-3 fill-yellow-400" />
+                    <span>{course.rating}/5</span>
+                  </div>
+                )}
+                {course.ratingCount && (
+                  <span className="text-[10px] text-gray-500">({course.ratingCount} đánh giá)</span>
+                )}
+                {course.enrolledCount && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <Users className="h-3 w-3" />
+                    <span>{course.enrolledCount}</span>
+                  </div>
+                )}
+                {course.duration && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <Clock className="h-3 w-3" />
+                    <span>{course.duration}h</span>
+                  </div>
+                )}
+                {course.lessons && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <BookOpen className="h-3 w-3" />
+                    <span>{course.lessons} bài học</span>
+                  </div>
+                )}
+              </div>
+              {instructorName && (
+                <p className="text-[11px] text-gray-500 mt-1 truncate">Giảng viên: {instructorName}</p>
               )}
             </div>
-            <div className="mt-2">
+            <div className="mt-3 flex items-center justify-between">
               <span className="text-sm font-semibold text-blue-400">{priceDisplay}</span>
+              <span className="text-xs text-blue-400 font-medium">Xem chi tiết →</span>
             </div>
           </div>
         </div>
-      </div>
+      </a>
     );
   };
 
@@ -268,8 +295,8 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
                     </div>
 
                     {/* Course Recommendations */}
-                    {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
-                      <div className="mt-3 ml-10 space-y-2">
+                      {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
+                        <div className="mt-3 space-y-2">
                         {message.sources.map((source, idx) => (
                           <CourseCard key={idx} course={source} />
                         ))}

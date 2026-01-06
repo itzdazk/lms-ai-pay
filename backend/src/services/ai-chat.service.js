@@ -770,7 +770,7 @@ class AIChatService {
 
 🎯 Hãy cho tôi biết:
 - Bạn muốn học về lĩnh vực gì trong lập trình? (Web, Mobile, Data, AI, Game, v.v.)
-- Level hiện tại của bạn ra sao? (Beginner/Intermediate/Advanced)
+- Level hiện tại của bạn ra sao? (Cơ bản/Trung cấp/Nâng cao)
 - Bạn có bao nhiêu thời gian để học?
 
 Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt nhất! 💡`
@@ -818,17 +818,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
 
             // Include relevant courses only when we found matches
             if (relevantCourses.length > 0) {
-                advisorMessage += `\n\n---\n📚 **Khóa học liên quan:**\n`
-                relevantCourses.forEach((course, idx) => {
-                    const price = course.price > 0 ? `${Number(course.price).toLocaleString('vi-VN')}đ` : 'Miễn phí'
-                    const finalPrice = course.discountPrice ? `${Number(course.discountPrice).toLocaleString('vi-VN')}đ` : price
-                    const rating = course.ratingAvg ? `⭐ ${course.ratingAvg}/5` : 'Chưa có đánh giá'
-                    
-                    advisorMessage += `\n${idx + 1}. **${course.title}** - ${finalPrice}`
-                    advisorMessage += ` | ${rating} | 👥 ${course.enrolledCount} học viên`
-                    advisorMessage += ` | ⏱️ ${course.durationHours || 0}h\n`
-                    advisorMessage += `   📖 ${course.shortDescription || course.description || ''}\n`
-                })
+                advisorMessage += `\n\nTìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
             }
 
             // Build sources from courses
@@ -850,20 +840,12 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 instructor: course.instructor,
             }))
 
-            // Build suggested actions
-            const suggestedActions = relevantCourses.map((course) => ({
-                type: 'view_course',
-                label: `Xem ${course.title}`,
-                courseId: course.id,
-                courseSlug: course.slug,
-            }))
-
             // If no relevant courses, add a follow-up prompt instead of empty list
             if (relevantCourses.length === 0) {
                 advisorMessage += `\n\nHiện chưa có khóa học khớp với yêu cầu của bạn. Hãy cho tôi biết thêm: bạn muốn học ngôn ngữ nào (Python, JavaScript, v.v.) và mục tiêu cụ thể (AI, Data, Web, Game)?`
             }
 
-            return { text: advisorMessage, sources, suggestedActions }
+            return { text: advisorMessage, sources }
         } catch (error) {
             logger.error('Error in generateAdvisorResponse:', error)
             
@@ -922,20 +904,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
 
             // Show courses if relevant
             if (shouldShowCourses && relevantCourses.length > 0) {
-                const topCourses = relevantCourses.slice(0, 3)
-                text += `📚 **Khóa học có thể giúp bạn:**\n`
-                
-                topCourses.forEach((course, idx) => {
-                    const price = course.price > 0 ? `${Number(course.price).toLocaleString('vi-VN')}đ` : 'Miễn phí'
-                    const finalPrice = course.discountPrice ? `${Number(course.discountPrice).toLocaleString('vi-VN')}đ` : price
-                    const rating = course.ratingAvg ? `⭐ ${course.ratingAvg}/5` : 'Chưa có đánh giá'
-                    
-                    text += `\n**${idx + 1}. ${course.title}**\n`
-                    text += `💰 ${finalPrice} | ${rating} | 👥 ${course.enrolledCount} học viên | ⏱️ ${course.durationHours || 0}h\n`
-                    text += `📖 ${course.shortDescription || course.description || ''}\n`
-                })
-                
-                text += `\n💡 Bạn có thể xem chi tiết hoặc đăng ký khóa học trên.`
+                text += `Tìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
             }
             
             if (shouldShowCourses) {
@@ -957,16 +926,9 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                     instructor: course.instructor,
                 }))
 
-                const suggestedActions = relevantCourses.map((course) => ({
-                    type: 'view_course',
-                    label: `Xem ${course.title}`,
-                    courseId: course.id,
-                    courseSlug: course.slug,
-                }))
-
-                return { text, sources, suggestedActions }
+                return { text, sources }
             } else {
-                return { text, sources: [], suggestedActions: [] }
+                return { text, sources: [] }
             }
         }
     }
