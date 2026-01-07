@@ -152,10 +152,20 @@ apiClient.interceptors.response.use(
                     requestUrl.includes('/auth/login') ||
                     requestUrl.includes('/auth/register')
 
+                // Check if this is a public endpoint that might return 401 for guest users
+                // These endpoints should handle 401 gracefully in their components
+                const isPublicEndpointThatMayFail =
+                    requestUrl.includes('/enrollments/check/') ||
+                    requestUrl.includes('/enrollments') && requestMethod === 'GET'
+
                 if (isAuthRequest) {
                     // For login/register, don't show toast or redirect
                     // Let the page handle the error message display
                     // This prevents duplicate error messages
+                } else if (isPublicEndpointThatMayFail) {
+                    // For public endpoints that may return 401 for guests,
+                    // don't redirect - let the component handle it
+                    // This allows guest users to view public pages without being forced to login
                 } else {
                     // For other requests, session has expired
                     localStorage.removeItem('user')

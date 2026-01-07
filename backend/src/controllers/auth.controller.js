@@ -41,12 +41,12 @@ class AuthController {
 
     /**
      * @route   POST /api/v1/auth/login
-     * @desc    Login user
+     * @desc    Login user (supports email or username)
      * @access  Public
      */
     login = asyncHandler(async (req, res) => {
-        const { email, password } = req.body
-        const result = await authService.login(email, password, req)
+        const { identifier, password } = req.body
+        const result = await authService.login(identifier, password, req)
 
         CookieUtil.setAuthTokens(res, result.tokens)
 
@@ -66,16 +66,23 @@ class AuthController {
      */
     logout = asyncHandler(async (req, res) => {
         // Get sessionId from token
-        const token = req.cookies?.accessToken || req.headers.authorization?.substring(7)
+        const token =
+            req.cookies?.accessToken || req.headers.authorization?.substring(7)
         if (token) {
             try {
                 const decoded = JWTUtil.decode(token)
                 if (decoded?.sessionId) {
-                    await authService.logoutSession(decoded.sessionId, req.user.id)
+                    await authService.logoutSession(
+                        decoded.sessionId,
+                        req.user.id
+                    )
                 }
             } catch (error) {
                 // If token decode fails, just continue with logout
-                logger.debug('Failed to decode token for logout:', error.message)
+                logger.debug(
+                    'Failed to decode token for logout:',
+                    error.message
+                )
             }
         }
 
@@ -93,7 +100,11 @@ class AuthController {
     getSessions = asyncHandler(async (req, res) => {
         const sessions = await authService.getSessions(req.user.id)
 
-        return ApiResponse.success(res, { sessions }, 'Sessions retrieved successfully')
+        return ApiResponse.success(
+            res,
+            { sessions },
+            'Sessions retrieved successfully'
+        )
     })
 
     /**

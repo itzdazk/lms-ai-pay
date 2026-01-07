@@ -6,6 +6,7 @@ import { CheckCircle, Loader2, ShoppingCart, BookOpen } from 'lucide-react'
 import { enrollmentsApi } from '../../lib/api/enrollments'
 import type { PublicCourse } from '../../lib/api/types'
 import { getCoursePrice } from '../../lib/courseUtils'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface EnrollmentButtonProps {
     course: PublicCourse
@@ -19,23 +20,47 @@ export function EnrollmentButton({
     className,
 }: EnrollmentButtonProps) {
     const navigate = useNavigate()
+    const { user, loading: authLoading } = useAuth()
     const [isEnrolled, setIsEnrolled] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [isEnrolling, setIsEnrolling] = useState(false)
 
-    // Check enrollment status on mount
+    // Check enrollment status on mount - only if user is authenticated
     useEffect(() => {
-        checkEnrollmentStatus()
-    }, [course.id])
+        // Don't check enrollment if auth is still loading
+        if (authLoading) return
+
+        // Only check enrollment if user is logged in
+        // For guest users, we skip this check to avoid 401 errors
+        if (user) {
+            checkEnrollmentStatus()
+        } else {
+            // User is not logged in, skip enrollment check
+            setIsLoading(false)
+        }
+    }, [course.id, user, authLoading])
 
     const checkEnrollmentStatus = async () => {
+        // Double check: only call API if user is authenticated
+        if (!user) {
+            setIsLoading(false)
+            return
+        }
+
         try {
             setIsLoading(true)
             const response = await enrollmentsApi.checkEnrollment(course.id)
             setIsEnrolled(response.data.isEnrolled)
         } catch (error: any) {
+            // If 401, user is not authenticated - this is fine for guest users
             // If 404, user is not enrolled - this is fine
-            if (error?.response?.status !== 404) {
+            if (
+                error?.response?.status === 401 ||
+                error?.response?.status === 404
+            ) {
+                // User is not enrolled or not authenticated - this is expected for guests
+                setIsEnrolled(false)
+            } else {
                 console.error('Failed to check enrollment:', error)
             }
         } finally {

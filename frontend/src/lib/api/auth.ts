@@ -70,7 +70,7 @@ export const authApi = {
         } finally {
             // ✅ Clear all auth-related data from localStorage
             localStorage.removeItem('user')
-            localStorage.removeItem('rememberEmail')
+            localStorage.removeItem('rememberIdentifier')
 
             // ✅ Redirect to login page
             window.location.href = '/login'

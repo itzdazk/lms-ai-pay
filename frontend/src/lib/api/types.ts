@@ -46,7 +46,7 @@ export interface PaginatedApiResponse<T> {
 // AUTH TYPES
 // =====================================================
 export interface LoginRequest {
-    email: string
+    identifier: string
     password: string
 }
 
