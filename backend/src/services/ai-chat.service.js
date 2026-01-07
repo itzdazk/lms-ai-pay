@@ -793,7 +793,7 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             }))
 
             const relevantCourses = scoredCourses
-                .filter((item) => item.score >= 0.35)
+                .filter((item) => item.score >= 0.4)
                 .sort((a, b) => b.score - a.score)
                 .map((item) => item.course)
 
@@ -977,7 +977,20 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             'co', 'có', 'coi', 'xem', 'camon', 'cảm', 'cảm ơn', 'on', 'ơn'
         ])
 
-        const allowShortKeywords = new Set(['ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql'])
+        const allowShortKeywords = new Set([
+            'ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql', 'ml', 'dl', 'nlp', 'cv',
+            'php', 'css', 'html', 'xml', 'json', 'api', 'rest', 'http', 'tcp', 'udp',
+            'node', 'react', 'vue', 'angular', 'svelte', 'next', 'nuxt', 'nest',
+            'python', 'java', 'ruby', 'rust', 'swift', 'kotlin', 'dart', 'scala', 'r',
+            'django', 'flask', 'spring', 'laravel', 'express', 'fastapi',
+            'mysql', 'mongodb', 'postgres', 'redis', 'sqlite', 'oracle', 'mariadb',
+            'git', 'docker', 'k8s', 'aws', 'azure', 'gcp', 'ci', 'cd', 'devops',
+            'redux', 'mobx', 'vuex', 'pinia', 'graphql', 'grpc', 'mqtt',
+            'sass', 'less', 'scss', 'tailwind', 'bootstrap', 'mui',
+            'web', 'app', 'ios', 'android', 'mobile', 'game', 'ar', 'vr', 'xr',
+            'oop', 'fp', 'tdd', 'bdd', 'mvc', 'mvvm', 'clean', 'solid',
+            'orm', 'jwt', 'oauth', 'sso', 'cors', 'csrf'
+        ])
 
         const keywords = query
             .toLowerCase()
@@ -997,7 +1010,10 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     _getCourseRelevanceScore(query, course) {
         if (!query || query.trim().length === 0) return 0
 
-        const text = `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''}`.toLowerCase()
+        const title = (course.title || '').toLowerCase()
+        const shortDesc = (course.shortDescription || '').toLowerCase()
+        const description = (course.description || '').toLowerCase()
+        const whatYouLearn = (course.whatYouLearn || '').toLowerCase()
         const categoryText = `${course.category?.name || ''} ${course.category?.slug || ''}`.toLowerCase()
 
         // Extract keywords (same logic as _isCourseRelevant)
@@ -1007,7 +1023,20 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             've', 'về', 'khoa', 'khóa', 'lop', 'lớp', 'co', 'có', 'trinh', 'trình', 'lap', 'lập',
             'co', 'có', 'coi', 'xem', 'camon', 'cảm', 'cảm ơn', 'on', 'ơn'
         ])
-        const allowShortKeywords = new Set(['ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql'])
+        const allowShortKeywords = new Set([
+            'ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql', 'ml', 'dl', 'nlp', 'cv',
+            'php', 'css', 'html', 'xml', 'json', 'api', 'rest', 'http', 'tcp', 'udp',
+            'node', 'react', 'vue', 'angular', 'svelte', 'next', 'nuxt', 'nest',
+            'python', 'java', 'ruby', 'rust', 'swift', 'kotlin', 'dart', 'scala', 'r',
+            'django', 'flask', 'spring', 'laravel', 'express', 'fastapi',
+            'mysql', 'mongodb', 'postgres', 'redis', 'sqlite', 'oracle', 'mariadb',
+            'git', 'docker', 'k8s', 'aws', 'azure', 'gcp', 'ci', 'cd', 'devops',
+            'redux', 'mobx', 'vuex', 'pinia', 'graphql', 'grpc', 'mqtt',
+            'sass', 'less', 'scss', 'tailwind', 'bootstrap', 'mui',
+            'web', 'app', 'ios', 'android', 'mobile', 'game', 'ar', 'vr', 'xr',
+            'oop', 'fp', 'tdd', 'bdd', 'mvc', 'mvvm', 'clean', 'solid',
+            'orm', 'jwt', 'oauth', 'sso', 'cors', 'csrf'
+        ])
         const keywords = query
             .toLowerCase()
             .split(/[^\p{L}\p{N}+#.]+/u)
@@ -1016,30 +1045,45 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
 
         if (keywords.length === 0) return 0
 
-        // Base score from text matches
-        const matched = keywords.filter((kw) => text.includes(kw))
-        const matchRatio = matched.length / keywords.length
-        let score = matchRatio * 0.6
+        let score = 0
 
-        // Bonus if full query phrase appears in text
+        // HIGHEST PRIORITY: Title matches (0.5 max)
+        const titleMatched = keywords.filter((kw) => title.includes(kw))
+        const titleMatchRatio = titleMatched.length / keywords.length
+        score += titleMatchRatio * 0.5
+
+        // Huge bonus for exact or near-exact title match
         const q = query.toLowerCase().trim()
-        if (q.length >= 4 && text.includes(q)) {
-            score += 0.2
+        if (q.length >= 3) {
+            if (title.includes(q)) {
+                score += 0.3 // Exact phrase in title
+            } else if (title.split(/\s+/).some(word => word === q)) {
+                score += 0.25 // Exact word match in title
+            }
         }
 
-        // Category bonus (if any keyword matches category name/slug)
+        // Secondary: Short description matches (0.15 max)
+        const shortDescMatched = keywords.filter((kw) => shortDesc.includes(kw))
+        score += (shortDescMatched.length / keywords.length) * 0.15
+
+        // Tertiary: Description/whatYouLearn matches (0.1 max)
+        const contentText = description + ' ' + whatYouLearn
+        const contentMatched = keywords.filter((kw) => contentText.includes(kw))
+        score += (contentMatched.length / keywords.length) * 0.1
+
+        // Category bonus (0.1 max)
         const categoryMatched = keywords.some((kw) => categoryText.includes(kw))
         if (categoryMatched) {
-            score += 0.15
+            score += 0.1
         }
 
-        // Quality bonuses: rating and popularity
+        // Quality bonuses: rating and popularity (0.15 max combined)
         const rating = Number(course.ratingAvg) || 0
-        const ratingBonus = Math.min(0.15, (rating / 5) * 0.15)
+        const ratingBonus = Math.min(0.08, (rating / 5) * 0.08)
         score += ratingBonus
 
         const enrolled = Number(course.enrolledCount) || 0
-        const enrolledBonus = Math.min(0.15, Math.log10(enrolled + 1) * 0.05) // ~0.15 at ~1k enrollments
+        const enrolledBonus = Math.min(0.07, Math.log10(enrolled + 1) * 0.025)
         score += enrolledBonus
 
         // Clamp to [0, 1]
