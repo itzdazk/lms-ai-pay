@@ -11,7 +11,16 @@ import {
     CardTitle,
 } from '../components/ui/card'
 import { Checkbox } from '../components/ui/checkbox'
-import { BookOpen, AlertCircle, Loader2, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react'
+import {
+    BookOpen,
+    AlertCircle,
+    Loader2,
+    Lock,
+    Eye,
+    EyeOff,
+    Moon,
+    Sun,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -22,15 +31,16 @@ export function LoginPage() {
     const location = useLocation()
     const { login, isAuthenticated, user } = useAuth()
     const { theme, toggleTheme } = useTheme()
-    const [email, setEmail] = useState('')
+    const [identifier, setIdentifier] = useState('')
     const [password, setPassword] = useState('')
     const [rememberMe, setRememberMe] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [showPassword, setShowPassword] = useState(false)
-    const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-        {}
-    )
+    const [errors, setErrors] = useState<{
+        identifier?: string
+        password?: string
+    }>({})
 
     // Redirect if already authenticated
     useEffect(() => {
@@ -66,12 +76,28 @@ export function LoginPage() {
         setErrors({})
 
         // Validate inputs với thông báo cụ thể
-        const newErrors: { email?: string; password?: string } = {}
+        const newErrors: { identifier?: string; password?: string } = {}
 
-        if (!email.trim()) {
-            newErrors.email = 'Vui lòng nhập email'
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            newErrors.email = 'Email không hợp lệ'
+        if (!identifier.trim()) {
+            newErrors.identifier = 'Vui lòng nhập email hoặc tên người dùng'
+        } else {
+            // Check if it looks like an email (contains @) - validate email format
+            // Otherwise treat as username - validate username format
+            const isEmail = identifier.includes('@')
+            if (isEmail) {
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+                    newErrors.identifier = 'Email không hợp lệ'
+                }
+            } else {
+                // Username validation: 3-50 chars, letters, numbers, underscores only
+                if (identifier.length < 3) {
+                    newErrors.identifier =
+                        'Tên người dùng phải có ít nhất 3 ký tự'
+                } else if (!/^[a-zA-Z0-9_]+$/.test(identifier)) {
+                    newErrors.identifier =
+                        'Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới'
+                }
+            }
         }
 
         if (!password.trim()) {
@@ -82,8 +108,8 @@ export function LoginPage() {
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors)
             // Focus vào field đầu tiên bị lỗi
-            if (newErrors.email) {
-                document.getElementById('email')?.focus()
+            if (newErrors.identifier) {
+                document.getElementById('identifier')?.focus()
             } else if (newErrors.password) {
                 document.getElementById('password')?.focus()
             }
@@ -92,16 +118,16 @@ export function LoginPage() {
 
         try {
             setLoading(true)
-            await login(email, password)
+            await login(identifier, password)
 
             // Show success message
             toast.success('Đăng nhập thành công!')
 
             // Store remember me preference
             if (rememberMe) {
-                localStorage.setItem('rememberEmail', email)
+                localStorage.setItem('rememberIdentifier', identifier)
             } else {
-                localStorage.removeItem('rememberEmail')
+                localStorage.removeItem('rememberIdentifier')
             }
 
             // Redirect based on user role
@@ -124,23 +150,25 @@ export function LoginPage() {
             // For auth requests, we handle it here
             const errorMessage =
                 err.response?.data?.message ||
-                'Email hoặc mật khẩu chưa chính xác'
+                'Email/tên người dùng hoặc mật khẩu chưa chính xác'
             setError(errorMessage)
 
-            // Set field-specific errors if available
-            if (err.response?.status === 401) {
-                setErrors({ password: 'Email hoặc mật khẩu không đúng' })
-            }
+            // // Set field-specific errors if available
+            // if (err.response?.status === 401) {
+            //     setErrors({
+            //         password: 'Email/tên người dùng hoặc mật khẩu không đúng',
+            //     })
+            // }
         } finally {
             setLoading(false)
         }
     }
 
-    // Load remembered email on mount
+    // Load remembered identifier on mount
     useEffect(() => {
-        const rememberedEmail = localStorage.getItem('rememberEmail')
-        if (rememberedEmail) {
-            setEmail(rememberedEmail)
+        const rememberedIdentifier = localStorage.getItem('rememberIdentifier')
+        if (rememberedIdentifier) {
+            setIdentifier(rememberedIdentifier)
             setRememberMe(true)
         }
     }, [])
@@ -197,32 +225,44 @@ export function LoginPage() {
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className='space-y-4' noValidate>
+                        <form
+                            onSubmit={handleSubmit}
+                            className='space-y-4'
+                            noValidate
+                        >
                             <div className='space-y-2'>
-                                <Label htmlFor='email' className='text-white'>
-                                    Email
+                                <Label
+                                    htmlFor='identifier'
+                                    className='text-white'
+                                >
+                                    Email hoặc Tên người dùng
                                 </Label>
                                 <Input
-                                    id='email'
-                                    type='email'
-                                    placeholder='name@example.com'
-                                    value={email}
+                                    id='identifier'
+                                    type='text'
+                                    placeholder='email@example.com hoặc username'
+                                    value={identifier}
                                     onChange={(e) => {
-                                        setEmail(e.target.value)
+                                        setIdentifier(e.target.value)
                                         // Clear error when user starts typing
-                                        if (errors.email) {
-                                            setErrors({ ...errors, email: undefined })
+                                        if (errors.identifier) {
+                                            setErrors({
+                                                ...errors,
+                                                identifier: undefined,
+                                            })
                                         }
                                     }}
                                     className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
-                                        errors.email ? 'border-red-500' : ''
+                                        errors.identifier
+                                            ? 'border-red-500'
+                                            : ''
                                     }`}
                                     disabled={loading}
                                 />
-                                {errors.email && (
+                                {errors.identifier && (
                                     <p className='text-xs text-red-500 flex items-center gap-1'>
                                         <AlertCircle className='h-3 w-3' />
-                                        {errors.email}
+                                        {errors.identifier}
                                     </p>
                                 )}
                             </div>
@@ -254,11 +294,16 @@ export function LoginPage() {
                                             setPassword(e.target.value)
                                             // Clear error when user starts typing
                                             if (errors.password) {
-                                                setErrors({ ...errors, password: undefined })
+                                                setErrors({
+                                                    ...errors,
+                                                    password: undefined,
+                                                })
                                             }
                                         }}
                                         className={`pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
-                                            errors.password ? 'border-red-500' : ''
+                                            errors.password
+                                                ? 'border-red-500'
+                                                : ''
                                         }`}
                                         disabled={loading}
                                     />

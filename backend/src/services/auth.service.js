@@ -144,11 +144,19 @@ class AuthService {
 
     /**
      * Login user
+     * @param {string} identifier - Email or username
+     * @param {string} password - User password
+     * @param {object} req - Express request object
      */
-    async login(email, password, req) {
-        // Find user by email
-        const user = await prisma.user.findUnique({
-            where: { email },
+    async login(identifier, password, req) {
+        // Check if identifier is email or username
+        const isEmail = identifier.includes('@')
+
+        // Find user by email or username
+        const user = await prisma.user.findFirst({
+            where: isEmail
+                ? { email: identifier.toLowerCase() }
+                : { userName: identifier },
             select: {
                 id: true,
                 userName: true,
@@ -165,7 +173,7 @@ class AuthService {
         })
 
         if (!user) {
-            const error = new Error('Invalid email or password')
+            const error = new Error('Invalid email/username or password')
             error.statusCode = HTTP_STATUS.UNAUTHORIZED
             throw error
         }
@@ -184,7 +192,7 @@ class AuthService {
         )
 
         if (!isPasswordValid) {
-            const error = new Error('Invalid email or password')
+            const error = new Error('Invalid email/username or password')
             error.statusCode = HTTP_STATUS.UNAUTHORIZED
             throw error
         }
