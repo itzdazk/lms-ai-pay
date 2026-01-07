@@ -45,8 +45,6 @@ model User {
   notifications       Notification[]
   userSessions        UserSession[]
   lessonNotes         LessonNote[]
-  learningGoals       LearningGoal[]
-  bookmarks           Bookmark[]
   refundRequests      RefundRequest[]
 
   @@index([email])
@@ -145,8 +143,6 @@ model Course {
   quizzes           Quiz[]
   aiRecommendations AiRecommendation[]
   conversations     Conversation[]
-  learningGoals     LearningGoal[]
-  bookmarks         Bookmark[]
 
   @@index([slug])
   @@index([instructorId])
@@ -227,7 +223,6 @@ model Lesson {
   quizzes       Quiz[]
   conversations Conversation[]
   lessonNotes   LessonNote[]
-  bookmarks     Bookmark[]
 
   @@unique([courseId, slug])
   @@index([courseId])
