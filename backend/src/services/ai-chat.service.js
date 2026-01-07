@@ -786,10 +786,16 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
         try {
             const availableCourses = courses && courses.length > 0 ? courses : []
 
-            // Filter courses that are relevant to the user's intent
-            const relevantCourses = availableCourses.filter((course) =>
-                this._isCourseRelevant(query, course)
-            )
+            // Score courses by relevance + quality and sort
+            const scoredCourses = availableCourses.map((course) => ({
+                course,
+                score: this._getCourseRelevanceScore(query, course),
+            }))
+
+            const relevantCourses = scoredCourses
+                .filter((item) => item.score >= 0.35)
+                .sort((a, b) => b.score - a.score)
+                .map((item) => item.course)
 
             // Build a prompt that prevents hallucination and only uses relevant courses
             const coursesForPrompt = relevantCourses.length > 0 ? relevantCourses : []
@@ -819,6 +825,18 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             // Include relevant courses only when we found matches
             if (relevantCourses.length > 0) {
                 advisorMessage += `\n\nTìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
+                // If courses span multiple categories, ask a brief clarifying question
+                const uniqueCategories = Array.from(
+                    new Set(
+                        relevantCourses
+                            .map((c) => c.category?.name || c.category?.slug)
+                            .filter(Boolean)
+                    )
+                )
+                if (uniqueCategories.length > 1) {
+                    const displayCats = uniqueCategories.slice(0, 3).join(', ')
+                    advisorMessage += `\n\nBạn muốn tập trung vào lĩnh vực nào? (${displayCats})`
+                }
             }
 
             // Build sources from courses
@@ -838,6 +856,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 description: course.shortDescription,
                 thumbnail: course.thumbnailUrl,
                 instructor: course.instructor,
+                category: course.category,
             }))
 
             // If no relevant courses, add a follow-up prompt instead of empty list
@@ -948,7 +967,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     _isCourseRelevant(query, course) {
         if (!query || query.trim().length === 0) return false
 
-        const haystack = `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''}`.toLowerCase()
+        const haystack = `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''} ${course.category?.name || ''} ${course.category?.slug || ''}`.toLowerCase()
 
         // Filter out generic Vietnamese stopwords so we only match on meaningful tech keywords
         const stopwords = new Set([
@@ -969,6 +988,62 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
         if (keywords.length === 0) return false
 
         return keywords.some((kw) => haystack.includes(kw))
+    }
+
+    /**
+     * Compute a relevance score for a course based on query, category, rating and enrollment
+     * Returns a number in [0, 1]
+     */
+    _getCourseRelevanceScore(query, course) {
+        if (!query || query.trim().length === 0) return 0
+
+        const text = `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''}`.toLowerCase()
+        const categoryText = `${course.category?.name || ''} ${course.category?.slug || ''}`.toLowerCase()
+
+        // Extract keywords (same logic as _isCourseRelevant)
+        const stopwords = new Set([
+            'hoc', 'học', 'muon', 'muốn', 'toi', 'tôi', 'ban', 'bạn', 'lam', 'làm', 'viec', 'việc',
+            'can', 'cần', 'gi', 'gì', 'the', 'thế', 'nào', 'phu', 'phù', 'hop', 'hợp', 'de', 'để',
+            've', 'về', 'khoa', 'khóa', 'lop', 'lớp', 'co', 'có', 'trinh', 'trình', 'lap', 'lập',
+            'co', 'có', 'coi', 'xem', 'camon', 'cảm', 'cảm ơn', 'on', 'ơn'
+        ])
+        const allowShortKeywords = new Set(['ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql'])
+        const keywords = query
+            .toLowerCase()
+            .split(/[^\p{L}\p{N}+#.]+/u)
+            .filter((w) => w.length > 0)
+            .filter((w) => (w.length >= 3 || allowShortKeywords.has(w)) && !stopwords.has(w))
+
+        if (keywords.length === 0) return 0
+
+        // Base score from text matches
+        const matched = keywords.filter((kw) => text.includes(kw))
+        const matchRatio = matched.length / keywords.length
+        let score = matchRatio * 0.6
+
+        // Bonus if full query phrase appears in text
+        const q = query.toLowerCase().trim()
+        if (q.length >= 4 && text.includes(q)) {
+            score += 0.2
+        }
+
+        // Category bonus (if any keyword matches category name/slug)
+        const categoryMatched = keywords.some((kw) => categoryText.includes(kw))
+        if (categoryMatched) {
+            score += 0.15
+        }
+
+        // Quality bonuses: rating and popularity
+        const rating = Number(course.ratingAvg) || 0
+        const ratingBonus = Math.min(0.15, (rating / 5) * 0.15)
+        score += ratingBonus
+
+        const enrolled = Number(course.enrolledCount) || 0
+        const enrolledBonus = Math.min(0.15, Math.log10(enrolled + 1) * 0.05) // ~0.15 at ~1k enrollments
+        score += enrolledBonus
+
+        // Clamp to [0, 1]
+        return Math.max(0, Math.min(1, score))
     }
     generateTranscriptResponse(transcripts, query) {
         const topResult = transcripts[0]
