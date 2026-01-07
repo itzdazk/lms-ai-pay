@@ -619,11 +619,28 @@ class KnowledgeBaseService {
             let transcripts = []
 
             if (mode === 'advisor') {
-                // Advisor mode: No knowledge base search needed
-                // AI advisor will recommend courses based on conversation only
-                courses = []
+                // Advisor mode: Search courses to provide real recommendations
+                // Fetch top courses, optionally filtered by query if user's intent is about courses
+                courses = await this.searchCoursesByQuery(query, {
+                    published: false, // Show all courses regardless of status for advisor recommendations
+                    limit: 10,
+                    orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                })
+                
+                // If search returned no results but user provided a query, try broader search
+                // (fetch all courses and let advisor recommend them)
+                if (courses.length === 0 && query && query.trim()) {
+                    logger.debug(`Advisor search returned 0 results for "${query}", fetching all courses as fallback`)
+                    courses = await this.searchCoursesByQuery('', {
+                        published: false,
+                        limit: 10,
+                        orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                    })
+                }
+                
                 lessons = []
                 transcripts = []
+                logger.debug(`Advisor mode: Found ${courses.length} courses for recommendations`)
             } else if (mode === 'course' && targetLessonId) {
                 // Restrict to the exact lesson's transcript; searchInTranscripts already
                 // falls back to lesson content/description/title if transcript is missing
@@ -920,6 +937,92 @@ class KnowledgeBaseService {
         } catch (error) {
             logger.warn('Failed to get representative transcript text:', error)
             return ''
+        }
+    }
+
+    /**
+     * Search courses by query (for advisor recommendations)
+     * @param {string} query - Search query
+     * @param {Object} options - Search options (published, active, limit, orderBy)
+     * @returns {Promise<Array>} List of courses
+     */
+    async searchCoursesByQuery(query, options = {}) {
+        try {
+            const { published = true, limit = 10, orderBy = [] } = options
+
+            // Build where clause
+            const where = {}
+            if (published) {
+                where.status = 'published'
+            }
+
+            // Search in title, description, shortDescription if query provided
+            if (query && query.trim()) {
+                const searchTerm = query.toLowerCase().trim()
+                where.OR = [
+                    { title: { contains: searchTerm, mode: 'insensitive' } },
+                    { shortDescription: { contains: searchTerm, mode: 'insensitive' } },
+                    { description: { contains: searchTerm, mode: 'insensitive' } },
+                    { whatYouLearn: { contains: searchTerm, mode: 'insensitive' } },
+                ]
+            }
+
+            logger.debug(`Searching courses with query="${query}", where=${JSON.stringify(where)}`)
+
+            // Build orderBy clause (default: rating desc, enrolledCount desc, publishedAt desc)
+            let orderByClause = []
+            if (orderBy.length > 0) {
+                orderByClause = orderBy.map(field => {
+                    if (field === 'ratingAvg') return { ratingAvg: 'desc' }
+                    if (field === 'enrolledCount') return { enrolledCount: 'desc' }
+                    if (field === 'publishedAt') return { publishedAt: 'desc' }
+                    return { [field]: 'desc' }
+                })
+            } else {
+                orderByClause = [
+                    { ratingAvg: 'desc' },
+                    { enrolledCount: 'desc' },
+                    { publishedAt: 'desc' },
+                ]
+            }
+
+            const courses = await prisma.course.findMany({
+                where,
+                orderBy: orderByClause,
+                take: limit,
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    shortDescription: true,
+                    description: true,
+                    thumbnailUrl: true,
+                    level: true,
+                    price: true,
+                    discountPrice: true,
+                    ratingAvg: true,
+                    ratingCount: true,
+                    enrolledCount: true,
+                    durationHours: true,
+                    totalLessons: true,
+                    instructor: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            avatarUrl: true,
+                        },
+                    },
+                },
+            })
+
+            logger.info(`Advisor search: Found ${courses.length} courses for query="${query}"`)
+            if (courses.length > 0) {
+                logger.debug(`Top courses: ${courses.slice(0, 3).map(c => c.title).join(', ')}`)
+            }
+            return courses
+        } catch (error) {
+            logger.error('Error searching courses for advisor:', error)
+            throw error
         }
     }
 }
