@@ -5,7 +5,6 @@ import {
     Card,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from '../ui/card'
@@ -33,7 +32,7 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
     const badgeRef = useRef<HTMLDivElement>(null)
     const levelBadge = getCourseLevelBadge(course.level)
     const priceInfo = getCoursePrice(course)
-    
+
     const visibleTags = course.tags?.slice(0, 3) || []
     const remainingTags = course.tags?.slice(3) || []
 
@@ -86,25 +85,25 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                     />
                     <div className='absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
                     <Badge
-                        className={`absolute top-3 left-3 shadow-lg ${levelBadge.className} transition-transform group-hover:scale-105`}
+                        className={`absolute top-2 left-2 shadow-lg ${levelBadge.className} transition-transform group-hover:scale-105`}
                     >
                         {levelBadge.label}
                     </Badge>
                     {course.isFeatured && (
-                        <Badge className='absolute top-3 right-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg transition-transform group-hover:scale-105'>
+                        <Badge className='absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg transition-transform group-hover:scale-105'>
                             ⭐ Nổi bật
                         </Badge>
                     )}
                     {priceInfo.hasDiscount && (
-                        <Badge className='absolute bottom-3 left-3 bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg transition-transform group-hover:scale-105'>
+                        <Badge className='absolute bottom-2 left-2 bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg transition-transform group-hover:scale-105'>
                             Giảm {priceInfo.discountPercentage}%
                         </Badge>
                     )}
                 </div>
             </Link>
 
-            <CardHeader className='flex-1 p-4'>
-                <div className='flex items-center gap-2 mb-2'>
+            <CardHeader className='flex-1 p-2'>
+                <div className='flex items-center gap-1.5'>
                     <Avatar className='h-7 w-7 border-2 border-[#2D2D2D] hover:border-blue-500/50 transition-colors'>
                         <AvatarImage src={course.instructor?.avatarUrl} />
                         <AvatarFallback className='bg-gradient-to-br from-blue-600 to-blue-700 text-white text-xs'>
@@ -115,16 +114,16 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                         {course.instructor?.fullName || 'Instructor'}
                     </span>
                 </div>
-                <CardTitle className='line-clamp-2 hover:text-blue-400 transition-colors text-white text-base font-bold mb-1.5 group-hover:text-blue-400'>
+                <CardTitle className='line-clamp-2 hover:text-blue-400 transition-colors text-white text-base font-bold mb-1 group-hover:text-blue-400'>
                     <Link to={getCourseUrl(course)}>{course.title}</Link>
                 </CardTitle>
-                <CardDescription className='line-clamp-3 text-gray-400 leading-relaxed text-sm'>
+                <CardDescription className='line-clamp-2 text-gray-400 leading-snug text-sm mb-1'>
                     {course.shortDescription ||
                         course.description ||
                         'Khóa học chất lượng cao'}
                 </CardDescription>
                 {course.tags && course.tags.length > 0 && (
-                    <div className='flex flex-wrap gap-1.5 mt-2 relative'>
+                    <div className='flex flex-wrap gap-1 mt-1 relative'>
                         {visibleTags.map((tag, index) => {
                             const tagName =
                                 typeof tag === 'string' ? tag : tag.name
@@ -144,9 +143,7 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                                 onMouseEnter={handleMouseEnter}
                                 onMouseLeave={() => setShowMoreTags(false)}
                             >
-                                <Badge
-                                    className='text-xs bg-gray-600 text-white hover:bg-gray-700 transition-colors cursor-pointer'
-                                >
+                                <Badge className='text-xs bg-gray-600 text-white hover:bg-gray-700 transition-colors cursor-pointer'>
                                     +{remainingTags.length}
                                 </Badge>
                                 {showMoreTags &&
@@ -192,9 +189,9 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                 )}
             </CardHeader>
 
-            <CardContent className='px-4 pb-3'>
-                <div className='grid grid-cols-2 gap-2'>
-                    <div className='flex items-center gap-1.5 text-sm group/item'>
+            <CardContent className='px-2 pb-1.5 pt-0'>
+                <div className='grid grid-cols-2 gap-1.5 mb-1.5'>
+                    <div className='flex items-center gap-1 text-sm group/item'>
                         <Star className='h-4 w-4 fill-yellow-400 text-yellow-400 group-hover/item:scale-110 transition-transform' />
                         <span className='text-white font-semibold'>
                             {Number(course.ratingAvg || 0).toFixed(1)}
@@ -203,49 +200,44 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                             ({formatNumber(course.ratingCount)})
                         </span>
                     </div>
-                    <div className='flex items-center gap-1.5 text-sm group/item'>
-                        <Users className='h-4 w-4 text-blue-400 group-hover/item:scale-110 transition-transform' />
+                    <div className='flex items-center gap-1 text-sm'>
+                        <Users className='h-4 w-4 text-gray-400' />
                         <span className='text-gray-300'>
                             {formatNumber(course.enrolledCount)}
                         </span>
                     </div>
-                    <div className='flex items-center gap-1.5 text-sm group/item'>
-                        <BookOpen className='h-4 w-4 text-green-400 group-hover/item:scale-110 transition-transform' />
+                    <div className='flex items-center gap-1 text-sm'>
+                        <BookOpen className='h-4 w-4 text-gray-400' />
                         <span className='text-gray-300'>
                             {course.totalLessons} bài
                         </span>
                     </div>
-                    <div className='flex items-center gap-1.5 text-sm group/item'>
-                        <Clock className='h-4 w-4 text-purple-400 group-hover/item:scale-110 transition-transform' />
+                    <div className='flex items-center gap-1 text-sm'>
+                        <Clock className='h-4 w-4 text-gray-400' />
                         <span className='text-gray-300'>
                             {formatDuration(course.durationHours)}
                         </span>
                     </div>
                 </div>
-            </CardContent>
-
-            <CardFooter className='border-t border-[#2D2D2D]/50 pt-3 px-4 pb-4'>
-                <div className='flex items-center justify-between w-full'>
+                <div className='flex items-center justify-between border-t border-[#2D2D2D]/50 pt-1.5'>
                     {priceInfo.isFree ? (
-                        <span className='text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent'>
+                        <span className='text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent'>
                             Miễn phí
                         </span>
                     ) : (
-                        <div className='flex flex-col gap-0.5'>
-                            <div className='flex items-center gap-2'>
-                                <span className='text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent'>
-                                    {priceInfo.displayPrice}
+                        <div className='flex items-center gap-1.5'>
+                            <span className='text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent'>
+                                {priceInfo.displayPrice}
+                            </span>
+                            {priceInfo.hasDiscount && (
+                                <span className='text-xs text-gray-500 line-through'>
+                                    {formatPrice(priceInfo.originalPrice)}
                                 </span>
-                                {priceInfo.hasDiscount && (
-                                    <span className='text-xs text-gray-500 line-through'>
-                                        {formatPrice(priceInfo.originalPrice)}
-                                    </span>
-                                )}
-                            </div>
+                            )}
                         </div>
                     )}
                 </div>
-            </CardFooter>
+            </CardContent>
         </Card>
     )
 }
