@@ -69,7 +69,13 @@ export function CoursesPage() {
             try {
                 setIsCategoriesLoading(true)
                 const data = await coursesApi.getCategories()
-                setCategories(data)
+                // Sort categories by coursesCount (descending) - categories with most courses first
+                const sortedData = [...data].sort((a, b) => {
+                    const countA = a.coursesCount || 0
+                    const countB = b.coursesCount || 0
+                    return countB - countA // Descending order
+                })
+                setCategories(sortedData)
             } catch (error) {
                 console.error('Error fetching categories:', error)
                 toast.error('Không thể tải danh mục')
@@ -223,19 +229,19 @@ export function CoursesPage() {
 
                         {/* Stats */}
                         <div className='flex gap-4'>
-                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-200 shadow-lg hover:shadow-blue-500/10 group min-w-[100px]'>
-                                <div className='text-2xl font-bold text-white dark:text-white group-hover:text-blue-400 dark:group-hover:text-blue-400 transition-colors'>
+                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] transition-all duration-200 shadow-lg group min-w-[100px]'>
+                                <div className='text-2xl font-bold text-white dark:text-white transition-colors'>
                                     {totalCourses}
                                 </div>
-                                <div className='text-xs text-gray-400 dark:text-gray-400 group-hover:text-gray-300 dark:group-hover:text-gray-300 transition-colors mt-1'>
+                                <div className='text-xs text-gray-400 dark:text-gray-400 transition-colors mt-1'>
                                     Khóa học
                                 </div>
                             </div>
-                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] hover:border-green-500 dark:hover:border-green-500 transition-all duration-200 shadow-lg hover:shadow-green-500/10 group min-w-[100px]'>
-                                <div className='text-2xl font-bold text-white dark:text-white group-hover:text-green-400 dark:group-hover:text-green-400 transition-colors'>
+                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] dark:border-[#2D2D2D] transition-all duration-200 shadow-lg group min-w-[100px]'>
+                                <div className='text-2xl font-bold text-white dark:text-white transition-colors'>
                                     {categories.length}
                                 </div>
-                                <div className='text-xs text-gray-400 dark:text-gray-400 group-hover:text-gray-300 dark:group-hover:text-gray-300 transition-colors mt-1'>
+                                <div className='text-xs text-gray-400 dark:text-gray-400 transition-colors mt-1'>
                                     Danh mục
                                 </div>
                             </div>
