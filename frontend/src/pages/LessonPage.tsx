@@ -152,6 +152,7 @@ export function LessonPage() {
     const isPlayingRef = useRef(false)
     const previousCourseSlugRef = useRef<string | null>(null)
     const subtitleBlobUrlRef = useRef<string | null>(null)
+    const lastPauseUpdateRef = useRef<number>(0) // Track last pause update to prevent rate limit
     const { currentChapter, currentChapterLessonIds } = useMemo(() => {
         if (!selectedLesson) {
             return {
@@ -776,6 +777,14 @@ export function LessonPage() {
     // Debounced update progress khi pause
     const debouncedUpdateProgress = debounceAsync(async () => {
         if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
+            // Check rate limit on client side (10 seconds matching backend)
+            const now = Date.now()
+            const PAUSE_UPDATE_INTERVAL = 10000 // 10 seconds
+            if (now - lastPauseUpdateRef.current < PAUSE_UPDATE_INTERVAL) {
+                console.log('[Progress] Skip pause update - rate limited (client side)')
+                return
+            }
+
             try {
                 const position = videoCurrentTimeRef.current
                     ? videoCurrentTimeRef.current()
@@ -790,6 +799,7 @@ export function LessonPage() {
                     selectedLesson.id,
                     payload
                 )
+                lastPauseUpdateRef.current = now
                 if (typeof updatedProgress?.watchDuration === 'number') {
                     setWatchedDuration(updatedProgress.watchDuration)
                 }
@@ -805,10 +815,12 @@ export function LessonPage() {
                     }
                 }
             } catch (err: any) {
-                // Nếu lỗi rate limit, không hiện toast (đã có toast ở VideoPlayer)
-                // if (err?.response?.data?.message?.toLowerCase().includes('rate limit')) {
-                //   toast.warning('Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.');
-                // }
+                // Handle rate limit error from server
+                if (err?.response?.status === 429) {
+                    console.log('[Progress] Pause update rate limited by server')
+                    // Update last update time to prevent immediate retry
+                    lastPauseUpdateRef.current = now
+                }
             }
         }
     }, 1500)

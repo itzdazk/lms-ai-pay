@@ -134,6 +134,7 @@ export function VideoPlayer({
   const [videoError, setVideoError] = useState<string | null>(null);
   // Đã loại bỏ toàn bộ logic viewedSegments
   const lessonIdRef = useRef<number | string | undefined>(undefined); // Truyền lessonId từ props nếu cần
+  const hasResetPlaybackRateRef = useRef(false); // Track if we've already reset playback rate for this watchedDuration crossing
 
   // Format time to MM:SS
   const formatTime = (seconds: number): string => {
@@ -1004,7 +1005,25 @@ export function VideoPlayer({
   useEffect(() => {
     setShowInitialPlayButton(false);
     setIsLoading(true);
+    // Reset flag when video changes
+    hasResetPlaybackRateRef.current = false;
   }, [videoUrl]);
+
+  // Auto-reset playback rate to 1x when crossing watchedDuration marker
+  useEffect(() => {
+    if (videoRef.current && watchedDuration > 0 && currentTime >= watchedDuration && playbackRate > 1) {
+      // User has crossed the yellow marker and playback rate is > 1x, reset to 1x
+      // Only reset once per crossing (not continuously)
+      if (!hasResetPlaybackRateRef.current) {
+        handlePlaybackRateChange('1');
+        toast.info('Đã tự động giảm tốc độ về 1x khi vượt qua phần đã xem');
+        hasResetPlaybackRateRef.current = true;
+      }
+    } else if (currentTime < watchedDuration) {
+      // Reset flag when going back below watchedDuration
+      hasResetPlaybackRateRef.current = false;
+    }
+  }, [currentTime, watchedDuration, playbackRate]);
 
   // Handle seek from external (e.g., transcript click)
   useEffect(() => {
@@ -1076,6 +1095,7 @@ export function VideoPlayer({
         src={videoUrl}
         className="w-full h-full"
         playsInline
+        crossOrigin="anonymous"
         onClick={() => setIsVideoFocused(true)}
       >
         {subtitleUrl && (

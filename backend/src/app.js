@@ -178,10 +178,46 @@ app.get('/favicon.ico', (req, res) => {
     res.status(HTTP_STATUS.NO_CONTENT).end()
 })
 
-// Serve static files (uploads)
+// Serve static files (uploads) with CORS headers
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+
+// Middleware to handle OPTIONS requests for static files (CORS preflight)
+app.use('/uploads', (req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        const origin = req.headers.origin
+        if (origin && config.ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+            res.setHeader('Access-Control-Allow-Origin', origin)
+            res.setHeader('Access-Control-Allow-Credentials', 'true')
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
+            res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type')
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges')
+        }
+        return res.status(204).end()
+    }
+    next()
+})
+
+// Middleware to add CORS headers to static files
+const staticOptions = {
+    setHeaders: (res, filePath) => {
+        // Add CORS headers for video and other media files
+        const origin = res.req.headers.origin
+        if (origin && config.ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+            res.setHeader('Access-Control-Allow-Origin', origin)
+            res.setHeader('Access-Control-Allow-Credentials', 'true')
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges')
+        }
+        
+        // Enable Range requests for video streaming
+        if (filePath.endsWith('.mp4') || filePath.endsWith('.webm') || filePath.endsWith('.m3u8') || filePath.endsWith('.ts')) {
+            res.setHeader('Accept-Ranges', 'bytes')
+            res.setHeader('Cache-Control', 'public, max-age=31536000')
+        }
+    }
+}
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), staticOptions))
 
 // API routes
 app.use(`/api/${config.API_VERSION}`, routes)

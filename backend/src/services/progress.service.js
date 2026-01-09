@@ -365,36 +365,49 @@ class ProgressService {
 
         const updateData = {}
         if (position !== undefined) {
-            updateData.lastPosition = position
+            // --- Anti-cheat: kiểm tra thời gian học hợp lệ ---
+            let isCheat = false;
+            if (currentProgress && currentProgress.updatedAt) {
+                const now = Date.now();
+                const lastUpdated = new Date(currentProgress.updatedAt).getTime();
+                const deltaTime = (now - lastUpdated) / 1000; // giây
+                const deltaLearned = position - (currentProgress.lastPosition ?? 0);
+                const ALLOWED_ERROR = 3; // sai số nhỏ (giây)
+                if (deltaLearned > deltaTime + ALLOWED_ERROR) {
+                    logger.warn(`Anti-cheat: User ${userId} tried to update lesson ${lessonId} with deltaLearned=${deltaLearned}s > deltaTime=${deltaTime}s (allowed error ${ALLOWED_ERROR}s). Request ignored.`);
+                    return currentProgress; // Bỏ qua request gian lận
+                }
+            }
+            updateData.lastPosition = position;
             // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
             let newWatchDuration =
                 currentProgress === null ||
                 position > (currentProgress.watchDuration ?? 0)
                     ? position
-                    : currentProgress.watchDuration
+                    : currentProgress.watchDuration;
             if (
                 currentProgress === null ||
                 position > (currentProgress.watchDuration ?? 0)
             ) {
-                updateData.watchDuration = position
+                updateData.watchDuration = position;
             }
-            const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.1
+            const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.1;
             // Tự động đánh dấu completed nếu đã xem >= threshold video
             if (
                 lesson.videoDuration &&
                 newWatchDuration >= lesson.videoDuration * threshold
             ) {
-                updateData.isCompleted = true
-                updateData.completedAt = new Date()
+                updateData.isCompleted = true;
+                updateData.completedAt = new Date();
                 // Đảm bảo watchedDuration = videoDuration khi hoàn thành
-                updateData.watchDuration = lesson.videoDuration
+                updateData.watchDuration = lesson.videoDuration;
 
                 // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
                 const quiz = await prisma.quiz.findUnique({
                     where: { lessonId: lesson.id },
-                })
+                });
                 if (!quiz || quiz.isPublished === false) {
-                    updateData.quizCompleted = true
+                    updateData.quizCompleted = true;
                 }
             }
         }
@@ -485,7 +498,56 @@ class ProgressService {
             throw error
         }
 
-        // Bỏ kiểm tra điều kiện xem >= 70% video khi đánh dấu hoàn thành bài học
+        // --- Anti-cheat: Kiểm tra watchDuration trước khi cho phép complete ---
+        const currentProgress = await prisma.progress.findUnique({
+            where: {
+                userId_lessonId: {
+                    userId,
+                    lessonId,
+                },
+            },
+        })
+
+        // Kiểm tra xem user đã xem đủ video chưa
+        const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.1 // 70% mặc định
+        if (lesson.videoDuration) {
+            const minWatchDuration = lesson.videoDuration * threshold
+            const currentWatchDuration = currentProgress?.watchDuration || 0
+            
+            if (currentWatchDuration < minWatchDuration) {
+                const error = new Error(
+                    `You must watch at least ${Math.round(threshold * 100)}% of the video to complete this lesson. ` +
+                    `Current: ${Math.round((currentWatchDuration / lesson.videoDuration) * 100)}%`
+                )
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
+        }
+
+        // Kiểm tra thời gian hợp lệ: không thể complete quá nhanh sau khi start
+        if (currentProgress) {
+            const now = Date.now()
+            // Sử dụng createdAt nếu updatedAt không có
+            const startedAt = currentProgress.updatedAt 
+                ? new Date(currentProgress.updatedAt).getTime()
+                : (currentProgress.createdAt ? new Date(currentProgress.createdAt).getTime() : now)
+            const timeSinceStart = (now - startedAt) / 1000 // giây
+            
+            // Nếu lesson có videoDuration, phải mất ít nhất 50% thời gian video để complete
+            // Nhưng chỉ kiểm tra nếu đã có progress record (đã start lesson)
+            if (lesson.videoDuration && timeSinceStart >= 0 && timeSinceStart < lesson.videoDuration * 0.5) {
+                logger.warn(
+                    `Anti-cheat: User ${userId} tried to complete lesson ${lessonId} too quickly. ` +
+                    `Time since start: ${Math.round(timeSinceStart)}s, Video duration: ${lesson.videoDuration}s`
+                )
+                const error = new Error(
+                    'You cannot complete this lesson too quickly. Please watch the video properly.'
+                )
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
+        }
+
         // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
         let quizCompleted = false
         const quiz = await prisma.quiz.findUnique({
@@ -694,6 +756,20 @@ class ProgressService {
         logger.info(
             `Updated course progress for user ${userId}, course ${courseId}: ${progressPercentage}%`
         )
+        // --- Update course completionRate after enrollment completed ---
+        if (updateData.status === ENROLLMENT_STATUS.COMPLETED) {
+            // Đếm tổng số enrollment và số enrollment đã hoàn thành
+            const [totalEnrollments, completedEnrollments] = await Promise.all([
+                prisma.enrollment.count({ where: { courseId } }),
+                prisma.enrollment.count({ where: { courseId, status: ENROLLMENT_STATUS.COMPLETED } })
+            ])
+            const completionRate = totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 10000) / 100 : 0;
+            await prisma.course.update({
+                where: { id: courseId },
+                data: { completionRate }
+            })
+            logger.info(`Updated course completionRate for course ${courseId}: ${completionRate}%`)
+        }
     }
 
     /**
