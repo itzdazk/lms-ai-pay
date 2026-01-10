@@ -42,14 +42,6 @@ export const updateProgressValidator = [
     validate,
 ];
 
-// Complete lesson validator
-export const completeLessonValidator = [
-    param('lessonId')
-        .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
-    validate,
-];
-
 // Get resume position validator
 export const getResumePositionValidator = [
     param('lessonId')

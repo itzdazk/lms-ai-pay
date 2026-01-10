@@ -43,12 +43,6 @@ export const progressApi = {
         return response.data.data.progress;
     },
 
-    // Đánh dấu hoàn thành bài học
-    async completeLesson(lessonId: string | number): Promise<LessonProgress> {
-        const response = await apiClient.post<ApiResponse<LessonProgress>>(`/progress/lessons/${lessonId}/complete`)
-        return response.data.data
-    },
-
     // Lấy trạng thái lesson/quiz cho LessonList UI
     async getCourseLessonProgressList(courseId: string | number): Promise<LessonQuizProgress[]> {
         const response = await apiClient.get<ApiResponse<LessonQuizProgress[]>>(`/progress/courses/${courseId}/lesson-progress`);

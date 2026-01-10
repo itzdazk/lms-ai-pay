@@ -885,17 +885,33 @@ export function LessonPage() {
     const handleVideoEnded = async () => {
         if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             try {
-                await progressApi.completeLesson(selectedLesson.id)
-                // Refresh lesson/quiz progress to update unlock status
-                await refreshLessonQuizProgress()
-                await refreshEnrollmentProgress()
-            } catch (err) {}
-            if (!completedLessonIds.includes(selectedLesson.id)) {
-                setCompletedLessonIds([
-                    ...completedLessonIds,
+                // Gọi updateProgress với position = videoDuration khi video kết thúc
+                const finalPosition = videoCurrentTimeRef.current
+                    ? videoCurrentTimeRef.current()
+                    : currentTime
+                const payload: any = {
+                    position: finalPosition,
+                    actionType: 'auto',
+                }
+                const updatedProgress = await progressApi.updateLessonProgress(
                     selectedLesson.id,
-                ])
-            }
+                    payload
+                )
+                if (typeof updatedProgress?.watchDuration === 'number') {
+                    setWatchedDuration(updatedProgress.watchDuration)
+                }
+                // If lesson is completed, refresh progress immediately to unlock next lesson
+                if (updatedProgress?.isCompleted === true) {
+                    await refreshLessonQuizProgress()
+                    await refreshEnrollmentProgress()
+                    if (!completedLessonIds.includes(selectedLesson.id)) {
+                        setCompletedLessonIds([
+                            ...completedLessonIds,
+                            selectedLesson.id,
+                        ])
+                    }
+                }
+            } catch (err) {}
         }
         if (progressSaveIntervalRef.current) {
             clearInterval(progressSaveIntervalRef.current)

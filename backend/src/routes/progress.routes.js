@@ -8,7 +8,6 @@ import {
     getLessonProgressValidator,
     startLessonValidator,
     updateProgressValidator,
-    completeLessonValidator,
     getResumePositionValidator,
 } from '../validators/progress.validator.js'
 
@@ -60,18 +59,6 @@ router.put(
     authenticate,
     updateProgressValidator,
     progressController.updateProgress
-)
-
-/**
- * @route   POST /api/v1/progress/lessons/:lessonId/complete
- * @desc    Mark lesson as completed
- * @access  Private
- */
-router.post(
-    '/lessons/:lessonId/complete',
-    authenticate,
-    completeLessonValidator,
-    progressController.completeLesson
 )
 
 /**

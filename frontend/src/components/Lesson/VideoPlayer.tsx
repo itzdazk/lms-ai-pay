@@ -27,7 +27,6 @@ import {
 import { toast } from 'sonner';
 import { SubtitleSettingsDialog, type SubtitleSettings, DEFAULT_SETTINGS } from './SubtitleSettingsDialog';
 import { PlaybackRateDialog } from './PlaybackRateDialog';
-import { progressApi } from '../../lib/api/progress';
 
 interface VideoPlayerProps {
       onSeek?: (time: number) => void;

@@ -141,39 +141,6 @@ class ProgressController {
         );
     });
 
-    /**
-     * Mark lesson as completed
-     * POST /api/v1/progress/lessons/:lessonId/complete
-     */
-    completeLesson = asyncHandler(async (req, res) => {
-        const { lessonId } = req.params;
-        const userId = req.user.id;
-
-        // Rate limiting: chỉ cho phép complete mỗi lesson một lần trong 5 giây
-        const key = `${userId}:${lessonId}:complete`;
-        if (!global._progressRateLimit) global._progressRateLimit = {};
-        const now = Date.now();
-        const last = global._progressRateLimit[key] || 0;
-        if (now - last < 5000) { // 5 giây
-            return res.status(429).json({
-                success: false,
-                errorCode: ERROR_CODES.RATE_LIMIT_ERROR,
-                message: 'You are completing lessons too quickly. Please wait a moment.',
-            });
-        }
-        global._progressRateLimit[key] = now;
-
-        const result = await progressService.completeLesson(
-            userId,
-            parseInt(lessonId)
-        );
-
-        return ApiResponse.success(
-            res,
-            result,
-            'Lesson marked as completed successfully'
-        );
-    });
 
     /**
      * Get resume position
