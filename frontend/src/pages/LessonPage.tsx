@@ -1097,16 +1097,36 @@ export function LessonPage() {
             case 'INSTRUCTOR':
                 return (
                     <>
+                        <DropdownMenuLabel className='text-white px-2 py-1.5'>
+                            <div className='flex items-center'>
+                                <LayoutDashboard className='mr-2 h-4 w-4' />
+                                <span className='font-medium'>
+                                    Bảng điều khiển
+                                </span>
+                            </div>
+                        </DropdownMenuLabel>
                         <DropdownMenuItem
                             asChild
                             className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
                         >
                             <Link
                                 to='/instructor/dashboard'
-                                className='flex items-center'
+                                className='flex items-center pl-6'
                             >
-                                <LayoutDashboard className='mr-2 h-4 w-4 text-gray-300' />
-                                Bảng điều khiển
+                                <GraduationCap className='mr-2 h-4 w-4 text-gray-300' />
+                                Giảng viên
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            asChild
+                            className='text-white hover:bg-[#252525] transition-colors cursor-pointer'
+                        >
+                            <Link
+                                to='/dashboard'
+                                className='flex items-center pl-6'
+                            >
+                                <User className='mr-2 h-4 w-4 text-gray-300' />
+                                Học viên
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
