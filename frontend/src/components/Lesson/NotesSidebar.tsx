@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
 import { Loader2, X, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { lessonNotesApi } from '../../lib/api';
+import { lessonNotesApi } from '../../lib/api/lesson-notes';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
   DropdownMenu,

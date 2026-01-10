@@ -1,6 +1,6 @@
 import { NotificationItem } from './NotificationItem'
 import { EmptyNotifications } from './EmptyNotifications'
-import type { Notification } from '../../lib/api'
+import type { Notification } from '../../lib/api/types'
 
 export interface NotificationListProps {
     notifications: Notification[]

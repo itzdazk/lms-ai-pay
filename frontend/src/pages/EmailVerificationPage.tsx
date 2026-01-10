@@ -11,7 +11,7 @@ import {
 } from '../components/ui/card'
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react'
 import { toast } from 'sonner'
-import { authApi } from '../lib/api'
+import { authApi } from '../lib/api/auth'
 
 type VerificationStatus = 'verifying' | 'success' | 'error' | 'resend'
 

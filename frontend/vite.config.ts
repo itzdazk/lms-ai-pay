@@ -10,6 +10,36 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Tối ưu code splitting - chỉ tách vendor code lớn
+        manualChunks: (id) => {
+          // Tách node_modules thành vendor chunk
+          if (id.includes('node_modules')) {
+            // Tách React và React-DOM riêng (thường được dùng chung)
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react'
+            }
+            // Tách các thư viện UI lớn
+            if (id.includes('lucide-react') || id.includes('recharts') || id.includes('date-fns')) {
+              return 'vendor-ui'
+            }
+            // Các thư viện khác vào vendor chunk chung
+            return 'vendor'
+          }
+          // Giữ các file trong src/lib/api cùng nhau (sẽ được lazy load theo route)
+          // Không cần tách manual vì Vite sẽ tự động tối ưu
+        },
+        // Giảm số lượng chunks bằng cách gộp các file nhỏ
+        chunkSizeWarningLimit: 1000,
+      },
+    },
+    // Tối ưu chunk size
+    chunkSizeWarningLimit: 1000,
+    // Không preload tất cả chunks - chỉ preload khi cần
+    assetsInlineLimit: 4096,
+  },
   server: {
     port: 3000,
     allowedHosts: ['unlyrical-leonard-flexographic.ngrok-free.dev'],

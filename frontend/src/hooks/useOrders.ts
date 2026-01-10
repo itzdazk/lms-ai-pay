@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import type { CreateOrderRequest, Order, OrderFilters } from '../lib/api'
+import type { CreateOrderRequest, Order, OrderFilters } from '../lib/api/types'
 import { ordersApi } from '../lib/api/orders'
 import type { OrderStats } from '../components/Payment/OrderStats'
 

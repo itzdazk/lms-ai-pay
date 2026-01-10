@@ -43,14 +43,12 @@ import { NotesDrawer } from '../components/Lesson/NotesDrawer'
 import { NotesSidebar } from '../components/Lesson/NotesSidebar'
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar'
 import { QuizTaking } from '../components/Quiz/QuizTaking'
-import {
-    coursesApi,
-    lessonsApi,
-    lessonNotesApi,
-    chaptersApi,
-    progressApi,
-    quizzesApi,
-} from '../lib/api'
+import { coursesApi } from '../lib/api/courses'
+import { lessonsApi } from '../lib/api/lessons'
+import { lessonNotesApi } from '../lib/api/lesson-notes'
+import { chaptersApi } from '../lib/api/chapters'
+import { progressApi } from '../lib/api/progress'
+import { quizzesApi } from '../lib/api/quizzes'
 import { useQuizTaking } from '../hooks/useQuiz'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'

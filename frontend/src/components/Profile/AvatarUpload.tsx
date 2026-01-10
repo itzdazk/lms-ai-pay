@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Camera, Loader2 } from 'lucide-react';
-import { usersApi } from '../../lib/api';
+import { usersApi } from '../../lib/api/users';
 import { toast } from 'sonner';
 import type { User } from '../../lib/api/types';
 import {

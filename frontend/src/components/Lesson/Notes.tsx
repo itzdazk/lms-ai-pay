@@ -4,7 +4,7 @@ import { DarkOutlineButton } from '../ui/buttons';
 import { Textarea } from '../ui/textarea';
 import { Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { lessonNotesApi } from '../../lib/api';
+import { lessonNotesApi } from '../../lib/api/lesson-notes';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface NotesProps {

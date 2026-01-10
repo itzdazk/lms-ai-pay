@@ -14,7 +14,7 @@ import {
     type CourseFiltersState,
     type SortOption,
 } from '../components/Courses'
-import { coursesApi } from '../lib/api'
+import { coursesApi } from '../lib/api/courses'
 import type { Category, Tag, PublicCourse } from '../lib/api/types'
 
 export function CoursesPage() {

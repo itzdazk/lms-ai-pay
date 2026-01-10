@@ -22,7 +22,7 @@ import {
     ChevronUp,
 } from 'lucide-react'
 import type { Category, Tag } from '../../lib/api/types'
-import { coursesApi } from '../../lib/api'
+import { coursesApi } from '../../lib/api/courses'
 
 export interface CourseFiltersState {
     categoryId?: number

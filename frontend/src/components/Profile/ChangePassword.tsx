@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
-import { usersApi } from '../../lib/api';
+import { usersApi } from '../../lib/api/users';
 import { toast } from 'sonner';
 
 export function ChangePassword() {

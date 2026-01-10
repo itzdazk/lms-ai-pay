@@ -3,7 +3,7 @@ import {
     getNotificationTypeConfig,
     getNotificationRoute,
 } from '../../lib/notificationUtils'
-import type { Notification } from '../../lib/api'
+import type { Notification } from '../../lib/api/types'
 import { cn } from '../ui/utils'
 import { useNavigate } from 'react-router-dom'
 

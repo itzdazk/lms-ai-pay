@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { enrollmentsApi } from '../lib/api/enrollments'
 import type { EnrollmentWithCourse } from '../lib/api/enrollments'
-import { coursesApi } from '../lib/api'
+import { coursesApi } from '../lib/api/courses'
 import type { Lesson } from '../lib/api/types'
 
 export function EnrollmentDetailPage() {

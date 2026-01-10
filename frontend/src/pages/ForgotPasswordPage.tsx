@@ -13,7 +13,7 @@ import {
 } from '../components/ui/card'
 import { BookOpen, ArrowLeft, Mail, Loader2, CheckCircle, Moon, Sun, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { authApi } from '../lib/api'
+import { authApi } from '../lib/api/auth'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 

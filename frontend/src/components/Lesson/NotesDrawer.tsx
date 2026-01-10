@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { DarkOutlineButton } from '../ui/buttons';
 import { Loader2, PenTool, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { lessonNotesApi } from '../../lib/api';
+import { lessonNotesApi } from '../../lib/api/lesson-notes';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface NotesDrawerProps {

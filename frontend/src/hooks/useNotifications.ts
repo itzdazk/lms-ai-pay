@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import type { Notification } from '../lib/api'
+import type { Notification } from '../lib/api/types'
 import { notificationsApi } from '../lib/api/notifications'
 import type { GetNotificationsParams } from '../lib/api/notifications'
 

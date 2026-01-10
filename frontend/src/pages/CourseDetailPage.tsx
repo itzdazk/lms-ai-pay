@@ -33,7 +33,8 @@ import {
     CourseSidebar,
 } from '../components/Courses'
 import { EnrollmentButton } from '../components/Enrollments'
-import { coursesApi, chaptersApi } from '../lib/api'
+import { coursesApi } from '../lib/api/courses'
+import { chaptersApi } from '../lib/api/chapters'
 import type {
     PublicCourse,
     Lesson,

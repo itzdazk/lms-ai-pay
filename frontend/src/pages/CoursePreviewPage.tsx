@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../lib/api';
+import { authApi } from '../lib/api/auth';
 import type { User } from '../lib/api/types';
 import {
     CourseHeroSection,

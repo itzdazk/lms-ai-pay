@@ -13,7 +13,7 @@ import {
 } from '../components/ui/card'
 import { BookOpen, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { authApi } from '../lib/api'
+import { authApi } from '../lib/api/auth'
 
 export function ResetPasswordPage() {
     const [searchParams] = useSearchParams()
