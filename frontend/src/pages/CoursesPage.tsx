@@ -1,8 +1,3 @@
-// ============================================
-// FILE: src/pages/CoursesPage.tsx (THAY ĐỔI HOÀN TOÀN)
-// Integrated with real API - thay thế toàn bộ mock data
-// ============================================
-
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'

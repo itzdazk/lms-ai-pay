@@ -1,8 +1,3 @@
-// ============================================
-// FILE: src/pages/CourseDetailPage.tsx
-// ĐÃ TÍCH HỢP API - CHỈ THAY ĐỔI NHỮNG GÌ ĐƯỢC YÊU CẦU
-// ============================================
-
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'

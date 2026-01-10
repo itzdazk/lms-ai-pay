@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -17,7 +17,8 @@ import { SaveChangesBar } from '../../components/instructor/SaveChangesBar'
 import { chaptersApi } from '../../lib/api/chapters'
 import { instructorLessonsApi } from '../../lib/api/instructor-lessons'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
-import type { Chapter, Lesson, Course, CreateChapterRequest, UpdateChapterRequest, CreateLessonRequest, UpdateLessonRequest } from '../../lib/api/types'
+import { instructorQuizzesApi } from '../../lib/api/instructor-quizzes'
+import type { Chapter, Lesson, Course, Quiz, CreateChapterRequest, UpdateChapterRequest, CreateLessonRequest, UpdateLessonRequest } from '../../lib/api/types'
 
 // Helper function to format video duration (seconds to MM:SS or HH:MM:SS)
 const formatDuration = (seconds?: number): string => {
@@ -65,6 +66,12 @@ export function CourseChaptersPage() {
     const [localChapters, setLocalChapters] = useState<Chapter[]>([])
     const { hasChanges: hasUnsavedChanges, setHasChanges: setHasUnsavedChanges } = useCourseForm()
     const localChaptersRef = useRef<Chapter[]>([])
+    
+    // Quizzes data - Map of lessonId to quizzes array
+    const [lessonsQuizzes, setLessonsQuizzes] = useState<Map<number, Quiz[]>>(new Map())
+    
+    // Track which lesson's quiz management is open (similar to CourseQuizzesPage)
+    const [openLessonQuiz, setOpenLessonQuiz] = useState<number | null>(null)
 
     // Dialogs
     const [showChapterDialog, setShowChapterDialog] = useState(false)
@@ -113,6 +120,57 @@ export function CourseChaptersPage() {
             saveExpandedChaptersToStorage(courseId, expandedChapters)
         }
     }, [expandedChapters, courseId, loading])
+
+    // Fetch quizzes for all lessons after chapters are loaded
+    useEffect(() => {
+        if (!localChapters.length || loading) return
+
+        let isMounted = true
+
+        const fetchQuizzes = async () => {
+            // Collect all lesson IDs from all chapters
+            const lessonIds = localChapters.flatMap(ch => 
+                ch.lessons?.map(l => l.id) || []
+            )
+
+            if (lessonIds.length === 0) return
+
+            try {
+                // Fetch all quizzes in parallel using Promise.allSettled
+                // This won't fail if one lesson's quiz fetch fails
+                const quizResults = await Promise.allSettled(
+                    lessonIds.map(lessonId =>
+                        instructorQuizzesApi.getQuizzes(lessonId)
+                            .then(quizzes => ({ lessonId, quizzes }))
+                            .catch(error => {
+                                console.error(`Error fetching quizzes for lesson ${lessonId}:`, error)
+                                return { lessonId, quizzes: [] }
+                            })
+                    )
+                )
+
+                if (!isMounted) return
+
+                const newQuizzesMap = new Map<number, Quiz[]>()
+                quizResults.forEach(result => {
+                    if (result.status === 'fulfilled') {
+                        newQuizzesMap.set(result.value.lessonId, result.value.quizzes)
+                    }
+                })
+
+                setLessonsQuizzes(newQuizzesMap)
+            } catch (error) {
+                console.error('Error fetching quizzes:', error)
+                // Fail silently, don't block UI
+            }
+        }
+
+        fetchQuizzes()
+
+        return () => {
+            isMounted = false
+        }
+    }, [localChapters, loading])
 
     // Poll transcript status when there are processing transcripts
     useEffect(() => {
@@ -191,6 +249,8 @@ export function CourseChaptersPage() {
             setLocalChapters(chaptersData)
             localChaptersRef.current = chaptersData
             setHasUnsavedChanges(false)
+            // Reset quizzes map when chapters reload
+            setLessonsQuizzes(new Map())
             
             // Load expanded chapters from localStorage, or expand all by default if not saved
             const savedExpanded = loadExpandedChaptersFromStorage(courseId)
@@ -234,6 +294,29 @@ export function CourseChaptersPage() {
             setChapters(prev => 
                 prev.map(ch => ch.id === chapterId ? updatedChapter : ch)
             )
+            
+            // Refresh quizzes for lessons in this chapter
+            if (updatedChapter.lessons && updatedChapter.lessons.length > 0) {
+                const lessonIds = updatedChapter.lessons.map(l => l.id)
+                const quizResults = await Promise.allSettled(
+                    lessonIds.map(lessonId =>
+                        instructorQuizzesApi.getQuizzes(lessonId)
+                            .then(quizzes => ({ lessonId, quizzes }))
+                            .catch(() => ({ lessonId, quizzes: [] }))
+                    )
+                )
+                
+                setLessonsQuizzes(prev => {
+                    const newMap = new Map(prev)
+                    quizResults.forEach(result => {
+                        if (result.status === 'fulfilled') {
+                            newMap.set(result.value.lessonId, result.value.quizzes)
+                        }
+                    })
+                    return newMap
+                })
+            }
+            
             return updatedChapter
         } catch (error) {
             console.error('Error refreshing chapter:', error)
@@ -379,6 +462,47 @@ export function CourseChaptersPage() {
         setShowDeleteLessonDialog(true)
     }
 
+    // Toggle quiz management for a lesson (similar to CourseQuizzesPage)
+    const handleToggleLessonQuiz = (lesson: Lesson) => {
+        const willOpen = openLessonQuiz !== lesson.id
+        const currentOpenId = openLessonQuiz
+        
+        // Set new state
+        setOpenLessonQuiz(willOpen ? lesson.id : null)
+        
+        // Refresh quizzes when opening or closing
+        const lessonIdToRefresh = willOpen ? lesson.id : (currentOpenId === lesson.id ? lesson.id : null)
+        
+        if (lessonIdToRefresh) {
+            // Refresh quizzes asynchronously
+            instructorQuizzesApi.getQuizzes(lessonIdToRefresh)
+                .then(updatedQuizzes => {
+                    setLessonsQuizzes(prev => {
+                        const newMap = new Map(prev)
+                        newMap.set(lessonIdToRefresh, updatedQuizzes)
+                        return newMap
+                    })
+                })
+                .catch(error => {
+                    console.error('Error refreshing quizzes:', error)
+                })
+        }
+    }
+    
+    // Refresh quizzes for a specific lesson (can be called from QuizzesPage via callback)
+    const refreshLessonQuizzes = useCallback(async (lessonId: number) => {
+        try {
+            const updatedQuizzes = await instructorQuizzesApi.getQuizzes(lessonId)
+            setLessonsQuizzes(prev => {
+                const newMap = new Map(prev)
+                newMap.set(lessonId, updatedQuizzes)
+                return newMap
+            })
+        } catch (error) {
+            console.error('Error refreshing quizzes:', error)
+        }
+    }, [])
+
     const handleLessonSubmit = async (
         data: CreateLessonRequest | UpdateLessonRequest,
         videoFile?: File,
@@ -477,6 +601,13 @@ export function CourseChaptersPage() {
                         : ch
                 )
             )
+            
+            // Remove quizzes for deleted lesson
+            setLessonsQuizzes(prev => {
+                const newMap = new Map(prev)
+                newMap.delete(lesson.id)
+                return newMap
+            })
             
             toast.success('Xóa bài học thành công!')
             setShowDeleteLessonDialog(false)
@@ -967,6 +1098,7 @@ export function CourseChaptersPage() {
                                     isDragged={draggedChapterId === chapter.id}
                                     isDragOver={dragOverChapterId === chapter.id}
                                     hasOrderChanged={hasChapterOrderChanged(chapter.id)}
+                                    lessonsQuizzes={lessonsQuizzes}
                                     draggedLessonId={draggedLessonId}
                                     draggedLessonChapterId={draggedLessonChapterId}
                                     dragOverLessonId={dragOverLessonId}
@@ -997,6 +1129,8 @@ export function CourseChaptersPage() {
                                     onDeleteLesson={handleDeleteLesson}
                                     onRequestTranscript={handleRequestTranscript}
                                     onClearDragStates={clearDragStates}
+                                    openLessonQuiz={openLessonQuiz}
+                                    onToggleLessonQuiz={handleToggleLessonQuiz}
                                 />
                             )
                         })}

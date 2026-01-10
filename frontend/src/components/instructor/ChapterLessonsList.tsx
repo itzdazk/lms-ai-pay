@@ -1,11 +1,12 @@
 import { Button } from '../ui/button'
 import { Plus } from 'lucide-react'
 import { LessonItem } from './LessonItem'
-import type { Lesson, Chapter } from '../../lib/api/types'
+import type { Lesson, Chapter, Quiz } from '../../lib/api/types'
 
 interface ChapterLessonsListProps {
     chapter: Chapter
     lessons: Lesson[]
+    lessonsQuizzes?: Map<number, Quiz[]> // Map of lessonId to quizzes array
     draggedLessonId: number | null
     draggedLessonChapterId: number | null
     dragOverLessonId: number | null
@@ -25,11 +26,14 @@ interface ChapterLessonsListProps {
     onRequestTranscript: (lesson: Lesson) => void
     onCreateLesson: (chapterId: number) => void
     onClearDragStates: () => void
+    openLessonQuiz?: number | null // ID of lesson with open quiz management
+    onToggleLessonQuiz?: (lesson: Lesson) => void // Callback to toggle quiz management
 }
 
 export function ChapterLessonsList({
     chapter,
     lessons,
+    lessonsQuizzes = new Map(),
     draggedLessonId,
     draggedLessonChapterId,
     dragOverLessonId,
@@ -49,6 +53,8 @@ export function ChapterLessonsList({
     onRequestTranscript,
     onCreateLesson,
     onClearDragStates,
+    openLessonQuiz = null,
+    onToggleLessonQuiz,
 }: ChapterLessonsListProps) {
     return (
         <div
@@ -80,6 +86,7 @@ export function ChapterLessonsList({
                         key={lesson.id}
                         lesson={lesson}
                         chapterId={chapter.id}
+                        quizzes={lessonsQuizzes.get(lesson.id) || []}
                         isDragged={draggedLessonId === lesson.id}
                         isDragOver={dragOverLessonId === lesson.id && dragOverLessonChapterId === chapter.id}
                         isSwapped={swappedLessonIds.has(lesson.id)}
@@ -93,6 +100,8 @@ export function ChapterLessonsList({
                         onEdit={() => onEditLesson(lesson, chapter.id)}
                         onDelete={() => onDeleteLesson(lesson, chapter.id)}
                         onRequestTranscript={() => onRequestTranscript(lesson)}
+                        isQuizManagementOpen={openLessonQuiz === lesson.id}
+                        onToggleQuizManagement={onToggleLessonQuiz ? () => onToggleLessonQuiz(lesson) : undefined}
                     />
                 ))
             )}

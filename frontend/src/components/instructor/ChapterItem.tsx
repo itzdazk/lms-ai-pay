@@ -8,7 +8,7 @@ import {
     DropdownMenuItem,
 } from '../ui/dropdown-menu'
 import { ChapterLessonsList } from './ChapterLessonsList'
-import type { Chapter, Lesson } from '../../lib/api/types'
+import type { Chapter, Lesson, Quiz } from '../../lib/api/types'
 import { useState } from 'react'
 import { PublishChapterDialog } from './PublishChapterDialog'
 
@@ -18,6 +18,7 @@ interface ChapterItemProps {
     isDragged: boolean
     isDragOver: boolean
     hasOrderChanged: boolean
+    lessonsQuizzes?: Map<number, Quiz[]> // Map of lessonId to quizzes array
     draggedLessonId: number | null
     draggedLessonChapterId: number | null
     dragOverLessonId: number | null
@@ -46,6 +47,8 @@ interface ChapterItemProps {
     onDeleteLesson: (lesson: Lesson, chapterId: number) => void
     onRequestTranscript: (lesson: Lesson) => void
     onClearDragStates: () => void
+    openLessonQuiz?: number | null // ID of lesson with open quiz management
+    onToggleLessonQuiz?: (lesson: Lesson) => void // Callback to toggle quiz management
 }
 
 export function ChapterItem({
@@ -54,6 +57,7 @@ export function ChapterItem({
     isDragged,
     isDragOver,
     hasOrderChanged,
+    lessonsQuizzes = new Map(),
     draggedLessonId,
     draggedLessonChapterId,
     dragOverLessonId,
@@ -82,6 +86,8 @@ export function ChapterItem({
     onDeleteLesson,
     onRequestTranscript,
     onClearDragStates,
+    openLessonQuiz = null,
+    onToggleLessonQuiz,
 }: ChapterItemProps) {
     const chapterDurationSeconds =
         chapter.lessons?.reduce((acc, l) => acc + (l.videoDuration || 0), 0) || 0
@@ -207,6 +213,7 @@ export function ChapterItem({
                 <ChapterLessonsList
                     chapter={chapter}
                     lessons={lessons}
+                    lessonsQuizzes={lessonsQuizzes}
                     draggedLessonId={draggedLessonId}
                     draggedLessonChapterId={draggedLessonChapterId}
                     dragOverLessonId={dragOverLessonId}
@@ -226,6 +233,8 @@ export function ChapterItem({
                     onRequestTranscript={onRequestTranscript}
                     onCreateLesson={onCreateLesson}
                     onClearDragStates={onClearDragStates}
+                    openLessonQuiz={openLessonQuiz}
+                    onToggleLessonQuiz={onToggleLessonQuiz}
                 />
             )}
             {/* Publish/Unpublish confirmation dialog */}
