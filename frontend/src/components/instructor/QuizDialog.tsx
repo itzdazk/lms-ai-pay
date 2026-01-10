@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
-import { Button } from '../ui/button'
 import { toast } from 'sonner'
 import { QuizForm } from './QuizForm'
 import type { Quiz, CreateQuizRequest, UpdateQuizRequest } from '../../lib/api/types'
@@ -37,11 +36,13 @@ export function QuizDialog({ open, quiz, lessonId, onClose, onSaved }: QuizDialo
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-[#1A1A1A]">
-        <DialogHeader>
-          <DialogTitle>{quiz ? 'Chỉnh sửa câu hỏi ôn tập' : 'Tạo câu hỏi ôn tập mới'}</DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-[#1A1A1A] border-[#2D2D2D]">
+        <DialogHeader className="pb-4 border-b border-[#2D2D2D]">
+          <DialogTitle className="text-xl font-semibold text-white">
+            {quiz ? 'Chỉnh sửa câu hỏi ôn tập' : 'Tạo câu hỏi ôn tập mới'}
+          </DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto px-1">
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           <QuizForm
             quiz={quiz || null}
             courseId={0}
@@ -50,9 +51,6 @@ export function QuizDialog({ open, quiz, lessonId, onClose, onSaved }: QuizDialo
             onCancel={onClose}
             loading={saving}
           />
-        </div>
-        <div className="mt-4 flex justify-end gap-2 border-t pt-4">
-          <Button variant="outline" onClick={onClose} disabled={saving}>Hủy</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -70,7 +70,7 @@ export function CourseChaptersPage() {
     // Quizzes data - Map of lessonId to quizzes array
     const [lessonsQuizzes, setLessonsQuizzes] = useState<Map<number, Quiz[]>>(new Map())
     
-    // Track which lesson's quiz management is open (similar to CourseQuizzesPage)
+    // Track which lesson's quiz management is open
     const [openLessonQuiz, setOpenLessonQuiz] = useState<number | null>(null)
 
     // Dialogs
@@ -462,7 +462,7 @@ export function CourseChaptersPage() {
         setShowDeleteLessonDialog(true)
     }
 
-    // Toggle quiz management for a lesson (similar to CourseQuizzesPage)
+    // Toggle quiz management for a lesson
     const handleToggleLessonQuiz = (lesson: Lesson) => {
         const willOpen = openLessonQuiz !== lesson.id
         const currentOpenId = openLessonQuiz

@@ -41,11 +41,6 @@ function CourseLayoutContent() {
                 title: 'Bài học',
                 description: 'Nội dung học tập',
             },
-            {
-                id: 'quizzes',
-                title: 'Câu hỏi ôn tập',
-                description: 'Câu hỏi ôn tập theo bài học',
-            },
         ],
         []
     )
@@ -54,9 +49,6 @@ function CourseLayoutContent() {
     const currentStep = useMemo(() => {
         if (location.pathname.includes('/chapters')) {
             return 1 // Lessons step
-        }
-        if (location.pathname.includes('/quizzes')) {
-            return 2 // Quizzes step
         }
         return 0 // Course step
     }, [location.pathname])
@@ -91,13 +83,6 @@ function CourseLayoutContent() {
                     toast.info(
                         'Vui lòng tạo khóa học trước khi chuyển sang bước bài học'
                     )
-                }
-            } else if (stepIndex === 2) {
-                // Navigate to quizzes step
-                if (courseId) {
-                    navigate(`/instructor/courses/${courseId}/quizzes`)
-                } else {
-                    toast.info('Vui lòng tạo khóa học trước khi chuyển sang bước câu hỏi ôn tập')
                 }
             }
         },
@@ -153,11 +138,6 @@ function CourseLayoutContent() {
                 if (courseId) {
                     navigate(`/instructor/courses/${courseId}/chapters`)
                 }
-            } else if (stepIndex === 2) {
-                // Navigate to quizzes step
-                if (courseId) {
-                    navigate(`/instructor/courses/${courseId}/quizzes`)
-                }
             }
         } else {
             // Navigate to dashboard
@@ -199,25 +179,10 @@ function CourseLayoutContent() {
         }
     }
 
-    const handleNavigateToQuizzes = () => {
-        // Check if there are unsaved changes
-        if (hasChanges) {
-            setPendingStepNavigation(2)
-            setShowCancelDialog(true)
-            return
-        }
-
-        if (courseId) {
-            navigate(`/instructor/courses/${courseId}/quizzes`)
-        } else {
-            toast.info('Vui lòng tạo khóa học trước khi chuyển sang bước câu hỏi ôn tập')
-        }
-    }
-
     return (
         <div className='py-2 px-6 max-w-6xl mx-auto space-y-6'>
             {/* Dashboard Button - Sticky */}
-            <div className='sticky top-16 z-40 mb-2'>
+            <div className=' top-16 z-40 mb-2'>
                 <div className='bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg p-2'>
                     {/* Top row */}
                     <div className='flex items-center justify-between gap-4'>
@@ -233,7 +198,7 @@ function CourseLayoutContent() {
                         {/* Navigation Buttons (always visible; use disabled for constraints) */}
                         <div className='flex items-center gap-2'>
                             <button
-                                onClick={() => (currentStep === 0 ? null : currentStep === 1 ? handleNavigateToCourse() : handleNavigateToLessons())}
+                                onClick={handleNavigateToCourse}
                                 className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                                 disabled={currentStep === 0}
                                 title={currentStep === 0 ? 'Không có bước trước' : 'Quay lại bước trước'}
@@ -242,10 +207,10 @@ function CourseLayoutContent() {
                                 <span>Trước</span>
                             </button>
                             <button
-                                onClick={() => (currentStep === 2 ? null : currentStep === 0 ? handleNavigateToLessons() : handleNavigateToQuizzes())}
+                                onClick={handleNavigateToLessons}
                                 className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                                disabled={currentStep === 2 || !courseId}
-                                title={currentStep === 2 ? 'Đã ở bước cuối' : (!courseId ? 'Vui lòng tạo khóa học trước' : 'Đi tới bước tiếp theo')}
+                                disabled={currentStep === 1 || !courseId}
+                                title={currentStep === 1 ? 'Đã ở bước cuối' : (!courseId ? 'Vui lòng tạo khóa học trước' : 'Đi tới bước tiếp theo')}
                             >
                                 <span>Tiếp</span>
                                 <ChevronRight className='h-4 w-4' />
@@ -264,7 +229,7 @@ function CourseLayoutContent() {
                 />
             </div>
 
-            {/* Outlet renders child routes (CourseCreatePage, CourseEditPage, CourseChaptersPage, CourseQuizzesPage) */}
+            {/* Outlet renders child routes (CourseCreatePage, CourseEditPage, CourseChaptersPage) */}
             <Outlet />
 
             {/* Cancel Confirmation Dialog */}

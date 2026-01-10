@@ -290,7 +290,7 @@ export function QuizzesPage({ lessonId: propLessonId, lessonTitle }: { lessonId?
                                 <AlertCircle className="h-12 w-12 text-gray-400 mx-auto opacity-50" />
                             </div>
                             <p className="text-gray-400 mb-4">
-                                {searchQuery ? 'Không tìm thấy quiz phù hợp' : 'Chưa có quiz nào cho bài học này'}
+                                {searchQuery ? 'Không tìm thấy phù hợp' : 'Bài học này chưa có câu hỏi ôn tập'}
                             </p>
                             {!searchQuery && quizzes.length === 0 && (
                                 <Button

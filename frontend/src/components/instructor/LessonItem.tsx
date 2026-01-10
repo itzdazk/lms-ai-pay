@@ -1,6 +1,6 @@
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { GripVertical, Video, FileText, Eye, EyeOff, Edit, Trash2, Clock, MoreVertical } from 'lucide-react'
+import { GripVertical, Video, FileText, Eye, EyeOff, Edit, Trash2, Clock, MoreVertical, ChevronRight } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -150,18 +150,30 @@ export function LessonItem({
                 </div>
             </div>
             {/* Quiz info row - Always show to indicate quiz status */}
-            <div className="flex items-center gap-2 ml-8 pl-1">
+            <div className="flex items-center justify-between gap-2 ml-8 pl-1">
                 <QuizInfoBadge 
                     quizzes={quizzes || []} 
                     isQuizManagementOpen={isQuizManagementOpen}
-                    onToggleQuizManagement={onToggleQuizManagement}
+                    onToggleQuizManagement={undefined}
                 />
+                {/* Quiz management toggle button - positioned to the right */}
+                {onToggleQuizManagement && (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={onToggleQuizManagement}
+                        className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white border-blue-600 flex-shrink-0"
+                    >
+                        Câu hỏi ôn tập
+                        <ChevronRight className={`h-3 w-3 ml-1 transition-transform ${isQuizManagementOpen ? 'rotate-90' : ''}`} />
+                    </Button>
+                )}
             </div>
             
             {/* Quiz management section - Show when toggled */}
             {isQuizManagementOpen && onToggleQuizManagement && (
-                <div className="flex flex-col items-center mt-2 border border-[#2D2D2D] rounded-lg bg-[#181818] py-3 ml-8">
-                    <div className="w-full mt-2">
+                <div className="flex flex-col items-center border border-[#2D2D2D] rounded-lg bg-[#181818]">
+                    <div className="w-full">
                         <QuizzesPage key={lesson.id} lessonId={lesson.id} lessonTitle={lesson.title} />
                     </div>
                 </div>

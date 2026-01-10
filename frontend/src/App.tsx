@@ -59,7 +59,6 @@ const CourseChaptersPage = lazy(() => import('./pages/instructor/CourseChaptersP
 const InstructorOrdersPage = lazy(() => import('./pages/instructor/InstructorOrdersPage').then(module => ({ default: module.InstructorOrdersPage })))
 const InstructorEnrollmentsPage = lazy(() => import('./pages/instructor/InstructorEnrollmentsPage').then(module => ({ default: module.InstructorEnrollmentsPage })))
 const InstructorCoursesManagementPage = lazy(() => import('./pages/instructor/InstructorCoursesManagementPage').then(module => ({ default: module.InstructorCoursesManagementPage })))
-const CourseQuizzesPage = lazy(() => import('./pages/instructor/CourseQuizzesPage').then(module => ({ default: module.CourseQuizzesPage })))
 const QuizzesPage = lazy(() => import('./pages/instructor/QuizzesPage').then(module => ({ default: module.QuizzesPage })))
 
 // Admin Pages - Lazy loaded
@@ -488,14 +487,6 @@ export default function App() {
                                             }
                                         />
                                         <Route
-                                            path=':id/quizzes'
-                                            element={
-                                                <Suspense fallback={<PageLoading />}>
-                                                    <CourseQuizzesPage />
-                                                </Suspense>
-                                            }
-                                        />
-                                        <Route
                                             path=':id/quizzes/lessons/:lessonId'
                                             element={
                                                 <Suspense fallback={<PageLoading />}>
@@ -533,23 +524,6 @@ export default function App() {
                                                 >
                                                     <Suspense fallback={<PageLoading />}>
                                                         <InstructorEnrollmentsPage />
-                                                    </Suspense>
-                                                </RoleRoute>
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path='/instructor/courses/:courseId/quizzes'
-                                        element={
-                                            <ProtectedRoute>
-                                                <RoleRoute
-                                                    allowedRoles={[
-                                                        'INSTRUCTOR',
-                                                        'ADMIN',
-                                                    ]}
-                                                >
-                                                    <Suspense fallback={<PageLoading />}>
-                                                        <CourseQuizzesPage />
                                                     </Suspense>
                                                 </RoleRoute>
                                             </ProtectedRoute>

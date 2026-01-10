@@ -3,11 +3,9 @@ import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectIt
 import { Select, SelectValue } from '../ui/select'
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
-import { Checkbox } from '../ui/checkbox'
 import { Textarea } from '../ui/textarea'
-import type { Quiz, CreateQuizRequest, UpdateQuizRequest, QuizQuestion } from '../../lib/api/types'
+import type { Quiz, CreateQuizRequest, UpdateQuizRequest } from '../../lib/api/types'
 import { useQuizForm } from '../../hooks/useQuizForm'
-import { QuestionsManager } from './QuestionsManager'
 
 interface QuizFormProps {
   quiz: Quiz | null
@@ -53,23 +51,42 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 space-y-6">
         <div>
-          <Label htmlFor="title">Tiêu đề</Label>
-          <Input id="title" value={formData.title} onChange={(e) => updateField('title', e.target.value)} placeholder="Nhập tiêu câu hỏi ôn tập" />
+          <Label htmlFor="title" className="text-sm font-medium text-gray-300 mb-2 block">
+            Tiêu đề <span className="text-red-500">*</span>
+          </Label>
+          <Input 
+            id="title" 
+            value={formData.title} 
+            onChange={(e) => updateField('title', e.target.value)} 
+            placeholder="Nhập tiêu đề câu hỏi ôn tập" 
+            className="bg-[#2D2D2D] border-[#3D3D3D] text-white placeholder:text-gray-500 focus:border-blue-500"
+          />
         </div>
         <div>
-          <Label htmlFor="description">Mô tả</Label>
-          <Textarea id="description" value={formData.description} onChange={(e) => updateField('description', e.target.value)} placeholder="Mô tả ngắn về câu hỏi ôn tập" />
+          <Label htmlFor="description" className="text-sm font-medium text-gray-300 mb-2 block">
+            Mô tả
+          </Label>
+          <Textarea 
+            id="description" 
+            value={formData.description} 
+            onChange={(e) => updateField('description', e.target.value)} 
+            placeholder="Mô tả ngắn về câu hỏi ôn tập (tùy chọn)" 
+            rows={3}
+            className="bg-[#2D2D2D] border-[#3D3D3D] text-white placeholder:text-gray-500 focus:border-blue-500 resize-none"
+          />
         </div>
         <div>
-          <Label htmlFor="passingScore">Điểm đạt (%)</Label>
+          <Label htmlFor="passingScore" className="text-sm font-medium text-gray-300 mb-2 block">
+            Điểm đạt (%)
+          </Label>
           <Select
             value={String(formData.passingScore)}
             onValueChange={val => updateField('passingScore', Number(val))}
           >
-            <DarkOutlineSelectTrigger id="passingScore">
+            <DarkOutlineSelectTrigger id="passingScore" className="bg-[#2D2D2D] border-[#3D3D3D] text-white">
               <SelectValue placeholder="Chọn điểm đạt" />
             </DarkOutlineSelectTrigger>
             <DarkOutlineSelectContent>
@@ -77,7 +94,7 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
                 const val = (i + 1) * 10;
                 return (
                   <DarkOutlineSelectItem key={val} value={String(val)}>
-                    {val}
+                    {val}%
                   </DarkOutlineSelectItem>
                 );
               })}
@@ -85,9 +102,24 @@ export function QuizForm({ quiz, loading, onSubmit, onCancel }: QuizFormProps) {
           </Select>
         </div>
       </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel} disabled={loading}>Hủy</Button>
-        <Button onClick={handleSubmit} disabled={loading || (quiz ? !hasChanges() : false)}>{quiz ? 'Lưu thay đổi' : 'Tạo câu hỏi ôn tập'}</Button>
+      
+      {/* Footer with action buttons */}
+      <div className="mt-8 pt-6 border-t border-[#2D2D2D] flex justify-end gap-3">
+        <Button 
+          variant="outline" 
+          onClick={onCancel} 
+          disabled={loading}
+          className="min-w-[100px] border-[#3D3D3D] text-gray-300 hover:bg-[#2D2D2D] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Hủy
+        </Button>
+        <Button 
+          onClick={handleSubmit} 
+          disabled={loading || (quiz ? !hasChanges() : false)}
+          className="min-w-[180px] bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Đang lưu...' : (quiz ? 'Lưu thay đổi' : 'Tạo câu hỏi ôn tập')}
+        </Button>
       </div>
     </div>
   )
