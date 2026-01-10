@@ -108,7 +108,7 @@ export function QuizInfoBadge({ quizzes, className, isQuizManagementOpen = false
                     onClick={onToggleQuizManagement}
                     className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
                 >
-                    {isQuizManagementOpen ? 'Đóng quản lý câu hỏi' : 'Quản lý câu hỏi'}
+                    {isQuizManagementOpen ? 'Câu hỏi ôn tập' : 'Câu hỏi ôn tập'}
                     <ChevronRight className={`h-3 w-3 ml-1 transition-transform ${isQuizManagementOpen ? 'rotate-90' : ''}`} />
                 </Button>
             )}

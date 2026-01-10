@@ -58,24 +58,10 @@ export function ChapterLessonsList({
 }: ChapterLessonsListProps) {
     return (
         <div
-            className="relative border-t border-[#2D2D2D] p-4 space-y-4 max-h-[520px] overflow-y-auto custom-scrollbar"
+            className="relative border-t border-[#2D2D2D] p-4 space-y-4"
             ref={containerRef}
             onPointerUp={onClearDragStates}
         >
-            {(draggedLessonChapterId === chapter.id || draggedLessonId) && lessonScrollHint.chapterId === chapter.id && (
-                <>
-                    {lessonScrollHint.top && (
-                        <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-blue-500/15 to-transparent flex items-start justify-center z-10">
-                            <span className="text-[11px] text-blue-300 mt-1">Kéo gần mép để cuộn lên</span>
-                        </div>
-                    )}
-                    {lessonScrollHint.bottom && (
-                        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-blue-500/15 to-transparent flex items-end justify-center z-10">
-                            <span className="text-[11px] text-blue-300 mb-1">Kéo gần mép để cuộn xuống</span>
-                        </div>
-                    )}
-                </>
-            )}
             {lessons.length === 0 ? (
                 <div className="text-center py-4">
                     <p className="text-gray-500 text-sm">Chưa có bài học nào</p>

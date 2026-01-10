@@ -118,7 +118,7 @@ function CourseLayoutContent() {
                 'instructorDashboardScroll',
                 scrollPosition.toString()
             )
-            navigate('/instructor/courses-management', {
+            navigate('/instructor/dashboard', {
                 state: { preserveScroll: true },
             })
         }
@@ -227,7 +227,7 @@ function CourseLayoutContent() {
                         >
                             <ChevronLeft className='h-4 w-4' />
                             <LayoutDashboard className='h-4 w-4' />
-                            <span>Dashb</span>
+                            <span>Dashboard</span>
                         </button>
 
                         {/* Navigation Buttons (always visible; use disabled for constraints) */}
