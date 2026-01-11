@@ -491,24 +491,9 @@ export function LessonPage() {
                     setVideoUrl(preferredUrl || '')
                 }
 
-                // Update selectedLesson with transcriptJsonUrl only if it's different
+                // Update selectedLesson with full lesson details (including content and transcriptJsonUrl)
                 if (lessonDetails && isMounted) {
-                    setSelectedLesson((prev) => {
-                        if (!prev) return null
-                        // Only update if transcriptJsonUrl actually changed
-                        if (
-                            prev.transcriptJsonUrl !==
-                            lessonDetails.transcriptJsonUrl
-                        ) {
-                            return {
-                                ...prev,
-                                transcriptUrl: lessonDetails.transcriptUrl,
-                                transcriptJsonUrl:
-                                    lessonDetails.transcriptJsonUrl,
-                            }
-                        }
-                        return prev
-                    })
+                    setSelectedLesson(lessonDetails)
                 }
 
                 // Load and convert transcript to VTT for subtitle
@@ -1742,17 +1727,15 @@ export function LessonPage() {
                                                         Trong bài học này bạn sẽ
                                                         học:
                                                     </h3>
-                                                    {selectedLesson?.content ? (
-                                                        <div className='text-muted-foreground whitespace-pre-wrap'>
-                                                            {
-                                                                selectedLesson.content
-                                                            }
-                                                        </div>
+                                                    {selectedLesson?.content && selectedLesson.content.trim() ? (
+                                                        <div className='text-muted-foreground whitespace-pre-wrap' dangerouslySetInnerHTML={{ __html: selectedLesson.content }} />
+                                                    ) : selectedLesson?.description ? (
+                                                        <p className='text-muted-foreground'>
+                                                            {selectedLesson.description}
+                                                        </p>
                                                     ) : (
-                                                        <p>
-                                                            {
-                                                                selectedLesson?.description
-                                                            }
+                                                        <p className='text-muted-foreground'>
+                                                            Chưa có nội dung mô tả cho bài học này.
                                                         </p>
                                                     )}
                                                 </div>

@@ -7,6 +7,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import apiClient from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatDuration } from '../../lib/courseUtils';
 
 interface Message {
   id: number;
@@ -197,7 +198,7 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
                 {course.duration && (
                   <div className="flex items-center gap-1 text-xs text-gray-400">
                     <Clock className="h-3 w-3" />
-                    <span>{course.duration}h</span>
+                    <span>{formatDuration(course.duration / 60)}</span>
                   </div>
                 )}
                 {course.lessons && (
