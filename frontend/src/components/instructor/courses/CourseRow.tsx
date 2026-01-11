@@ -12,7 +12,6 @@ import {
     Star,
     MoreVertical,
     Eye,
-    TrendingUp,
     Edit,
     Trash2,
     BarChart3,
@@ -26,7 +25,6 @@ interface CourseRowProps {
     onEdit: (course: Course) => void
     onDelete: (course: Course) => void
     onChangeStatus: (course: Course) => void
-    onViewAnalytics: (course: Course) => void
     onViewStudents: (course: Course) => void
     isSelected: boolean
     onSelect: (courseId: number | null) => void
@@ -37,7 +35,6 @@ export function CourseRow({
     onEdit,
     onDelete,
     onChangeStatus,
-    onViewAnalytics,
     onViewStudents,
     isSelected,
     onSelect,
@@ -380,16 +377,6 @@ export function CourseRow({
                             <Eye className='h-4 w-4' />
                             Xem
                         </Link>
-                        <div
-                            className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
-                            onClick={() => {
-                                onViewAnalytics(course)
-                                setMenuOpen(false)
-                            }}
-                        >
-                            <TrendingUp className='h-4 w-4' />
-                            Phân tích
-                        </div>
                         <div
                             className='flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-white hover:bg-[#1F1F1F] cursor-pointer'
                             onClick={() => {

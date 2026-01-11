@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '../components/ui/card'
@@ -26,7 +25,6 @@ import {
     BarChart3,
     Loader2,
     ShoppingCart,
-    GraduationCap,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -52,6 +50,7 @@ import { EnrollmentTrendChart } from '../components/Dashboard/EnrollmentTrendCha
 import { CoursePerformanceTable } from '../components/Dashboard/CoursePerformanceTable'
 import { EnrollmentsList } from '../components/Dashboard/EnrollmentsList'
 import { instructorCoursesApi } from '../lib/api/instructor-courses'
+import { CourseAnalytics } from '../components/instructor/CourseAnalytics'
 
 function formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -89,7 +88,9 @@ export function InstructorDashboard() {
     })
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+    const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false)
     const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+    const [selectedCourseIdForAnalytics, setSelectedCourseIdForAnalytics] = useState<number | null>(null)
     const [actionLoading, setActionLoading] = useState(false)
     const [newStatus, setNewStatus] = useState<
         'draft' | 'published' | 'archived'
@@ -396,19 +397,6 @@ export function InstructorDashboard() {
     return (
         <div className='bg-white dark:bg-black min-h-screen'>
             {/* Header Section */}
-            <div className='bg-[#1A1A1A] border-b border-[#2d2d2d]'>
-                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
-                    <div className='mb-2'>
-                        <h1 className='text-2xl md:text-3xl font-bold mb-2 text-white'>
-                            Dashboard Giảng viên
-                        </h1>
-                        <p className='text-base text-gray-300 leading-relaxed'>
-                            Xin chào, {currentUser?.fullName || 'Giảng viên'}!
-                            👋
-                        </p>
-                    </div>
-                </div>
-            </div>
             <div className='container mx-auto px-4 py-4 bg-background min-h-screen'>
                 {/* Stats Cards */}
                 <div className='grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
@@ -510,13 +498,13 @@ export function InstructorDashboard() {
                             <BookOpen className='h-4 w-4 mr-2' />
                             Khóa học
                         </DarkTabsTrigger>
-                        <DarkTabsTrigger value='analytics' variant='blue'>
-                            <BarChart3 className='h-4 w-4 mr-2' />
-                            Phân tích
-                        </DarkTabsTrigger>
                         <DarkTabsTrigger value='revenue' variant='blue'>
                             <DollarSign className='h-4 w-4 mr-2' />
                             Doanh thu
+                        </DarkTabsTrigger>
+                        <DarkTabsTrigger value='analytics' variant='blue'>
+                            <BarChart3 className='h-4 w-4 mr-2' />
+                            Phân tích
                         </DarkTabsTrigger>
                         <DarkTabsTrigger value='orders' variant='blue'>
                             <ShoppingCart className='h-4 w-4 mr-2' />
@@ -542,15 +530,20 @@ export function InstructorDashboard() {
                         <EnrollmentsList />
                     </TabsContent>
 
-                    {/* Analytics Tab */}
-                    <TabsContent value='analytics' className='space-y-4'>
-                        <EnrollmentTrendChart />
-                        <CoursePerformanceTable />
-                    </TabsContent>
-
                     {/* Revenue Tab */}
                     <TabsContent value='revenue' className='space-y-4'>
                         <RevenueChart />
+                    </TabsContent>
+
+                    {/* Analytics Tab */}
+                    <TabsContent value='analytics' className='space-y-4'>
+                        <EnrollmentTrendChart />
+                        <CoursePerformanceTable 
+                            onViewAnalytics={(courseId: number) => {
+                                setSelectedCourseIdForAnalytics(courseId)
+                                setIsAnalyticsDialogOpen(true)
+                            }}
+                        />
                     </TabsContent>
                 </Tabs>
 
@@ -666,6 +659,30 @@ export function InstructorDashboard() {
                                 )}
                             </Button>
                         </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Analytics Dialog */}
+                <Dialog
+                    open={isAnalyticsDialogOpen}
+                    onOpenChange={setIsAnalyticsDialogOpen}
+                >
+                    <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white w-[96vw] sm:max-w-[96vw] md:max-w-[1400px] lg:max-w-[1600px] max-h-[90vh] overflow-y-auto custom-scrollbar'>
+                        <DialogHeader>
+                            <DialogTitle className='text-white'>
+                                Phân tích khóa học
+                            </DialogTitle>
+                            <DialogDescription className='text-gray-400'>
+                                Chi tiết phân tích khóa học
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className='mt-4'>
+                            {selectedCourseIdForAnalytics && (
+                                <CourseAnalytics
+                                    courseId={String(selectedCourseIdForAnalytics)}
+                                />
+                            )}
+                        </div>
                     </DialogContent>
                 </Dialog>
             </div>

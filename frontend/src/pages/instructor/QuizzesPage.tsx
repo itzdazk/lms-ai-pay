@@ -97,7 +97,7 @@ export function QuizzesPage({ lessonId: propLessonId, lessonTitle }: { lessonId?
                 quiz.isPublished ? 'Câu hỏi ôn tập đã được ẩn' : 'Câu hỏi ôn tập đã được xuất bản'
             )
         } catch (error) {
-            toast.error('Lỗi cập nhật trạng thái quiz')
+            toast.error('Lỗi cập nhật trạng thái câu hỏi ôn tập')
             console.error('Error publishing quiz:', error)
         }
     }

@@ -19,9 +19,10 @@ type SortDirection = 'asc' | 'desc'
 
 interface CoursePerformanceTableProps {
     className?: string
+    onViewAnalytics?: (courseId: number) => void
 }
 
-export function CoursePerformanceTable({ className }: CoursePerformanceTableProps) {
+export function CoursePerformanceTable({ className, onViewAnalytics }: CoursePerformanceTableProps) {
     const navigate = useNavigate()
     const { analytics, isLoading, isError } = useInstructorAnalytics()
     const [sortField, setSortField] = useState<SortField>('totalEnrollments')
@@ -216,9 +217,13 @@ export function CoursePerformanceTable({ className }: CoursePerformanceTableProp
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() =>
-                                                    navigate(`/instructor/courses/${course.courseId}/edit`)
-                                                }
+                                                onClick={() => {
+                                                    if (onViewAnalytics) {
+                                                        onViewAnalytics(course.courseId)
+                                                    } else {
+                                                        navigate(`/instructor/courses/${course.courseId}/edit`)
+                                                    }
+                                                }}
                                                 className="text-blue-500 hover:text-blue-400"
                                             >
                                                 <ExternalLink className="h-4 w-4 mr-1" />

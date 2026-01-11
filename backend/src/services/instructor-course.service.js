@@ -142,6 +142,7 @@ class InstructorCourseService {
                 ...course,
                 lessonsCount: course._count.lessons,
                 enrollmentsCount: course._count.enrollments,
+                enrolledCount: course._count.enrollments,
                 _count: undefined,
             })),
             total,

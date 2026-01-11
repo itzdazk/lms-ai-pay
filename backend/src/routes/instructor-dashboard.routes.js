@@ -65,6 +65,28 @@ router.get(
 )
 
 /**
+ * @route   GET /api/v1/dashboard/instructor/revenue/orders
+ * @desc    Get instructor revenue orders (paid orders for revenue report)
+ * @access  Private (Instructor, Admin)
+ */
+router.get(
+    '/revenue/orders',
+    isInstructor,
+    instructorDashboardController.getInstructorRevenueOrders
+)
+
+/**
+ * @route   GET /api/v1/dashboard/instructor/revenue/chart
+ * @desc    Get instructor revenue chart data (grouped by month or day)
+ * @access  Private (Instructor, Admin)
+ */
+router.get(
+    '/revenue/chart',
+    isInstructor,
+    instructorDashboardController.getInstructorRevenueChartData
+)
+
+/**
  * @route   GET /api/v1/dashboard/instructor/enrollments
  * @desc    Get instructor enrollments (enrollments for their courses)
  * @access  Private (Instructor, Admin)

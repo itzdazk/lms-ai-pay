@@ -21,19 +21,77 @@ const parseErrorMessage = (error: unknown): string => {
 /**
  * Hook: fetch instructor revenue data
  */
-export function useInstructorRevenue(
-    period: 'day' | 'week' | 'month' | 'year' = 'month'
-) {
+export function useInstructorRevenue(params?: {
+    period?: 'day' | 'week' | 'month' | 'year'
+    courseId?: number | null
+    year?: number
+    month?: number | null
+}) {
     const [revenue, setRevenue] = useState<InstructorRevenueData | null>(null)
-    const [status, setStatus] = useState<FetchStatus>('idle')
+    const [status, setStatus] = useState<FetchStatus>('loading')
     const [error, setError] = useState<string | null>(null)
 
-    const fetchRevenue = useCallback(async () => {
+    // Extract primitive values for stable dependency comparison
+    const period = params?.period ?? 'month'
+    const courseId = params?.courseId ?? null
+    const year = params?.year ?? new Date().getFullYear()
+    const month = params?.month ?? null
+
+    // Create a stable dependency string
+    const deps = `${period}|${courseId}|${year}|${month}`
+
+    useEffect(() => {
+        let isCancelled = false
+
+        const fetchRevenue = async () => {
+            setStatus('loading')
+            setError(null)
+            try {
+                const requestParams = {
+                    period: period as 'day' | 'week' | 'month' | 'year',
+                    courseId: courseId,
+                    year: year,
+                    month: month,
+                }
+                const data = await instructorDashboardApi.getInstructorRevenue(
+                    requestParams
+                )
+                
+                if (!isCancelled) {
+                    setRevenue(data)
+                    setStatus('success')
+                }
+            } catch (err) {
+                if (!isCancelled) {
+                    const message = parseErrorMessage(err)
+                    setError(message)
+                    setStatus('error')
+                    toast.error(message)
+                }
+            }
+        }
+
+        fetchRevenue()
+
+        return () => {
+            isCancelled = true
+        }
+        // Use deps string for stable comparison
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deps])
+
+    const refetch = useCallback(async () => {
         setStatus('loading')
         setError(null)
         try {
+            const requestParams = {
+                period: period as 'day' | 'week' | 'month' | 'year',
+                courseId: courseId,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+            }
             const data = await instructorDashboardApi.getInstructorRevenue(
-                period
+                requestParams
             )
             setRevenue(data)
             setStatus('success')
@@ -43,11 +101,8 @@ export function useInstructorRevenue(
             setStatus('error')
             toast.error(message)
         }
-    }, [period])
-
-    useEffect(() => {
-        fetchRevenue()
-    }, [fetchRevenue])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deps])
 
     return {
         revenue,
@@ -55,6 +110,6 @@ export function useInstructorRevenue(
         isLoading: status === 'loading',
         isError: status === 'error',
         error,
-        refetch: fetchRevenue,
+        refetch,
     }
 }

@@ -61,10 +61,51 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
   const addOption = () => setForm((f) => ({ ...f, options: [...f.options, ''] }))
   const removeOption = (idx: number) => {
     const next = form.options.filter((_, i) => i !== idx)
-    let ca = form.correctAnswer ?? 0
-    if (idx === ca) ca = 0
-    else if (idx < ca) ca = ca - 1
-    setForm((f) => ({ ...f, options: next, correctAnswer: Math.max(0, Math.min(ca, next.length - 1)) }))
+    if (form.type === 'multiple_choice' && typeof form.correctAnswer === 'number') {
+      let ca = form.correctAnswer
+      if (idx === ca) ca = 0
+      else if (idx < ca) ca = ca - 1
+      setForm((f) => ({ ...f, options: next, correctAnswer: Math.max(0, Math.min(ca, next.length - 1)) }))
+    } else {
+      setForm((f) => ({ ...f, options: next }))
+    }
+  }
+
+  // Helper function to validate form
+  const isValidForm = (): boolean => {
+    if (!form.question.trim()) {
+      return false
+    }
+    
+    if (form.type === 'multiple_choice') {
+      const filledOptions = form.options.filter(opt => opt.trim() !== '')
+      if (filledOptions.length < 2) {
+        return false
+      }
+      // Check if correct answer is valid and points to a filled option
+      if (typeof form.correctAnswer === 'number') {
+        const selectedOption = form.options[form.correctAnswer]
+        if (!selectedOption || !selectedOption.trim()) {
+          return false
+        }
+      } else {
+        return false
+      }
+    }
+    
+    if (form.type === 'true_false') {
+      if (typeof form.correctAnswer !== 'number' || (form.correctAnswer !== 0 && form.correctAnswer !== 1)) {
+        return false
+      }
+    }
+    
+    if (form.type === 'short_answer') {
+      if (!form.correctAnswer || (typeof form.correctAnswer === 'string' && !form.correctAnswer.trim())) {
+        return false
+      }
+    }
+    
+    return true
   }
 
   const handleSave = async () => {
@@ -79,36 +120,18 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
       const filledOptions = form.options.filter(opt => opt.trim() !== '')
       
       if (filledOptions.length < 2) {
-        toast.error('Câu hỏi trắc nghiệm cần ít nhất 2 phương án trả lời')
+        toast.error('Câu hỏi trắc nghiệm cần ít nhất 2 phương án trả lời (không được để trống)')
         return
       }
       
-      // Update form with only filled options
-      const validOptions = filledOptions
-      let validCorrectAnswer = form.correctAnswer
-      
-      // Adjust correct answer if needed (in case it was pointing to an empty option)
-      if (typeof validCorrectAnswer === 'number') {
-        const originalIndex = form.options.findIndex(opt => opt === form.options[validCorrectAnswer as number])
-        // Recalculate correct answer index after filtering
-        let newIndex = 0
-        for (let i = 0; i <= (validCorrectAnswer as number); i++) {
-          if (form.options[i]?.trim()) {
-            if (i === (validCorrectAnswer as number)) {
-              break
-            }
-            newIndex++
-          }
+      // Check if correct answer points to a filled option
+      if (typeof form.correctAnswer === 'number') {
+        const selectedOption = form.options[form.correctAnswer]
+        if (!selectedOption || !selectedOption.trim()) {
+          toast.error('Vui lòng chọn đáp án đúng cho câu hỏi')
+          return
         }
-        validCorrectAnswer = newIndex
       }
-      
-      // Update form with cleaned options
-      setForm(prev => ({ ...prev, options: validOptions, correctAnswer: validCorrectAnswer }))
-      
-      // Use cleaned options for submission
-      form.options = validOptions
-      form.correctAnswer = validCorrectAnswer
     }
     
     // Validation for true/false
@@ -127,12 +150,44 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
     
     setSaving(true)
     try {
+      // Prepare submission data - filter out empty options for multiple choice
+      let submitOptions = form.options
+      let submitCorrectAnswer = form.correctAnswer
+      
+      if (form.type === 'multiple_choice') {
+        // Map original indices to new indices after filtering
+        const filledOptions: string[] = []
+        const indexMap: Map<number, number> = new Map()
+        let newIndex = 0
+        
+        form.options.forEach((opt, originalIdx) => {
+          if (opt.trim() !== '') {
+            filledOptions.push(opt)
+            indexMap.set(originalIdx, newIndex)
+            newIndex++
+          }
+        })
+        
+        // Update correct answer index if it was pointing to a filled option
+        if (typeof form.correctAnswer === 'number') {
+          const mappedIndex = indexMap.get(form.correctAnswer)
+          if (mappedIndex !== undefined) {
+            submitCorrectAnswer = mappedIndex
+          } else {
+            // If selected option was empty, default to first filled option
+            submitCorrectAnswer = 0
+          }
+        }
+        
+        submitOptions = filledOptions
+      }
+      
       if (isEdit && question?.id) {
         await instructorQuizzesApi.updateQuestion(quizId, question.id, {
           question: form.question,
           type: form.type,
-          options: form.options,
-          correctAnswer: form.correctAnswer,
+          options: submitOptions,
+          correctAnswer: submitCorrectAnswer,
           explanation: form.explanation || null,
         })
         toast.success('Đã cập nhật câu hỏi')
@@ -140,8 +195,8 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
         await instructorQuizzesApi.createQuestion(quizId, {
           question: form.question,
           type: form.type,
-          options: form.options,
-          correctAnswer: form.correctAnswer,
+          options: submitOptions,
+          correctAnswer: submitCorrectAnswer,
           explanation: form.explanation || null,
         })
         toast.success('Đã thêm câu hỏi')
@@ -275,11 +330,25 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
                     Chưa có phương án nào. Nhấn "Thêm phương án" để bắt đầu.
                   </div>
                 )}
-                {form.options.length > 0 && form.options.length < 2 && (
-                  <div className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2">
-                    Cần ít nhất 2 phương án cho câu hỏi trắc nghiệm.
-                  </div>
-                )}
+                {(() => {
+                  const filledOptions = form.options.filter(opt => opt.trim() !== '')
+                  if (form.options.length > 0 && filledOptions.length < 2) {
+                    return (
+                      <div className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
+                        <span className="mt-0.5">⚠️</span>
+                        <div>
+                          <strong>Cần ít nhất 2 phương án đã điền</strong> cho câu hỏi trắc nghiệm.
+                          {form.options.length - filledOptions.length > 0 && (
+                            <span className="block mt-1 text-yellow-300">
+                              Có {form.options.length - filledOptions.length} phương án đang trống.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
           )}
@@ -350,8 +419,9 @@ export function QuestionDialog({ open, quizId, question, onClose, onSaved }: Que
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={saving}
+            disabled={saving || !isValidForm()}
             className="min-w-[140px] bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!isValidForm() ? 'Vui lòng điền đầy đủ thông tin bắt buộc' : ''}
           >
             {saving ? 'Đang lưu...' : (isEdit ? 'Lưu thay đổi' : 'Thêm câu hỏi')}
           </Button>

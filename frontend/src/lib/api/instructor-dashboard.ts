@@ -34,9 +34,13 @@ export interface RevenueChartData {
 
 export interface InstructorRevenueData {
     totalRevenue: number
+    totalOrders: number
     period: 'day' | 'week' | 'month' | 'year'
     revenueChart: RevenueChartData[]
     recentOrders: Order[]
+    courseId: number | null
+    year: number
+    month: number | null
 }
 
 export interface CoursePerformance {
@@ -136,14 +140,84 @@ export const instructorDashboardApi = {
 
     /**
      * Get instructor revenue data
-     * @param period - 'day' | 'week' | 'month' | 'year'
+     * @param params - Revenue query parameters
      */
-    async getInstructorRevenue(
-        period: 'day' | 'week' | 'month' | 'year' = 'month'
-    ): Promise<InstructorRevenueData> {
+    async getInstructorRevenue(params?: {
+        period?: 'day' | 'week' | 'month' | 'year'
+        courseId?: number | null
+        year?: number // Required, defaults to current year
+        month?: number | null // Optional, 1-12 or null for all months
+    }): Promise<InstructorRevenueData> {
+        const queryParams = new URLSearchParams()
+        if (params?.period) queryParams.append('period', params.period)
+        // Only send courseId if it's explicitly provided and not null
+        // null means "all courses", so we don't send it
+        if (params?.courseId !== null && params?.courseId !== undefined) {
+            queryParams.append('courseId', params.courseId.toString())
+        }
+        // Year is required, default to current year if not provided
+        const year = params?.year ?? new Date().getFullYear()
+        queryParams.append('year', year.toString())
+        // Month is optional (1-12)
+        if (params?.month !== null && params?.month !== undefined && params.month >= 1 && params.month <= 12) {
+            queryParams.append('month', params.month.toString())
+        }
+
+        const url = `/dashboard/instructor/revenue${
+            queryParams.toString() ? `?${queryParams.toString()}` : ''
+        }`
         const response = await apiClient.get<
             ApiResponse<InstructorRevenueData>
-        >(`/dashboard/instructor/revenue?period=${period}`)
+        >(url)
+        return response.data.data
+    },
+
+    /**
+     * Get instructor revenue orders (paid orders for revenue report)
+     * @param params - Parameters for revenue orders query
+     */
+    async getInstructorRevenueOrders(params?: {
+        year?: number
+        month?: number | null
+        courseId?: number | null
+        page?: number
+        limit?: number
+    }): Promise<{
+        orders: Order[]
+        totalRevenue: number
+        pagination: {
+            page: number
+            limit: number
+            total: number
+            totalPages: number
+        }
+    }> {
+        const queryParams = new URLSearchParams()
+        // Year is required, default to current year if not provided
+        const year = params?.year ?? new Date().getFullYear()
+        queryParams.append('year', year.toString())
+        // Month is optional (1-12)
+        if (params?.month !== null && params?.month !== undefined && params.month >= 1 && params.month <= 12) {
+            queryParams.append('month', params.month.toString())
+        }
+        // Only send courseId if it's explicitly provided and not null
+        if (params?.courseId !== null && params?.courseId !== undefined) {
+            queryParams.append('courseId', params.courseId.toString())
+        }
+        if (params?.page) queryParams.append('page', params.page.toString())
+        if (params?.limit) queryParams.append('limit', params.limit.toString())
+
+        const url = `/dashboard/instructor/revenue/orders?${queryParams.toString()}`
+        const response = await apiClient.get<ApiResponse<{
+            orders: Order[]
+            totalRevenue: number
+            pagination: {
+                page: number
+                limit: number
+                total: number
+                totalPages: number
+            }
+        }>>(url)
         return response.data.data
     },
 
@@ -175,6 +249,51 @@ export const instructorDashboardApi = {
         }`
         const response = await apiClient.get<
             ApiResponse<InstructorStudentsData>
+        >(url)
+        return response.data.data
+    },
+
+    /**
+     * Get instructor revenue chart data (grouped by month or day)
+     * @param params - Parameters for revenue chart query
+     */
+    async getInstructorRevenueChartData(params?: {
+        year?: number
+        month?: number | null
+        courseId?: number | null
+    }): Promise<
+        Array<{
+            period: string | number
+            periodLabel: string
+            revenue: number
+            date: string
+        }>
+    > {
+        const queryParams = new URLSearchParams()
+        // Year is required, default to current year if not provided
+        const year = params?.year ?? new Date().getFullYear()
+        queryParams.append('year', year.toString())
+        // Month is optional (1-12 or null for all months)
+        if (params?.month !== null && params?.month !== undefined && params.month >= 1 && params.month <= 12) {
+            queryParams.append('month', params.month.toString())
+        }
+        // Only send courseId if it's explicitly provided and not null
+        if (params?.courseId !== null && params?.courseId !== undefined) {
+            queryParams.append('courseId', params.courseId.toString())
+        }
+
+        const url = `/dashboard/instructor/revenue/chart${
+            queryParams.toString() ? `?${queryParams.toString()}` : ''
+        }`
+        const response = await apiClient.get<
+            ApiResponse<
+                Array<{
+                    period: string | number
+                    periodLabel: string
+                    revenue: number
+                    date: string
+                }>
+            >
         >(url)
         return response.data.data
     },

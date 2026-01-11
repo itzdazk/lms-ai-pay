@@ -144,46 +144,76 @@ class InstructorDashboardService {
     }
 
     /**
+     * Get instructor courses list for dropdown (simple version)
+     * @param {number} instructorId - Instructor ID
+     * @returns {Promise<Array>} List of courses (id, title, slug)
+     */
+    async getInstructorCoursesForDropdown(instructorId) {
+        const courses = await prisma.course.findMany({
+            where: { instructorId },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        })
+
+        return courses
+    }
+
+    /**
      * Get instructor revenue data
      * @param {number} instructorId - Instructor ID
-     * @param {Object} options - Options (period: 'day' | 'week' | 'month' | 'year')
+     * @param {Object} options - Options (period, courseId, year, month)
      * @returns {Promise<Object>} Revenue data
      */
     async getInstructorRevenue(instructorId, options = {}) {
-        const { period = 'month' } = options
+        const { 
+            period = 'month', 
+            courseId = null, 
+            year = new Date().getFullYear(),
+            month = null // null = all months, 1-12 = specific month
+        } = options
 
-        // Calculate date range based on period
-        const now = new Date()
-        let startDate = new Date()
+        // Calculate date range based on year and month
+        // If month is provided: filter that month (01/MM/YYYY to last day of month)
+        // If month is null: filter entire year (01/01/YYYY to 31/12/YYYY)
+        const startDate = new Date(year, month ? month - 1 : 0, 1) // month-1 because Date uses 0-indexed months
+        startDate.setHours(0, 0, 0, 0) // Beginning of day
+        
+        let endDate
+        if (month) {
+            // Last day of the specified month
+            endDate = new Date(year, month, 0) // Day 0 of next month = last day of current month
+        } else {
+            // Last day of the year
+            endDate = new Date(year, 11, 31) // December 31
+        }
+        endDate.setHours(23, 59, 59, 999) // End of day
 
-        switch (period) {
-            case 'day':
-                startDate.setDate(now.getDate() - 30) // Last 30 days
-                break
-            case 'week':
-                startDate.setDate(now.getDate() - 7 * 12) // Last 12 weeks
-                break
-            case 'month':
-                startDate.setMonth(now.getMonth() - 12) // Last 12 months
-                break
-            case 'year':
-                startDate.setFullYear(now.getFullYear() - 5) // Last 5 years
-                break
-            default:
-                startDate.setMonth(now.getMonth() - 12)
+        // Build where clause
+        // When filtering by courseId, ensure the course belongs to the instructor
+        const whereClause = {
+            course: {
+                instructorId,
+                // Add courseId filter inside course to ensure security (course belongs to instructor)
+                // courseId is already parsed as number in controller, but ensure it's a number
+                ...(courseId && !isNaN(Number(courseId)) ? { id: Number(courseId) } : {}),
+            },
+            paymentStatus: PAYMENT_STATUS.PAID,
+            // Always filter by date range (year and/or month)
+            paidAt: {
+                gte: startDate,
+                lte: endDate,
+            },
         }
 
         // Get all paid orders for instructor's courses
         const orders = await prisma.order.findMany({
-            where: {
-                course: {
-                    instructorId,
-                },
-                paymentStatus: PAYMENT_STATUS.PAID,
-                paidAt: {
-                    gte: startDate,
-                },
-            },
+            where: whereClause,
             select: {
                 id: true,
                 finalPrice: true,
@@ -192,6 +222,7 @@ class InstructorDashboardService {
                     select: {
                         id: true,
                         title: true,
+                        slug: true,
                     },
                 },
             },
@@ -206,55 +237,41 @@ class InstructorDashboardService {
             0
         )
 
-        // Group by period
-        const revenueByPeriod = {}
+        // Group by day (always group by day for bar chart)
+        const revenueByDay = {}
         orders.forEach((order) => {
             if (!order.paidAt) return
 
             const date = new Date(order.paidAt)
-            let key
+            // Format as YYYY-MM-DD
+            const dayKey = date.toISOString().split('T')[0]
 
-            switch (period) {
-                case 'day':
-                    key = date.toISOString().split('T')[0] // YYYY-MM-DD
-                    break
-                case 'week':
-                    const weekStart = new Date(date)
-                    weekStart.setDate(date.getDate() - date.getDay())
-                    key = weekStart.toISOString().split('T')[0]
-                    break
-                case 'month':
-                    key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-                    break
-                case 'year':
-                    key = String(date.getFullYear())
-                    break
-                default:
-                    key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-            }
-
-            if (!revenueByPeriod[key]) {
-                revenueByPeriod[key] = {
-                    period: key,
+            if (!revenueByDay[dayKey]) {
+                revenueByDay[dayKey] = {
+                    period: dayKey,
                     revenue: 0,
                     orders: 0,
                 }
             }
 
-            revenueByPeriod[key].revenue += parseFloat(order.finalPrice)
-            revenueByPeriod[key].orders += 1
+            revenueByDay[dayKey].revenue += parseFloat(order.finalPrice)
+            revenueByDay[dayKey].orders += 1
         })
 
-        // Convert to array and sort
-        const revenueChart = Object.values(revenueByPeriod).sort((a, b) => {
+        // Convert to array and sort by date
+        const revenueChart = Object.values(revenueByDay).sort((a, b) => {
             return a.period.localeCompare(b.period)
         })
 
         return {
             totalRevenue,
-            period,
-            revenueChart,
+            totalOrders: orders.length,
+            period: month ? 'month' : 'year', // Return period type
+            revenueChart: revenueChart, // Keep for compatibility, but frontend may not use
             recentOrders: orders.slice(0, 10),
+            courseId: courseId ? parseInt(courseId) : null,
+            year: year,
+            month: month,
         }
     }
 
@@ -535,6 +552,255 @@ class InstructorDashboardService {
             orders,
             total,
         }
+    }
+
+    /**
+     * Get instructor revenue orders (paid orders for revenue report)
+     * @param {number} instructorId - Instructor ID
+     * @param {Object} options - Filters and pagination options (year, month, courseId, page, limit)
+     * @returns {Promise<Object>} Paid orders list with pagination and total revenue
+     */
+    async getInstructorRevenueOrders(instructorId, options = {}) {
+        const {
+            year = new Date().getFullYear(),
+            month = null, // null = all months, 1-12 = specific month
+            courseId = null,
+            page = 1,
+            limit = 20,
+        } = options
+
+        const skip = (page - 1) * limit
+
+        // Calculate date range based on year and month
+        const startDate = new Date(year, month ? month - 1 : 0, 1)
+        startDate.setHours(0, 0, 0, 0) // Beginning of day
+        
+        let endDate
+        if (month) {
+            // Last day of the specified month
+            endDate = new Date(year, month, 0) // Day 0 of next month = last day of current month
+        } else {
+            // Last day of the year
+            endDate = new Date(year, 11, 31) // December 31
+        }
+        endDate.setHours(23, 59, 59, 999) // End of day
+
+        // Build where clause - only paid orders
+        const where = {
+            course: {
+                instructorId,
+                // Add courseId filter inside course to ensure security
+                ...(courseId && !isNaN(Number(courseId)) ? { id: Number(courseId) } : {}),
+            },
+            paymentStatus: PAYMENT_STATUS.PAID,
+            paidAt: {
+                not: null, // Ensure paidAt is not null
+                gte: startDate,
+                lte: endDate,
+            },
+        }
+
+        // Execute query
+        const [orders, total] = await Promise.all([
+            prisma.order.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: {
+                    paidAt: 'desc', // Latest first
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            userName: true,
+                            email: true,
+                            fullName: true,
+                            avatarUrl: true,
+                        },
+                    },
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            price: true,
+                            discountPrice: true,
+                        },
+                    },
+                    paymentTransactions: {
+                        select: {
+                            id: true,
+                            transactionId: true,
+                            status: true,
+                            amount: true,
+                            createdAt: true,
+                        },
+                        orderBy: {
+                            createdAt: 'desc',
+                        },
+                        take: 1, // Get latest transaction
+                    },
+                },
+            }),
+            prisma.order.count({ where }),
+        ])
+
+        // Calculate total revenue for all matching orders (not just current page)
+        const totalRevenueResult = await prisma.order.aggregate({
+            where,
+            _sum: {
+                finalPrice: true,
+            },
+        })
+
+        const totalRevenue = totalRevenueResult._sum?.finalPrice 
+            ? parseFloat(totalRevenueResult._sum.finalPrice.toString())
+            : 0
+
+        return {
+            orders,
+            total,
+            totalRevenue,
+        }
+    }
+
+    /**
+     * Get instructor revenue chart data (aggregated by month or day)
+     * @param {number} instructorId - Instructor ID
+     * @param {Object} options - Options (year, month, courseId)
+     * @returns {Promise<Array>} Chart data (grouped by month if month=null, by day if month is set)
+     */
+    async getInstructorRevenueChartData(instructorId, options = {}) {
+        const {
+            year = new Date().getFullYear(),
+            month = null, // null = all months (group by month), 1-12 = specific month (group by day)
+            courseId = null,
+        } = options
+
+        // Calculate date range based on year and month
+        const startDate = new Date(year, month ? month - 1 : 0, 1)
+        startDate.setHours(0, 0, 0, 0)
+
+        let endDate
+        if (month) {
+            // Last day of the specified month
+            endDate = new Date(year, month, 0)
+        } else {
+            // Last day of the year
+            endDate = new Date(year, 11, 31)
+        }
+        endDate.setHours(23, 59, 59, 999)
+
+        // Build where clause
+        const where = {
+            course: {
+                instructorId,
+                ...(courseId && !isNaN(Number(courseId)) ? { id: Number(courseId) } : {}),
+            },
+            paymentStatus: PAYMENT_STATUS.PAID,
+            paidAt: {
+                not: null,
+                gte: startDate,
+                lte: endDate,
+            },
+        }
+
+        // Get all orders in the date range
+        const orders = await prisma.order.findMany({
+            where,
+            select: {
+                finalPrice: true,
+                paidAt: true,
+            },
+            orderBy: {
+                paidAt: 'asc',
+            },
+        })
+
+        // Group data by month or day
+        const chartData = []
+
+        if (month === null) {
+            // Group by month (12 months)
+            const revenueByMonth = new Map()
+
+            // Initialize all 12 months with 0 revenue
+            for (let m = 1; m <= 12; m++) {
+                revenueByMonth.set(m, 0)
+            }
+
+            // Aggregate revenue by month
+            orders.forEach((order) => {
+                if (!order.paidAt) return
+                const orderDate = new Date(order.paidAt)
+                const orderMonth = orderDate.getMonth() + 1 // 1-12
+                const revenue = parseFloat(order.finalPrice.toString())
+                revenueByMonth.set(
+                    orderMonth,
+                    revenueByMonth.get(orderMonth) + revenue
+                )
+            })
+
+            // Convert to array and format
+            const monthNames = [
+                'Tháng 1',
+                'Tháng 2',
+                'Tháng 3',
+                'Tháng 4',
+                'Tháng 5',
+                'Tháng 6',
+                'Tháng 7',
+                'Tháng 8',
+                'Tháng 9',
+                'Tháng 10',
+                'Tháng 11',
+                'Tháng 12',
+            ]
+
+            for (let m = 1; m <= 12; m++) {
+                chartData.push({
+                    period: monthNames[m - 1],
+                    periodLabel: monthNames[m - 1],
+                    revenue: revenueByMonth.get(m),
+                    date: `${year}-${String(m).padStart(2, '0')}-01`,
+                })
+            }
+        } else {
+            // Group by day (days in the selected month)
+            const revenueByDay = new Map()
+
+            // Get number of days in the month
+            const daysInMonth = new Date(year, month, 0).getDate()
+
+            // Initialize all days with 0 revenue
+            for (let d = 1; d <= daysInMonth; d++) {
+                revenueByDay.set(d, 0)
+            }
+
+            // Aggregate revenue by day
+            orders.forEach((order) => {
+                if (!order.paidAt) return
+                const orderDate = new Date(order.paidAt)
+                const orderDay = orderDate.getDate() // 1-31
+                const revenue = parseFloat(order.finalPrice.toString())
+                revenueByDay.set(orderDay, revenueByDay.get(orderDay) + revenue)
+            })
+
+            // Convert to array and format
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date = new Date(year, month - 1, d)
+                chartData.push({
+                    period: d,
+                    periodLabel: `${String(d).padStart(2, '0')}/${String(month).padStart(2, '0')}`,
+                    revenue: revenueByDay.get(d),
+                    date: date.toISOString().split('T')[0],
+                })
+            }
+        }
+
+        return chartData
     }
 
     /**

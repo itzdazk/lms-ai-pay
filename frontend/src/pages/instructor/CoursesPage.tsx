@@ -434,10 +434,6 @@ export function CoursesPage() {
                         setNewStatus(statusLower);
                         setIsStatusDialogOpen(true);
                       }}
-                      onViewAnalytics={(c) => {
-                        setSelectedCourse(c);
-                        setIsAnalyticsDialogOpen(true);
-                      }}
                       onViewStudents={handleViewStudents}
         selectedRowId={selectedRowId}
         onSelectRow={setSelectedRowId}
