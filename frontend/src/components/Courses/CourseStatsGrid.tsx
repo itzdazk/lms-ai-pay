@@ -16,53 +16,54 @@ export function CourseStatsGrid({
     totalLessons = 0,
     durationHours = 0,
 }: CourseStatsGridProps) {
+    // Backend trả về durationHours nhưng thực chất là phút, cần chuyển đổi sang giờ
     const durationDisplay = durationHours
-        ? formatDuration(durationHours).split(' ')[0] + 'h'
+        ? formatDuration(durationHours / 60)
         : '0 Giờ'
 
     return (
         <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-yellow-500/50 transition-all duration-200 shadow-lg hover:shadow-yellow-500/10 group'>
+            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 shadow-lg'>
                 <div className='flex items-center gap-2 mb-2'>
-                    <Star className='h-5 w-5 fill-yellow-400 text-yellow-400 group-hover:scale-110 transition-transform' />
-                    <span className='text-xl font-bold text-white group-hover:text-yellow-400 transition-colors'>
+                    <Star className='h-5 w-5 fill-yellow-400 text-yellow-400' />
+                    <span className='text-xl font-bold text-white'>
                         {Number(ratingAvg).toFixed(1)}
                     </span>
                 </div>
-                <p className='text-xs text-gray-400 group-hover:text-gray-300 transition-colors'>
+                <p className='text-xs text-gray-400'>
                     {ratingCount} đánh giá
                 </p>
             </div>
-            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-blue-500/10 group'>
+            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 shadow-lg'>
                 <div className='flex items-center gap-2 mb-2'>
-                    <Users className='h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform' />
-                    <span className='text-xl font-bold text-white group-hover:text-blue-400 transition-colors'>
+                    <Users className='h-5 w-5 text-blue-500' />
+                    <span className='text-xl font-bold text-white'>
                         {enrolledCount.toLocaleString()}
                     </span>
                 </div>
-                <p className='text-xs text-gray-400 group-hover:text-gray-300 transition-colors'>
+                <p className='text-xs text-gray-400'>
                     Học viên
                 </p>
             </div>
-            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-green-500/50 transition-all duration-200 shadow-lg hover:shadow-green-500/10 group'>
+            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 shadow-lg'>
                 <div className='flex items-center gap-2 mb-2'>
-                    <BookOpen className='h-5 w-5 text-green-500 group-hover:scale-110 transition-transform' />
-                    <span className='text-xl font-bold text-white group-hover:text-green-400 transition-colors'>
+                    <BookOpen className='h-5 w-5 text-green-500' />
+                    <span className='text-xl font-bold text-white'>
                         {totalLessons}
                     </span>
                 </div>
-                <p className='text-xs text-gray-400 group-hover:text-gray-300 transition-colors'>
+                <p className='text-xs text-gray-400'>
                     Bài học
                 </p>
             </div>
-            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 hover:border-purple-500/50 transition-all duration-200 shadow-lg hover:shadow-purple-500/10 group'>
+            <div className='bg-gradient-to-br from-[#1F1F1F] to-[#1A1A1A] rounded-xl p-4 border border-[#2D2D2D]/50 shadow-lg'>
                 <div className='flex items-center gap-2 mb-2'>
-                    <Clock className='h-5 w-5 text-purple-500 group-hover:scale-110 transition-transform' />
-                    <span className='text-xl font-bold text-white group-hover:text-purple-400 transition-colors'>
+                    <Clock className='h-5 w-5 text-purple-500' />
+                    <span className='text-xl font-bold text-white'>
                         {durationDisplay}
                     </span>
                 </div>
-                <p className='text-xs text-gray-400 group-hover:text-gray-300 transition-colors'>
+                <p className='text-xs text-gray-400'>
                     Thời lượng
                 </p>
             </div>

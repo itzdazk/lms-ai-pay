@@ -32,7 +32,6 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     PenTool,
-    Bell,
     Bot,
     ReceiptText,
 } from 'lucide-react'
@@ -42,6 +41,7 @@ import { Transcript } from '../components/Lesson/Transcript'
 import { NotesDrawer } from '../components/Lesson/NotesDrawer'
 import { NotesSidebar } from '../components/Lesson/NotesSidebar'
 import { AIChatSidebar } from '../components/Lesson/AIChatSidebar'
+import { NotificationBell } from '../components/Notifications/NotificationBell'
 import { QuizTaking } from '../components/Quiz/QuizTaking'
 import { coursesApi } from '../lib/api/courses'
 import { lessonsApi } from '../lib/api/lessons'
@@ -1392,63 +1392,7 @@ export function LessonPage() {
                                 )}
                             </DarkOutlineButton>
                             {/* Notifications */}
-                            {user && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant='ghost'
-                                            size='icon'
-                                            className='relative text-white hover:bg-[#1F1F1F]'
-                                        >
-                                            <Bell className='h-5 w-5' />
-                                            <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-600'>
-                                                3
-                                            </Badge>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                        align='end'
-                                        className='w-[480px] max-w-[90vw] bg-[#1A1A1A] border-[#2D2D2D] shadow-xl'
-                                    >
-                                        <DropdownMenuLabel className='text-white flex items-center justify-between gap-2'>
-                                            <span>Thông báo</span>
-                                            <Badge className='bg-blue-600 text-white'>
-                                                Mới
-                                            </Badge>
-                                        </DropdownMenuLabel>
-                                        <DropdownMenuSeparator className='bg-[#2D2D2D]' />
-                                        <div className='max-h-[420px] overflow-y-auto divide-y divide-[#2D2D2D] custom-scrollbar'>
-                                            <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                                <p className='text-sm text-white font-semibold'>
-                                                    Bạn đã hoàn thành bài học
-                                                    "React Hooks"
-                                                </p>
-                                                <p className='text-xs text-gray-500 mt-1'>
-                                                    2 giờ trước
-                                                </p>
-                                            </div>
-                                            <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                                <p className='text-sm text-white font-semibold'>
-                                                    Khóa học "Next.js Pro" vừa
-                                                    được cập nhật
-                                                </p>
-                                                <p className='text-xs text-gray-500 mt-1'>
-                                                    Hôm qua
-                                                </p>
-                                            </div>
-                                            <div className='p-4 hover:bg-[#1F1F1F] cursor-pointer'>
-                                                <p className='text-sm text-white font-semibold'>
-                                                    Bạn có chứng chỉ mới cần tải
-                                                    xuống
-                                                </p>
-                                                <p className='text-xs text-gray-500 mt-1'>
-                                                    2 ngày trước
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
+                            {user && <NotificationBell />}
                             {/* User Avatar */}
                             {user && (
                                 <DropdownMenu>
@@ -1732,6 +1676,7 @@ export function LessonPage() {
                                         onPause={handlePause}
                                         watchedDuration={watchedDuration}
                                         onSeek={handleSeek}
+                                        isCompleted={isCurrentLessonCompleted}
                                     />
                                 </Card>
 

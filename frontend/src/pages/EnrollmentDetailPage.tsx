@@ -23,6 +23,7 @@ import { enrollmentsApi } from '../lib/api/enrollments'
 import type { EnrollmentWithCourse } from '../lib/api/enrollments'
 import { coursesApi } from '../lib/api/courses'
 import type { Lesson } from '../lib/api/types'
+import { formatDuration } from '../lib/courseUtils'
 
 export function EnrollmentDetailPage() {
     const { id } = useParams<{ id: string }>()
@@ -228,7 +229,7 @@ export function EnrollmentDetailPage() {
                                             Thời gian đã học
                                         </p>
                                         <p className='text-lg font-semibold text-white'>
-                                            {course.durationHours}h
+                                            {formatDuration(course.durationHours / 60)}
                                         </p>
                                     </div>
                                 </div>
@@ -416,7 +417,7 @@ export function EnrollmentDetailPage() {
                                                 </span>
                                             </div>
                                             <span className='text-sm font-medium text-white'>
-                                                {course.durationHours}h
+                                                {formatDuration(course.durationHours / 60)}
                                             </span>
                                         </div>
                                         <div className='flex items-center justify-between'>

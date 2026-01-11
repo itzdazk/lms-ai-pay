@@ -241,7 +241,7 @@ export function CourseRow({
                             </div>
                             <p className='text-sm text-gray-400 break-words whitespace-normal'>
                                 {course.totalLessons} bài •{' '}
-                                {formatDuration(course.durationHours)}
+                                {formatDuration(course.durationHours / 60)}
                             </p>
                         </div>
                     </div>

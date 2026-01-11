@@ -16,15 +16,15 @@ export function StatCard({
     title,
     value,
     icon: Icon,
-    iconColor = 'text-blue-400',
-    bgColor = 'bg-blue-950/50',
-    borderColor = 'border-blue-900',
+    iconColor = 'text-gray-400',
+    bgColor = 'bg-gray-800/50',
+    borderColor = 'border-gray-700',
     description,
     progress,
 }: StatCardProps) {
     return (
         <Card
-            className={`overflow-hidden border-l-4 ${borderColor} bg-[#1A1A1A] hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+            className={`overflow-hidden border-l-4 ${borderColor} bg-[#1A1A1A]`}
         >
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                 <CardTitle className='text-sm font-medium text-gray-300 dark:text-gray-300'>

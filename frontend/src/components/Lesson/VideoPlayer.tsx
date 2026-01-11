@@ -43,6 +43,7 @@ interface VideoPlayerProps {
   showSidebar?: boolean; // Whether sidebar is visible
   onPlay?: () => void;
   onPause?: () => void;
+  isCompleted?: boolean; // Whether the lesson is completed
 }
 
 export function VideoPlayer({
@@ -61,6 +62,7 @@ export function VideoPlayer({
   getCurrentTime,
   watchedDuration = 0,
   onSeek,
+  isCompleted = false,
 }: VideoPlayerProps) {
   // Anti-spam forward: lưu lịch sử bấm forward
   const [forwardClicks, setForwardClicks] = useState<number[]>([]);
@@ -1439,8 +1441,19 @@ export function VideoPlayer({
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-white hover:bg-[#2D2D2D] cursor-pointer flex items-center justify-between px-3 py-2.5"
-                    onClick={() => setPlaybackRateDialogOpen(true)}
+                    className={`flex items-center justify-between px-3 py-2.5 ${
+                      isCompleted
+                        ? 'text-white hover:bg-[#2D2D2D] cursor-pointer'
+                        : 'text-gray-500 cursor-not-allowed opacity-50'
+                    }`}
+                    onClick={() => {
+                      if (isCompleted) {
+                        setPlaybackRateDialogOpen(true)
+                      } else {
+                        toast.info('Chỉ có thể sử dụng tốc độ phát khi bài học đã hoàn thành')
+                      }
+                    }}
+                    disabled={!isCompleted}
                   >
                     <span>Tốc độ</span>
                     <div className="flex items-center gap-2">

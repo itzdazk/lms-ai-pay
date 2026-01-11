@@ -154,7 +154,7 @@ export function SearchResults({
                                     <Clock className="h-4 w-4 text-gray-400" />
                                     <span>
                                         {course.durationHours > 0
-                                            ? `${course.durationHours} giờ`
+                                            ? formatDuration(course.durationHours / 60)
                                             : 'N/A'}
                                     </span>
                                 </div>

@@ -112,7 +112,7 @@ export function OrderSummary({
                         </div>
                         <div className='flex items-center gap-2'>
                             <Clock className='h-4 w-4' />
-                            <span>{formatDuration(durationHours)}</span>
+                            <span>{formatDuration(durationHours / 60)}</span>
                         </div>
                         <div className='flex items-center gap-2'>
                             <Sparkles className='h-4 w-4' />

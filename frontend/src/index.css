@@ -340,6 +340,45 @@ html {
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
+/* Scrollbar for DropdownMenuContent - supports light/dark mode */
+[data-slot='dropdown-menu-content']::-webkit-scrollbar {
+    width: 6px;
+}
+
+[data-slot='dropdown-menu-content']::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+[data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+[data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar for DropdownMenuContent */
+.dark [data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.dark [data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox */
+[data-slot='dropdown-menu-content'] {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.dark [data-slot='dropdown-menu-content'] {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
 /* ScrollArea - Force proper width constraints */
 [data-slot='scroll-area-viewport'] {
     min-width: 0 !important;

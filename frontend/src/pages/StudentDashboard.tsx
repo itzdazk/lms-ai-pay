@@ -204,18 +204,18 @@ export function StudentDashboard() {
                     title='Khóa học đã đăng ký'
                     value={stats.totalEnrollments || enrolledCourses.length}
                     icon={BookOpen}
-                    iconColor='text-violet-400'
-                    bgColor='bg-violet-950/50'
-                    borderColor='border-violet-900'
+                    iconColor='text-gray-400'
+                    bgColor='bg-gray-800/50'
+                    borderColor='border-gray-700'
                     description='Tổng số khóa học'
                 />
                 <StatCard
                     title='Đang học'
                     value={stats.activeEnrollments || activeCourses.length}
                     icon={PlayCircle}
-                    iconColor='text-blue-400'
-                    bgColor='bg-blue-950/50'
-                    borderColor='border-blue-900'
+                    iconColor='text-gray-400'
+                    bgColor='bg-gray-800/50'
+                    borderColor='border-gray-700'
                     description='Khóa học đang học'
                 />
                 <StatCard
@@ -224,12 +224,12 @@ export function StudentDashboard() {
                         stats.completedEnrollments || completedCourses.length
                     }
                     icon={CheckCircle}
-                    iconColor='text-green-400'
-                    bgColor='bg-green-950/50'
-                    borderColor='border-green-900'
+                    iconColor='text-gray-400'
+                    bgColor='bg-gray-800/50'
+                    borderColor='border-gray-700'
                     description='Khóa học đã hoàn thành'
                 />
-                <div className='bg-[#1A1A1A] border-l-4 border-orange-900 rounded-lg p-4 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1'>
+                <div className='bg-[#1A1A1A] border-l-4 border-gray-700 rounded-lg p-4 overflow-hidden'>
                     <div className='flex items-center justify-between mb-2'>
                         <span className='text-sm text-gray-300 dark:text-gray-300'>
                             Tiến độ tổng quan

@@ -365,7 +365,7 @@ export function CourseDetailPage() {
                                                 chapters={chapters}
                                                 isEnrolled={isEnrolled}
                                                 totalDuration={
-                                                    course.durationHours * 60
+                                                    course.durationHours
                                                 }
                                             />
                                         </CardContent>

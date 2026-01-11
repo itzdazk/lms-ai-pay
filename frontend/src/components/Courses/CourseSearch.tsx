@@ -28,7 +28,7 @@ interface CourseSearchProps {
 export function CourseSearch({
     value,
     onChange,
-    placeholder = 'Tìm kiếm khóa học, giảng viên, công nghệ...',
+    placeholder = 'Tìm kiếm khóa học, giảng viên, thẻ...',
     className = '',
     showSuggestions = true,
     onSuggestionClick,

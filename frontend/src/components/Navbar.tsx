@@ -343,7 +343,7 @@ export function Navbar() {
                 {/* Search Bar - Desktop */}
                 <div className='hidden md:flex flex-1 max-w-xl mx-8'>
                     <SearchBar
-                        placeholder='Tìm kiếm khóa học, giảng viên, công nghệ...'
+                        placeholder='Tìm kiếm khóa học, giảng viên, thẻ...'
                         showSuggestions={true}
                     />
                 </div>
@@ -564,7 +564,7 @@ export function Navbar() {
                             <div className='mt-8 space-y-4'>
                                 {/* Mobile Search */}
                                 <SearchBar
-                                    placeholder='Tìm kiếm khóa học, giảng viên, công nghệ...'
+                                    placeholder='Tìm kiếm khóa học, giảng viên, thẻ...'
                                     showSuggestions={true}
                                 />
 

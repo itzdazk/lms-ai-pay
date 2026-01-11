@@ -13,6 +13,7 @@ import {
     Star,
 } from 'lucide-react'
 import type { EnrollmentWithCourse } from '../../lib/api/enrollments'
+import { formatDuration } from '../../lib/courseUtils'
 
 interface EnrollmentCardProps {
     enrollment: EnrollmentWithCourse
@@ -188,7 +189,7 @@ export function EnrollmentCard({ enrollment }: EnrollmentCardProps) {
                                         Thời lượng
                                     </p>
                                     <p className='text-sm font-medium text-white'>
-                                        {course.durationHours}h
+                                        {formatDuration(course.durationHours / 60)}
                                     </p>
                                 </div>
                             </div>

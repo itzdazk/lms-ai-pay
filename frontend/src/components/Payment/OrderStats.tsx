@@ -56,9 +56,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Tổng đơn hàng',
             value: stats.total,
             icon: ShoppingBag,
-            color: 'text-blue-400',
-            bgColor: 'bg-blue-950/30',
-            borderColor: 'border-blue-900',
+            color: 'text-gray-400',
+            bgColor: 'bg-gray-800/50',
+            borderColor: 'border-gray-700',
             isPrice: false,
             change: null,
         },
@@ -66,9 +66,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Đã thanh toán',
             value: stats.paid,
             icon: CheckCircle,
-            color: 'text-green-400',
-            bgColor: 'bg-green-950/30',
-            borderColor: 'border-green-900',
+            color: 'text-gray-400',
+            bgColor: 'bg-gray-800/50',
+            borderColor: 'border-gray-700',
             isPrice: false,
             change:
                 stats.total > 0
@@ -79,9 +79,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Đang chờ thanh toán',
             value: stats.pending,
             icon: Clock,
-            color: 'text-yellow-400',
-            bgColor: 'bg-yellow-950/30',
-            borderColor: 'border-yellow-900',
+            color: 'text-gray-400',
+            bgColor: 'bg-gray-800/50',
+            borderColor: 'border-gray-700',
             isPrice: false,
             change: null,
         },
@@ -89,9 +89,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Thanh toán thất bại',
             value: stats.failed,
             icon: XCircle,
-            color: 'text-red-400',
-            bgColor: 'bg-red-950/30',
-            borderColor: 'border-red-900',
+            color: 'text-gray-400',
+            bgColor: 'bg-gray-800/50',
+            borderColor: 'border-gray-700',
             isPrice: false,
             change: null,
         },
@@ -99,9 +99,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Đã hoàn tiền',
             value: stats.refunded + (stats.partiallyRefunded || 0),
             icon: RefreshCw,
-            color: 'text-purple-400',
-            bgColor: 'bg-purple-950/30',
-            borderColor: 'border-purple-900',
+            color: 'text-gray-400',
+            bgColor: 'bg-gray-800/50',
+            borderColor: 'border-gray-700',
             isPrice: false,
             change: null,
         },
@@ -109,9 +109,9 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             label: 'Tổng chi tiêu',
             value: stats.totalSpent,
             icon: DollarSign,
-            color: 'text-orange-400',
-            bgColor: 'bg-orange-950/30',
-            borderColor: 'border-orange-900',
+            color: 'text-gray-400',
+            bgColor: 'bg-gray-800/50',
+            borderColor: 'border-gray-700',
             isPrice: true,
             change: null,
         },
@@ -122,7 +122,7 @@ export function OrderStats({ stats, loading }: OrderStatsProps) {
             {statsCards.map((stat) => (
                 <Card
                     key={stat.label}
-                    className={`overflow-hidden border-l-4 ${stat.borderColor} bg-[#1A1A1A] hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+                    className={`overflow-hidden border-l-4 ${stat.borderColor} bg-[#1A1A1A]`}
                 >
                     <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                         <CardTitle className='text-sm font-medium text-gray-300 dark:text-gray-300'>

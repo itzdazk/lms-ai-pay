@@ -16,10 +16,6 @@ import {
     Users,
     BookOpen,
     Clock,
-    Bot,
-    Award,
-    GraduationCap,
-    CreditCard,
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react'
@@ -180,69 +176,6 @@ export function LandingPage() {
                                 </a>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Features Section */}
-            <section className='py-12 bg-background'>
-                <div className='container mx-auto px-4'>
-                    <div className='text-center mb-12'>
-                        <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
-                            Tính năng nổi bật
-                        </h2>
-                        <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
-                            EduLearn cung cấp trải nghiệm học tập toàn diện với
-                            công nghệ AI tiên tiến
-                        </p>
-                    </div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
-                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                            <CardContent className='pt-6'>
-                                <Bot className='h-12 w-12 text-blue-500 mb-4' />
-                                <h3 className='text-xl font-semibold mb-2 text-white'>
-                                    AI Tutor Chatbox
-                                </h3>
-                                <p className='text-gray-400'>
-                                    Chat trực tiếp với AI để được hỗ trợ học tập
-                                    24/7
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                            <CardContent className='pt-6'>
-                                <Award className='h-12 w-12 text-green-500 mb-4' />
-                                <h3 className='text-xl font-semibold mb-2 text-white'>
-                                    Auto-grading Quiz
-                                </h3>
-                                <p className='text-gray-400'>
-                                    Tự động chấm điểm và hiển thị kết quả ngay
-                                    lập tức
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                            <CardContent className='pt-6'>
-                                <GraduationCap className='h-12 w-12 text-purple-500 mb-4' />
-                                <h3 className='text-xl font-semibold mb-2 text-white'>
-                                    Progress Tracking
-                                </h3>
-                                <p className='text-gray-400'>
-                                    Theo dõi tiến độ học tập chi tiết và tự động
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                            <CardContent className='pt-6'>
-                                <CreditCard className='h-12 w-12 text-orange-500 mb-4' />
-                                <h3 className='text-xl font-semibold mb-2 text-white'>
-                                    Payment Integration
-                                </h3>
-                                <p className='text-gray-400'>
-                                    Thanh toán dễ dàng với VNPay và MoMo
-                                </p>
-                            </CardContent>
-                        </Card>
                     </div>
                 </div>
             </section>

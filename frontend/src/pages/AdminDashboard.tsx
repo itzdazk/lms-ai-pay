@@ -352,11 +352,7 @@ export function AdminDashboard() {
                                         }`}
                                     >
                                         <Icon
-                                            className={`h-5 w-5 transition-colors ${
-                                                isActive
-                                                    ? itemColor
-                                                    : 'group-hover:' + itemColor
-                                            }`}
+                                            className='h-5 w-5 transition-colors text-gray-400'
                                         />
                                         <span className='font-medium text-sm'>
                                             {item.label}

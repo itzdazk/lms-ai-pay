@@ -215,13 +215,13 @@ export function CourseCard({ course, className = '' }: CourseCardProps) {
                     <div className='flex items-center gap-1 text-sm'>
                         <Clock className='h-4 w-4 text-gray-400' />
                         <span className='text-gray-300'>
-                            {formatDuration(course.durationHours)}
+                            {formatDuration(course.durationHours / 60)}
                         </span>
                     </div>
                 </div>
                 <div className='flex items-center justify-between border-t border-[#2D2D2D]/50 pt-1.5'>
                     {priceInfo.isFree ? (
-                        <span className='text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent'>
+                        <span className='text-lg font-bold text-green-500'>
                             Miễn phí
                         </span>
                     ) : (
