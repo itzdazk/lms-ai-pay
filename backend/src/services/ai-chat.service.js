@@ -1392,6 +1392,131 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     }
 
     /**
+     * Get all conversations (Admin only)
+     */
+    async getAllConversations(options = {}) {
+        try {
+            const {
+                page = 1,
+                limit = 20,
+                mode,
+                search,
+                userId,
+                startDate,
+                endDate,
+            } = options
+
+            const where = {}
+
+            // Add mode filter if provided
+            // When mode is 'general', include both 'general' and 'course' (tutor conversations)
+            if (mode) {
+                if (mode === 'general') {
+                    where.mode = { in: ['general', 'course'] }
+                } else {
+                    where.mode = mode
+                }
+            }
+
+            // Add userId filter if provided
+            if (userId) {
+                where.userId = userId
+            }
+
+            // Add date range filter if provided
+            if (startDate || endDate) {
+                where.createdAt = {}
+                if (startDate) {
+                    where.createdAt.gte = new Date(startDate)
+                }
+                if (endDate) {
+                    where.createdAt.lte = new Date(endDate)
+                }
+            }
+
+            // Add search filter if provided
+            if (search) {
+                where.OR = [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    {
+                        user: {
+                            OR: [
+                                { fullName: { contains: search, mode: 'insensitive' } },
+                                { email: { contains: search, mode: 'insensitive' } },
+                            ],
+                        },
+                    },
+                ]
+            }
+
+            const conversations = await prisma.conversation.findMany({
+                where,
+                orderBy: { lastMessageAt: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                            avatarUrl: true,
+                        },
+                    },
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                        },
+                    },
+                    lesson: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                        },
+                    },
+                    _count: {
+                        select: { messages: true },
+                    },
+                    messages: {
+                        take: 1,
+                        orderBy: { createdAt: 'desc' },
+                        select: {
+                            message: true,
+                            senderType: true,
+                        },
+                    },
+                },
+            })
+
+            // Map to include lastMessage in a cleaner format
+            const conversationsWithLastMessage = conversations.map((conv) => ({
+                ...conv,
+                lastMessage: conv.messages?.[0]?.message || null,
+                lastMessageSender: conv.messages?.[0]?.senderType || null,
+            }))
+
+            const total = await prisma.conversation.count({ where })
+
+            return {
+                conversations: conversationsWithLastMessage,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                },
+            }
+        } catch (error) {
+            logger.error('Error getting all conversations (admin):', error)
+            throw error
+        }
+    }
+
+    /**
      * Archive conversation
      */
     async archiveConversation(conversationId, userId) {

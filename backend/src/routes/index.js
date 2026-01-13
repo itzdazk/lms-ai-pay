@@ -32,6 +32,7 @@ import lessonNotesRoutes from './lesson-notes.routes.js'
 import chaptersRoutes from './chapters.routes.js'
 import refundRequestRoutes from './refund-request.routes.js'
 import adminRefundRequestRoutes from './admin-refund-request.routes.js'
+import adminAIRoutes from './admin-ai.routes.js'
 
 const router = express.Router()
 
@@ -119,6 +120,7 @@ router.use('/notes', lessonNotesRoutes)
 router.use('/', chaptersRoutes)
 router.use('/refund-requests', refundRequestRoutes)
 router.use('/admin/refund-requests', adminRefundRequestRoutes)
+router.use('/admin/ai', adminAIRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

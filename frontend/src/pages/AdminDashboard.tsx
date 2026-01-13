@@ -31,12 +31,14 @@ import {
     Users,
     BookOpen,
     RotateCcw,
+    Bot,
 } from 'lucide-react'
 import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
 import { CategoriesPage } from './admin/CategoriesPage'
 import { TagsPage } from './admin/TagsPage'
 import { OrdersPage } from './admin/OrdersPage'
+import { AIMonitoringPage } from './admin/AIMonitoringPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -79,6 +81,7 @@ type AdminSection =
     | 'categories'
     | 'settings'
     | 'tags'
+    | 'ai-monitoring'
 
 interface MenuItem {
     id: AdminSection
@@ -154,6 +157,17 @@ const menuGroups: MenuGroup[] = [
                 label: 'Hoàn tiền',
                 icon: RotateCcw,
                 color: 'text-yellow-400',
+            },
+        ],
+    },
+    {
+        label: 'Giám sát AI',
+        items: [
+            {
+                id: 'ai-monitoring',
+                label: 'Lịch sử Chat AI',
+                icon: Bot,
+                color: 'text-purple-400',
             },
         ],
     },
@@ -258,6 +272,8 @@ export function AdminDashboard() {
                 return <TagsManagement />
             case 'settings':
                 return <SettingsView />
+            case 'ai-monitoring':
+                return <AIMonitoringPage />
             default:
                 return <DashboardOverview />
         }
