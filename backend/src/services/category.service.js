@@ -27,7 +27,7 @@ class CategoryService {
         })
 
         if (existingCategory) {
-            const error = new Error('Category with this slug already exists')
+            const error = new Error('Danh mục với slug này đã tồn tại')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -39,7 +39,7 @@ class CategoryService {
             })
 
             if (!parentCategory) {
-                const error = new Error('Parent category not found')
+                const error = new Error('Không tìm thấy danh mục cha')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -66,8 +66,6 @@ class CategoryService {
             },
         })
 
-        logger.info(`Category created: ${category.name} (ID: ${category.id})`)
-
         return category
     }
 
@@ -81,7 +79,7 @@ class CategoryService {
         })
 
         if (!existingCategory) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -93,9 +91,7 @@ class CategoryService {
             })
 
             if (slugExists) {
-                const error = new Error(
-                    'Category with this slug already exists'
-                )
+                const error = new Error('Danh mục với slug này đã tồn tại')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -105,7 +101,9 @@ class CategoryService {
         if (updateData.parentId !== undefined) {
             // Prevent setting itself as parent
             if (updateData.parentId === categoryId) {
-                const error = new Error('Category cannot be its own parent')
+                const error = new Error(
+                    'Không thể đặt danh mục làm cha của chính nó'
+                )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -117,14 +115,16 @@ class CategoryService {
                 })
 
                 if (!parentCategory) {
-                    const error = new Error('Parent category not found')
+                    const error = new Error('Không tìm thấy danh mục cha')
                     error.statusCode = HTTP_STATUS.BAD_REQUEST
                     throw error
                 }
 
                 // Prevent circular reference (child cannot become parent of its parent)
                 if (parentCategory.parentId === categoryId) {
-                    const error = new Error('Circular reference not allowed')
+                    const error = new Error(
+                        'Không thể đặt danh mục làm cha của chính nó'
+                    )
                     error.statusCode = HTTP_STATUS.BAD_REQUEST
                     throw error
                 }
@@ -152,8 +152,6 @@ class CategoryService {
             },
         })
 
-        logger.info(`Category updated: ${category.name} (ID: ${category.id})`)
-
         return category
     }
 
@@ -175,7 +173,7 @@ class CategoryService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -202,8 +200,6 @@ class CategoryService {
             where: { id: categoryId },
         })
 
-        logger.info(`Category deleted: ${category.name} (ID: ${category.id})`)
-
         return true
     }
 
@@ -211,7 +207,16 @@ class CategoryService {
      * Get all categories with filters
      */
     async getCategories(filters) {
-        const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = filters
+        const {
+            page,
+            limit,
+            parentId,
+            categoryId,
+            isActive,
+            search,
+            sort,
+            sortOrder,
+        } = filters
 
         const skip = (page - 1) * limit
 
@@ -225,7 +230,7 @@ class CategoryService {
                 where: { id: categoryId },
                 select: { id: true },
             })
-            
+
             if (category) {
                 // Filter to show the category itself and all its children
                 // This allows selecting a parent category to see it and all its children
@@ -235,15 +240,25 @@ class CategoryService {
                         { parentId: categoryId }, // All its children
                     ],
                 }
-                
+
                 // If there's also a search filter, combine them with AND
                 if (search) {
                     where.AND = [
                         categoryFilter,
                         {
                             OR: [
-                                { name: { contains: search, mode: 'insensitive' } },
-                                { description: { contains: search, mode: 'insensitive' } },
+                                {
+                                    name: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                                {
+                                    description: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
                             ],
                         },
                     ]
@@ -258,8 +273,18 @@ class CategoryService {
                         { id: categoryId },
                         {
                             OR: [
-                                { name: { contains: search, mode: 'insensitive' } },
-                                { description: { contains: search, mode: 'insensitive' } },
+                                {
+                                    name: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                                {
+                                    description: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
                             ],
                         },
                     ]
@@ -343,7 +368,7 @@ class CategoryService {
             slug: category.slug,
             description: category.description,
             imageUrl: category.imageUrl,
-            parentId: category.parentId,  // Thêm parentId field
+            parentId: category.parentId, // Thêm parentId field
             sortOrder: category.sortOrder,
             isActive: category.isActive,
             parent: category.parent,
@@ -352,8 +377,6 @@ class CategoryService {
             createdAt: category.createdAt,
             updatedAt: category.updatedAt,
         }))
-
-        logger.info(`Retrieved ${formattedCategories.length} categories`)
 
         return {
             categories: formattedCategories,
@@ -399,7 +422,7 @@ class CategoryService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -434,7 +457,7 @@ class CategoryService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -511,10 +534,6 @@ class CategoryService {
             prisma.course.count({ where }),
         ])
 
-        logger.info(
-            `Retrieved ${courses.length} courses for category ${categoryId}`
-        )
-
         return {
             courses,
             total,
@@ -537,7 +556,7 @@ class CategoryService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -556,7 +575,7 @@ class CategoryService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -572,7 +591,6 @@ class CategoryService {
                 )
                 await fs.unlink(oldImagePath).catch(() => {
                     // Ignore if file doesn't exist
-                    logger.debug(`Old image file not found: ${oldImagePath}`)
                 })
             }
 
@@ -601,10 +619,6 @@ class CategoryService {
                 },
             })
 
-            logger.info(
-                `Category image uploaded: ${category.name} (ID: ${category.id})`
-            )
-
             return {
                 category: updatedCategory,
                 imageUrl,
@@ -612,9 +626,7 @@ class CategoryService {
         } catch (error) {
             // Delete uploaded file if database update fails
             if (file) {
-                await fs.unlink(file.path).catch(() => {
-                    logger.debug(`Failed to delete file: ${file.path}`)
-                })
+                await fs.unlink(file.path).catch(() => {})
             }
             throw error
         }
@@ -630,13 +642,13 @@ class CategoryService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (!category.imageUrl) {
-            const error = new Error('Category has no image')
+            const error = new Error('Không có hình ảnh cho danh mục')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -649,10 +661,7 @@ class CategoryService {
                 'categories',
                 path.basename(category.imageUrl)
             )
-            await fs.unlink(imagePath).catch(() => {
-                // Ignore if file doesn't exist
-                logger.warn(`Image file not found: ${imagePath}`)
-            })
+            await fs.unlink(imagePath).catch(() => {})
 
             // Update category to remove image URL
             const updatedCategory = await prisma.category.update({
@@ -676,13 +685,8 @@ class CategoryService {
                 },
             })
 
-            logger.info(
-                `Category image deleted: ${category.name} (ID: ${category.id})`
-            )
-
             return updatedCategory
         } catch (error) {
-            logger.error('Error deleting category image:', error)
             throw error
         }
     }
@@ -715,7 +719,6 @@ class CategoryService {
                 child,
             }
         } catch (error) {
-            logger.error('Error getting category stats:', error)
             throw error
         }
     }

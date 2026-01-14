@@ -8,7 +8,6 @@ import {
     TRANSACTION_STATUS,
     HTTP_STATUS,
 } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 import notificationsService from './notifications.service.js'
 import emailService from './email.service.js'
 
@@ -63,7 +62,7 @@ class OrdersService {
         const validGateways = Object.values(PAYMENT_GATEWAY)
         if (!validGateways.includes(paymentGateway)) {
             const error = new Error(
-                `Invalid payment gateway. Must be one of: ${validGateways.join(', ')}`
+                `Cổng thanh toán không hợp lệ. Phải là một trong các cổng: ${validGateways.join(', ')}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -82,13 +81,13 @@ class OrdersService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            const error = new Error('Course is not available for enrollment')
+            const error = new Error('Khóa học không khả dụng để đăng ký')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -100,7 +99,7 @@ class OrdersService {
         // Check if course is paid (finalPrice > 0)
         if (finalPrice <= 0) {
             const error = new Error(
-                'Cannot create order for free course. Please use free enrollment instead.'
+                'Không thể tạo đơn hàng cho khóa học miễn phí. Vui lòng sử dụng đăng ký miễn phí thay vì đơn hàng.'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -117,7 +116,7 @@ class OrdersService {
         })
 
         if (existingEnrollment) {
-            const error = new Error('You are already enrolled in this course')
+            const error = new Error('Bạn đã đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -139,16 +138,10 @@ class OrdersService {
             const orderAge =
                 Date.now() - existingPendingOrder.createdAt.getTime()
             if (orderAge < PENDING_TIME.PENDING_TIMEOUT_MS) {
-                logger.info(
-                    `Returning existing pending order: ${existingPendingOrder.orderCode}`
-                )
                 return existingPendingOrder
             }
             // If the order has expired (>= 15 minutes), CANCEL it and proceed to create a new order
             else {
-                logger.warn(
-                    `Auto-cancelling expired pending order: ${existingPendingOrder.orderCode}`
-                )
                 await prisma.order.update({
                     where: { id: existingPendingOrder.id },
                     data: {
@@ -201,10 +194,6 @@ class OrdersService {
                 },
             },
         })
-
-        logger.info(
-            `Order created: Order ID ${order.id}, Order Code ${orderCode}, User ID ${userId}, Course ID ${courseId}`
-        )
 
         return order
     }
@@ -396,7 +385,7 @@ class OrdersService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -404,7 +393,7 @@ class OrdersService {
         // Check if order belongs to user (unless user is admin)
         // Note: Add admin check if needed
         if (order.userId !== userId) {
-            const error = new Error('Unauthorized access to this order')
+            const error = new Error('Không có quyền truy cập vào đơn hàng này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -458,7 +447,7 @@ class OrdersService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -466,7 +455,7 @@ class OrdersService {
         // Check if order belongs to user (unless user is admin)
         // Note: Add admin check if needed
         if (order.userId !== userId) {
-            const error = new Error('Unauthorized access to this order')
+            const error = new Error('Không có quyền truy cập vào đơn hàng này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -496,16 +485,13 @@ class OrdersService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check if order is already paid
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
-            logger.warn(
-                `Order ID ${orderId} is already paid. Returning existing order.`
-            )
             // Still try to enroll if not already enrolled (idempotent)
             try {
                 const { default: enrollmentService } =
@@ -519,9 +505,6 @@ class OrdersService {
                 }
             } catch (error) {
                 // Enrollment might already exist, that's ok
-                logger.warn(
-                    `Could not enroll from already-paid order: ${error.message}`
-                )
             }
             return {
                 order: await this.getOrderById(orderId, order.userId),
@@ -533,7 +516,7 @@ class OrdersService {
         // Check if order is pending
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Cannot update order to PAID. Current status: ${order.paymentStatus}`
+                `Không thể cập nhật trạng thái đơn hàng thành PAID. Trạng thái hiện tại: ${order.paymentStatus}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -579,10 +562,6 @@ class OrdersService {
                 },
             })
 
-            logger.info(
-                `Order ID ${orderId} updated to PAID. Transaction ID: ${transactionId || 'N/A'}`
-            )
-
             return updatedOrder
         })
 
@@ -593,15 +572,8 @@ class OrdersService {
             const { default: enrollmentService } =
                 await import('./enrollment.service.js')
             enrollment = await enrollmentService.enrollFromPayment(orderId)
-            logger.info(
-                `User ID ${order.userId} automatically enrolled in course ID ${order.courseId} after payment`
-            )
         } catch (error) {
             // Log error but don't fail - enrollment might already exist (idempotent)
-            logger.error(
-                `Failed to enroll user from payment: ${error.message}`,
-                error
-            )
             // Re-throw if it's a critical error (not just "already enrolled")
             if (!error.message.includes('already enrolled')) {
                 throw error
@@ -630,9 +602,6 @@ class OrdersService {
                 )
             }
         } catch (error) {
-            logger.error(
-                `Failed to notify instructor about payment: ${error.message}`
-            )
             // Don't fail payment if notification fails
         }
 
@@ -643,15 +612,8 @@ class OrdersService {
                 result.user.fullName,
                 result
             )
-            logger.info(
-                `Payment success email sent to user ${result.user.id} for order ${result.orderCode}`
-            )
         } catch (error) {
             // Log error but don't fail the payment process
-            logger.error(
-                `Failed to send payment success email: ${error.message}`,
-                error
-            )
         }
 
         return {
@@ -693,7 +655,7 @@ class OrdersService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -701,7 +663,7 @@ class OrdersService {
         // 2. Validate order status
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Cannot cancel order with status: ${order.paymentStatus}. Only PENDING orders can be cancelled.`
+                `Không thể hủy đơn hàng với trạng thái: ${order.paymentStatus}. Chỉ có đơn hàng PENDING mới có thể bị hủy.`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -718,7 +680,7 @@ class OrdersService {
 
         if (hasSuccessfulTransaction) {
             const error = new Error(
-                'Cannot cancel order - payment has already been processed successfully'
+                'Không thể hủy đơn hàng - thanh toán đã được xử lý thành công'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -743,10 +705,6 @@ class OrdersService {
                         },
                     },
                 })
-
-            logger.info(
-                `Cancelled ${updatedTransactionsCount.count} pending transaction(s) for order ${order.orderCode}`
-            )
 
             // 4.2. Update Order → FAILED
             const cancelledOrder = await tx.order.update({
@@ -780,10 +738,6 @@ class OrdersService {
             }
         })
 
-        logger.info(
-            `Order cancelled: ${order.orderCode} by user ${userId} (${result.cancelledTransactionsCount} transactions cancelled)`
-        )
-
         // 5. Send notification (fire-and-forget)
         setImmediate(() => {
             notificationsService
@@ -793,11 +747,7 @@ class OrdersService {
                     order.courseId,
                     order.course?.title || 'Unknown Course'
                 )
-                .catch((err) => {
-                    logger.error(
-                        `Failed to send cancellation notification: ${err.message}`
-                    )
-                })
+                .catch((err) => {})
         })
 
         return result.order
@@ -809,37 +759,31 @@ class OrdersService {
      * @returns {Promise<object>} Order statistics
      */
     async getUserOrderStats(userId) {
-        const [
-            total,
-            paid,
-            pending,
-            failed,
-            refunded,
-            partiallyRefunded,
-        ] = await Promise.all([
-            prisma.order.count({ where: { userId } }),
-            prisma.order.count({
-                where: { userId, paymentStatus: PAYMENT_STATUS.PAID },
-            }),
-            prisma.order.count({
-                where: { userId, paymentStatus: PAYMENT_STATUS.PENDING },
-            }),
-            prisma.order.count({
-                where: { userId, paymentStatus: PAYMENT_STATUS.FAILED },
-            }),
-            prisma.order.count({
-                where: {
-                    userId,
-                    paymentStatus: PAYMENT_STATUS.REFUNDED,
-                },
-            }),
-            prisma.order.count({
-                where: {
-                    userId,
-                    paymentStatus: PAYMENT_STATUS.PARTIALLY_REFUNDED,
-                },
-            }),
-        ])
+        const [total, paid, pending, failed, refunded, partiallyRefunded] =
+            await Promise.all([
+                prisma.order.count({ where: { userId } }),
+                prisma.order.count({
+                    where: { userId, paymentStatus: PAYMENT_STATUS.PAID },
+                }),
+                prisma.order.count({
+                    where: { userId, paymentStatus: PAYMENT_STATUS.PENDING },
+                }),
+                prisma.order.count({
+                    where: { userId, paymentStatus: PAYMENT_STATUS.FAILED },
+                }),
+                prisma.order.count({
+                    where: {
+                        userId,
+                        paymentStatus: PAYMENT_STATUS.REFUNDED,
+                    },
+                }),
+                prisma.order.count({
+                    where: {
+                        userId,
+                        paymentStatus: PAYMENT_STATUS.PARTIALLY_REFUNDED,
+                    },
+                }),
+            ])
 
         // Calculate total spent
         const totalSpent = await prisma.order.aggregate({

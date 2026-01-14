@@ -14,7 +14,10 @@ class UploadController {
      */
     uploadImage = asyncHandler(async (req, res) => {
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'No image file provided')
+            return ApiResponse.badRequest(
+                res,
+                'Không có tệp hình ảnh nào được cung cấp'
+            )
         }
 
         const userId = req.user.id
@@ -22,7 +25,7 @@ class UploadController {
 
         const result = await uploadService.uploadImage(req.file, userId, type)
 
-        return ApiResponse.created(res, result, 'Image uploaded successfully')
+        return ApiResponse.created(res, result, 'Tải ảnh lên thành công')
     })
 
     /**
@@ -36,7 +39,10 @@ class UploadController {
      */
     uploadVideo = asyncHandler(async (req, res) => {
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'No video file provided')
+            return ApiResponse.badRequest(
+                res,
+                'Không có tệp video nào được cung cấp'
+            )
         }
 
         const userId = req.user.id
@@ -53,7 +59,7 @@ class UploadController {
             lessonId,
         })
 
-        return ApiResponse.created(res, result, 'Video uploaded successfully')
+        return ApiResponse.created(res, result, 'Tải video lên thành công')
     })
 
     /**
@@ -66,7 +72,10 @@ class UploadController {
      */
     uploadDocument = asyncHandler(async (req, res) => {
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'No document file provided')
+            return ApiResponse.badRequest(
+                res,
+                'Không có tệp tài liệu nào được cung cấp'
+            )
         }
 
         const userId = req.user.id
@@ -82,11 +91,7 @@ class UploadController {
             { lessonId }
         )
 
-        return ApiResponse.created(
-            res,
-            result,
-            'Document uploaded successfully'
-        )
+        return ApiResponse.created(res, result, 'Tải tài liệu lên thành công')
     })
 
     /**
@@ -102,7 +107,7 @@ class UploadController {
 
         const result = await uploadService.deleteFile(fileId, userId, userRole)
 
-        return ApiResponse.success(res, result, 'File deleted successfully')
+        return ApiResponse.success(res, result, 'Tệp đã bị xóa thành công')
     })
 
     /**
@@ -120,7 +125,7 @@ class UploadController {
         return ApiResponse.success(
             res,
             result,
-            'Upload status retrieved successfully'
+            'Truy xuất trạng thái tải lên thành công'
         )
     })
 
@@ -149,7 +154,7 @@ class UploadController {
                 limit: parseInt(limit),
                 total: result.total,
             },
-            'User files retrieved successfully'
+            'Truy xuất tệp của người dùng thành công'
         )
     })
 }

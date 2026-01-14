@@ -1,7 +1,6 @@
 // backend/src/services/health.service.js
 import { prisma } from '../config/database.config.js'
 import config from '../config/app.config.js'
-import logger from '../config/logger.config.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -67,8 +66,6 @@ class HealthService {
                 },
             }
         } catch (error) {
-            logger.error('Database health check failed:', error)
-
             return {
                 isHealthy: false,
                 status: 'disconnected',
@@ -157,7 +154,6 @@ class HealthService {
                         status: readable && writable ? 'healthy' : 'unhealthy',
                     })
                 } catch (error) {
-                    logger.error(`Error checking directory ${dir.name}:`, error)
                     directoriesStatus.push({
                         name: dir.name,
                         exists: false,
@@ -177,7 +173,6 @@ class HealthService {
                 fs.unlinkSync(testFilePath)
                 writeTest = true
             } catch (error) {
-                logger.warn('Storage write test failed:', error)
                 allHealthy = false
             }
 
@@ -194,8 +189,6 @@ class HealthService {
                 },
             }
         } catch (error) {
-            logger.error('Storage health check failed:', error)
-
             return {
                 isHealthy: false,
                 status: 'failed',
@@ -211,7 +204,7 @@ class HealthService {
     checkTranscriptionQueueHealth() {
         try {
             const queueStatus = transcriptionService.getQueueStatus()
-            
+
             return {
                 isHealthy: true,
                 status: 'operational',
@@ -219,7 +212,6 @@ class HealthService {
                 queue: queueStatus,
             }
         } catch (error) {
-            logger.error('Transcription queue health check failed:', error)
             return {
                 isHealthy: false,
                 status: 'error',
@@ -233,12 +225,13 @@ class HealthService {
      * Check full system health (all services)
      */
     async checkFullHealth() {
-        const [basicHealth, dbHealth, storageHealth, transcriptionHealth] = await Promise.all([
-            this.checkBasicHealth(),
-            this.checkDatabaseHealth(),
-            this.checkStorageHealth(),
-            Promise.resolve(this.checkTranscriptionQueueHealth()),
-        ])
+        const [basicHealth, dbHealth, storageHealth, transcriptionHealth] =
+            await Promise.all([
+                this.checkBasicHealth(),
+                this.checkDatabaseHealth(),
+                this.checkStorageHealth(),
+                Promise.resolve(this.checkTranscriptionQueueHealth()),
+            ])
 
         return {
             timestamp: new Date().toISOString(),

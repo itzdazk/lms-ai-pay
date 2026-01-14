@@ -10,32 +10,41 @@ class PaymentExpirationCron {
 
     start() {
         if (this.intervalId) {
-            logger.warn('Payment expiration cron job is already running')
+            logger.warn(
+                'Tiến trình (cron job) xử lý hết hạn thanh toán hiện đang chạy'
+            )
             return
         }
 
         // Chạy mỗi 30 giây
         this.intervalId = setInterval(async () => {
             if (this.isRunning) {
-                logger.warn('Previous cron job still running, skipping...')
+                logger.warn(
+                    'Tiến trình (cron job) trước đó vẫn đang chạy, đang bỏ qua...'
+                )
                 return
             }
 
             this.isRunning = true
 
             try {
-                logger.info(' Running VNPay expiration handler cron job...')
+                logger.info(
+                    ' Đang chạy tiến trình (cron job) xử lý hết hạn thanh toán VNPay...'
+                )
 
                 const result =
                     await vnpayExpirationHandler.handleExpiredTransactions(15)
 
-                logger.info(' VNPay expiration handler completed:', {
-                    processed: result.processedCount,
-                    failed: result.failedCount,
-                })
+                logger.info(
+                    ' Tiến trình (cron job) xử lý hết hạn thanh toán VNPay đã hoàn tất:',
+                    {
+                        processed: result.processedCount,
+                        failed: result.failedCount,
+                    }
+                )
             } catch (error) {
                 logger.error(
-                    ` VNPay expiration handler cron failed: ${error.message}`
+                    ` Tiến trình (cron job) xử lý hết hạn thanh toán VNPay đã thất bại: ${error.message}`
                 )
             } finally {
                 this.isRunning = false
@@ -43,7 +52,7 @@ class PaymentExpirationCron {
         }, 30000) // 30 seconds
 
         logger.info(
-            ' Payment expiration cron job started (runs every 30 seconds)'
+            ' Tiến trình (cron job) xử lý hết hạn thanh toán đã bắt đầu (chạy mỗi 30 giây)'
         )
     }
 
@@ -52,19 +61,28 @@ class PaymentExpirationCron {
             clearInterval(this.intervalId)
             this.intervalId = null
             this.isRunning = false
-            logger.info(' Payment expiration cron job stopped')
+            logger.info(
+                ' Tiến trình (cron job) xử lý hết hạn thanh toán đã dừng'
+            )
         }
     }
 
     async runNow() {
-        logger.info(' Running VNPay expiration handler manually...')
+        logger.info(
+            ' Đang chạy tiến trình (cron job) xử lý hết hạn thanh toán VNPay bằng tay...'
+        )
         try {
             const result =
                 await vnpayExpirationHandler.handleExpiredTransactions(15)
-            logger.info(' Manual run completed:', result)
+            logger.info(
+                ' Tiến trình (cron job) xử lý hết hạn thanh toán VNPay đã hoàn tất:',
+                result
+            )
             return result
         } catch (error) {
-            logger.error(` Manual run failed: ${error.message}`)
+            logger.error(
+                ` Tiến trình (cron job) xử lý hết hạn thanh toán VNPay đã thất bại: ${error.message}`
+            )
             throw error
         }
     }

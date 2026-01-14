@@ -26,7 +26,7 @@ class AIRecommendationController {
         return ApiResponse.success(
             res,
             recommendations,
-            'Recommendations retrieved successfully',
+            'Truy xuất danh sách gợi ý thành công',
             HTTP_STATUS.OK,
             {
                 total: recommendations.length,
@@ -53,7 +53,7 @@ class AIRecommendationController {
         return ApiResponse.success(
             res,
             similarCourses,
-            'Similar courses retrieved successfully',
+            'Truy xuất danh sách khóa học tương tự thành công',
             HTTP_STATUS.OK,
             {
                 total: similarCourses.length,
@@ -75,7 +75,7 @@ class AIRecommendationController {
             req.user.id
         )
 
-        return ApiResponse.success(res, null, 'Recommendation marked as viewed')
+        return ApiResponse.success(res, null, 'Đã đánh dấu gợi ý là đã xem')
     })
 }
 

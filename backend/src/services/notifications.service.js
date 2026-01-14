@@ -35,10 +35,6 @@ class NotificationsService {
             prisma.notification.count({ where }),
         ])
 
-        logger.info(
-            `Retrieved ${items.length} notifications for user ${userId} (page ${page})`
-        )
-
         return {
             items,
             total,
@@ -55,8 +51,6 @@ class NotificationsService {
             },
         })
 
-        logger.info(`User ${userId} has ${count} unread notifications`)
-
         return count
     }
 
@@ -69,7 +63,7 @@ class NotificationsService {
         })
 
         if (!notification) {
-            const error = new Error('Notification not found')
+            const error = new Error('Không tìm thấy thông báo')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -86,7 +80,7 @@ class NotificationsService {
         })
 
         if (!notification) {
-            const error = new Error('Notification not found')
+            const error = new Error('Không tìm thấy thông báo')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -103,10 +97,6 @@ class NotificationsService {
             },
         })
 
-        logger.info(
-            `Notification ${notificationId} marked as read by user ${userId}`
-        )
-
         return updated
     }
 
@@ -122,10 +112,6 @@ class NotificationsService {
             },
         })
 
-        logger.info(
-            `User ${userId} marked ${result.count} notifications as read`
-        )
-
         return {
             updated: result.count,
         }
@@ -140,7 +126,7 @@ class NotificationsService {
         })
 
         if (!notification) {
-            const error = new Error('Notification not found')
+            const error = new Error('Không tìm thấy thông báo')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -148,8 +134,6 @@ class NotificationsService {
         await prisma.notification.delete({
             where: { id: notificationId },
         })
-
-        logger.info(`Notification ${notificationId} deleted by user ${userId}`)
     }
 
     async deleteAllNotifications(userId) {
@@ -158,18 +142,12 @@ class NotificationsService {
                 userId,
             },
         })
-
-        logger.info(`User ${userId} deleted ${result.count} notifications`)
     }
 
     async createNotification(data) {
         const notification = await prisma.notification.create({
             data,
         })
-
-        logger.info(
-            `Notification created for user ${notification.userId} (type: ${notification.type})`
-        )
 
         return notification
     }
@@ -187,12 +165,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create enrollment notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     async notifyPaymentSuccess(userId, orderId, courseId, courseTitle, amount) {
@@ -205,12 +178,7 @@ class NotificationsService {
                 relatedId: orderId,
                 relatedType: 'ORDER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create payment success notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     async notifyOrderCancelled(userId, orderId, courseId, courseTitle) {
@@ -223,12 +191,7 @@ class NotificationsService {
                 relatedId: orderId,
                 relatedType: 'ORDER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create order cancellation notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     async notifyPaymentFailed(userId, orderId, courseId, courseTitle, reason) {
@@ -241,21 +204,10 @@ class NotificationsService {
                 relatedId: orderId,
                 relatedType: 'ORDER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create payment failed notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
-    async notifyLessonCompleted(
-        userId,
-        lessonId,
-        courseId,
-        lessonTitle,
-        courseTitle
-    ) {
+    async notifyLessonCompleted(userId, lessonId, lessonTitle, courseTitle) {
         try {
             await this.createNotification({
                 userId,
@@ -265,12 +217,7 @@ class NotificationsService {
                 relatedId: lessonId,
                 relatedType: 'LESSON',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create lesson completed notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     async notifyCourseCompleted(userId, courseId, courseTitle) {
@@ -283,12 +230,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create course completed notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -300,7 +242,7 @@ class NotificationsService {
     /**
      * Notify all admins about new user registration
      */
-    async notifyAdminsUserRegistered(userId, userName, fullName, email, role) {
+    async notifyAdminsUserRegistered(userId, fullName, email, role) {
         try {
             // Get all admin users
             const admins = await prisma.user.findMany({
@@ -324,12 +266,7 @@ class NotificationsService {
             )
 
             await Promise.all(notifications)
-        } catch (error) {
-            logger.error(
-                `Failed to notify admins about user registration: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -351,12 +288,7 @@ class NotificationsService {
                 relatedId: userId,
                 relatedType: 'USER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create user status change notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -378,12 +310,7 @@ class NotificationsService {
                 relatedId: userId,
                 relatedType: 'USER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create user role change notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -415,12 +342,7 @@ class NotificationsService {
             )
 
             await Promise.all(notifications)
-        } catch (error) {
-            logger.error(
-                `Failed to notify admins about course pending approval: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -454,12 +376,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create course approval status notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -480,19 +397,13 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create course published notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
      * Notify all admins about new enrollment
      */
     async notifyAdminsNewEnrollment(
-        studentId,
         studentName,
         courseId,
         courseTitle,
@@ -528,12 +439,7 @@ class NotificationsService {
             )
 
             await Promise.all(notifications)
-        } catch (error) {
-            logger.error(
-                `Failed to notify admins about new enrollment: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -555,12 +461,7 @@ class NotificationsService {
                 relatedId: orderId,
                 relatedType: 'ORDER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create large order notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -582,12 +483,7 @@ class NotificationsService {
                 relatedId: orderId,
                 relatedType: 'ORDER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create refund request notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -603,12 +499,7 @@ class NotificationsService {
                 relatedId: null,
                 relatedType: null,
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create system alert notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -636,12 +527,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create new enrollment notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -663,12 +549,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create student completed course notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -690,12 +571,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create new review notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -717,12 +593,7 @@ class NotificationsService {
                 relatedId: courseId,
                 relatedType: 'COURSE',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create new question notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -732,7 +603,6 @@ class NotificationsService {
         instructorId,
         quizId,
         quizTitle,
-        courseId,
         courseTitle,
         studentName,
         score
@@ -746,12 +616,7 @@ class NotificationsService {
                 relatedId: quizId,
                 relatedType: 'QUIZ',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create quiz submission notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -760,7 +625,6 @@ class NotificationsService {
     async notifyInstructorPaymentReceived(
         instructorId,
         orderId,
-        courseId,
         courseTitle,
         amount,
         studentName
@@ -774,12 +638,7 @@ class NotificationsService {
                 relatedId: orderId,
                 relatedType: 'ORDER',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create payment received notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -800,12 +659,7 @@ class NotificationsService {
                 relatedId: null,
                 relatedType: null,
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create revenue report notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -821,12 +675,7 @@ class NotificationsService {
                 relatedId: payoutId,
                 relatedType: 'PAYOUT',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create payout processed notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -836,7 +685,6 @@ class NotificationsService {
         instructorId,
         lessonId,
         lessonTitle,
-        courseId,
         courseTitle
     ) {
         try {
@@ -848,12 +696,7 @@ class NotificationsService {
                 relatedId: lessonId,
                 relatedType: 'LESSON',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create transcript completed notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 
     /**
@@ -863,7 +706,6 @@ class NotificationsService {
         instructorId,
         lessonId,
         lessonTitle,
-        courseId,
         courseTitle
     ) {
         try {
@@ -875,12 +717,7 @@ class NotificationsService {
                 relatedId: lessonId,
                 relatedType: 'LESSON',
             })
-        } catch (error) {
-            logger.error(
-                `Failed to create video uploaded notification: ${error.message}`,
-                error
-            )
-        }
+        } catch (error) {}
     }
 }
 

@@ -7,11 +7,8 @@ import {
     REFUND_REASON_TYPES,
     REFUND_TYPES,
     REFUND_POLICY,
-    ENROLLMENT_STATUS,
 } from '../config/constants.js'
 import { Prisma } from '@prisma/client'
-import logger from '../config/logger.config.js'
-import progressService from './progress.service.js'
 import notificationsService from './notifications.service.js'
 import emailService from './email.service.js'
 
@@ -67,7 +64,7 @@ class RefundRequestService {
                 eligible: false,
                 type: null,
                 suggestedAmount: null,
-                message: 'Order not found',
+                message: 'Không tìm thấy đơn hàng',
             }
         }
 
@@ -76,7 +73,7 @@ class RefundRequestService {
                 eligible: false,
                 type: null,
                 suggestedAmount: null,
-                message: 'Unauthorized access',
+                message: 'Không thể truy cập',
             }
         }
 
@@ -85,7 +82,7 @@ class RefundRequestService {
                 eligible: false,
                 type: null,
                 suggestedAmount: null,
-                message: 'Only paid orders can be refunded',
+                message: 'Chỉ có thể hoàn tiền cho các đơn hàng đã thanh toán',
             }
         }
 
@@ -215,14 +212,14 @@ class RefundRequestService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (order.userId !== userId) {
             const error = new Error(
-                'You can only request refund for your own orders'
+                'Bạn chỉ có thể yêu cầu hoàn tiền cho đơn hàng của mình'
             )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
@@ -231,7 +228,7 @@ class RefundRequestService {
         // Check if order is PAID
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
             const error = new Error(
-                'Refund can only be requested for paid orders'
+                'Chỉ có thể yêu cầu hoàn tiền cho các đơn hàng đã thanh toán'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -249,7 +246,7 @@ class RefundRequestService {
 
         if (existingRequest) {
             const error = new Error(
-                'A refund request already exists for this order'
+                'Đã tồn tại yêu cầu hoàn tiền cho đơn hàng này'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -356,10 +353,6 @@ class RefundRequestService {
                     )
                 )
 
-                logger.info(
-                    `Sent refund request notifications to ${admins.length} admin(s) for order ${order.orderCode}`
-                )
-
                 // Send email to student
                 try {
                     await emailService.sendRefundRequestSubmittedEmail(
@@ -368,17 +361,9 @@ class RefundRequestService {
                         order
                     )
                 } catch (emailError) {
-                    logger.error(
-                        'Error sending refund request submitted email:',
-                        emailError
-                    )
                     // Don't throw error, just log it
                 }
             } catch (error) {
-                logger.error(
-                    'Error sending refund request notification:',
-                    error
-                )
                 // Don't throw error, just log it
             }
         }
@@ -662,7 +647,7 @@ class RefundRequestService {
         })
 
         if (!refundRequest) {
-            const error = new Error('Refund request not found')
+            const error = new Error('Không tìm thấy yêu cầu hoàn tiền')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -676,7 +661,7 @@ class RefundRequestService {
             })
 
             if (user?.role !== 'ADMIN') {
-                const error = new Error('Unauthorized')
+                const error = new Error('Không thể truy cập')
                 error.statusCode = HTTP_STATUS.FORBIDDEN
                 throw error
             }
@@ -715,9 +700,6 @@ class RefundRequestService {
         })
 
         if (!enrollment) {
-            logger.warn(
-                `No enrollment found to revoke for user ${userId} and course ${courseId}`
-            )
             return null
         }
 
@@ -772,10 +754,6 @@ class RefundRequestService {
             return deletedEnrollment
         })
 
-        logger.info(
-            `Enrollment and related data deleted for user ${userId} in course ${courseId}. Reason: ${reason}`
-        )
-
         return result
     }
 
@@ -814,7 +792,7 @@ class RefundRequestService {
             })
 
             if (!request) {
-                const error = new Error('Refund request not found')
+                const error = new Error('Không tìm thấy yêu cầu hoàn tiền')
                 error.statusCode = HTTP_STATUS.NOT_FOUND
                 throw error
             }
@@ -822,7 +800,7 @@ class RefundRequestService {
             // Check status while locked to prevent race condition
             if (request.status !== 'PENDING') {
                 const error = new Error(
-                    `Cannot process refund request with status: ${request.status}. This request may have been processed already.`
+                    `Không thể xử lý yêu cầu hoàn tiền với trạng thái: ${request.status}. Yêu cầu này có thể đã được xử lý.`
                 )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
@@ -854,10 +832,6 @@ class RefundRequestService {
                 return refundRequestUpdated
             })
 
-            logger.info(
-                `Admin ${adminUserId} rejected refund request ${requestId}`
-            )
-
             // Send rejection email
             try {
                 await emailService.sendRefundRejectedEmail(
@@ -867,7 +841,6 @@ class RefundRequestService {
                     notes || 'Rejected by admin'
                 )
             } catch (emailError) {
-                logger.error('Error sending refund rejected email:', emailError)
                 // Don't throw error, just log it
             }
 
@@ -885,7 +858,7 @@ class RefundRequestService {
             const parsedAmount = parseFloat(customAmount)
             if (isNaN(parsedAmount) || parsedAmount <= 0) {
                 const error = new Error(
-                    `Invalid refund amount: ${customAmount}. Amount must be a positive number.`
+                    `Giá trị hoàn tiền không hợp lệ: ${customAmount}. Giá trị phải là một số dương.`
                 )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
@@ -900,7 +873,7 @@ class RefundRequestService {
 
         if (!refundAmount || refundAmount <= 0) {
             const error = new Error(
-                'Invalid refund amount. Please specify a valid refund amount or ensure the refund request has a suggested amount.'
+                'Số tiền hoàn trả không hợp lệ. Vui lòng xác định một số tiền cụ thể hoặc đảm bảo yêu cầu hoàn tiền đã có số tiền được đề xuất.'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -915,7 +888,9 @@ class RefundRequestService {
         })
 
         if (!adminUser || adminUser.role !== 'ADMIN') {
-            const error = new Error('Only administrators can process refunds')
+            const error = new Error(
+                'Chỉ quản trị viên mới có thể xử lý hoàn tiền'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -945,15 +920,11 @@ class RefundRequestService {
             await this.revokeEnrollmentAccess(
                 refundRequest.studentId,
                 refundRequest.order.courseId,
-                `Refund approved for order ${refundRequest.order.orderCode}`
+                `Yêu cầu hoàn tiền cho đơn hàng đã được phê duyệt: ${refundRequest.order.orderCode}`
             )
 
             return refundRequestUpdated
         })
-
-        logger.info(
-            `Admin ${adminUserId} approved refund request ${requestId}. Amount: ${refundAmount}`
-        )
 
         // Send approval email
         try {
@@ -964,7 +935,6 @@ class RefundRequestService {
                 refundAmount.toString()
             )
         } catch (emailError) {
-            logger.error('Error sending refund approved email:', emailError)
             // Don't throw error, just log it
         }
 
@@ -999,7 +969,7 @@ class RefundRequestService {
         // Check if user is authorized (must be the student who created the request)
         if (refundRequest.studentId !== userId) {
             const error = new Error(
-                'You can only cancel your own refund requests'
+                'Bạn chỉ có thể hủy yêu cầu hoàn tiền của mình'
             )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
@@ -1008,7 +978,7 @@ class RefundRequestService {
         // Only allow cancellation if status is PENDING
         if (refundRequest.status !== 'PENDING') {
             const error = new Error(
-                `Cannot cancel refund request with status: ${refundRequest.status}. Only pending requests can be cancelled.`
+                `Không thể hủy yêu cầu hoàn tiền với trạng thái: ${refundRequest.status}. Chỉ có thể hủy các yêu cầu đang chờ.`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -1031,10 +1001,6 @@ class RefundRequestService {
 
             return deletedRequest
         })
-
-        logger.info(
-            `Student ${userId} cancelled refund request ${requestId} for order ${refundRequest.order.orderCode}`
-        )
 
         return result
     }

@@ -23,8 +23,7 @@ const authLimiter =
         : rateLimit({
               windowMs: RATE_LIMITS.AUTH.windowMs,
               max: RATE_LIMITS.AUTH.max,
-              message:
-                  'Too many authentication attempts, please try again later',
+              message: 'Quá nhiều lần thử xác thực, vui lòng thử lại sau.',
           })
 
 /**
@@ -120,6 +119,10 @@ router.get('/sessions', authenticate, authController.getSessions)
  * @desc    Logout a specific session
  * @access  Private
  */
-router.delete('/sessions/:sessionId', authenticate, authController.logoutSession)
+router.delete(
+    '/sessions/:sessionId',
+    authenticate,
+    authController.logoutSession
+)
 
 export default router

@@ -4,7 +4,6 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import config from '../config/app.config.js'
-import logger from '../config/logger.config.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -42,13 +41,15 @@ class EmailService {
 
             // Replace year placeholder if not provided
             if (!data.year) {
-                html = html.replace(/{{year}}/g, new Date().getFullYear().toString())
+                html = html.replace(
+                    /{{year}}/g,
+                    new Date().getFullYear().toString()
+                )
             }
 
             return html
         } catch (error) {
-            logger.error(`Failed to load template ${templateName}:`, error)
-            throw new Error(`Failed to load email template: ${templateName}`)
+            throw new Error(`Không thể tải mẫu email: ${templateName}`)
         }
     }
 
@@ -66,11 +67,9 @@ class EmailService {
             }
 
             const info = await this.transporter.sendMail(mailOptions)
-            logger.info(`Email sent: ${info.messageId}`)
             return info
         } catch (error) {
-            logger.error('Error sending email:', error)
-            throw new Error('Failed to send email')
+            throw new Error('Không thể gửi email')
         }
     }
 
@@ -176,7 +175,9 @@ class EmailService {
             amount: formattedAmount,
             paymentGateway: order.paymentGateway || 'N/A',
             transactionId: order.transactionId || 'N/A',
-            paymentDate: new Date(order.paidAt || Date.now()).toLocaleString('vi-VN'),
+            paymentDate: new Date(order.paidAt || Date.now()).toLocaleString(
+                'vi-VN'
+            ),
             courseUrl,
             year: new Date().getFullYear().toString(),
         })

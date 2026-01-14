@@ -66,7 +66,7 @@ class ProgressService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -172,7 +172,7 @@ class ProgressService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -189,7 +189,7 @@ class ProgressService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -246,7 +246,7 @@ class ProgressService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -263,7 +263,7 @@ class ProgressService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -331,7 +331,7 @@ class ProgressService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -348,7 +348,7 @@ class ProgressService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -366,48 +366,53 @@ class ProgressService {
         const updateData = {}
         if (position !== undefined) {
             // --- Anti-cheat: kiểm tra thời gian học hợp lệ ---
-            let isCheat = false;
+            let isCheat = false
             if (currentProgress && currentProgress.updatedAt) {
-                const now = Date.now();
-                const lastUpdated = new Date(currentProgress.updatedAt).getTime();
-                const deltaTime = (now - lastUpdated) / 1000; // giây
-                const deltaLearned = position - (currentProgress.lastPosition ?? 0);
-                const ALLOWED_ERROR = 3; // sai số nhỏ (giây)
+                const now = Date.now()
+                const lastUpdated = new Date(
+                    currentProgress.updatedAt
+                ).getTime()
+                const deltaTime = (now - lastUpdated) / 1000 // giây
+                const deltaLearned =
+                    position - (currentProgress.lastPosition ?? 0)
+                const ALLOWED_ERROR = 3 // sai số nhỏ (giây)
                 if (deltaLearned > deltaTime + ALLOWED_ERROR) {
-                    logger.warn(`Anti-cheat: User ${userId} tried to update lesson ${lessonId} with deltaLearned=${deltaLearned}s > deltaTime=${deltaTime}s (allowed error ${ALLOWED_ERROR}s). Request ignored.`);
-                    return currentProgress; // Bỏ qua request gian lận
+                    logger.warn(
+                        `Anti-cheat: User ${userId} tried to update lesson ${lessonId} with deltaLearned=${deltaLearned}s > deltaTime=${deltaTime}s (allowed error ${ALLOWED_ERROR}s). Request ignored.`
+                    )
+                    return currentProgress // Bỏ qua request gian lận
                 }
             }
-            updateData.lastPosition = position;
+            updateData.lastPosition = position
             // Luôn cập nhật watchDuration nếu position lớn hơn watchDuration hiện tại
             let newWatchDuration =
                 currentProgress === null ||
                 position > (currentProgress.watchDuration ?? 0)
                     ? position
-                    : currentProgress.watchDuration;
+                    : currentProgress.watchDuration
             if (
                 currentProgress === null ||
                 position > (currentProgress.watchDuration ?? 0)
             ) {
-                updateData.watchDuration = position;
+                updateData.watchDuration = position
             }
-            const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.7;
+            const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.7
             // Tự động đánh dấu completed nếu đã xem >= threshold video
             if (
                 lesson.videoDuration &&
                 newWatchDuration >= lesson.videoDuration * threshold
             ) {
-                updateData.isCompleted = true;
-                updateData.completedAt = new Date();
+                updateData.isCompleted = true
+                updateData.completedAt = new Date()
                 // Đảm bảo watchedDuration = videoDuration khi hoàn thành
-                updateData.watchDuration = lesson.videoDuration;
+                updateData.watchDuration = lesson.videoDuration
 
                 // Kiểm tra quiz: nếu không có quiz hoặc quiz không xuất bản thì quizCompleted=true
                 const quiz = await prisma.quiz.findUnique({
                     where: { lessonId: lesson.id },
-                });
+                })
                 if (!quiz || quiz.isPublished === false) {
-                    updateData.quizCompleted = true;
+                    updateData.quizCompleted = true
                 }
             }
         }
@@ -433,9 +438,9 @@ class ProgressService {
         // If this update marked the lesson as completed, refresh course progress percentage
         const shouldUpdateCourseProgress =
             updateData.isCompleted === true ||
-            (!currentProgress?.isCompleted && progress.isCompleted === true);
+            (!currentProgress?.isCompleted && progress.isCompleted === true)
         if (shouldUpdateCourseProgress) {
-            await this.updateCourseProgress(userId, lesson.courseId);
+            await this.updateCourseProgress(userId, lesson.courseId)
         }
 
         // Update enrollment lastAccessedAt
@@ -466,7 +471,7 @@ class ProgressService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -483,7 +488,7 @@ class ProgressService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -609,14 +614,23 @@ class ProgressService {
             // Đếm tổng số enrollment và số enrollment đã hoàn thành
             const [totalEnrollments, completedEnrollments] = await Promise.all([
                 prisma.enrollment.count({ where: { courseId } }),
-                prisma.enrollment.count({ where: { courseId, status: ENROLLMENT_STATUS.COMPLETED } })
+                prisma.enrollment.count({
+                    where: { courseId, status: ENROLLMENT_STATUS.COMPLETED },
+                }),
             ])
-            const completionRate = totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 10000) / 100 : 0;
+            const completionRate =
+                totalEnrollments > 0
+                    ? Math.round(
+                          (completedEnrollments / totalEnrollments) * 10000
+                      ) / 100
+                    : 0
             await prisma.course.update({
                 where: { id: courseId },
-                data: { completionRate }
+                data: { completionRate },
             })
-            logger.info(`Updated course completionRate for course ${courseId}: ${completionRate}%`)
+            logger.info(
+                `Updated course completionRate for course ${courseId}: ${completionRate}%`
+            )
         }
     }
 

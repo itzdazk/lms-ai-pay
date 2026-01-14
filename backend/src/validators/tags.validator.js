@@ -6,64 +6,56 @@ const createTagValidator = [
     body('name')
         .trim()
         .notEmpty()
-        .withMessage('Tag name is required')
+        .withMessage('Tên thẻ là bắt buộc')
         .isLength({ min: 2, max: 50 })
-        .withMessage('Tag name must be between 2 and 50 characters'),
+        .withMessage('Tên thẻ phải có độ dài từ 2 đến 50 ký tự'),
 
     body('slug')
         .trim()
         .notEmpty()
-        .withMessage('Tag slug is required')
+        .withMessage('Slug thẻ là bắt buộc')
         .isLength({ min: 2, max: 50 })
-        .withMessage('Tag slug must be between 2 and 50 characters')
+        .withMessage('Slug thẻ phải có độ dài từ 2 đến 50 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-        .withMessage(
-            'Slug must contain only lowercase letters, numbers and hyphens'
-        ),
+        .withMessage('Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
 
     body('description')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage('Description must not exceed 500 characters'),
+        .withMessage('Mô tả không được vượt quá 500 ký tự'),
 
     validate,
 ]
 
 const updateTagValidator = [
-    param('id')
-        .isInt({ min: 1 })
-        .withMessage('Tag ID must be a positive integer'),
+    param('id').isInt({ min: 1 }).withMessage('ID thẻ phải là số nguyên dương'),
 
     body('name')
         .optional()
         .trim()
         .isLength({ min: 2, max: 50 })
-        .withMessage('Tag name must be between 2 and 50 characters'),
+        .withMessage('Tên thẻ phải có độ dài từ 2 đến 50 ký tự'),
 
     body('slug')
         .optional()
         .trim()
         .isLength({ min: 2, max: 50 })
-        .withMessage('Tag slug must be between 2 and 50 characters')
+        .withMessage('Slug thẻ phải có độ dài từ 2 đến 50 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-        .withMessage(
-            'Slug must contain only lowercase letters, numbers and hyphens'
-        ),
+        .withMessage('Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
 
     body('description')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage('Description must not exceed 500 characters'),
+        .withMessage('Mô tả không được vượt quá 500 ký tự'),
 
     validate,
 ]
 
 const getTagByIdValidator = [
-    param('id')
-        .isInt({ min: 1 })
-        .withMessage('Tag ID must be a positive integer'),
+    param('id').isInt({ min: 1 }).withMessage('ID thẻ phải là số nguyên dương'),
 
     validate,
 ]
@@ -72,54 +64,50 @@ const getTagsValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải nằm trong khoảng từ 1 đến 100'),
 
     query('search')
         .optional()
         .trim()
         .isLength({ min: 1, max: 100 })
-        .withMessage('Search term must be between 1 and 100 characters'),
+        .withMessage('Từ khóa tìm kiếm phải có độ dài từ 1 đến 100 ký tự'),
 
     validate,
 ]
 
 const getTagCoursesValidator = [
-    param('id')
-        .isInt({ min: 1 })
-        .withMessage('Tag ID must be a positive integer'),
+    param('id').isInt({ min: 1 }).withMessage('ID thẻ phải là số nguyên dương'),
 
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải nằm trong khoảng từ 1 đến 100'),
 
     query('level')
         .optional()
         .isIn(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'])
-        .withMessage('Invalid level'),
+        .withMessage('Cấp độ không hợp lệ'),
 
     query('sort')
         .optional()
         .isIn(['newest', 'popular', 'rating', 'price_asc', 'price_desc'])
-        .withMessage('Invalid sort option'),
+        .withMessage('Tùy chọn sắp xếp không hợp lệ'),
 
     validate,
 ]
 
 const deleteTagValidator = [
-    param('id')
-        .isInt({ min: 1 })
-        .withMessage('Tag ID must be a positive integer'),
+    param('id').isInt({ min: 1 }).withMessage('ID thẻ phải là số nguyên dương'),
 
     validate,
 ]
@@ -132,6 +120,3 @@ export {
     getTagCoursesValidator,
     deleteTagValidator,
 }
-
-
-

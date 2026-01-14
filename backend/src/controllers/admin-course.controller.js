@@ -59,7 +59,7 @@ class AdminCourseController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Courses retrieved successfully'
+            'Truy xuất danh sách khóa học thành công'
         )
     })
 
@@ -74,11 +74,11 @@ class AdminCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         if (typeof isFeatured !== 'boolean') {
-            return ApiResponse.badRequest(res, 'isFeatured must be a boolean')
+            return ApiResponse.badRequest(res, 'isFeatured phải là boolean')
         }
 
         const course = await adminCourseService.toggleCourseFeatured(
@@ -89,7 +89,7 @@ class AdminCourseController {
         return ApiResponse.success(
             res,
             course,
-            `Course ${isFeatured ? 'featured' : 'unfeatured'} successfully`
+            `Khóa học ${isFeatured ? 'featured' : 'unfeatured'} thành công`
         )
     })
 
@@ -104,7 +104,7 @@ class AdminCourseController {
         return ApiResponse.success(
             res,
             analytics,
-            'Platform analytics retrieved successfully'
+            'Truy xuất thống kê toàn bộ thành công'
         )
     })
 
@@ -115,12 +115,13 @@ class AdminCourseController {
      */
     getInstructorsForCourses = asyncHandler(async (req, res) => {
         const limit = parseInt(req.query.limit) || 1000
-        const instructors = await adminCourseService.getInstructorsForCourses(limit)
+        const instructors =
+            await adminCourseService.getInstructorsForCourses(limit)
 
         return ApiResponse.success(
             res,
             instructors,
-            'Instructors retrieved successfully'
+            'Truy xuất danh sách giảng viên thành công'
         )
     })
 }

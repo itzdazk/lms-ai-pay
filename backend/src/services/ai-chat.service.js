@@ -16,11 +16,11 @@ class AIChatService {
      */
     async verifyConversationAccess(conversationId, userId) {
         const conversation = await prisma.conversation.findUnique({
-            where: { id: conversationId }
+            where: { id: conversationId },
         })
 
         if (!conversation) {
-            const error = new Error('Conversation not found')
+            const error = new Error('Cuộc hội thoại không tồn tại')
             error.statusCode = 404
             throw error
         }
@@ -32,7 +32,9 @@ class AIChatService {
 
         // Private conversation - must match current user
         if (conversation.userId !== userId) {
-            const error = new Error('Access denied: This conversation belongs to another user')
+            const error = new Error(
+                'Truy cập bị từ chối: Cuộc hội thoại này thuộc về một người dùng khác'
+            )
             error.statusCode = 403
             throw error
         }
@@ -60,7 +62,7 @@ class AIChatService {
                 if (course) {
                     validCourseId = courseId
                 } else {
-                    const error = new Error('Course not found')
+                    const error = new Error('Khóa học không tồn tại')
                     error.statusCode = HTTP_STATUS.NOT_FOUND
                     throw error
                 }
@@ -85,7 +87,7 @@ class AIChatService {
                         }
                     }
                 } else {
-                    const error = new Error('Lesson not found')
+                    const error = new Error('Bài học không tồn tại')
                     error.statusCode = HTTP_STATUS.NOT_FOUND
                     throw error
                 }
@@ -170,15 +172,18 @@ class AIChatService {
                     data: { lastMessageAt: new Date() },
                 })
             } catch (greetErr) {
-                logger.warn('Failed to create initial AI greeting message:', greetErr)
+                logger.warn(
+                    'Không thể tạo tin nhắn chào mừng ban đầu của AI:',
+                    greetErr
+                )
             }
 
             logger.info(
-                `Created conversation ${conversation.id} for user ${userId}`
+                `Tạo cuộc hội thoại ${conversation.id} cho người dùng ${userId}`
             )
             return conversation
         } catch (error) {
-            logger.error('Error creating conversation:', error)
+            logger.error('Lỗi khi tạo cuộc hội thoại:', error)
             throw error
         }
     }
@@ -186,10 +191,19 @@ class AIChatService {
     /**
      * Gửi message và nhận response
      */
-    async sendMessage(userId, conversationId, messageText, mode = 'course', lessonId = null) {
+    async sendMessage(
+        userId,
+        conversationId,
+        messageText,
+        mode = 'course',
+        lessonId = null
+    ) {
         try {
             // 1. Verify conversation access (handles both public advisor and private conversations)
-            const conversation = await this.verifyConversationAccess(conversationId, userId)
+            const conversation = await this.verifyConversationAccess(
+                conversationId,
+                userId
+            )
 
             // 2. Lưu message của user
             const userMessage = await prisma.chatMessage.create({
@@ -211,7 +225,10 @@ class AIChatService {
                 { mode, dynamicLessonId: lessonId }
             )
             const contextDuration = Date.now() - contextStartTime
-            logger.debug(`Knowledge base context built in ${contextDuration}ms`)
+
+            logger.debug(
+                `Knowledge base context đã được thiết lập trong ${contextDuration}ms`
+            )
 
             // 4. Get conversation history for context (use knowledge base service)
             const conversationHistory =
@@ -229,7 +246,8 @@ class AIChatService {
             try {
                 // Check if Ollama is available (for all modes including advisor)
                 const healthCheckStart = Date.now()
-                const isOllamaAvailable = ollamaService.enabled && await ollamaService.checkHealth()
+                const isOllamaAvailable =
+                    ollamaService.enabled && (await ollamaService.checkHealth())
                 const healthCheckDuration = Date.now() - healthCheckStart
 
                 if (isOllamaAvailable) {
@@ -241,7 +259,7 @@ class AIChatService {
                                 () =>
                                     reject(
                                         new Error(
-                                            'Ollama generation timeout'
+                                            'Thời gian tạo của Ollama đã hết hạn'
                                         )
                                     ),
                                 generationTimeout
@@ -252,7 +270,8 @@ class AIChatService {
                         let generationPromise
                         if (mode === 'advisor') {
                             // Advisor mode: fetch courses first, then use Ollama to generate smart response
-                            const availableCourses = context.searchResults?.courses || []
+                            const availableCourses =
+                                context.searchResults?.courses || []
                             generationPromise = this.generateAdvisorResponse(
                                 availableCourses,
                                 messageText
@@ -272,8 +291,7 @@ class AIChatService {
                             timeoutPromise,
                         ])
                         usedOllama = true
-                        const responseDuration =
-                            Date.now() - responseStartTime
+                        const responseDuration = Date.now() - responseStartTime
                         logger.info(
                             `Response generated in ${responseDuration}ms (mode: ${mode}) ` +
                                 `(health check: ${healthCheckDuration}ms, ` +
@@ -281,17 +299,16 @@ class AIChatService {
                         )
                     } catch (ollamaError) {
                         const errorDuration = Date.now() - responseStartTime
-                        fallbackReason =
-                            ollamaError.message || 'Unknown error'
+                        fallbackReason = ollamaError.message || 'Unknown error'
 
                         // Log error with context
                         if (ollamaError.message?.includes('timeout')) {
                             logger.warn(
-                                `Ollama generation timeout after ${errorDuration}ms, falling back to template`
+                                `Thời gian tạo của Ollama đã hết hạn sau ${errorDuration}ms, trở lại mẫu trả lời`
                             )
                         } else {
                             logger.error(
-                                `Ollama generation failed after ${errorDuration}ms, falling back to template:`,
+                                `Thất bại sau ${errorDuration}ms, trở lại mẫu trả lời:`,
                                 ollamaError.message,
                                 ollamaError.stack
                             )
@@ -306,9 +323,9 @@ class AIChatService {
                     }
                 } else {
                     const checkDuration = Date.now() - responseStartTime
-                    fallbackReason = 'Ollama service unavailable'
+                    fallbackReason = 'Dịch vụ Ollama không khả dụng'
                     logger.warn(
-                        `Ollama not available (checked in ${checkDuration}ms), falling back to template response`
+                        `Ollama không khả dụng (kiểm tra trong ${checkDuration}ms), trở lại mẫu trả lời`
                     )
                     responseData = this.generateTemplateResponse(
                         context,
@@ -318,9 +335,9 @@ class AIChatService {
                 }
             } catch (error) {
                 // Catch-all error handler
-                fallbackReason = error.message || 'Unexpected error'
+                fallbackReason = error.message || 'Lỗi không xác định'
                 logger.error(
-                    `Error generating response (${fallbackReason}), using template fallback:`,
+                    `Lỗi khi tạo trả lời (${fallbackReason}), trở lại mẫu trả lời:`,
                     error.message,
                     error.stack
                 )
@@ -356,8 +373,6 @@ class AIChatService {
                 data: { lastMessageAt: new Date() },
             })
 
-            logger.info(`Sent message in conversation ${conversationId}`)
-
             return {
                 userMessage,
                 aiMessage,
@@ -367,7 +382,6 @@ class AIChatService {
                 },
             }
         } catch (error) {
-            logger.error('Error sending message:', error)
             throw error
         }
     }
@@ -375,10 +389,20 @@ class AIChatService {
     /**
      * Send message with streaming response (for better UX)
      */
-    async sendMessageStream(userId, conversationId, messageText, mode = 'course', onChunk, lessonId = null) {
+    async sendMessageStream(
+        userId,
+        conversationId,
+        messageText,
+        mode = 'course',
+        onChunk,
+        lessonId = null
+    ) {
         try {
             // 1. Verify conversation access (handles both public advisor and private conversations)
-            const conversation = await this.verifyConversationAccess(conversationId, userId)
+            const conversation = await this.verifyConversationAccess(
+                conversationId,
+                userId
+            )
 
             // 2. Lưu message của user
             const userMessage = await prisma.chatMessage.create({
@@ -423,8 +447,10 @@ class AIChatService {
                     const isOllamaAvailable = await ollamaService.checkHealth()
                     if (isOllamaAvailable) {
                         // Build system prompt
-                        const systemPrompt =
-                            ollamaService.buildSystemPrompt(context, mode)
+                        const systemPrompt = ollamaService.buildSystemPrompt(
+                            context,
+                            mode
+                        )
 
                         // Stream response from Ollama
                         try {
@@ -496,7 +522,7 @@ class AIChatService {
                         } catch (streamError) {
                             streamingError = streamError
                             logger.error(
-                                'Error during Ollama streaming:',
+                                'Lỗi trong quá trình truyền dòng của Ollama:',
                                 streamError
                             )
                             // Continue to fallback
@@ -510,7 +536,7 @@ class AIChatService {
                         !fullResponse.trim()
                     ) {
                         logger.warn(
-                            'Falling back to template response (Ollama unavailable or streaming failed)'
+                            'Trở lại mẫu trả lời (Ollama không khả dụng hoặc truyền dòng thất bại)'
                         )
                         const templateResponse = this.generateTemplateResponse(
                             context,
@@ -549,7 +575,6 @@ class AIChatService {
                     })
                 }
             } catch (error) {
-                logger.error('Error in streaming response:', error)
                 // Fallback to template
                 const templateResponse = this.generateTemplateResponse(
                     context,
@@ -576,7 +601,9 @@ class AIChatService {
                         sources,
                         suggestedActions,
                         usedOllama,
-                        fallbackReason: streamingError ? (streamingError.message || String(streamingError)) : null,
+                        fallbackReason: streamingError
+                            ? streamingError.message || String(streamingError)
+                            : null,
                         responseTime: Date.now() - responseStartTime,
                         mode,
                     },
@@ -594,10 +621,7 @@ class AIChatService {
                 type: 'ai_message',
                 data: aiMessage,
             })
-
-            logger.info(`Streamed message in conversation ${conversationId}`)
         } catch (error) {
-            logger.error('Error streaming message:', error)
             throw error
         }
     }
@@ -605,7 +629,12 @@ class AIChatService {
     /**
      * Generate response using Ollama with knowledge base context
      */
-    async generateOllamaResponse(messageText, conversationHistory, context, mode = 'course') {
+    async generateOllamaResponse(
+        messageText,
+        conversationHistory,
+        context,
+        mode = 'course'
+    ) {
         try {
             // Build system prompt with knowledge base
             const systemPrompt = ollamaService.buildSystemPrompt(context, mode)
@@ -682,7 +711,8 @@ class AIChatService {
                     prefix += `🔎 Ngữ cảnh: Bài học${lessonTitle ? ` "${lessonTitle}"` : ''}${courseTitle ? ` trong khóa "${courseTitle}"` : ''}.\n\n`
                 }
                 // If nothing found in this lesson, state it clearly and suggest options
-                const hasResults = (context?.searchResults?.totalResults || 0) > 0
+                const hasResults =
+                    (context?.searchResults?.totalResults || 0) > 0
                 if (!hasResults && lessonTitle) {
                     prefix += `⚠️ Không tìm thấy nội dung liên quan trong bài học này. Bạn có thể:\n- Chuyển sang tùy chọn "Tổng quan" để hỏi chung\n- Hoặc mô tả chi tiết hơn câu hỏi\n\n`
                 }
@@ -694,7 +724,6 @@ class AIChatService {
                 suggestedActions,
             }
         } catch (error) {
-            logger.error('Error in generateOllamaResponse:', error)
             throw error
         }
     }
@@ -712,7 +741,10 @@ class AIChatService {
 
         // ADVISOR MODE: Recommend courses based on search results
         if (mode === 'advisor') {
-            return await this.generateAdvisorResponse(searchResults.courses, query)
+            return await this.generateAdvisorResponse(
+                searchResults.courses,
+                query
+            )
         }
 
         // If in general mode, return a friendly conversational fallback
@@ -763,7 +795,7 @@ class AIChatService {
     async generateAdvisorResponse(courses, query, conversationHistory = []) {
         // Check if query is greeting or learning-related
         const isGreeting = this._isGreeting(query)
-        
+
         if (isGreeting) {
             // For greetings, return welcome message
             const text = `👋 Xin chào! Tôi là Trợ lý AI, sẵn sàng giúp bạn tìm khóa học lập trình phù hợp.
@@ -777,14 +809,15 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             return {
                 text,
                 sources: [],
-                suggestedActions: []
+                suggestedActions: [],
             }
         }
 
         // For learning-related queries, use LLM to understand context
         // Then show real courses with intelligent explanation
         try {
-            const availableCourses = courses && courses.length > 0 ? courses : []
+            const availableCourses =
+                courses && courses.length > 0 ? courses : []
 
             // Filter courses that are relevant to the user's intent
             const relevantCourses = availableCourses.filter((course) =>
@@ -792,9 +825,13 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             )
 
             // Build a prompt that prevents hallucination and only uses relevant courses
-            const coursesForPrompt = relevantCourses.length > 0 ? relevantCourses : []
+            const coursesForPrompt =
+                relevantCourses.length > 0 ? relevantCourses : []
             const coursesList = coursesForPrompt
-                .map((c, i) => `${i + 1}. ${c.title} (${c.durationHours}h, ${c.totalLessons} bài học)`)
+                .map(
+                    (c, i) =>
+                        `${i + 1}. ${c.title} (${c.durationHours}h, ${c.totalLessons} bài học)`
+                )
                 .join('\n')
 
             const prompt = `Bạn là trợ lý tư vấn khóa học lập trình. Người dùng nói: "${query}"
@@ -813,8 +850,6 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             // Use Ollama to understand context and generate explanation
             const contextResponse = await ollamaService.generateResponse(prompt)
             let advisorMessage = contextResponse
-
-            logger.info(`✅ Ollama used for advisor response generation`)
 
             // Include relevant courses only when we found matches
             if (relevantCourses.length > 0) {
@@ -847,17 +882,19 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
 
             return { text: advisorMessage, sources }
         } catch (error) {
-            logger.error('Error in generateAdvisorResponse:', error)
-            
             // Smarter fallback when Ollama unavailable
-            const availableCourses = courses && courses.length > 0 ? courses : []
+            const availableCourses =
+                courses && courses.length > 0 ? courses : []
             const queryLower = query.toLowerCase()
-            
+
             let text = ''
             let shouldShowCourses = true
-            
+
             // Detect user intent
-            if (queryLower.includes('khác') || queryLower.includes('nào khác')) {
+            if (
+                queryLower.includes('khác') ||
+                queryLower.includes('nào khác')
+            ) {
                 // User asking for other/different courses
                 if (availableCourses.length === 1) {
                     text = `📚 Hiện tại chúng tôi chỉ có **1 khóa học**: JavaScript cơ bản.\n\n`
@@ -869,7 +906,11 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 } else {
                     text = `✨ Dưới đây là tất cả các khóa học có sẵn:\n\n`
                 }
-            } else if (queryLower.includes('tư vấn') || queryLower.includes('gợi ý') || queryLower.includes('nên học gì')) {
+            } else if (
+                queryLower.includes('tư vấn') ||
+                queryLower.includes('gợi ý') ||
+                queryLower.includes('nên học gì')
+            ) {
                 // User asking for consultation/advice
                 text = `👨‍💼 Tôi sẵn sàng tư vấn! Để giúp bạn tốt hơn, hãy cho tôi biết:\n\n`
                 text += `🎯 **Câu hỏi để tôi hiểu rõ hơn:**\n`
@@ -879,7 +920,10 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 text += `4. Mục tiêu học tập của bạn là gì? (Tìm việc, nâng cao kỹ năng, hobby...)\n\n`
                 text += `Sau đó tôi sẽ gợi ý khóa học phù hợp nhất! 💡`
                 shouldShowCourses = false
-            } else if (queryLower.length < 5 || /^(ok|được|gì|vâng|okela|okie)$/i.test(queryLower)) {
+            } else if (
+                queryLower.length < 5 ||
+                /^(ok|được|gì|vâng|okela|okie)$/i.test(queryLower)
+            ) {
                 // Too short or acknowledgment
                 text = `👋 Bạn muốn biết gì thêm? Tôi có thể giúp bạn:\n\n`
                 text += `- 🔍 Tìm khóa học theo lĩnh vực\n`
@@ -891,10 +935,12 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 // General learning-related query
                 text = `✨ Bạn quan tâm đến: **${query}**\n\n`
             }
-            
+
             // Lọc khóa học liên quan dựa trên intent
             const relevantCourses = shouldShowCourses
-                ? availableCourses.filter((course) => this._isCourseRelevant(query, course))
+                ? availableCourses.filter((course) =>
+                      this._isCourseRelevant(query, course)
+                  )
                 : []
 
             // Nếu không có khóa liên quan, đừng hiển thị danh sách
@@ -906,7 +952,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             if (shouldShowCourses && relevantCourses.length > 0) {
                 text += `Tìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
             }
-            
+
             if (shouldShowCourses) {
                 const sources = relevantCourses.slice(0, 4).map((course) => ({
                     type: 'course',
@@ -938,7 +984,8 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
      */
     _isGreeting(query) {
         if (!query || query.trim().length === 0) return true
-        const greetings = /^(xin chào|chào|hello|hi|halo|hey|xin chào bạn|chào bạn|chào em|xin kính chào|tình hình|sao|sao rồi|thế nào|khỏe không|bạn khỏe không|alo|ê|ơi)$/i
+        const greetings =
+            /^(xin chào|chào|hello|hi|halo|hey|xin chào bạn|chào bạn|chào em|xin kính chào|tình hình|sao|sao rồi|thế nào|khỏe không|bạn khỏe không|alo|ê|ơi)$/i
         return greetings.test(query.trim())
     }
 
@@ -948,23 +995,80 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     _isCourseRelevant(query, course) {
         if (!query || query.trim().length === 0) return false
 
-        const haystack = `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''}`.toLowerCase()
+        const haystack =
+            `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''}`.toLowerCase()
 
         // Filter out generic Vietnamese stopwords so we only match on meaningful tech keywords
         const stopwords = new Set([
-            'hoc', 'học', 'muon', 'muốn', 'toi', 'tôi', 'ban', 'bạn', 'lam', 'làm', 'viec', 'việc',
-            'can', 'cần', 'gi', 'gì', 'the', 'thế', 'nào', 'phu', 'phù', 'hop', 'hợp', 'de', 'để',
-            've', 'về', 'khoa', 'khóa', 'lop', 'lớp', 'co', 'có', 'trinh', 'trình', 'lap', 'lập',
-            'co', 'có', 'coi', 'xem', 'camon', 'cảm', 'cảm ơn', 'on', 'ơn'
+            'hoc',
+            'học',
+            'muon',
+            'muốn',
+            'toi',
+            'tôi',
+            'ban',
+            'bạn',
+            'lam',
+            'làm',
+            'viec',
+            'việc',
+            'can',
+            'cần',
+            'gi',
+            'gì',
+            'the',
+            'thế',
+            'nào',
+            'phu',
+            'phù',
+            'hop',
+            'hợp',
+            'de',
+            'để',
+            've',
+            'về',
+            'khoa',
+            'khóa',
+            'lop',
+            'lớp',
+            'co',
+            'có',
+            'trinh',
+            'trình',
+            'lap',
+            'lập',
+            'co',
+            'có',
+            'coi',
+            'xem',
+            'camon',
+            'cảm',
+            'cảm ơn',
+            'on',
+            'ơn',
         ])
 
-        const allowShortKeywords = new Set(['ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql'])
+        const allowShortKeywords = new Set([
+            'ai',
+            'js',
+            'go',
+            'c',
+            'c++',
+            'c#',
+            'ui',
+            'ux',
+            'sql',
+        ])
 
         const keywords = query
             .toLowerCase()
             .split(/[^\p{L}\p{N}+#.]+/u)
             .filter((w) => w.length > 0)
-            .filter((w) => (w.length >= 3 || allowShortKeywords.has(w)) && !stopwords.has(w))
+            .filter(
+                (w) =>
+                    (w.length >= 3 || allowShortKeywords.has(w)) &&
+                    !stopwords.has(w)
+            )
 
         if (keywords.length === 0) return false
 
@@ -1220,7 +1324,8 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
      * General fallback for non-course mode (friendly conversational replies)
      */
     generateGeneralFallbackResponse(query) {
-        const greetingRegex = /(xin chào|chào|hello|hi|hey|có ở đó|are you there)/i
+        const greetingRegex =
+            /(xin chào|chào|hello|hi|hey|có ở đó|are you there)/i
         if (greetingRegex.test(query)) {
             const text = `Chào bạn! Mình là Gia sư AI — mình có thể giúp bạn những gì về lập trình hoặc học tập hôm nay?`
             return { text, sources: [], suggestedActions: [] }
@@ -1233,10 +1338,19 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     /**
      * Get messages trong conversation (optimized: combine verification with count)
      */
-    async getMessages(conversationId, userId, page = 1, limit = 50, order = 'asc') {
+    async getMessages(
+        conversationId,
+        userId,
+        page = 1,
+        limit = 50,
+        order = 'asc'
+    ) {
         try {
             // Verify conversation access (allows both public advisor and private conversations)
-            const conversation = await this.verifyConversationAccess(conversationId, userId)
+            const conversation = await this.verifyConversationAccess(
+                conversationId,
+                userId
+            )
 
             const [messages, total] = await Promise.all([
                 prisma.chatMessage.findMany({
@@ -1270,7 +1384,6 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 },
             }
         } catch (error) {
-            logger.error('Error getting messages:', error)
             throw error
         }
     }
@@ -1291,7 +1404,9 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             })
 
             if (!message) {
-                const error = new Error('Message not found or access denied')
+                const error = new Error(
+                    'Tin nhắn không tồn tại hoặc truy cập bị từ chối'
+                )
                 error.statusCode = 404
                 throw error
             }
@@ -1304,13 +1419,8 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 },
             })
 
-            logger.info(
-                `Feedback submitted for message ${messageId}: ${isHelpful ? 'helpful' : 'not helpful'}`
-            )
-
             return updated
         } catch (error) {
-            logger.error('Error submitting feedback:', error)
             throw error
         }
     }
@@ -1368,7 +1478,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             })
 
             // Map to include lastMessage in a cleaner format
-            const conversationsWithLastMessage = conversations.map(conv => ({
+            const conversationsWithLastMessage = conversations.map((conv) => ({
                 ...conv,
                 lastMessage: conv.messages?.[0]?.message || null,
                 lastMessageSender: conv.messages?.[0]?.senderType || null,
@@ -1386,7 +1496,6 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 },
             }
         } catch (error) {
-            logger.error('Error getting conversations:', error)
             throw error
         }
     }
@@ -1441,8 +1550,18 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                     {
                         user: {
                             OR: [
-                                { fullName: { contains: search, mode: 'insensitive' } },
-                                { email: { contains: search, mode: 'insensitive' } },
+                                {
+                                    fullName: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                                {
+                                    email: {
+                                        contains: search,
+                                        mode: 'insensitive',
+                                    },
+                                },
                             ],
                         },
                     },
@@ -1511,7 +1630,6 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 },
             }
         } catch (error) {
-            logger.error('Error getting all conversations (admin):', error)
             throw error
         }
     }
@@ -1523,18 +1641,20 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
         try {
             // Verify conversation access (only allow deletion of conversations owned by user, not public advisor conversations)
             const conversation = await prisma.conversation.findUnique({
-                where: { id: conversationId }
+                where: { id: conversationId },
             })
 
             if (!conversation) {
-                const error = new Error('Conversation not found')
+                const error = new Error('Không tìm thấy cuộc hội thoại')
                 error.statusCode = 404
                 throw error
             }
 
             // Only owner can archive their conversation
             if (conversation.userId !== userId) {
-                const error = new Error('Access denied: Only conversation owner can archive')
+                const error = new Error(
+                    'Truy cập bị từ chối: Chỉ chủ sở hữu cuộc hội thoại mới có thể lưu trữ'
+                )
                 error.statusCode = 403
                 throw error
             }
@@ -1543,10 +1663,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 where: { id: conversationId },
                 data: { isArchived: true, isActive: false },
             })
-
-            logger.info(`Archived conversation ${conversationId}`)
         } catch (error) {
-            logger.error('Error archiving conversation:', error)
             throw error
         }
     }
@@ -1557,18 +1674,20 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     async deleteConversation(conversationId, userId) {
         try {
             const conversation = await prisma.conversation.findUnique({
-                where: { id: conversationId }
+                where: { id: conversationId },
             })
 
             if (!conversation) {
-                const error = new Error('Conversation not found')
+                const error = new Error('Không tìm thấy cuộc hội thoại')
                 error.statusCode = 404
                 throw error
             }
 
             // Only owner can delete their conversation (advisor conversations are temporary and read-only)
             if (conversation.userId !== userId) {
-                const error = new Error('Access denied: Only conversation owner can delete')
+                const error = new Error(
+                    'Truy cập bị từ chối: Chỉ chủ sở hữu cuộc hội thoại mới có thể xóa'
+                )
                 error.statusCode = 403
                 throw error
             }
@@ -1577,10 +1696,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             await prisma.conversation.delete({
                 where: { id: conversationId },
             })
-
-            logger.info(`Deleted conversation ${conversationId}`)
         } catch (error) {
-            logger.error('Error deleting conversation:', error)
             throw error
         }
     }
@@ -1591,18 +1707,20 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
     async updateConversation(conversationId, userId, data) {
         try {
             const conversation = await prisma.conversation.findUnique({
-                where: { id: conversationId }
+                where: { id: conversationId },
             })
 
             if (!conversation) {
-                const error = new Error('Conversation not found')
+                const error = new Error('Không tìm thấy cuộc hội thoại')
                 error.statusCode = 404
                 throw error
             }
 
             // Only owner can update their conversation (advisor conversations are read-only)
             if (conversation.userId !== userId) {
-                const error = new Error('Access denied: Only conversation owner can update')
+                const error = new Error(
+                    'Truy cập bị từ chối: Chỉ chủ sở hữu cuộc hội thoại mới có thể cập nhật'
+                )
                 error.statusCode = 403
                 throw error
             }
@@ -1614,10 +1732,8 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 },
             })
 
-            logger.info(`Updated conversation ${conversationId}`)
             return updated
         } catch (error) {
-            logger.error('Error updating conversation:', error)
             throw error
         }
     }

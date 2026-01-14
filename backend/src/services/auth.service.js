@@ -3,12 +3,7 @@ import { prisma } from '../config/database.config.js'
 import BcryptUtil from '../utils/bcrypt.util.js'
 import JWTUtil from '../utils/jwt.util.js'
 import DeviceUtil from '../utils/device.util.js'
-import {
-    USER_STATUS,
-    USER_ROLES,
-    HTTP_STATUS,
-    JWT_EXPIRY,
-} from '../config/constants.js'
+import { USER_STATUS, USER_ROLES, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import emailService from './email.service.js'
 
@@ -37,12 +32,12 @@ class AuthService {
 
         if (existingUser) {
             if (existingUser.email === email) {
-                const error = new Error('Email already exists')
+                const error = new Error('Email đã tồn tại')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
             if (existingUser.userName === userName) {
-                const error = new Error('userName already exists')
+                const error = new Error('Tên người dùng đã tồn tại')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -103,8 +98,6 @@ class AuthService {
             sessionId: session.id,
         })
 
-        logger.info(`New user registered: ${user.email}`)
-
         // Notify admins about new user registration
         try {
             const { default: notificationsService } =
@@ -117,9 +110,6 @@ class AuthService {
                 user.role
             )
         } catch (error) {
-            logger.error(
-                `Failed to notify admins about user registration: ${error.message}`
-            )
             // Don't fail registration if notification fails
         }
 
@@ -130,9 +120,7 @@ class AuthService {
                 user.userName,
                 emailVerificationToken
             )
-            logger.info(`Verification email sent to: ${user.email}`)
         } catch (error) {
-            logger.error('Failed to send verification email:', error)
             // Don't fail registration if email fails
         }
 
@@ -173,14 +161,16 @@ class AuthService {
         })
 
         if (!user) {
-            const error = new Error('Invalid email/username or password')
+            const error = new Error(
+                'Email/tên đăng nhập hoặc mật khẩu không hợp lệ.'
+            )
             error.statusCode = HTTP_STATUS.UNAUTHORIZED
             throw error
         }
 
         // Check if user is active
         if (user.status !== USER_STATUS.ACTIVE) {
-            const error = new Error('Your account is not active')
+            const error = new Error('Tài khoản của bạn không hoạt động')
             error.statusCode = HTTP_STATUS.UNAUTHORIZED
             throw error
         }
@@ -192,7 +182,9 @@ class AuthService {
         )
 
         if (!isPasswordValid) {
-            const error = new Error('Invalid email/username or password')
+            const error = new Error(
+                'Email/tên đăng nhập hoặc mật khẩu không hợp lệ.'
+            )
             error.statusCode = HTTP_STATUS.UNAUTHORIZED
             throw error
         }
@@ -286,15 +278,15 @@ class AuthService {
             })
 
             if (!user) {
-                throw new Error('User not found')
+                throw new Error('Không tìm thấy người dùng')
             }
 
             if (user.status !== USER_STATUS.ACTIVE) {
-                throw new Error('User account is not active')
+                throw new Error('Tài khoản của bạn không hoạt động')
             }
 
             if (decoded.tokenVersion !== user.tokenVersion) {
-                throw new Error('Token has been invalidated')
+                throw new Error('Token đã bị hết hạn')
             }
 
             // Check if session exists and is active
@@ -309,11 +301,11 @@ class AuthService {
                 })
 
                 if (!session || !session.isActive) {
-                    throw new Error('Session has been invalidated')
+                    throw new Error('Phiên đăng nhập đã bị hết hạn')
                 }
 
                 if (session.expiresAt < new Date()) {
-                    throw new Error('Session has expired')
+                    throw new Error('Phiên đăng nhập đã hết hạn')
                 }
 
                 // Update last activity
@@ -332,7 +324,7 @@ class AuthService {
 
             return tokens
         } catch (error) {
-            throw new Error('Invalid refresh token')
+            throw new Error('Token làm mới không hợp lệ')
         }
     }
 
@@ -356,11 +348,11 @@ class AuthService {
             })
 
             if (!user) {
-                throw new Error('Invalid verification token')
+                throw new Error('Token xác thực không hợp lệ')
             }
 
             if (user.emailVerified) {
-                throw new Error('Email already verified')
+                throw new Error('Email đã được xác thực')
             }
 
             await prisma.user.update({
@@ -375,18 +367,14 @@ class AuthService {
             // Send welcome email
             try {
                 await emailService.sendWelcomeEmail(user.email, user.userName)
-            } catch (error) {
-                logger.error('Failed to send welcome email:', error)
-            }
-
-            logger.info(`Email verified for user: ${user.email}`)
+            } catch (error) {}
 
             return true
         } catch (error) {
             if (error.message === 'Email already verified') {
                 throw error
             }
-            throw new Error('Email verification failed')
+            throw new Error('Xác minh email thất bại')
         }
     }
 
@@ -405,11 +393,11 @@ class AuthService {
         })
 
         if (!user) {
-            throw new Error('User not found')
+            throw new Error('Không tìm thấy người dùng')
         }
 
         if (user.emailVerified) {
-            throw new Error('Email already verified')
+            throw new Error('Email đã được xác thực')
         }
 
         // Generate new verification token
@@ -430,9 +418,7 @@ class AuthService {
             emailVerificationToken
         )
 
-        logger.info(`Verification email resent to: ${user.email}`)
-
-        return { message: 'Verification email sent' }
+        return { message: 'Email xác minh đã được gửi thành công' }
     }
 
     /**
@@ -449,11 +435,10 @@ class AuthService {
         })
 
         if (!user) {
-            // Don't reveal if user exists
-            logger.info(
-                `Password reset requested for non-existent email: ${email}`
-            )
-            return { message: 'If the email exists, a reset link will be sent' }
+            return {
+                message:
+                    'Nếu email tồn tại, một liên kết đặt lại mật khẩu sẽ được gửi',
+            }
         }
 
         const resetToken = JWTUtil.generatePasswordResetToken(user.id)
@@ -474,13 +459,11 @@ class AuthService {
                 user.userName,
                 resetToken
             )
-            logger.info(`Password reset email sent to: ${user.email}`)
         } catch (error) {
-            logger.error('Failed to send password reset email:', error)
-            throw new Error('Failed to send password reset email')
+            throw new Error('Không thể gửi email đặt lại mật khẩu')
         }
 
-        return { message: 'Password reset email sent' }
+        return { message: 'Email đặt lại mật khẩu đã được gửi thành công' }
     }
 
     /**
@@ -506,7 +489,9 @@ class AuthService {
             })
 
             if (!user) {
-                throw new Error('Invalid or expired reset token')
+                throw new Error(
+                    'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn'
+                )
             }
 
             const passwordHash = await BcryptUtil.hash(newPassword)
@@ -527,20 +512,15 @@ class AuthService {
                     user.userName
                 )
             } catch (error) {
-                logger.error(
-                    'Failed to send password change confirmation:',
-                    error
-                )
+                // Don't fail password reset if email fails
             }
-
-            logger.info(`Password reset successful for: ${user.email}`)
 
             return true
         } catch (error) {
             if (error.message === 'Invalid or expired reset token') {
                 throw error
             }
-            throw new Error('Password reset failed')
+            throw new Error('Đặt lại mật khẩu thất bại')
         }
     }
 
@@ -567,11 +547,9 @@ class AuthService {
                 },
             })
 
-            logger.info(`All tokens invalidated for user ID: ${userId}`)
             return true
         } catch (error) {
-            logger.error('Error invalidating tokens:', error)
-            throw new Error('Failed to invalidate tokens')
+            throw new Error('Không thể vô hiệu hóa tất cả tokens.')
         }
     }
 
@@ -592,7 +570,7 @@ class AuthService {
             })
 
             if (!session) {
-                throw new Error('Session not found')
+                throw new Error('Không tìm thấy phiên đăng nhập')
             }
 
             // Deactivate session
@@ -601,11 +579,9 @@ class AuthService {
                 data: { isActive: false },
             })
 
-            logger.info(`Session logged out: ${sessionId}`)
             return true
         } catch (error) {
-            logger.error('Error logging out session:', error)
-            throw new Error('Failed to logout session')
+            throw new Error('Không thể đăng xuất phiên đăng nhập')
         }
     }
 
@@ -641,8 +617,7 @@ class AuthService {
 
             return sessions
         } catch (error) {
-            logger.error('Error getting sessions:', error)
-            throw new Error('Failed to get sessions')
+            throw new Error('Không thể lấy phiên đăng nhập')
         }
     }
 
@@ -655,7 +630,7 @@ class AuthService {
         })
 
         if (!user) {
-            throw new Error('User not found')
+            throw new Error('Không tìm thấy người dùng')
         }
 
         const isPasswordValid = await BcryptUtil.compare(
@@ -664,7 +639,7 @@ class AuthService {
         )
 
         if (!isPasswordValid) {
-            throw new Error('Current password is incorrect')
+            throw new Error('Mật khẩu hiện tại không chính xác')
         }
 
         const passwordHash = await BcryptUtil.hash(newPassword)
@@ -678,8 +653,6 @@ class AuthService {
                 },
             },
         })
-
-        logger.info(`Password changed for user: ${user.email}`)
 
         return true
     }

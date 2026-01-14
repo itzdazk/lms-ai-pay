@@ -53,7 +53,7 @@ class RefundRequestController {
         return ApiResponse.success(
             res,
             eligibility,
-            'Refund eligibility checked successfully'
+            'Kiểm tra tính đáp ứng hoàn tiền thành công'
         )
     })
 
@@ -68,13 +68,13 @@ class RefundRequestController {
         const { action, customAmount, notes } = req.body
 
         if (isNaN(requestId)) {
-            return ApiResponse.badRequest(res, 'Invalid request ID')
+            return ApiResponse.badRequest(res, 'ID yêu cầu không hợp lệ')
         }
 
         if (!action || !['APPROVE', 'REJECT'].includes(action)) {
             return ApiResponse.badRequest(
                 res,
-                'Action must be either APPROVE or REJECT'
+                'Hành động phải là APPROVE hoặc REJECT'
             )
         }
 
@@ -90,8 +90,8 @@ class RefundRequestController {
             res,
             result,
             action === 'APPROVE'
-                ? 'Refund request approved and processed successfully'
-                : 'Refund request rejected successfully'
+                ? 'Yêu cầu hoàn tiền đã được chấp nhận và xử lý thành công'
+                : 'Yêu cầu hoàn tiền đã bị từ chối thành công'
         )
     })
 
@@ -119,7 +119,7 @@ class RefundRequestController {
             res,
             result.refundRequests,
             result.pagination,
-            'Refund requests retrieved successfully'
+            'Truy xuất yêu cầu hoàn tiền thành công'
         )
     })
 
@@ -140,7 +140,7 @@ class RefundRequestController {
         return ApiResponse.success(
             res,
             refundRequest,
-            'Refund request retrieved successfully'
+            'Truy xuất yêu cầu hoàn tiền thành công'
         )
     })
 
@@ -158,7 +158,7 @@ class RefundRequestController {
         return ApiResponse.success(
             res,
             refundRequest,
-            'Refund request retrieved successfully'
+            'Truy xuất yêu cầu hoàn tiền thành công'
         )
     })
 
@@ -198,7 +198,7 @@ class RefundRequestController {
             res,
             result.refundRequests,
             result.pagination,
-            'Refund requests retrieved successfully'
+            'Truy xuất yêu cầu hoàn tiền thành công'
         )
     })
 
@@ -223,7 +223,7 @@ class RefundRequestController {
         return ApiResponse.success(
             res,
             refundRequest,
-            'Refund request cancelled successfully'
+            'Yêu cầu hoàn tiền đã bị hủy thành công'
         )
     })
 }

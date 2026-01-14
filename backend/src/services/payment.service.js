@@ -33,8 +33,6 @@ import {
 } from '../config/momo.config.js'
 import ordersService from './orders.service.js'
 import qs from 'qs'
-import crypto from 'crypto'
-import querystring from 'querystring'
 import notificationsService from './notifications.service.js'
 
 const ensureMoMoConfig = () => {
@@ -44,12 +42,12 @@ const ensureMoMoConfig = () => {
         !momoConfig.secretKey
     ) {
         throw new Error(
-            'MoMo configuration is missing. Please set MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, and MOMO_SECRET_KEY.'
+            'Thiếu cấu hình MoMo. Vui lòng thiết lập MOMO_PARTNER_CODE, MOMO_ACCESS_KEY và MOMO_SECRET_KEY'
         )
     }
     if (!momoConfig.returnUrl || !momoConfig.notifyUrl) {
         throw new Error(
-            'MoMo return or notify URL is not configured. Please set MOMO_RETURN_URL and MOMO_NOTIFY_URL.'
+            'Thiếu cấu hình MoMo return hoặc notify URL. Vui lòng thiết lập MOMO_RETURN_URL và MOMO_NOTIFY_URL'
         )
     }
 }
@@ -57,12 +55,12 @@ const ensureMoMoConfig = () => {
 const ensureVNPayConfig = () => {
     if (!vnpayConfig.tmnCode || !vnpayConfig.hashSecret) {
         throw new Error(
-            'VNPay configuration is missing. Please set VNPAY_TMN_CODE and VNPAY_HASH_SECRET.'
+            'Thiếu cấu hình VNPay. Vui lòng thiết lập VNPAY_TMN_CODE và VNPAY_HASH_SECRET'
         )
     }
     if (!vnpayConfig.returnUrl) {
         throw new Error(
-            'VNPay return URL is not configured. Please set VNPAY_RETURN_URL.'
+            'Thiếu cấu hình VNPay return URL. Vui lòng thiết lập VNPAY_RETURN_URL'
         )
     }
 }
@@ -197,11 +195,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const ERROR_MESSAGES = {
     supersededByNewRequest: (gateway) =>
-        `${gateway} payment attempt superseded by a newer request`,
+        `${gateway} yêu cầu thanh toán đã bị thay thế bởi một yêu cầu mới hơn`,
     supersededBySuccess: (gateway) =>
-        `${gateway} payment attempt superseded by a successful payment`,
+        `${gateway} yêu cầu thanh toán đã bị thay thế bởi một thanh toán thành công`,
     paymentCreationFailed: (gateway, resultCode) =>
-        `${gateway} payment creation failed${
+        `${gateway} thanh toán thất bại${
             resultCode !== undefined && resultCode !== null
                 ? ` (resultCode: ${resultCode})`
                 : ''
@@ -210,7 +208,7 @@ const ERROR_MESSAGES = {
         if (gateway === PAYMENT_GATEWAY.MOMO) {
             return getMoMoRefundErrorMessage(resultCode)
         }
-        return `${gateway} refund failed${
+        return `${gateway} hoàn tiền thất bại${
             resultCode !== undefined && resultCode !== null
                 ? ` (resultCode: ${resultCode})`
                 : ''
@@ -277,35 +275,35 @@ class PaymentService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
         if (order.userId !== userId) {
             const error = new Error(
-                'You are not authorized to pay for this order'
+                'Bạn không được phép thanh toán cho đơn hàng này'
             )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
         if (order.paymentGateway !== PAYMENT_GATEWAY.VNPAY) {
-            const error = new Error('Order is not assigned to VNPay')
+            const error = new Error('Đơn hàng không được gán cho VNPay')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
-            const error = new Error('Order has already been paid')
+            const error = new Error('Đơn hàng đã được thanh toán')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
-            const error = new Error('Order has already been refunded')
+            const error = new Error('Đơn hàng đã được hoàn tiền')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Order cannot be paid in status ${order.paymentStatus}`
+                `Không thể thanh toán đơn hàng trong trạng thái ${order.paymentStatus}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -313,7 +311,7 @@ class PaymentService {
 
         const amount = normalizeAmount(order.finalPrice)
         if (amount <= 0) {
-            const error = new Error('Order amount must be greater than 0')
+            const error = new Error('Giá trị thanh toán phải lớn hơn 0')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -336,7 +334,7 @@ class PaymentService {
                 return {
                     payUrl,
                     txnRef: existingTxn.transactionId,
-                    message: 'Payment URL already exists',
+                    message: 'URL thanh toán đã tồn tại',
                     order: {
                         id: order.id,
                         orderCode: order.orderCode,
@@ -413,7 +411,7 @@ class PaymentService {
         return {
             payUrl,
             txnRef,
-            message: 'New VNPay payment URL created',
+            message: 'Tạo URL thanh toán VNPay mới thành công',
             order: {
                 id: order.id,
                 orderCode: order.orderCode,
@@ -450,42 +448,40 @@ class PaymentService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (order.userId !== userId) {
             const error = new Error(
-                'You are not authorized to pay for this order'
+                'Bạn không được phép thanh toán cho đơn hàng này'
             )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
         if (order.paymentGateway !== PAYMENT_GATEWAY.MOMO) {
-            const error = new Error(
-                'Order is not assigned to MoMo payment gateway'
-            )
+            const error = new Error('Đơn hàng không được gán cho MoMo')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
         if (order.paymentStatus === PAYMENT_STATUS.PAID) {
-            const error = new Error('Order has already been paid')
+            const error = new Error('Đơn hàng đã được thanh toán')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
         if (order.paymentStatus === PAYMENT_STATUS.REFUNDED) {
-            const error = new Error('Order has already been refunded')
+            const error = new Error('Đơn hàng đã được hoàn tiền')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Order cannot be paid in status ${order.paymentStatus}`
+                `Không thể thanh toán đơn hàng trong trạng thái ${order.paymentStatus}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -495,7 +491,7 @@ class PaymentService {
 
         if (amount <= 0) {
             throw new Error(
-                'Order amount must be greater than 0 to process payment'
+                'Giá trị thanh toán phải lớn hơn 0 để xử lý thanh toán'
             )
         }
 
@@ -522,7 +518,7 @@ class PaymentService {
                 payUrl: gatewayResponse.payUrl || null,
                 deeplink: gatewayResponse.deeplink || null,
                 qrCodeUrl: gatewayResponse.qrCodeUrl || null,
-                message: 'Payment URL already exists',
+                message: 'URL thanh toán đã tồn tại',
                 resultCode: gatewayResponse.resultCode || 0,
                 order: {
                     id: order.id,
@@ -612,7 +608,7 @@ class PaymentService {
                 })
 
                 throw new Error(
-                    responseBody?.message || 'Failed to create MoMo payment URL'
+                    responseBody?.message || 'Không thể tạo URL thanh toán MoMo'
                 )
             }
         } catch (error) {
@@ -679,7 +675,7 @@ class PaymentService {
         ensureMoMoConfig()
 
         if (!isIpAllowed(ipAddress)) {
-            throw new Error('Unauthorized IP address for MoMo webhook')
+            throw new Error('IP không được phép cho webhook MoMo')
         }
 
         return this.#processMoMoResult(payload, 'webhook', ipAddress)
@@ -688,7 +684,7 @@ class PaymentService {
     // ==================== Refund Methods ====================
     async refundOrder(orderId, adminUser, amountInput = null, reason = null) {
         if (adminUser.role !== USER_ROLES.ADMIN) {
-            const error = new Error('Only administrators can process refunds')
+            const error = new Error('Chỉ có quản trị viên mới có thể hoàn tiền')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -707,7 +703,7 @@ class PaymentService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -720,7 +716,7 @@ class PaymentService {
             order.paymentStatus !== PAYMENT_STATUS.REFUND_FAILED
         ) {
             const error = new Error(
-                `Only paid, refund pending, or refund failed orders can be refunded. Current status: ${order.paymentStatus}`
+                `Chỉ có thể hoàn tiền cho các đơn hàng ở trạng thái đã thanh toán, đang chờ hoàn tiền hoặc hoàn tiền thất bại. Trạng thái hiện tại: ${order.paymentStatus}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -730,7 +726,7 @@ class PaymentService {
 
         if (!successfulTransaction || !successfulTransaction.transactionId) {
             const error = new Error(
-                'No successful transaction found for this order to refund'
+                'Không tìm thấy giao dịch thành công để hoàn tiền cho đơn hàng này'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -756,7 +752,7 @@ class PaymentService {
         }
 
         throw new Error(
-            `Refund not supported for payment gateway: ${order.paymentGateway}`
+            `Không hỗ trợ hoàn tiền cho phương thức thanh toán: ${order.paymentGateway}`
         )
     }
 
@@ -849,7 +845,7 @@ class PaymentService {
         if (amountInput !== null && amountInput !== undefined) {
             const parsed = parseFloat(amountInput)
             if (isNaN(parsed) || parsed <= 0) {
-                throw new Error('Refund amount must be a positive number')
+                throw new Error('Giá trị hoàn tiền phải là một số nguyên dương')
             }
             requestedAmount = Math.round(parsed)
         } else {
@@ -858,19 +854,19 @@ class PaymentService {
         }
 
         if (requestedAmount <= 0) {
-            throw new Error('Refund amount must be greater than 0')
+            throw new Error('Giá trị hoàn tiền phải lớn hơn 0')
         }
 
         if (requestedAmount > remainingAmount) {
             throw new Error(
-                `Refund amount (${requestedAmount}) exceeds remaining paid amount (${remainingAmount})`
+                `Giá trị hoàn tiền (${requestedAmount}) vượt quá giá trị thanh toán còn lại (${remainingAmount})`
             )
         }
 
         // MoMo requires amount to be a positive integer (no decimals)
         if (!Number.isInteger(requestedAmount) || requestedAmount < 1) {
             throw new Error(
-                'Refund amount must be a positive integer (MoMo requirement)'
+                'Giá trị hoàn tiền phải là một số nguyên dương (yêu cầu của MoMo)'
             )
         }
 
@@ -895,7 +891,7 @@ class PaymentService {
 
         if (!gatewayTransId) {
             throw new Error(
-                'Missing MoMo gateway transaction ID for this order. Cannot process refund.'
+                'Thiếu ID giao dịch MoMo cho đơn hàng này. Không thể xử lý hoàn tiền.'
             )
         }
 
@@ -951,7 +947,7 @@ class PaymentService {
                     parseError
                 )
                 throw new Error(
-                    'MoMo API returned invalid response. Please try again.'
+                    'API MoMo trả về kết quả không hợp lệ. Vui lòng thử lại.'
                 )
             }
 
@@ -1072,7 +1068,7 @@ class PaymentService {
             let errorMessage = 'Failed to process MoMo refund'
             if (error.name === 'AbortError') {
                 errorMessage =
-                    'MoMo refund request timed out. Please try again. The request may still be processing on MoMo side.'
+                    'Yêu cầu hoàn tiền MoMo đã hết thời gian sau 30 giây. Vui lòng thử lại. Yêu cầu có thể đang được xử lý trên phía MoMo.'
             } else if (responseBody?.resultCode !== undefined) {
                 // Prioritize resultCode mapping
                 errorMessage = getMoMoRefundErrorMessage(
@@ -1158,8 +1154,8 @@ class PaymentService {
             refundTransaction: result.transactionRecord,
             gatewayResponse: responseBody,
             message: isFullRefund
-                ? 'MoMo refund completed successfully'
-                : 'MoMo partial refund completed successfully',
+                ? 'Hoàn tiền MoMo toàn phần thành công'
+                : 'Hoàn tiền MoMo một phần thành công',
             requiresManualAction: false,
             unenrollment,
         }
@@ -1182,11 +1178,13 @@ class PaymentService {
                 : orderAmount
 
         if (requestedAmount <= 0) {
-            throw new Error('Refund amount must be greater than 0')
+            throw new Error('Giá trị hoàn tiền phải lớn hơn 0')
         }
 
         if (requestedAmount > orderAmount - existingRefundAmount) {
-            throw new Error('Refund amount exceeds remaining paid amount')
+            throw new Error(
+                'Giá trị hoàn tiền vượt quá giá trị thanh toán còn lại'
+            )
         }
 
         const newRefundTotal = existingRefundAmount + requestedAmount
@@ -1245,7 +1243,7 @@ class PaymentService {
             order: result.updatedOrder,
             refundTransaction: result.transactionRecord,
             message:
-                'VNPay refund recorded. Please process refund manually in VNPay portal.',
+                'Hoàn tiền VNPay đã được ghi nhận. Vui lòng xử lý hoàn tiền bằng cách thủ công trên cổng VNPay.',
             requiresManualAction: true,
             unenrollment,
         }
@@ -1358,16 +1356,14 @@ class PaymentService {
         })
 
         if (!transaction) {
-            throw new Error('Transaction not found')
+            throw new Error('Không tìm thấy giao dịch')
         }
 
         if (
             currentUser.role !== USER_ROLES.ADMIN &&
             transaction.order.userId !== currentUser.id
         ) {
-            throw new Error(
-                'You do not have permission to view this transaction'
-            )
+            throw new Error('Bạn không có quyền xem giao dịch này')
         }
 
         return transaction
@@ -1412,12 +1408,12 @@ class PaymentService {
             signatureInput.accessKey || String(momoConfig.accessKey || '')
 
         if (!verifySignature(signatureInput, signature, signatureKeys)) {
-            throw new Error('Invalid MoMo signature')
+            throw new Error('Chữ ký MoMo không hợp lệ')
         }
 
         if (signatureInput.partnerCode !== momoConfig.partnerCode) {
             throw new Error(
-                'Partner code does not match configured MoMo partner'
+                'Mã đối tác không khớp với đối tác MoMo được cấu hình'
             )
         }
 
@@ -1445,14 +1441,14 @@ class PaymentService {
         })
 
         if (!order) {
-            throw new Error('Order not found for the provided MoMo callback')
+            throw new Error('Không tìm thấy đơn hàng cho callback MoMo')
         }
 
         const expectedAmount = normalizeAmount(order.finalPrice)
 
         if (amount !== expectedAmount) {
             throw new Error(
-                `Payment amount mismatch. Expected ${expectedAmount}, received ${amount}`
+                `Giá trị thanh toán không khớp. Dự kiến ${expectedAmount}, nhận được ${amount}`
             )
         }
 
@@ -1666,7 +1662,7 @@ class PaymentService {
                 receivedHash: secureHash,
                 params: vnpParams,
             })
-            throw new Error('Invalid VNPay signature')
+            throw new Error('Chữ ký VNPay không hợp lệ')
         }
 
         // Extract key transaction details from VNPay response
@@ -1696,14 +1692,14 @@ class PaymentService {
 
         // If order not found → invalid request
         if (!order) {
-            throw new Error('Order not found for the provided VNPay callback')
+            throw new Error('Không tìm thấy đơn hàng cho callback VNPay')
         }
 
         // Validate payment amount matches expected order price
         const expectedAmount = normalizeAmount(order.finalPrice)
         if (amount !== expectedAmount) {
             throw new Error(
-                `Payment amount mismatch. Expected ${expectedAmount}, received ${amount}`
+                `Giá trị thanh toán không khớp. Dự kiến ${expectedAmount}, nhận được ${amount}`
             )
         }
 
@@ -1744,7 +1740,7 @@ class PaymentService {
             })
 
             if (!transactionRecord) {
-                throw new Error(`Transaction ${transactionId} not found`)
+                throw new Error(`Không tìm thấy giao dịch ${transactionId}`)
             }
 
             const transactionData = {

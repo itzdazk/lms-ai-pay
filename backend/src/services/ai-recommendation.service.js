@@ -1,7 +1,6 @@
 // backend/src/services/ai-recommendation.service.js
 import { prisma } from '../config/database.config.js'
 import ollamaService from './ollama.service.js'
-import logger from '../config/logger.config.js'
 import { COURSE_STATUS, ENROLLMENT_STATUS } from '../config/constants.js'
 
 class AIRecommendationService {
@@ -20,9 +19,6 @@ class AIRecommendationService {
                 const recentRecommendations =
                     await this._getRecentRecommendations(userId, limit)
                 if (recentRecommendations.length > 0) {
-                    logger.info(
-                        `Returning ${recentRecommendations.length} cached recommendations for user ${userId}`
-                    )
                     return recentRecommendations
                 }
             }
@@ -34,7 +30,6 @@ class AIRecommendationService {
             const candidateCourses = await this._getCandidateCourses(userId)
 
             if (candidateCourses.length === 0) {
-                logger.info(`No candidate courses found for user ${userId}`)
                 return []
             }
 
@@ -51,13 +46,7 @@ class AIRecommendationService {
                             candidateCourses,
                             limit
                         )
-                        logger.info(
-                            `Generated ${recommendations.length} AI recommendations using Ollama`
-                        )
                     } else {
-                        logger.warn(
-                            'Ollama not available, falling back to rule-based recommendations'
-                        )
                         recommendations =
                             await this._generateRuleBasedRecommendations(
                                 userProfile,
@@ -66,10 +55,6 @@ class AIRecommendationService {
                             )
                     }
                 } catch (error) {
-                    logger.error(
-                        'Error generating AI recommendations, falling back to rule-based:',
-                        error
-                    )
                     recommendations =
                         await this._generateRuleBasedRecommendations(
                             userProfile,
@@ -79,7 +64,6 @@ class AIRecommendationService {
                 }
             } else {
                 // Ollama disabled, use rule-based
-                logger.info('Ollama disabled, using rule-based recommendations')
                 recommendations = await this._generateRuleBasedRecommendations(
                     userProfile,
                     candidateCourses,
@@ -90,12 +74,8 @@ class AIRecommendationService {
             // 5. Save recommendations to database
             await this._saveRecommendations(userId, recommendations)
 
-            logger.info(
-                `Generated ${recommendations.length} recommendations for user ${userId}`
-            )
             return recommendations
         } catch (error) {
-            logger.error('Error getting recommendations for user:', error)
             throw error
         }
     }
@@ -128,7 +108,7 @@ class AIRecommendationService {
             })
 
             if (!targetCourse) {
-                throw new Error('Course not found')
+                throw new Error('Khóa học không tồn tại')
             }
 
             // 2. Get candidate courses (same category, similar tags)
@@ -169,7 +149,6 @@ class AIRecommendationService {
             })
 
             if (candidateCourses.length === 0) {
-                logger.info(`No similar courses found for course ${courseId}`)
                 return []
             }
 
@@ -185,9 +164,6 @@ class AIRecommendationService {
                             candidateCourses,
                             limit
                         )
-                        logger.info(
-                            `Calculated AI similarity for ${similarCourses.length} courses`
-                        )
                     } else {
                         similarCourses = this._calculateRuleBasedSimilarity(
                             targetCourse,
@@ -196,10 +172,6 @@ class AIRecommendationService {
                         )
                     }
                 } catch (error) {
-                    logger.error(
-                        'Error calculating AI similarity, falling back to rule-based:',
-                        error
-                    )
                     similarCourses = this._calculateRuleBasedSimilarity(
                         targetCourse,
                         candidateCourses,
@@ -213,13 +185,8 @@ class AIRecommendationService {
                     limit
                 )
             }
-
-            logger.info(
-                `Found ${similarCourses.length} similar courses for course ${courseId}`
-            )
             return similarCourses
         } catch (error) {
-            logger.error('Error getting similar courses:', error)
             throw error
         }
     }
@@ -241,7 +208,9 @@ class AIRecommendationService {
             })
 
             if (!recommendation) {
-                throw new Error('Recommendation not found or access denied')
+                throw new Error(
+                    'Không tìm thấy đề xuất hoặc truy cập bị từ chối'
+                )
             }
 
             // Update viewed status
@@ -250,10 +219,8 @@ class AIRecommendationService {
                 data: { isViewed: true },
             })
 
-            logger.info(`Marked recommendation ${recommendationId} as viewed`)
             return updated
         } catch (error) {
-            logger.error('Error marking recommendation as viewed:', error)
             throw error
         }
     }
@@ -473,7 +440,6 @@ class AIRecommendationService {
             // Return top recommendations
             return recommendations.slice(0, limit)
         } catch (error) {
-            logger.error('Error in AI recommendations:', error)
             throw error
         }
     }
@@ -555,7 +521,7 @@ Hãy gợi ý ít nhất 10 khóa học, sắp xếp theo score giảm dần.`
                 !parsed.recommendations ||
                 !Array.isArray(parsed.recommendations)
             ) {
-                throw new Error('Invalid AI response format')
+                throw new Error('Định dạng phản hồi của AI không hợp lệ')
             }
 
             // Map to course objects
@@ -578,7 +544,6 @@ Hãy gợi ý ít nhất 10 khóa học, sắp xếp theo score giảm dần.`
 
             return recommendations
         } catch (error) {
-            logger.error('Error parsing AI recommendations:', error)
             // Return empty array if parsing fails
             return []
         }
@@ -695,7 +660,6 @@ Hãy gợi ý ít nhất 10 khóa học, sắp xếp theo score giảm dần.`
             )
             return similarCourses.slice(0, limit)
         } catch (error) {
-            logger.error('Error in AI similarity calculation:', error)
             throw error
         }
     }
@@ -772,7 +736,7 @@ Hãy gợi ý ít nhất 5 khóa học tương đồng nhất.`
                 !parsed.similarCourses ||
                 !Array.isArray(parsed.similarCourses)
             ) {
-                throw new Error('Invalid AI similarity response format')
+                throw new Error('Định dạng phản hồi của AI không hợp lệ')
             }
 
             const similarCourses = parsed.similarCourses
@@ -793,7 +757,6 @@ Hãy gợi ý ít nhất 5 khóa học tương đồng nhất.`
 
             return similarCourses
         } catch (error) {
-            logger.error('Error parsing AI similarity:', error)
             return []
         }
     }
@@ -886,12 +849,7 @@ Hãy gợi ý ít nhất 5 khóa học tương đồng nhất.`
                 data,
                 skipDuplicates: true,
             })
-
-            logger.info(
-                `Saved ${data.length} recommendations for user ${userId}`
-            )
         } catch (error) {
-            logger.error('Error saving recommendations:', error)
             // Don't throw, just log - this is not critical
         }
     }

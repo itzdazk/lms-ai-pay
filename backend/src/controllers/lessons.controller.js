@@ -16,7 +16,7 @@ class LessonsController {
         const { id } = req.params
         const lesson = await lessonsService.getLessonById(parseInt(id))
 
-        return ApiResponse.success(res, lesson, 'Lesson retrieved successfully')
+        return ApiResponse.success(res, lesson, 'Truy xuất bài học thành công')
     })
 
     /**
@@ -28,7 +28,7 @@ class LessonsController {
         const { slug, lessonSlug } = req.params
         const lesson = await lessonsService.getLessonBySlug(slug, lessonSlug)
 
-        return ApiResponse.success(res, lesson, 'Lesson retrieved successfully')
+        return ApiResponse.success(res, lesson, 'Truy xuất bài học thành công')
     })
 
     /**
@@ -51,7 +51,7 @@ class LessonsController {
                 hlsStatus: result.hlsStatus,
                 videoDuration: result.videoDuration,
             },
-            'Video URL retrieved successfully'
+            'Truy xuất video URL thành công'
         )
     })
 
@@ -67,7 +67,10 @@ class LessonsController {
 
         // If no transcript, return 404 (frontend will handle silently)
         if (!result.transcriptUrl) {
-            return ApiResponse.notFound(res, 'Transcript not available for this lesson')
+            return ApiResponse.notFound(
+                res,
+                'Không có bản dịch cho bài học này'
+            )
         }
 
         return ApiResponse.success(
@@ -77,7 +80,7 @@ class LessonsController {
                 title: result.title,
                 transcriptUrl: result.transcriptUrl,
             },
-            'Transcript URL retrieved successfully'
+            'Truy xuất transcript URL thành công'
         )
     })
 
@@ -94,7 +97,7 @@ class LessonsController {
             req.user.id
         )
 
-        return ApiResponse.created(res, lesson, 'Lesson created successfully')
+        return ApiResponse.created(res, lesson, 'Tạo bài học thành công')
     })
 
     /**
@@ -110,7 +113,7 @@ class LessonsController {
             req.body
         )
 
-        return ApiResponse.success(res, lesson, 'Lesson updated successfully')
+        return ApiResponse.success(res, lesson, 'Cập nhật bài học thành công')
     })
 
     /**
@@ -123,7 +126,7 @@ class LessonsController {
 
         await lessonsService.deleteLesson(parseInt(courseId), parseInt(id))
 
-        return ApiResponse.success(res, null, 'Lesson deleted successfully')
+        return ApiResponse.success(res, null, 'Xóa bài học thành công')
     })
 
     /**
@@ -133,10 +136,13 @@ class LessonsController {
      */
     uploadVideo = asyncHandler(async (req, res) => {
         const { courseId, id } = req.params
-        const autoCreateTranscript = req.body.autoCreateTranscript === true || req.body.autoCreateTranscript === 'true' || req.query.autoCreateTranscript === 'true'
+        const autoCreateTranscript =
+            req.body.autoCreateTranscript === true ||
+            req.body.autoCreateTranscript === 'true' ||
+            req.query.autoCreateTranscript === 'true'
 
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'Video file is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu tệp video')
         }
 
         try {
@@ -148,21 +154,21 @@ class LessonsController {
                 autoCreateTranscript
             )
 
-            return ApiResponse.success(
-                res,
-                lesson,
-                'Video uploaded successfully'
-            )
+            return ApiResponse.success(res, lesson, 'Tải lên video thành công')
         } catch (error) {
             // Delete uploaded file if there's an error
             if (req.file && req.file.path) {
                 try {
                     if (fs.existsSync(req.file.path)) {
                         fs.unlinkSync(req.file.path)
-                        logger.info(`Deleted uploaded video file due to error: ${req.file.path}`)
+                        logger.info(
+                            `Đã xóa tệp video đã tải lên do có lỗi: ${req.file.path}`
+                        )
                     }
                 } catch (deleteError) {
-                    logger.error(`Error deleting uploaded file: ${deleteError.message}`)
+                    logger.error(
+                        `Lỗi khi xóa tệp đã tải lên: ${deleteError.message}`
+                    )
                 }
             }
             throw error
@@ -178,7 +184,7 @@ class LessonsController {
         const { courseId, id } = req.params
 
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'Transcript file is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu tệp bản dịch')
         }
 
         try {
@@ -191,7 +197,7 @@ class LessonsController {
             return ApiResponse.success(
                 res,
                 lesson,
-                'Transcript uploaded successfully'
+                'Tải lên bản dịch thành công'
             )
         } catch (error) {
             // Delete uploaded file if there's an error
@@ -199,10 +205,14 @@ class LessonsController {
                 try {
                     if (fs.existsSync(req.file.path)) {
                         fs.unlinkSync(req.file.path)
-                        logger.info(`Deleted uploaded transcript file due to error: ${req.file.path}`)
+                        logger.info(
+                            `Deleted uploaded transcript file due to error: ${req.file.path}`
+                        )
                     }
                 } catch (deleteError) {
-                    logger.error(`Error deleting uploaded file: ${deleteError.message}`)
+                    logger.error(
+                        `Error deleting uploaded file: ${deleteError.message}`
+                    )
                 }
             }
             throw error
@@ -226,7 +236,7 @@ class LessonsController {
         return ApiResponse.success(
             res,
             lesson,
-            'Transcript creation requested successfully. Processing will start shortly.'
+            'Yêu cầu tạo bản dịch thành công. Quá trình sẽ bắt đầu ngay lập tức.'
         )
     })
 
@@ -245,7 +255,7 @@ class LessonsController {
             parseInt(newOrder)
         )
 
-        return ApiResponse.success(res, lesson, 'Lesson reordered successfully')
+        return ApiResponse.success(res, lesson, 'Sắp xếp bài học thành công')
     })
 
     /**
@@ -263,7 +273,7 @@ class LessonsController {
             lessonIds.map((id) => parseInt(id))
         )
 
-        return ApiResponse.success(res, null, 'Lessons reordered successfully')
+        return ApiResponse.success(res, null, 'Sắp xếp bài học thành công')
     })
 
     /**
@@ -284,10 +294,9 @@ class LessonsController {
         return ApiResponse.success(
             res,
             lesson,
-            `Lesson ${isPublished ? 'published' : 'unpublished'} successfully`
+            `Bài học đã được ${isPublished ? 'xuất bản' : 'không xuất bản'} thành công`
         )
     })
 }
 
 export default new LessonsController()
-

@@ -15,7 +15,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             dashboard,
-            'Admin dashboard retrieved successfully'
+            'Truy xuất bảng điều khiển admin thành công'
         )
     })
 
@@ -30,7 +30,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             stats,
-            'User statistics retrieved successfully'
+            'Truy xuất thống kê người dùng thành công'
         )
     })
 
@@ -45,7 +45,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             stats,
-            'System statistics retrieved successfully'
+            'Truy xuất thống kê hệ thống chi tiết thành công'
         )
     })
 
@@ -60,7 +60,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             analytics,
-            'User analytics retrieved successfully'
+            'Truy xuất phân tích người dùng thành công'
         )
     })
 
@@ -75,7 +75,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             analytics,
-            'Course analytics retrieved successfully'
+            'Truy xuất phân tích khóa học thành công'
         )
     })
 
@@ -90,7 +90,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             analytics,
-            'Revenue analytics retrieved successfully'
+            'Truy xuất phân tích doanh thu thành công'
         )
     })
 
@@ -109,7 +109,7 @@ class AdminDashboardController {
         return ApiResponse.success(
             res,
             activities,
-            'Recent activities retrieved successfully'
+            'Truy xuất hoạt động gần đây thành công'
         )
     })
 }

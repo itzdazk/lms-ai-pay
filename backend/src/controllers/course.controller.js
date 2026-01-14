@@ -30,7 +30,9 @@ class CourseController {
         if (tagIds) {
             // Handle comma-separated string or array
             if (Array.isArray(tagIds)) {
-                tagIdsArray = tagIds.map((id) => parseInt(id)).filter((id) => !isNaN(id))
+                tagIdsArray = tagIds
+                    .map((id) => parseInt(id))
+                    .filter((id) => !isNaN(id))
             } else if (typeof tagIds === 'string') {
                 tagIdsArray = tagIds
                     .split(',')
@@ -67,7 +69,7 @@ class CourseController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Courses retrieved successfully'
+            'Truy xuất danh sách khóa học thành công'
         )
     })
 
@@ -85,7 +87,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             courses,
-            'Featured courses retrieved successfully'
+            'Truy xuất danh sách khóa học nổi bật thành công'
         )
     })
 
@@ -103,7 +105,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             courses,
-            'Trending courses retrieved successfully'
+            'Truy xuất danh sách khóa học nổi bật thành công'
         )
     })
 
@@ -117,7 +119,11 @@ class CourseController {
 
         const course = await courseService.getCourseBySlug(slug)
 
-        return ApiResponse.success(res, course, 'Course retrieved successfully')
+        return ApiResponse.success(
+            res,
+            course,
+            'Truy xuất danh sách khóa học thành công'
+        )
     })
 
     /**
@@ -130,12 +136,16 @@ class CourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const course = await courseService.getCourseById(courseId)
 
-        return ApiResponse.success(res, course, 'Course retrieved successfully')
+        return ApiResponse.success(
+            res,
+            course,
+            'Truy xuất danh sách khóa học thành công'
+        )
     })
 
     /**
@@ -148,7 +158,7 @@ class CourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const result = await courseService.getCourseLessons(courseId)
@@ -156,7 +166,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             result,
-            'Course lessons retrieved successfully'
+            'Truy xuất danh sách bài học thành công'
         )
     })
 
@@ -170,7 +180,7 @@ class CourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const instructor = await courseService.getCourseInstructor(courseId)
@@ -178,7 +188,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             instructor,
-            'Instructor details retrieved successfully'
+            'Truy xuất chi tiết giảng viên thành công'
         )
     })
 
@@ -192,7 +202,7 @@ class CourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const result = await courseService.incrementViewCount(courseId)
@@ -200,7 +210,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             result,
-            'View count updated successfully'
+            'Đã cập nhật lượt xem thành công'
         )
     })
 
@@ -215,7 +225,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             counts,
-            'Course counts by level retrieved successfully'
+            'Truy xuất số lượng khóa học theo cấp độ thành công'
         )
     })
 
@@ -230,7 +240,7 @@ class CourseController {
         return ApiResponse.success(
             res,
             counts,
-            'Course counts by price retrieved successfully'
+            'Truy xuất số lượng khóa học theo giá thành công'
         )
     })
 }

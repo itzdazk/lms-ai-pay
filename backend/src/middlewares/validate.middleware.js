@@ -18,7 +18,7 @@ const validate = (req, res, next) => {
 
         return res.status(HTTP_STATUS.UNPROCESSABLE_ENTITY).json({
             success: false,
-            message: 'Validation failed',
+            message: 'Kiểm tra thất bại',
             errors: formattedErrors,
         })
     }
@@ -45,7 +45,7 @@ const validateJoi = (schema, property = 'body') => {
 
             return res.status(HTTP_STATUS.UNPROCESSABLE_ENTITY).json({
                 success: false,
-                message: 'Validation failed',
+                message: 'Kiểm tra thất bại',
                 errors: formattedErrors,
             })
         }
@@ -94,7 +94,10 @@ const validateId = (paramName = 'id') => {
         const id = parseInt(req.params[paramName])
 
         if (isNaN(id) || id < 1) {
-            return ApiResponse.badRequest(res, `Invalid ${paramName}`)
+            return ApiResponse.badRequest(
+                res,
+                `Giá trị không hợp lệ ${paramName}`
+            )
         }
 
         req.params[paramName] = id

@@ -35,7 +35,7 @@ class AdminAIController {
         return ApiResponse.success(
             res,
             result.conversations,
-            'Conversations retrieved successfully',
+            'Truy xuất danh sách cuộc hội thoại thành công',
             200,
             result.pagination
         )
@@ -84,17 +84,13 @@ class AdminAIController {
         })
 
         if (!conversation) {
-            return ApiResponse.error(
-                res,
-                'Conversation not found',
-                404
-            )
+            return ApiResponse.error(res, 'Không tìm thấy cuộc hội thoại', 404)
         }
 
         return ApiResponse.success(
             res,
             conversation,
-            'Conversation retrieved successfully'
+            'Truy xuất chi tiết cuộc hội thoại thành công'
         )
     })
 
@@ -113,7 +109,7 @@ class AdminAIController {
         })
 
         if (!conversation) {
-            return ApiResponse.error(res, 'Conversation not found', 404)
+            return ApiResponse.error(res, 'Không tìm thấy cuộc hội thoại', 404)
         }
 
         const messages = await prisma.chatMessage.findMany({
@@ -144,7 +140,7 @@ class AdminAIController {
         return ApiResponse.success(
             res,
             messages,
-            'Messages retrieved successfully',
+            'Truy xuất danh sách tin nhắn thành công',
             200,
             {
                 page: parseInt(page),
@@ -169,7 +165,7 @@ class AdminAIController {
         })
 
         if (!conversation) {
-            return ApiResponse.error(res, 'Conversation not found', 404)
+            return ApiResponse.error(res, 'Không tìm thấy cuộc hội thoại', 404)
         }
 
         // Get all messages for this conversation
@@ -189,7 +185,9 @@ class AdminAIController {
 
         // Calculate statistics
         const totalMessages = messages.length
-        const userMessages = messages.filter((m) => m.senderType === 'user').length
+        const userMessages = messages.filter(
+            (m) => m.senderType === 'user'
+        ).length
         const aiMessages = messages.filter((m) => m.senderType === 'ai').length
 
         // Metadata statistics
@@ -203,7 +201,9 @@ class AdminAIController {
         let fallbackCount = 0
         let totalSources = 0
         const helpfulCount = messages.filter((m) => m.isHelpful === true).length
-        const notHelpfulCount = messages.filter((m) => m.isHelpful === false).length
+        const notHelpfulCount = messages.filter(
+            (m) => m.isHelpful === false
+        ).length
 
         aiMessagesWithMeta.forEach((msg) => {
             const meta = msg.metadata
@@ -225,22 +225,28 @@ class AdminAIController {
         })
 
         const avgResponseTime =
-            responseTimeCount > 0 ? Math.round(totalResponseTime / responseTimeCount) : 0
+            responseTimeCount > 0
+                ? Math.round(totalResponseTime / responseTimeCount)
+                : 0
         const ollamaUsageRate =
-            aiMessages > 0 ? Math.round((ollamaUsageCount / aiMessages) * 100 * 100) / 100 : 0
+            aiMessages > 0
+                ? Math.round((ollamaUsageCount / aiMessages) * 100 * 100) / 100
+                : 0
 
         // Calculate conversation duration
         const firstMessage = messages[0]
         const lastMessage = messages[messages.length - 1]
         const duration =
             firstMessage && lastMessage
-                ? lastMessage.createdAt.getTime() - firstMessage.createdAt.getTime()
+                ? lastMessage.createdAt.getTime() -
+                  firstMessage.createdAt.getTime()
                 : 0
 
         // Messages per day/hour
         const messagesByHour = {}
         messages.forEach((msg) => {
-            const hour = new Date(msg.createdAt).toISOString().slice(0, 13) + ':00'
+            const hour =
+                new Date(msg.createdAt).toISOString().slice(0, 13) + ':00'
             messagesByHour[hour] = (messagesByHour[hour] || 0) + 1
         })
 
@@ -258,7 +264,9 @@ class AdminAIController {
             feedbackRate:
                 totalMessages > 0
                     ? Math.round(
-                          ((helpfulCount + notHelpfulCount) / totalMessages) * 100 * 100
+                          ((helpfulCount + notHelpfulCount) / totalMessages) *
+                              100 *
+                              100
                       ) / 100
                     : 0,
             duration,
@@ -270,7 +278,7 @@ class AdminAIController {
         return ApiResponse.success(
             res,
             stats,
-            'Conversation statistics retrieved successfully'
+            'Truy xuất thống kê chi tiết cuộc hội thoại thành công'
         )
     })
 
@@ -314,7 +322,9 @@ class AdminAIController {
                 messageWhere.createdAt.lte = new Date(endDate)
             }
         }
-        const totalMessages = await prisma.chatMessage.count({ where: messageWhere })
+        const totalMessages = await prisma.chatMessage.count({
+            where: messageWhere,
+        })
 
         // Get unique users who used AI
         const uniqueUsers = await prisma.conversation.findMany({
@@ -381,9 +391,13 @@ class AdminAIController {
         })
 
         const avgResponseTime =
-            responseTimeCount > 0 ? Math.round(totalResponseTime / responseTimeCount) : 0
+            responseTimeCount > 0
+                ? Math.round(totalResponseTime / responseTimeCount)
+                : 0
         const ollamaUsageRate =
-            aiMessages.length > 0 ? (ollamaUsageCount / aiMessages.length) * 100 : 0
+            aiMessages.length > 0
+                ? (ollamaUsageCount / aiMessages.length) * 100
+                : 0
 
         const stats = {
             totalConversations,
@@ -400,7 +414,11 @@ class AdminAIController {
             }, {}),
         }
 
-        return ApiResponse.success(res, stats, 'AI statistics retrieved successfully')
+        return ApiResponse.success(
+            res,
+            stats,
+            'Truy xuất thống kê AI thành công'
+        )
     })
 }
 

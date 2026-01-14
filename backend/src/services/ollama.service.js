@@ -3,7 +3,6 @@ import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
 
 class OllamaService {
-
     /**
      * Check if Ollama is available (with timeout and caching)
      */
@@ -15,9 +14,11 @@ class OllamaService {
         this.maxTokens = config.OLLAMA_MAX_TOKENS || 2000
         this.healthCheckCache = { isHealthy: null, lastCheck: 0 }
         this.healthCheckCacheTTL = 30000 // 30 seconds
-        
+
         if (this.enabled) {
-            logger.info(`Ollama service initialized: ${this.baseUrl}, model: ${this.model}`)
+            logger.info(
+                `Ollama service initialized: ${this.baseUrl}, model: ${this.model}`
+            )
         }
     }
 
@@ -72,7 +73,7 @@ class OllamaService {
      */
     async generateResponse(prompt, context = [], systemPrompt = null) {
         if (!this.enabled) {
-            throw new Error('Ollama is disabled')
+            throw new Error('Ollama đã bị vô hiệu hóa')
         }
 
         try {
@@ -102,13 +103,15 @@ class OllamaService {
             })
 
             // Call Ollama API with timeout
-            logger.debug(`Calling Ollama API: ${this.baseUrl}/api/chat with model: ${this.model}`)
+            logger.debug(
+                `Calling Ollama API: ${this.baseUrl}/api/chat with model: ${this.model}`
+            )
             const startTime = Date.now()
-            
+
             const controller = new AbortController()
             // Increase timeout to 120s for complex queries (llama3.1 can be slow)
             const timeoutId = setTimeout(() => controller.abort(), 120000) // 120s timeout for generation
-            
+
             try {
                 const response = await fetch(`${this.baseUrl}/api/chat`, {
                     method: 'POST',
@@ -126,24 +129,26 @@ class OllamaService {
                         },
                     }),
                 })
-                
+
                 clearTimeout(timeoutId)
-                
+
                 const duration = Date.now() - startTime
                 logger.info(`Ollama API call completed in ${duration}ms`)
 
                 if (!response.ok) {
                     const errorText = await response.text()
-                    logger.error(`Ollama API error: ${response.status} - ${errorText}`)
-                    throw new Error(
+                    logger.error(
                         `Ollama API error: ${response.status} - ${errorText}`
+                    )
+                    throw new Error(
+                        `Lỗi API Ollama: ${response.status} - ${errorText}`
                     )
                 }
 
                 const data = await response.json()
 
                 if (!data.message || !data.message.content) {
-                    throw new Error('Invalid response from Ollama API')
+                    throw new Error('Phản hồi không hợp lệ từ API Ollama')
                 }
 
                 const totalDuration = Date.now() - startTime
@@ -156,10 +161,18 @@ class OllamaService {
                 clearTimeout(timeoutId)
                 const errorDuration = Date.now() - startTime
                 if (error.name === 'AbortError') {
-                    logger.error(`Ollama API timeout after ${errorDuration}ms (60s limit)`)
-                    throw new Error(`Ollama API timeout - response took too long (${errorDuration}ms)`)
+                    logger.error(
+                        `Ollama API timeout after ${errorDuration}ms (60s limit)`
+                    )
+                    throw new Error(
+                        `Hết thời gian chờ API Ollama - phản hồi mất quá nhiều thời gian (${errorDuration}ms)`
+                    )
                 }
-                logger.error(`Error generating Ollama response after ${errorDuration}ms:`, error.message, error.stack)
+                logger.error(
+                    `Error generating Ollama response after ${errorDuration}ms:`,
+                    error.message,
+                    error.stack
+                )
                 throw error
             }
         } catch (error) {
@@ -173,7 +186,7 @@ class OllamaService {
      */
     async *generateResponseStream(prompt, context = [], systemPrompt = null) {
         if (!this.enabled) {
-            throw new Error('Ollama is disabled')
+            throw new Error('Ollama đã bị vô hiệu hóa')
         }
 
         const startTime = Date.now()
@@ -202,7 +215,9 @@ class OllamaService {
                 content: prompt,
             })
 
-            logger.debug(`Starting Ollama streaming: ${this.baseUrl}/api/chat with model: ${this.model}`)
+            logger.debug(
+                `Starting Ollama streaming: ${this.baseUrl}/api/chat with model: ${this.model}`
+            )
 
             // Add timeout for streaming (longer than non-streaming)
             const controller = new AbortController()
@@ -232,8 +247,12 @@ class OllamaService {
 
             if (!response.ok) {
                 const errorText = await response.text()
-                logger.error(`Ollama streaming API error: ${response.status} - ${errorText}`)
-                throw new Error(`Ollama API error: ${response.status} - ${errorText}`)
+                logger.error(
+                    `Ollama streaming API error: ${response.status} - ${errorText}`
+                )
+                throw new Error(
+                    `Lỗi API Ollama: ${response.status} - ${errorText}`
+                )
             }
 
             const reader = response.body.getReader()
@@ -246,7 +265,7 @@ class OllamaService {
 
                     // Decode chunk and add to buffer (handle partial JSON)
                     buffer += decoder.decode(value, { stream: true })
-                    
+
                     // Process complete lines
                     const lines = buffer.split('\n')
                     buffer = lines.pop() || '' // Keep incomplete line in buffer
@@ -258,13 +277,13 @@ class OllamaService {
                         try {
                             // Ollama streaming format: JSON per line
                             const data = JSON.parse(trimmedLine)
-                            
+
                             if (data.message && data.message.content) {
                                 const content = data.message.content
                                 totalChunks++
                                 yield content
                             }
-                            
+
                             // Check if done
                             if (data.done === true) {
                                 const duration = Date.now() - startTime
@@ -275,7 +294,9 @@ class OllamaService {
                             }
                         } catch (parseError) {
                             // Skip invalid JSON lines (common in streaming)
-                            logger.debug(`Skipping invalid JSON line in stream: ${trimmedLine.substring(0, 50)}`)
+                            logger.debug(
+                                `Skipping invalid JSON line in stream: ${trimmedLine.substring(0, 50)}`
+                            )
                         }
                     }
                 }
@@ -303,7 +324,9 @@ class OllamaService {
             if (error.name === 'AbortError') {
                 const duration = Date.now() - startTime
                 logger.error(`Ollama streaming timeout after ${duration}ms`)
-                throw new Error(`Ollama streaming timeout - response took too long (${duration}ms)`)
+                throw new Error(
+                    `Hết thời gian chờ Ollama streaming - phản hồi mất quá nhiều thời gian (${duration}ms)`
+                )
             }
             logger.error('Error in Ollama stream:', error)
             throw error
@@ -314,27 +337,35 @@ class OllamaService {
      * Build system prompt with knowledge base context
      */
     buildSystemPrompt(context, mode = 'course') {
-                // ADVISOR MODE: Interactive course recommendation (PROGRAMMING-ONLY PLATFORM)
-                if (mode === 'advisor') {
-                        const { searchResults = {} } = context
-                        const courses = searchResults.courses || []
-                        
-                        // Build course catalog string
-                        let courseCatalog = ''
-                        if (courses.length > 0) {
-                            courseCatalog += '\n\n=== CATALOG KHÓA HỌC HIỆN CÓ ===\n'
-                            courses.slice(0, 8).forEach((course, idx) => {
-                                const price = course.price > 0 ? `${Number(course.price).toLocaleString('vi-VN')}đ` : 'Miễn phí'
-                                const finalPrice = course.discountPrice ? `${Number(course.discountPrice).toLocaleString('vi-VN')}đ` : price
-                                const rating = course.ratingAvg ? `⭐ ${course.ratingAvg}/5 (${course.ratingCount} đánh giá)` : 'Chưa có đánh giá'
-                                courseCatalog += `\n${idx + 1}. **${course.title}** [${course.level || 'Beginner'}]\n`
-                                courseCatalog += `   📖 ${course.shortDescription || course.description || ''}\n`
-                                courseCatalog += `   💰 ${finalPrice} | ${rating} | 👥 ${course.enrolledCount} học viên | ${course.durationHours || 0}h | ${course.totalLessons || 0} bài\n`
-                            })
-                            courseCatalog += '\n⚠️ CHỈ GỢI Ý CÁC KHÓA HỌC CÓ TRONG CATALOG TRÊN'
-                        }
-                        
-                        return `Bạn là AI Course Advisor cho nền tảng CHỈ CÓ các khóa học về LẬP TRÌNH.
+        // ADVISOR MODE: Interactive course recommendation (PROGRAMMING-ONLY PLATFORM)
+        if (mode === 'advisor') {
+            const { searchResults = {} } = context
+            const courses = searchResults.courses || []
+
+            // Build course catalog string
+            let courseCatalog = ''
+            if (courses.length > 0) {
+                courseCatalog += '\n\n=== CATALOG KHÓA HỌC HIỆN CÓ ===\n'
+                courses.slice(0, 8).forEach((course, idx) => {
+                    const price =
+                        course.price > 0
+                            ? `${Number(course.price).toLocaleString('vi-VN')}đ`
+                            : 'Miễn phí'
+                    const finalPrice = course.discountPrice
+                        ? `${Number(course.discountPrice).toLocaleString('vi-VN')}đ`
+                        : price
+                    const rating = course.ratingAvg
+                        ? `⭐ ${course.ratingAvg}/5 (${course.ratingCount} đánh giá)`
+                        : 'Chưa có đánh giá'
+                    courseCatalog += `\n${idx + 1}. **${course.title}** [${course.level || 'Beginner'}]\n`
+                    courseCatalog += `   📖 ${course.shortDescription || course.description || ''}\n`
+                    courseCatalog += `   💰 ${finalPrice} | ${rating} | 👥 ${course.enrolledCount} học viên | ${course.durationHours || 0}h | ${course.totalLessons || 0} bài\n`
+                })
+                courseCatalog +=
+                    '\n⚠️ CHỈ GỢI Ý CÁC KHÓA HỌC CÓ TRONG CATALOG TRÊN'
+            }
+
+            return `Bạn là AI Course Advisor cho nền tảng CHỈ CÓ các khóa học về LẬP TRÌNH.
 
 PHẠM VI BẮT BUỘC:
 - Chỉ hỗ trợ và đề xuất các lĩnh vực thuộc LẬP TRÌNH: Web (Frontend/Backend), Mobile, Data/AI/ML, DevOps/Cloud, Computer Science, DSA, Testing, Security, Game Dev, IoT, v.v.
@@ -361,15 +392,18 @@ LƯU Ý:
 - Ưu tiên khóa học có rating cao, enroll nhiều, hoặc phù hợp nhất với nhu cầu user.
 - Nếu user hỏi ngoài phạm vi, lịch sự điều hướng về chủ đề lập trình có liên quan.
 ${courseCatalog}`
-                }
-        
+        }
+
         if (mode === 'general') {
             return `Bạn là Gia sư AI chuyên về lập trình và công nghệ. Trả lời ngắn gọn, chính xác, và hữu ích bằng tiếng Việt.\n\nPHẠM VI HỖ TRỢ:\n- Các câu hỏi về lập trình, công nghệ phần mềm, AI/LLM, công cụ phát triển, hạ tầng hệ thống (ví dụ: Ollama, mô hình AI, API, cách hệ thống hoạt động).\n- Các câu hỏi chung về học tập trên nền tảng.\n\nHÀNH VI TRẢ LỜI:\n- Nếu câu hỏi THỰC SỰ không liên quan (không thuộc phạm vi trên), trả lời lịch sự: "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến lập trình, công nghệ và nội dung học tập trên nền tảng này."\n- Nếu câu hỏi là về công cụ/hệ thống (ví dụ: "Ollama là gì?"), hãy giải thích ngắn gọn và nêu cách hệ thống đang sử dụng công cụ đó.\n- Giữ câu trả lời ngắn gọn, ưu tiên ví dụ/giải pháp thực tế khi cần.`
         }
         const { searchResults, userContext, query = '' } = context
 
         // Detect if query is about specific course content
-        const isSpecificCourseQuery = this._isSpecificCourseQuery(query, userContext)
+        const isSpecificCourseQuery = this._isSpecificCourseQuery(
+            query,
+            userContext
+        )
         // Detect if query is unrelated to programming/learning
         const isUnrelatedQuery = this._isUnrelatedToProgramming(query)
 
@@ -412,10 +446,14 @@ HƯỚNG DẪN:
                 currentLength < MAX_SYSTEM_PROMPT_LENGTH
             ) {
                 systemPrompt += `=== TRANSCRIPT (Nội dung từ video bài học) ===\n`
-                const transcriptsToInclude = searchResults.transcripts.slice(0, 3)
+                const transcriptsToInclude = searchResults.transcripts.slice(
+                    0,
+                    3
+                )
                 transcriptsToInclude.forEach((t, idx) => {
                     // Calculate available space
-                    const remainingSpace = MAX_SYSTEM_PROMPT_LENGTH - currentLength
+                    const remainingSpace =
+                        MAX_SYSTEM_PROMPT_LENGTH - currentLength
                     if (remainingSpace < 100) return // Not enough space
 
                     // Use full text if available (for full transcript requests), otherwise use excerpt
@@ -430,14 +468,25 @@ HƯỚNG DẪN:
                     } else {
                         // For keyword matches, use contextText (longer context) or excerpt
                         const maxChars = Math.min(800, remainingSpace - 200) // Increased from 500
-                        transcriptContent = (t.contextText || t.excerpt || t.text || '').substring(0, maxChars)
-                        if ((t.contextText || t.excerpt || t.text || '').length > maxChars) {
+                        transcriptContent = (
+                            t.contextText ||
+                            t.excerpt ||
+                            t.text ||
+                            ''
+                        ).substring(0, maxChars)
+                        if (
+                            (t.contextText || t.excerpt || t.text || '')
+                                .length > maxChars
+                        ) {
                             transcriptContent += '...'
                         }
                     }
-                    
+
                     const transcriptInfo = `${idx + 1}. Bài: "${t.lessonTitle}"\n   Khóa học: "${t.courseTitle}"\n${t.timestamp ? `   Thời điểm: ${t.timestamp}\n` : ''}   Nội dung: "${transcriptContent}"\n\n`
-                    if (currentLength + transcriptInfo.length < MAX_SYSTEM_PROMPT_LENGTH) {
+                    if (
+                        currentLength + transcriptInfo.length <
+                        MAX_SYSTEM_PROMPT_LENGTH
+                    ) {
                         systemPrompt += transcriptInfo
                         currentLength += transcriptInfo.length
                     }
@@ -453,7 +502,8 @@ HƯỚNG DẪN:
                 systemPrompt += `=== BÀI HỌC LIÊN QUAN ===\n`
                 const lessonsToInclude = searchResults.lessons.slice(0, 3)
                 lessonsToInclude.forEach((l, idx) => {
-                    const remainingSpace = MAX_SYSTEM_PROMPT_LENGTH - currentLength
+                    const remainingSpace =
+                        MAX_SYSTEM_PROMPT_LENGTH - currentLength
                     if (remainingSpace < 50) return
 
                     const maxDescLength = Math.min(150, remainingSpace - 100) // Increased from 100
@@ -461,7 +511,10 @@ HƯỚNG DẪN:
                         ? l.description.substring(0, maxDescLength)
                         : ''
                     const lessonInfo = `${idx + 1}. "${l.title}"\n   Khóa học: "${l.course?.title || 'N/A'}"\n${desc ? `   Mô tả: "${desc}${desc.length < l.description.length ? '...' : ''}"\n\n` : '\n'}`
-                    if (currentLength + lessonInfo.length < MAX_SYSTEM_PROMPT_LENGTH) {
+                    if (
+                        currentLength + lessonInfo.length <
+                        MAX_SYSTEM_PROMPT_LENGTH
+                    ) {
                         systemPrompt += lessonInfo
                         currentLength += lessonInfo.length
                     }
@@ -477,7 +530,8 @@ HƯỚNG DẪN:
                 systemPrompt += `=== KHÓA HỌC LIÊN QUAN ===\n`
                 const coursesToInclude = searchResults.courses.slice(0, 2)
                 coursesToInclude.forEach((course, idx) => {
-                    const remainingSpace = MAX_SYSTEM_PROMPT_LENGTH - currentLength
+                    const remainingSpace =
+                        MAX_SYSTEM_PROMPT_LENGTH - currentLength
                     if (remainingSpace < 50) return
 
                     const maxDescLength = Math.min(150, remainingSpace - 100) // Increased from 100
@@ -485,7 +539,10 @@ HƯỚNG DẪN:
                         ? course.shortDescription.substring(0, maxDescLength)
                         : ''
                     const courseInfo = `${idx + 1}. "${course.title}" (${course.level || 'N/A'})\n${courseDesc ? `   Mô tả: "${courseDesc}${courseDesc.length < course.shortDescription.length ? '...' : ''}"\n\n` : '\n'}`
-                    if (currentLength + courseInfo.length < MAX_SYSTEM_PROMPT_LENGTH) {
+                    if (
+                        currentLength + courseInfo.length <
+                        MAX_SYSTEM_PROMPT_LENGTH
+                    ) {
                         systemPrompt += courseInfo
                         currentLength += courseInfo.length
                     }
@@ -542,51 +599,125 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
         if (!query) return false
 
         const queryLower = query.toLowerCase()
-        
+
         // Keywords indicating unrelated topics
         const unrelatedKeywords = [
             // Cooking/Food
-            'nấu', 'nấu ăn', 'công thức', 'món ăn', 'thức ăn', 'đồ ăn',
-            'bò kho', 'phở', 'bánh', 'canh', 'cháo', 'cơm', 'mì',
-            'cooking', 'recipe', 'food', 'dish',
-            
+            'nấu',
+            'nấu ăn',
+            'công thức',
+            'món ăn',
+            'thức ăn',
+            'đồ ăn',
+            'bò kho',
+            'phở',
+            'bánh',
+            'canh',
+            'cháo',
+            'cơm',
+            'mì',
+            'cooking',
+            'recipe',
+            'food',
+            'dish',
+
             // Weather
-            'thời tiết', 'mưa', 'nắng', 'gió', 'bão',
-            'weather', 'rain', 'sunny', 'wind', 'storm',
-            
+            'thời tiết',
+            'mưa',
+            'nắng',
+            'gió',
+            'bão',
+            'weather',
+            'rain',
+            'sunny',
+            'wind',
+            'storm',
+
             // News/Entertainment
-            'tin tức', 'báo', 'phim', 'phim ảnh', 'ca nhạc', 'nhạc',
-            'news', 'movie', 'film', 'music', 'song',
-            
+            'tin tức',
+            'báo',
+            'phim',
+            'phim ảnh',
+            'ca nhạc',
+            'nhạc',
+            'news',
+            'movie',
+            'film',
+            'music',
+            'song',
+
             // Sports
-            'bóng đá', 'thể thao', 'bơi lội', 'chạy',
-            'football', 'soccer', 'sport', 'sports',
-            
+            'bóng đá',
+            'thể thao',
+            'bơi lội',
+            'chạy',
+            'football',
+            'soccer',
+            'sport',
+            'sports',
+
             // Health/Medical
-            'bệnh', 'thuốc', 'sức khỏe', 'đau', 'ốm',
-            'disease', 'medicine', 'health', 'sick', 'pain',
-            
+            'bệnh',
+            'thuốc',
+            'sức khỏe',
+            'đau',
+            'ốm',
+            'disease',
+            'medicine',
+            'health',
+            'sick',
+            'pain',
+
             // Shopping
-            'mua', 'bán', 'giá', 'shop', 'shopping',
-            
+            'mua',
+            'bán',
+            'giá',
+            'shop',
+            'shopping',
+
             // General unrelated
-            'làm sao để', 'cách làm', 'hướng dẫn' // But check context
+            'làm sao để',
+            'cách làm',
+            'hướng dẫn', // But check context
         ]
 
         // Check if query contains unrelated keywords
-        const hasUnrelatedKeyword = unrelatedKeywords.some(keyword => 
+        const hasUnrelatedKeyword = unrelatedKeywords.some((keyword) =>
             queryLower.includes(keyword)
         )
 
         // But allow if it's about programming (e.g., "cách làm website")
         const programmingKeywords = [
-            'code', 'lập trình', 'programming', 'javascript', 'python', 'react',
-            'function', 'variable', 'array', 'object', 'class', 'method',
-            'website', 'web', 'app', 'application', 'api', 'database',
-            'html', 'css', 'node', 'vue', 'angular', 'framework',
-            'algorithm', 'data structure', 'cấu trúc dữ liệu', 'thuật toán'
+            'code',
+            'lập trình',
+            'programming',
+            'javascript',
+            'python',
+            'react',
+            'function',
+            'variable',
+            'array',
+            'object',
+            'class',
+            'method',
+            'website',
+            'web',
+            'app',
+            'application',
+            'api',
+            'database',
+            'html',
+            'css',
+            'node',
+            'vue',
+            'angular',
+            'framework',
+            'algorithm',
+            'data structure',
+            'cấu trúc dữ liệu',
+            'thuật toán',
         ]
-        const hasProgrammingKeyword = programmingKeywords.some(keyword =>
+        const hasProgrammingKeyword = programmingKeywords.some((keyword) =>
             queryLower.includes(keyword)
         )
 
@@ -608,31 +739,48 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
         if (!query) return false
 
         const queryLower = query.toLowerCase()
-        
+
         // Keywords indicating specific course content queries
         const specificKeywords = [
-            'trong bài này', 'trong bài học này', 'trong video này',
-            'trong khóa học này', 'bài này có', 'video này có',
-            'giảng viên nói', 'thầy/cô nói', 'trong transcript',
-            'có nói về', 'có đề cập', 'có giải thích',
-            'ở đâu trong bài', 'phần nào', 'đoạn nào'
+            'trong bài này',
+            'trong bài học này',
+            'trong video này',
+            'trong khóa học này',
+            'bài này có',
+            'video này có',
+            'giảng viên nói',
+            'thầy/cô nói',
+            'trong transcript',
+            'có nói về',
+            'có đề cập',
+            'có giải thích',
+            'ở đâu trong bài',
+            'phần nào',
+            'đoạn nào',
         ]
 
         // Check if query contains specific keywords
-        const hasSpecificKeyword = specificKeywords.some(keyword => 
+        const hasSpecificKeyword = specificKeywords.some((keyword) =>
             queryLower.includes(keyword)
         )
 
         // Check if user has current course/lesson context
-        const hasCourseContext = userContext?.currentCourse || userContext?.currentLesson
+        const hasCourseContext =
+            userContext?.currentCourse || userContext?.currentLesson
 
         // If query mentions current course/lesson explicitly
-        const mentionsCurrentCourse = userContext?.currentCourse?.title && 
+        const mentionsCurrentCourse =
+            userContext?.currentCourse?.title &&
             queryLower.includes(userContext.currentCourse.title.toLowerCase())
-        const mentionsCurrentLesson = userContext?.currentLesson?.title && 
+        const mentionsCurrentLesson =
+            userContext?.currentLesson?.title &&
             queryLower.includes(userContext.currentLesson.title.toLowerCase())
 
-        return hasSpecificKeyword || (hasCourseContext && (mentionsCurrentCourse || mentionsCurrentLesson))
+        return (
+            hasSpecificKeyword ||
+            (hasCourseContext &&
+                (mentionsCurrentCourse || mentionsCurrentLesson))
+        )
     }
 
     /**
@@ -643,7 +791,7 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
         try {
             const response = await fetch(`${this.baseUrl}/api/tags`)
             if (!response.ok) {
-                throw new Error(`Ollama API error: ${response.status}`)
+                throw new Error(`Lỗi API Ollama: ${response.status}`)
             }
             const data = await response.json()
             return data.models || []
@@ -661,7 +809,7 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
         try {
             const isHealthy = await this.checkHealth()
             const models = isHealthy ? await this.getAvailableModels() : []
-            
+
             return {
                 enabled: this.enabled,
                 available: isHealthy,
@@ -669,7 +817,7 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
                 model: this.model,
                 temperature: this.temperature,
                 maxTokens: this.maxTokens,
-                models: models.map(m => ({
+                models: models.map((m) => ({
                     name: m.name || m.model,
                     size: m.size,
                     modifiedAt: m.modified_at,
@@ -689,4 +837,3 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
 }
 
 export default new OllamaService()
-

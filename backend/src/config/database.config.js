@@ -48,10 +48,10 @@ const connectDB = async () => {
     try {
         await prisma.$connect()
         await prisma.$executeRaw`SET TIME ZONE 'Asia/Ho_Chi_Minh'`
-        logger.info('Database connected successfully')
+        logger.info('Kết nối cơ sở dữ liệu thành công')
         return true
     } catch (error) {
-        logger.error('Database connection failed:', error)
+        logger.error('Kết nối cơ sở dữ liệu thất bại', error)
         process.exit(1)
     }
 }
@@ -60,9 +60,9 @@ const connectDB = async () => {
 const disconnectDB = async () => {
     try {
         await prisma.$disconnect()
-        logger.info('Database disconnected')
+        logger.info('Ngắt kết nối cơ sở dữ liệu')
     } catch (error) {
-        logger.error('Error disconnecting database:', error)
+        logger.error('Lỗi ngắt kết nối cơ sở dữ liệu', error)
         process.exit(1)
     }
 }

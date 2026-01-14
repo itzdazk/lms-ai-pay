@@ -1,7 +1,11 @@
 // backend/src/services/search.service.js
 import { prisma } from '../config/database.config.js'
-import { COURSE_STATUS, USER_STATUS, USER_ROLES, HTTP_STATUS } from '../config/constants.js'
-import logger from '../config/logger.config.js'
+import {
+    COURSE_STATUS,
+    USER_STATUS,
+    USER_ROLES,
+    HTTP_STATUS,
+} from '../config/constants.js'
 
 class SearchService {
     /**
@@ -168,10 +172,6 @@ class SearchService {
             courseTags: undefined,
         }))
 
-        logger.info(
-            `Search courses: query="${q || ''}", found ${formattedCourses.length} courses`
-        )
-
         return {
             courses: formattedCourses,
             total,
@@ -289,10 +289,6 @@ class SearchService {
             )
         }
 
-        logger.info(
-            `Search instructors: query="${q || ''}", found ${instructorsWithStats.length} instructors`
-        )
-
         return {
             instructors: instructorsWithStats,
             total,
@@ -400,8 +396,6 @@ class SearchService {
             },
         })
 
-        logger.info(`Search suggestions for: "${searchTerm}"`)
-
         return {
             courses,
             categories,
@@ -427,8 +421,6 @@ class SearchService {
             .trim()
             .toLowerCase()
             .replace(/[^\w\s]/gi, '') // Remove special characters
-
-        logger.info(`Voice search processed: "${cleanedQuery}"`)
 
         // Use the same search logic as text search
         const results = await this.searchCourses({

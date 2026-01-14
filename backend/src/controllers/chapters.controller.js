@@ -20,7 +20,7 @@ class ChaptersController {
 
         res.status(HTTP_STATUS.OK).json({
             success: true,
-            message: 'Chapters retrieved successfully',
+            message: 'Truy xuất danh sách chương học thành công',
             data: chapters,
         })
     })
@@ -37,7 +37,7 @@ class ChaptersController {
 
         res.status(HTTP_STATUS.OK).json({
             success: true,
-            message: 'Chapter retrieved successfully',
+            message: 'Truy xuất danh sách chương học thành công',
             data: chapter,
         })
     })
@@ -59,7 +59,7 @@ class ChaptersController {
 
         res.status(HTTP_STATUS.CREATED).json({
             success: true,
-            message: 'Chapter created successfully',
+            message: 'Đã tạo chương học thành công',
             data: chapter,
         })
     })
@@ -81,7 +81,7 @@ class ChaptersController {
 
         res.status(HTTP_STATUS.OK).json({
             success: true,
-            message: 'Chapter updated successfully',
+            message: 'Đã cập nhật chương học thành công',
             data: chapter,
         })
     })
@@ -99,7 +99,7 @@ class ChaptersController {
 
         res.status(HTTP_STATUS.OK).json({
             success: true,
-            message: 'Chapter deleted successfully',
+            message: 'Đã xóa chương học thành công',
         })
     })
 
@@ -117,10 +117,9 @@ class ChaptersController {
 
         res.status(HTTP_STATUS.OK).json({
             success: true,
-            message: 'Chapters reordered successfully',
+            message: 'Đã sắp xếp lại chương học thành công',
         })
     })
 }
 
 export default new ChaptersController()
-

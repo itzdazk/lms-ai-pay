@@ -1,14 +1,13 @@
 // src/services/quizzes.service.js
 // Base service with shared utilities for quiz operations
-import { prisma } from '../config/database.config.js';
+import { prisma } from '../config/database.config.js'
 import {
     COURSE_STATUS,
     ENROLLMENT_STATUS,
     ERROR_CODES,
     HTTP_STATUS,
     USER_ROLES,
-} from '../config/constants.js';
-import logger from '../config/logger.config.js';
+} from '../config/constants.js'
 
 /**
  * Base class with shared utilities for quiz services
@@ -22,80 +21,96 @@ class QuizzesService {
      */
     sanitizeQuestions(questionItems = [], includeCorrectAnswers = false) {
         if (!Array.isArray(questionItems)) {
-            return [];
+            return []
         }
 
         const normalizeOptions = (opts) => {
             if (Array.isArray(opts)) {
-                return opts;
+                return opts
             }
             if (opts && typeof opts === 'object') {
-                const keys = Object.keys(opts).sort();
-                return keys.map((k) => opts[k]);
+                const keys = Object.keys(opts).sort()
+                return keys.map((k) => opts[k])
             }
-            return [];
-        };
+            return []
+        }
 
         const toIndex = (answer, opts, type) => {
-            const options = normalizeOptions(opts);
-            if (!includeCorrectAnswers) return null;
+            const options = normalizeOptions(opts)
+            if (!includeCorrectAnswers) return null
 
             if (typeof answer === 'number' && Number.isFinite(answer)) {
-                return answer;
+                return answer
             }
 
             if (typeof answer === 'string') {
                 // Try parse numeric index encoded as string
-                const n = Number.parseInt(answer, 10);
+                const n = Number.parseInt(answer, 10)
                 if (!Number.isNaN(n)) {
-                    return n;
+                    return n
                 }
 
                 // Map letter (A, B, C, ...) to index
-                const upper = answer.trim().toUpperCase();
+                const upper = answer.trim().toUpperCase()
                 if (upper.length === 1 && upper >= 'A' && upper <= 'Z') {
-                    return upper.charCodeAt(0) - 'A'.charCodeAt(0);
+                    return upper.charCodeAt(0) - 'A'.charCodeAt(0)
                 }
 
                 // Match by option text (case-insensitive)
-                const idxByText = options.findIndex((opt) =>
-                    String(opt ?? '')
-                        .trim()
-                        .toLowerCase() === upper.toLowerCase()
-                );
+                const idxByText = options.findIndex(
+                    (opt) =>
+                        String(opt ?? '')
+                            .trim()
+                            .toLowerCase() === upper.toLowerCase()
+                )
                 if (idxByText !== -1) {
-                    return idxByText;
+                    return idxByText
                 }
 
                 // True/False mapping
                 if (type === 'true_false') {
-                    const tf = upper === 'TRUE' || upper === 'T' ? 'true' : upper === 'FALSE' || upper === 'F' ? 'false' : upper;
-                    if (tf === 'true') return 0;
-                    if (tf === 'false') return 1;
+                    const tf =
+                        upper === 'TRUE' || upper === 'T'
+                            ? 'true'
+                            : upper === 'FALSE' || upper === 'F'
+                              ? 'false'
+                              : upper
+                    if (tf === 'true') return 0
+                    if (tf === 'false') return 1
                 }
             }
 
-            return null;
-        };
+            return null
+        }
 
         return questionItems.map((question) => {
             if (typeof question !== 'object' || question === null) {
-                return question;
+                return question
             }
 
-            const { correctAnswer, id, quizId, createdAt, updatedAt, options, type, ...rest } = question;
+            const {
+                correctAnswer,
+                id,
+                quizId,
+                createdAt,
+                updatedAt,
+                options,
+                type,
+                ...rest
+            } = question
 
-            const normalizedOptions = normalizeOptions(options);
+            const normalizedOptions = normalizeOptions(options)
 
             if (includeCorrectAnswers) {
                 const mappedCorrect =
                     type === 'short_answer'
-                        ? (typeof correctAnswer === 'string'
-                              ? correctAnswer
-                              : correctAnswer !== undefined && correctAnswer !== null
+                        ? typeof correctAnswer === 'string'
+                            ? correctAnswer
+                            : correctAnswer !== undefined &&
+                                correctAnswer !== null
                               ? String(correctAnswer)
-                              : '')
-                        : toIndex(correctAnswer, options, type);
+                              : ''
+                        : toIndex(correctAnswer, options, type)
 
                 return {
                     id, // include id for instructor edit operations
@@ -103,25 +118,23 @@ class QuizzesService {
                     type,
                     options: normalizedOptions,
                     correctAnswer: mappedCorrect,
-                };
+                }
             }
 
             // Always include real question id for client mapping
-            return { id, ...rest, type, options: normalizedOptions };
-        });
+            return { id, ...rest, type, options: normalizedOptions }
+        })
     }
 
     /**
      * Sanitize quiz response
      */
     sanitizeQuiz(quiz, options = {}) {
-        const {
-            includeCorrectAnswers = false,
-            includeQuestions = true,
-        } = options;
+        const { includeCorrectAnswers = false, includeQuestions = true } =
+            options
 
         if (!quiz) {
-            return null;
+            return null
         }
 
         const sanitizedQuiz = {
@@ -134,18 +147,21 @@ class QuizzesService {
             isPublished: quiz.isPublished,
             createdAt: quiz.createdAt,
             updatedAt: quiz.updatedAt,
-        };
+        }
 
         if (includeQuestions) {
             // Use questionItems from relation if available, otherwise fallback to questions JSON
-            const questionsToUse = quiz.questionItems && Array.isArray(quiz.questionItems) 
-                ? quiz.questionItems 
-                : (Array.isArray(quiz.questions) ? quiz.questions : []);
-            
+            const questionsToUse =
+                quiz.questionItems && Array.isArray(quiz.questionItems)
+                    ? quiz.questionItems
+                    : Array.isArray(quiz.questions)
+                      ? quiz.questions
+                      : []
+
             sanitizedQuiz.questions = this.sanitizeQuestions(
                 questionsToUse,
                 includeCorrectAnswers
-            );
+            )
         }
 
         if (quiz.lesson) {
@@ -161,7 +177,7 @@ class QuizzesService {
                           status: quiz.lesson.course.status,
                       }
                     : null,
-            };
+            }
         }
 
         if (quiz.course) {
@@ -170,50 +186,50 @@ class QuizzesService {
                 title: quiz.course.title,
                 slug: quiz.course.slug,
                 status: quiz.course.status,
-            };
+            }
         }
 
-        return sanitizedQuiz;
+        return sanitizedQuiz
     }
 
     /**
      * Helper to build not found error
      */
     buildNotFoundError(message) {
-        const error = new Error(message);
-        error.statusCode = HTTP_STATUS.NOT_FOUND;
-        error.code = ERROR_CODES.NOT_FOUND;
-        return error;
+        const error = new Error(message)
+        error.statusCode = HTTP_STATUS.NOT_FOUND
+        error.code = ERROR_CODES.NOT_FOUND
+        return error
     }
 
     /**
      * Helper to build forbidden error
      */
     buildForbiddenError(message) {
-        const error = new Error(message);
-        error.statusCode = HTTP_STATUS.FORBIDDEN;
-        error.code = ERROR_CODES.AUTHORIZATION_ERROR;
-        return error;
+        const error = new Error(message)
+        error.statusCode = HTTP_STATUS.FORBIDDEN
+        error.code = ERROR_CODES.AUTHORIZATION_ERROR
+        return error
     }
 
     /**
      * Helper to build bad request error
      */
     buildBadRequestError(message) {
-        const error = new Error(message);
-        error.statusCode = HTTP_STATUS.BAD_REQUEST;
-        error.code = ERROR_CODES.VALIDATION_ERROR;
-        return error;
+        const error = new Error(message)
+        error.statusCode = HTTP_STATUS.BAD_REQUEST
+        error.code = ERROR_CODES.VALIDATION_ERROR
+        return error
     }
 
     /**
      * Helper to build conflict error
      */
     buildConflictError(message) {
-        const error = new Error(message);
-        error.statusCode = HTTP_STATUS.CONFLICT;
-        error.code = ERROR_CODES.DUPLICATE_ENTRY;
-        return error;
+        const error = new Error(message)
+        error.statusCode = HTTP_STATUS.CONFLICT
+        error.code = ERROR_CODES.DUPLICATE_ENTRY
+        return error
     }
 
     /**
@@ -221,26 +237,26 @@ class QuizzesService {
      */
     resolveCourseId(quiz) {
         if (!quiz) {
-            return null;
+            return null
         }
 
         if (quiz.courseId) {
-            return quiz.courseId;
+            return quiz.courseId
         }
 
         if (quiz.course?.id) {
-            return quiz.course.id;
+            return quiz.course.id
         }
 
         if (quiz.lesson?.courseId) {
-            return quiz.lesson.courseId;
+            return quiz.lesson.courseId
         }
 
         if (quiz.lesson?.course?.id) {
-            return quiz.lesson.course.id;
+            return quiz.lesson.course.id
         }
 
-        return null;
+        return null
     }
 
     /**
@@ -280,7 +296,7 @@ class QuizzesService {
                     },
                 },
             },
-        });
+        })
     }
 
     /**
@@ -288,18 +304,18 @@ class QuizzesService {
      */
     getCourseInstructorId(quiz) {
         if (!quiz) {
-            return null;
+            return null
         }
 
         if (quiz.course?.instructorId) {
-            return quiz.course.instructorId;
+            return quiz.course.instructorId
         }
 
         if (quiz.lesson?.course?.instructorId) {
-            return quiz.lesson.course.instructorId;
+            return quiz.lesson.course.instructorId
         }
 
-        return null;
+        return null
     }
 
     /**
@@ -307,19 +323,19 @@ class QuizzesService {
      */
     ensureInstructorOwnership(instructorId, userId, userRole) {
         if (userRole === USER_ROLES.ADMIN) {
-            return;
+            return
         }
 
         if (instructorId === null || instructorId === undefined) {
             throw this.buildForbiddenError(
-                'Instructor permission cannot be verified for this resource'
-            );
+                'Không thể xác thực quyền giảng viên đối với tài nguyên này'
+            )
         }
 
         if (instructorId !== userId) {
             throw this.buildForbiddenError(
-                'You are not the instructor of this course'
-            );
+                'Bạn không phải là giảng viên của khóa học này'
+            )
         }
     }
 
@@ -328,11 +344,11 @@ class QuizzesService {
      */
     ensureInstructorQuizAccess(quiz, userId, userRole) {
         if (!quiz) {
-            throw this.buildNotFoundError('Quiz not found');
+            throw this.buildNotFoundError('Không tìm thấy bài trắc nghiệm')
         }
 
-        const instructorId = this.getCourseInstructorId(quiz);
-        this.ensureInstructorOwnership(instructorId, userId, userRole);
+        const instructorId = this.getCourseInstructorId(quiz)
+        this.ensureInstructorOwnership(instructorId, userId, userRole)
     }
 
     /**
@@ -340,7 +356,7 @@ class QuizzesService {
      */
     async fetchLessonWithCourse(lessonId) {
         if (!lessonId) {
-            return null;
+            return null
         }
 
         return prisma.lesson.findUnique({
@@ -360,7 +376,7 @@ class QuizzesService {
                     },
                 },
             },
-        });
+        })
     }
 
     /**
@@ -368,7 +384,7 @@ class QuizzesService {
      */
     async fetchCourseSummary(courseId) {
         if (!courseId) {
-            return null;
+            return null
         }
 
         return prisma.course.findUnique({
@@ -380,21 +396,21 @@ class QuizzesService {
                 status: true,
                 instructorId: true,
             },
-        });
+        })
     }
 
     /**
      * Normalize quiz payload fields
      */
     buildQuizDataFromPayload(payload = {}, options = {}) {
-        const { isUpdate = false } = options;
-        const data = {};
+        const { isUpdate = false } = options
+        const data = {}
 
         if (!isUpdate || 'title' in payload) {
             data.title =
                 typeof payload.title === 'string'
                     ? payload.title.trim()
-                    : payload.title;
+                    : payload.title
         }
 
         if ('description' in payload) {
@@ -402,8 +418,8 @@ class QuizzesService {
                 payload.description === null
                     ? null
                     : typeof payload.description === 'string'
-                    ? payload.description
-                    : String(payload.description ?? '');
+                      ? payload.description
+                      : String(payload.description ?? '')
         }
 
         // Note: questions are now managed separately in the Question table
@@ -412,17 +428,17 @@ class QuizzesService {
 
         if (!isUpdate || 'passingScore' in payload) {
             if (payload.passingScore !== undefined) {
-                data.passingScore = Number(payload.passingScore);
+                data.passingScore = Number(payload.passingScore)
             }
         }
 
         if (!isUpdate || 'isPublished' in payload) {
             if (payload.isPublished !== undefined) {
-                data.isPublished = Boolean(payload.isPublished);
+                data.isPublished = Boolean(payload.isPublished)
             }
         }
 
-        return data;
+        return data
     }
 
     /**
@@ -431,7 +447,7 @@ class QuizzesService {
      */
     buildQuestionsDataFromPayload(questions = [], quizId) {
         if (!Array.isArray(questions)) {
-            return [];
+            return []
         }
 
         return questions.map((q, index) => ({
@@ -442,7 +458,7 @@ class QuizzesService {
             correctAnswer: q.correctAnswer || null,
             explanation: q.explanation || null,
             questionOrder: index,
-        }));
+        }))
     }
 
     /**
@@ -454,38 +470,38 @@ class QuizzesService {
      */
     async ensureQuizAccess(quiz, userId, userRole) {
         if (!quiz) {
-            throw this.buildNotFoundError('Quiz not found');
+            throw this.buildNotFoundError('Không tìm thấy bài trắc nghiệm')
         }
 
         // Admin always has access
         if (userRole === USER_ROLES.ADMIN) {
-            return;
+            return
         }
 
         // Instructor: Check if they own the course
         if (userRole === USER_ROLES.INSTRUCTOR) {
-            const instructorId = this.getCourseInstructorId(quiz);
+            const instructorId = this.getCourseInstructorId(quiz)
 
             if (instructorId === null) {
                 throw this.buildForbiddenError(
-                    'Instructor permission cannot be verified for this quiz'
-                );
+                    'Không thể xác thực quyền giảng viên đối với bài trắc nghiệm này'
+                )
             }
 
             if (instructorId !== userId) {
                 throw this.buildForbiddenError(
-                    'You are not the instructor of this course'
-                );
+                    'Bạn không phải là giảng viên của khóa học này'
+                )
             }
 
-            return;
+            return
         }
 
         // Student: Check enrollment AND progress
-        const courseId = this.resolveCourseId(quiz);
+        const courseId = this.resolveCourseId(quiz)
 
         if (!courseId) {
-            return; // Quiz không thuộc course nào → cho phép
+            return // Quiz không thuộc course nào → cho phép
         }
 
         // 1. Check enrollment
@@ -499,15 +515,10 @@ class QuizzesService {
             select: {
                 status: true,
             },
-        });
+        })
 
-        if (
-            !enrollment ||
-            enrollment.status === ENROLLMENT_STATUS.DROPPED
-        ) {
-            throw this.buildForbiddenError(
-                'You are not enrolled in this course'
-            );
+        if (!enrollment || enrollment.status === ENROLLMENT_STATUS.DROPPED) {
+            throw this.buildForbiddenError('Bạn chưa đăng ký khóa học này')
         }
 
         // 2. If quiz is for a specific lesson, check if student has reached that lesson
@@ -520,15 +531,15 @@ class QuizzesService {
                     courseId: true,
                     isPreview: true, // Preview lessons are always accessible
                 },
-            });
+            })
 
             if (!lesson) {
-                throw this.buildNotFoundError('Lesson not found');
+                throw this.buildNotFoundError('Không tìm thấy bài học')
             }
 
             // Preview lessons are always accessible
             if (lesson.isPreview) {
-                return;
+                return
             }
 
             // Check if student has progress for this lesson
@@ -543,11 +554,11 @@ class QuizzesService {
                     id: true,
                     isCompleted: true,
                 },
-            });
+            })
 
             // If student has progress for this lesson → Allow
             if (lessonProgress) {
-                return;
+                return
             }
 
             // Check if student has completed previous lessons
@@ -566,7 +577,7 @@ class QuizzesService {
                 orderBy: {
                     lessonOrder: 'asc',
                 },
-            });
+            })
 
             // Check if student has completed all previous lessons
             if (previousLessons.length > 0) {
@@ -574,37 +585,37 @@ class QuizzesService {
                     where: {
                         userId,
                         lessonId: {
-                            in: previousLessons.map(l => l.id),
+                            in: previousLessons.map((l) => l.id),
                         },
                         isCompleted: true,
                     },
                     select: {
                         lessonId: true,
                     },
-                });
+                })
 
                 const completedLessonIds = new Set(
-                    completedLessons.map(p => p.lessonId)
-                );
+                    completedLessons.map((p) => p.lessonId)
+                )
 
                 // Check if all previous lessons are completed
-                const allPreviousCompleted = previousLessons.every(l =>
+                const allPreviousCompleted = previousLessons.every((l) =>
                     completedLessonIds.has(l.id)
-                );
+                )
 
                 if (!allPreviousCompleted) {
                     throw this.buildForbiddenError(
-                        'You must complete previous lessons before taking this quiz'
-                    );
+                        'Bạn phải hoàn thành các bài học trước đó trước khi tham gia bài trắc nghiệm này'
+                    )
                 }
             }
 
             // If no previous lessons or all completed → Allow
-            return;
+            return
         }
 
         // Quiz for course (not specific lesson) → Allow if enrolled
-        return;
+        return
     }
 
     /**
@@ -612,27 +623,27 @@ class QuizzesService {
      */
     buildAnswersMap(answers = []) {
         if (!Array.isArray(answers)) {
-            return new Map();
+            return new Map()
         }
 
-        const map = new Map();
+        const map = new Map()
 
         answers.forEach((answer) => {
             if (!answer || typeof answer !== 'object') {
-                return;
+                return
             }
 
             const questionId =
                 answer.questionId ??
                 answer.id ??
                 answer.question ??
-                answer.questionIndex;
+                answer.questionIndex
 
             if (questionId === undefined || questionId === null) {
-                return;
+                return
             }
 
-            const normalizedId = String(questionId);
+            const normalizedId = String(questionId)
 
             map.set(normalizedId, {
                 answer:
@@ -641,10 +652,10 @@ class QuizzesService {
                     answer.selectedOption ??
                     answer.selectedAnswer ??
                     null,
-            });
-        });
+            })
+        })
 
-        return map;
+        return map
     }
 
     /**
@@ -652,7 +663,7 @@ class QuizzesService {
      */
     getQuestionKey(question, index) {
         if (!question || typeof question !== 'object') {
-            return String(index + 1);
+            return String(index + 1)
         }
 
         const identifier =
@@ -662,11 +673,11 @@ class QuizzesService {
             question.uid ??
             question.slug ??
             question.order ??
-            null;
+            null
 
         return identifier !== null && identifier !== undefined
             ? String(identifier)
-            : String(index + 1);
+            : String(index + 1)
     }
 
     /**
@@ -674,13 +685,13 @@ class QuizzesService {
      */
     isAnswerCorrect(providedAnswer, correctAnswer) {
         if (correctAnswer === undefined || correctAnswer === null) {
-            return false;
+            return false
         }
 
         if (Array.isArray(correctAnswer)) {
             const normalizedProvided = Array.isArray(providedAnswer)
                 ? providedAnswer
-                : [providedAnswer];
+                : [providedAnswer]
 
             const correctSet = new Set(
                 correctAnswer.map((value) =>
@@ -688,7 +699,7 @@ class QuizzesService {
                         ? String(value).trim().toLowerCase()
                         : ''
                 )
-            );
+            )
 
             const providedSet = new Set(
                 normalizedProvided.map((value) =>
@@ -696,26 +707,30 @@ class QuizzesService {
                         ? String(value).trim().toLowerCase()
                         : ''
                 )
-            );
+            )
 
             if (correctSet.size !== providedSet.size) {
-                return false;
+                return false
             }
 
             for (const value of correctSet) {
                 if (!providedSet.has(value)) {
-                    return false;
+                    return false
                 }
             }
 
-            return true;
+            return true
         }
 
         // Normalize both to string for comparison (handles number vs string mismatch)
-        const normalizedProvided = String(providedAnswer ?? '').trim().toLowerCase();
-        const normalizedCorrect = String(correctAnswer ?? '').trim().toLowerCase();
-        
-        return normalizedProvided === normalizedCorrect;
+        const normalizedProvided = String(providedAnswer ?? '')
+            .trim()
+            .toLowerCase()
+        const normalizedCorrect = String(correctAnswer ?? '')
+            .trim()
+            .toLowerCase()
+
+        return normalizedProvided === normalizedCorrect
     }
 
     /**
@@ -723,50 +738,51 @@ class QuizzesService {
      */
     gradeQuiz(quiz, answersPayload = []) {
         // Use questionItems from Question table if available, fallback to legacy questions JSON
-        let questions = [];
+        let questions = []
         if (quiz?.questionItems && Array.isArray(quiz.questionItems)) {
-            questions = quiz.questionItems;
+            questions = quiz.questionItems
         } else if (Array.isArray(quiz?.questions)) {
-            questions = quiz.questions;
+            questions = quiz.questions
         }
-        
-        const answersMap = this.buildAnswersMap(answersPayload);
+
+        const answersMap = this.buildAnswersMap(answersPayload)
 
         // Debug logs removed
 
-        let correctCount = 0;
+        let correctCount = 0
 
         const gradedAnswers = questions.map((question, index) => {
-            const questionKey = this.getQuestionKey(question, index);
-            const hasEntry = answersMap.has(String(questionKey));
+            const questionKey = this.getQuestionKey(question, index)
+            const hasEntry = answersMap.has(String(questionKey))
             const correctAnswer =
                 question && typeof question === 'object'
-                    ? question.correctAnswer ?? null
-                    : null;
-            let answerEntry = answersMap.get(String(questionKey)) ?? null;
+                    ? (question.correctAnswer ?? null)
+                    : null
+            let answerEntry = answersMap.get(String(questionKey)) ?? null
             if (!answerEntry && Array.isArray(answersPayload)) {
-                const byIndex = answersPayload[index];
-                if (byIndex && (byIndex.answer !== undefined)) {
+                const byIndex = answersPayload[index]
+                if (byIndex && byIndex.answer !== undefined) {
                     answerEntry = {
                         answer: byIndex.answer ?? null,
-                    };
+                    }
                 }
             }
             let providedAnswer =
                 answerEntry && 'answer' in answerEntry
                     ? answerEntry.answer
-                    : null;
+                    : null
 
             // Ensure providedAnswer is not undefined
-            providedAnswer = providedAnswer !== undefined ? providedAnswer : null;
+            providedAnswer =
+                providedAnswer !== undefined ? providedAnswer : null
 
             const isCorrect = this.isAnswerCorrect(
                 providedAnswer,
                 correctAnswer
-            );
+            )
 
             if (isCorrect) {
-                correctCount += 1;
+                correctCount += 1
             }
 
             return {
@@ -774,23 +790,23 @@ class QuizzesService {
                 providedAnswer,
                 correctAnswer,
                 isCorrect,
-            };
-        });
+            }
+        })
 
-        const totalQuestions = questions.length || 0;
+        const totalQuestions = questions.length || 0
         const score =
             totalQuestions > 0
                 ? Number.parseFloat(
                       ((correctCount / totalQuestions) * 100).toFixed(2)
                   )
-                : 0;
+                : 0
 
         return {
             gradedAnswers,
             correctCount,
             totalQuestions,
             score,
-        };
+        }
     }
 
     /**
@@ -798,13 +814,10 @@ class QuizzesService {
      */
     buildSubmissionResponse(submission, options = {}) {
         if (!submission) {
-            return null;
+            return null
         }
 
-        const {
-            includeAnswers = true,
-            attemptNumber = undefined,
-        } = options;
+        const { includeAnswers = true, attemptNumber = undefined } = options
 
         const response = {
             id: submission.id,
@@ -816,17 +829,17 @@ class QuizzesService {
                     : null,
             isPassed: submission.isPassed ?? null,
             submittedAt: submission.submittedAt,
-        };
+        }
 
         if (includeAnswers) {
-            response.answers = submission.answers ?? [];
+            response.answers = submission.answers ?? []
         }
 
         if (attemptNumber !== undefined) {
-            response.attemptNumber = attemptNumber;
+            response.attemptNumber = attemptNumber
         }
 
-        return response;
+        return response
     }
 
     /**
@@ -834,36 +847,30 @@ class QuizzesService {
      */
     assertQuizVisibility(quiz) {
         if (!quiz) {
-            throw this.buildNotFoundError('Quiz not found');
+            throw this.buildNotFoundError('Không tìm thấy bài trắc nghiệm')
         }
 
         if (!quiz.isPublished) {
-            throw this.buildNotFoundError('Quiz is not published');
+            throw this.buildNotFoundError('Bài trắc nghiệm chưa được xuất bản')
         }
 
         if (quiz.lesson) {
             if (!quiz.lesson.isPublished) {
-                throw this.buildNotFoundError(
-                    'Quiz lesson is not published'
-                );
+                throw this.buildNotFoundError('Bài học chưa được xuất bản')
             }
 
             if (
                 quiz.lesson.course &&
                 quiz.lesson.course.status !== COURSE_STATUS.PUBLISHED
             ) {
-                throw this.buildNotFoundError('Course is not published');
+                throw this.buildNotFoundError('Khóa học chưa được xuất bản')
             }
         }
 
-        if (
-            quiz.course &&
-            quiz.course.status !== COURSE_STATUS.PUBLISHED
-        ) {
-            throw this.buildNotFoundError('Course is not published');
+        if (quiz.course && quiz.course.status !== COURSE_STATUS.PUBLISHED) {
+            throw this.buildNotFoundError('Khóa học chưa được xuất bản')
         }
     }
 }
 
-export default QuizzesService;
-
+export default QuizzesService

@@ -153,7 +153,7 @@ app.use(
 const limiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS || RATE_LIMITS.PUBLIC.windowMs,
     max: config.RATE_LIMIT_MAX_REQUESTS || RATE_LIMITS.PUBLIC.max,
-    message: 'Too many requests from this IP, please try again later',
+    message: 'Có quá nhiều yêu cầu từ địa chỉ IP này, vui lòng thử lại sau',
     standardHeaders: true,
     legacyHeaders: false,
 })

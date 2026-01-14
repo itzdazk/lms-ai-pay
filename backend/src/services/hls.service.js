@@ -5,9 +5,30 @@ import fs from 'fs/promises'
 import logger from '../config/logger.config.js'
 
 const HLS_VARIANTS = [
-    { name: '720p', width: 1280, height: 720, bandwidth: 2800000, videoBitrate: '2800k', audioBitrate: '128k' },
-    { name: '480p', width: 854, height: 480, bandwidth: 1400000, videoBitrate: '1400k', audioBitrate: '96k' },
-    { name: '360p', width: 640, height: 360, bandwidth: 800000, videoBitrate: '800k', audioBitrate: '64k' },
+    {
+        name: '720p',
+        width: 1280,
+        height: 720,
+        bandwidth: 2800000,
+        videoBitrate: '2800k',
+        audioBitrate: '128k',
+    },
+    {
+        name: '480p',
+        width: 854,
+        height: 480,
+        bandwidth: 1400000,
+        videoBitrate: '1400k',
+        audioBitrate: '96k',
+    },
+    {
+        name: '360p',
+        width: 640,
+        height: 360,
+        bandwidth: 800000,
+        videoBitrate: '800k',
+        audioBitrate: '64k',
+    },
 ]
 
 async function ensureCleanDir(dirPath) {
@@ -33,7 +54,8 @@ async function transcodeVariant(inputPath, variantDir, variant) {
                 '-hls_time 6',
                 '-hls_playlist_type vod',
                 '-hls_list_size 0',
-                '-hls_segment_filename', path.join(variantDir, 'segment_%03d.ts'),
+                '-hls_segment_filename',
+                path.join(variantDir, 'segment_%03d.ts'),
             ])
             .size(`${variant.width}x${variant.height}`)
             .audioBitrate(variant.audioBitrate)
@@ -61,7 +83,11 @@ function buildMasterPlaylist(variants) {
     return lines.join('\n')
 }
 
-export async function convertToHLS({ inputPath, outputDir, masterPlaylistName = 'master.m3u8' }) {
+export async function convertToHLS({
+    inputPath,
+    outputDir,
+    masterPlaylistName = 'master.m3u8',
+}) {
     try {
         await ensureCleanDir(outputDir)
 
@@ -76,7 +102,6 @@ export async function convertToHLS({ inputPath, outputDir, masterPlaylistName = 
 
         return masterPath
     } catch (error) {
-        logger.error(`[HLS] Conversion failed: ${error.message}`)
         // Cleanup partial outputs to avoid stale files
         await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {})
         throw error

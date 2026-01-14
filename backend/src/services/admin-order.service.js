@@ -1,7 +1,6 @@
 // backend/src/services/admin-order.service.js
 import { prisma } from '../config/database.config.js'
 import { PAYMENT_STATUS } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 
 class AdminOrderService {
     /**
@@ -173,8 +172,6 @@ class AdminOrderService {
             }),
             prisma.order.count({ where }),
         ])
-
-        logger.info(`Admin retrieved ${orders.length} orders`)
 
         return {
             orders,
@@ -398,7 +395,7 @@ class AdminOrderService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = 404
             throw error
         }

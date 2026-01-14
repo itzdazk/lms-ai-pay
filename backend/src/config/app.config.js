@@ -30,7 +30,8 @@ const config = {
         process.env.JWT_SECRET || 'your-jwt-secret-change-in-production',
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || JWT_EXPIRY.ACCESS_TOKEN,
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
-    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || JWT_EXPIRY.REFRESH_TOKEN,
+    JWT_REFRESH_EXPIRES_IN:
+        process.env.JWT_REFRESH_EXPIRES_IN || JWT_EXPIRY.REFRESH_TOKEN,
 
     // Cookie
     COOKIE_SECRET: process.env.COOKIE_SECRET || 'your-cookie-secret',
@@ -121,10 +122,11 @@ const config = {
         parseInt(process.env.WHISPER_MAX_CONCURRENT, 10) || 2, // Default: 2 concurrent jobs
 
     // Progress/Completion thresholds
-    VIDEO_COMPLETE_THRESHOLD:
-        Number.isFinite(parseFloat(process.env.VIDEO_COMPLETE_THRESHOLD))
-            ? parseFloat(process.env.VIDEO_COMPLETE_THRESHOLD)
-            : 0.1, // default 70%
+    VIDEO_COMPLETE_THRESHOLD: Number.isFinite(
+        parseFloat(process.env.VIDEO_COMPLETE_THRESHOLD)
+    )
+        ? parseFloat(process.env.VIDEO_COMPLETE_THRESHOLD)
+        : 0.1, // default 70%
 
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
@@ -178,7 +180,7 @@ const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar])
 
 if (missingEnvVars.length > 0) {
     console.error(
-        `Missing required environment variables: ${missingEnvVars.join(', ')}`
+        `Thiếu các biến môi trường bắt buộc: ${missingEnvVars.join(', ')}`
     )
     if (config.NODE_ENV === 'production') {
         process.exit(1)

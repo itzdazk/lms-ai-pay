@@ -22,7 +22,7 @@ class NotificationsController {
                 limit: result.limit,
                 total: result.total,
             },
-            'Notifications retrieved successfully'
+            'Truy xuất thông báo thành công'
         )
     })
 
@@ -45,7 +45,7 @@ class NotificationsController {
                 limit: result.limit,
                 total: result.total,
             },
-            'Unread notifications retrieved successfully'
+            'Truy xuất thông báo chưa đọc thành công'
         )
     })
 
@@ -57,7 +57,7 @@ class NotificationsController {
         return ApiResponse.success(
             res,
             { count },
-            'Unread notifications count retrieved successfully'
+            'Truy xuất số lượng thông báo chưa đọc thành công'
         )
     })
 
@@ -73,7 +73,7 @@ class NotificationsController {
         return ApiResponse.success(
             res,
             notification,
-            'Notification retrieved successfully'
+            'Truy xuất thông báo thành công'
         )
     })
 
@@ -89,7 +89,7 @@ class NotificationsController {
         return ApiResponse.success(
             res,
             updated,
-            'Notification marked as read successfully'
+            'Đánh dấu thông báo đã đọc thành công'
         )
     })
 
@@ -101,7 +101,7 @@ class NotificationsController {
         return ApiResponse.success(
             res,
             result,
-            'All notifications marked as read successfully'
+            'Đánh dấu tất cả thông báo đã đọc thành công'
         )
     })
 
@@ -124,4 +124,3 @@ class NotificationsController {
 }
 
 export default new NotificationsController()
-

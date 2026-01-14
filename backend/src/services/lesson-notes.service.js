@@ -18,7 +18,7 @@ class LessonNotesService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -35,7 +35,7 @@ class LessonNotesService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -81,7 +81,7 @@ class LessonNotesService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -98,7 +98,7 @@ class LessonNotesService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -122,10 +122,6 @@ class LessonNotesService {
             },
         })
 
-        logger.info(
-            `Note ${note.id ? 'updated' : 'created'} for user ${userId}, lesson ${lessonId}`
-        )
-
         return {
             note: {
                 id: note.id,
@@ -147,7 +143,7 @@ class LessonNotesService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -164,7 +160,7 @@ class LessonNotesService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -176,8 +172,6 @@ class LessonNotesService {
                 lessonId,
             },
         })
-
-        logger.info(`Note deleted for user ${userId}, lesson ${lessonId}`)
 
         return { success: true }
     }
@@ -201,7 +195,7 @@ class LessonNotesService {
         })
 
         if (!enrollment) {
-            const error = new Error('You are not enrolled in this course')
+            const error = new Error('Bạn chưa đăng ký vào khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }

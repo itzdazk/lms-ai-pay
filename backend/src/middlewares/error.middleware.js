@@ -7,7 +7,7 @@ import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js'
  * Handle 404 Not Found
  */
 const notFound = (req, res, next) => {
-    const error = new Error(`Route not found - ${req.originalUrl}`)
+    const error = new Error(`Đường dẫn không tồn tại - ${req.originalUrl}`)
     error.statusCode = HTTP_STATUS.NOT_FOUND
     next(error)
 }
@@ -17,11 +17,11 @@ const notFound = (req, res, next) => {
  */
 const errorHandler = (err, req, res, next) => {
     let statusCode = err.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR
-    let message = err.message || 'Internal Server Error'
+    let message = err.message || 'Lỗi máy chủ nội bộ'
     let errorCode = err.code || ERROR_CODES.INTERNAL_ERROR
 
     // Log error
-    logger.error('Error:', {
+    logger.error('Lỗi:', {
         message: err.message,
         stack: err.stack,
         statusCode,
@@ -65,37 +65,37 @@ const errorHandler = (err, req, res, next) => {
             case 'P2002':
                 // Unique constraint violation
                 const field = err.meta?.target?.[0] || 'field'
-                message = `${field} already exists`
+                message = `${field} đã tồn tại`
                 errorCode = ERROR_CODES.DUPLICATE_ENTRY
                 statusCode = HTTP_STATUS.CONFLICT
                 break
             case 'P2025':
                 // Record not found
-                message = 'Record not found'
+                message = 'Không tìm thấy bản ghi'
                 errorCode = ERROR_CODES.NOT_FOUND
                 statusCode = HTTP_STATUS.NOT_FOUND
                 break
             case 'P2003':
                 // Foreign key constraint
-                message = 'Related record not found'
+                message = 'Không tìm thấy bản ghi liên quan'
                 errorCode = ERROR_CODES.NOT_FOUND
                 statusCode = HTTP_STATUS.NOT_FOUND
                 break
             default:
-                message = 'Database operation failed'
+                message = 'Thao tác truy vấn cơ sở dữ liệu thất bại'
         }
     }
 
     // JWT errors
     if (err.name === 'JsonWebTokenError') {
         statusCode = HTTP_STATUS.UNAUTHORIZED
-        message = 'Invalid token'
+        message = 'Token không hợp lệ'
         errorCode = ERROR_CODES.AUTHENTICATION_ERROR
     }
 
     if (err.name === 'TokenExpiredError') {
         statusCode = HTTP_STATUS.UNAUTHORIZED
-        message = 'Token expired'
+        message = 'Token đã hết hạn'
         errorCode = ERROR_CODES.AUTHENTICATION_ERROR
     }
 
@@ -111,16 +111,16 @@ const errorHandler = (err, req, res, next) => {
         errorCode = ERROR_CODES.FILE_UPLOAD_ERROR
 
         if (err.code === 'LIMIT_FILE_SIZE') {
-            message = 'File size exceeds limit'
+            message = 'Kích thước tệp vượt quá giới hạn'
         } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-            message = 'Unexpected file field'
+            message = 'Trường tệp không mong đợi'
         }
     }
 
     // Cast errors
     if (err.name === 'CastError') {
         statusCode = HTTP_STATUS.BAD_REQUEST
-        message = `Invalid ${err.path}: ${err.value}`
+        message = `Giá trị không hợp lệ ${err.path}: ${err.value}`
         errorCode = ERROR_CODES.VALIDATION_ERROR
     }
 

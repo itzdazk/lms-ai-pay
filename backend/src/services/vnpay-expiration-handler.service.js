@@ -53,7 +53,7 @@ class VNPayExpirationHandlerService {
                 })
 
             if (expiredTransactions.length === 0) {
-                logger.info('No expired VNPay transactions found')
+                // logger.info('No expired VNPay transactions found')
                 return {
                     processedCount: 0,
                     failedCount: 0,
@@ -61,9 +61,9 @@ class VNPayExpirationHandlerService {
                 }
             }
 
-            logger.info(
-                `Found ${expiredTransactions.length} expired VNPay transactions`
-            )
+            // logger.info(
+            //     `Found ${expiredTransactions.length} expired VNPay transactions`
+            // )
 
             const results = {
                 processedCount: 0,
@@ -77,14 +77,14 @@ class VNPayExpirationHandlerService {
                     const age = now - new Date(transaction.createdAt)
                     const ageMinutes = Math.floor(age / 60000)
 
-                    logger.info(
-                        `   Processing transaction ${transaction.transactionId}`
-                    )
-                    logger.info(`      Order: ${transaction.order.orderCode}`)
-                    logger.info(
-                        `      Created: ${new Date(transaction.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`
-                    )
-                    logger.info(`      Age: ${ageMinutes} minutes`)
+                    // logger.info(
+                    //     `   Processing transaction ${transaction.transactionId}`
+                    // )
+                    // logger.info(`      Order: ${transaction.order.orderCode}`)
+                    // logger.info(
+                    //     `      Created: ${new Date(transaction.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`
+                    // )
+                    // logger.info(`      Age: ${ageMinutes} minutes`)
 
                     await this.#handleSingleExpiredTransaction(transaction)
 
@@ -96,7 +96,7 @@ class VNPayExpirationHandlerService {
                         status: 'processed',
                     })
 
-                    logger.info(`    Processed successfully`)
+                    // logger.info(`    Processed successfully`)
                 } catch (error) {
                     results.failedCount++
                     results.transactions.push({
@@ -105,19 +105,19 @@ class VNPayExpirationHandlerService {
                         status: 'failed',
                         error: error.message,
                     })
-                    logger.error(`    Failed: ${error.message}`)
+                    // logger.error(`    Failed: ${error.message}`)
                 }
             }
 
-            logger.info(' VNPay Expiration Check Completed')
-            logger.info(`    Processed: ${results.processedCount}`)
-            logger.info(`    Failed: ${results.failedCount}`)
+            // logger.info(' VNPay Expiration Check Completed')
+            // logger.info(`    Processed: ${results.processedCount}`)
+            // logger.info(`    Failed: ${results.failedCount}`)
 
             return results
         } catch (error) {
-            logger.error(
-                ` Error handling expired VNPay transactions: ${error.message}`
-            )
+            // logger.error(
+            //     ` Error handling expired VNPay transactions: ${error.message}`
+            // )
             throw error
         }
     }
@@ -136,16 +136,16 @@ class VNPayExpirationHandlerService {
             })
 
             if (currentOrder.paymentStatus !== PAYMENT_STATUS.PENDING) {
-                logger.info(
-                    `      Order ${order.orderCode} already ${currentOrder.paymentStatus} - skipping expiration`
-                )
+                // logger.info(
+                //     `      Order ${order.orderCode} already ${currentOrder.paymentStatus} - skipping expiration`
+                // )
 
                 // Vẫn update transaction nếu nó PENDING
                 await tx.paymentTransaction.update({
                     where: { id: transaction.id },
                     data: {
                         status: TRANSACTION_STATUS.FAILED,
-                        errorMessage: 'Order already cancelled/processed',
+                        errorMessage: 'Đơn hàng đã được hủy hoặc đã được xử lý',
                         gatewayResponse: {
                             ...(transaction.gatewayResponse || {}),
                             skippedAt: new Date().toISOString(),
@@ -163,7 +163,7 @@ class VNPayExpirationHandlerService {
                 data: {
                     status: TRANSACTION_STATUS.FAILED,
                     errorMessage:
-                        'Payment link expired - no payment was made within the time limit',
+                        'Link thanh toán đã hết hạn - không có thanh toán nào được thực hiện trong thời gian cho phép',
                     gatewayResponse: {
                         ...(transaction.gatewayResponse || {}),
                         expiredAt: new Date().toISOString(),
@@ -179,11 +179,11 @@ class VNPayExpirationHandlerService {
                     where: { id: order.id },
                     data: {
                         paymentStatus: PAYMENT_STATUS.FAILED,
-                        notes: 'Payment failed - link expired after 15 minutes',
+                        notes: 'Thanh toán thất bại - link hết hạn sau 15 phút',
                     },
                 })
 
-                logger.info(`      Order ${order.orderCode} → FAILED (expired)`)
+                // logger.info(`      Order ${order.orderCode} → FAILED (expired)`)
 
                 // 3. Send notification
                 const fullOrder = await tx.order.findUnique({
@@ -210,16 +210,16 @@ class VNPayExpirationHandlerService {
                                 'Link thanh toán đã hết hạn (15 phút)'
                             )
                             .catch((err) => {
-                                logger.error(
-                                    `Failed to send notification: ${err.message}`
-                                )
+                                // logger.error(
+                                //     `Failed to send notification: ${err.message}`
+                                // )
                             })
                     })
                 }
             } else {
-                logger.info(
-                    `      Order ${order.orderCode} already ${order.paymentStatus} - skipped`
-                )
+                // logger.info(
+                //     `      Order ${order.orderCode} already ${order.paymentStatus} - skipped`
+                // )
             }
         })
     }
@@ -279,7 +279,7 @@ class VNPayExpirationHandlerService {
                 return {
                     orderCode: order.orderCode,
                     paymentStatus: order.paymentStatus,
-                    message: `Transaction not yet expired (age: ${ageMinutes} minutes)`,
+                    message: `Giao dịch chưa hết hạn (thời gian đã trôi qua: ${ageMinutes} phút)`,
                     changed: false,
                 }
             }
@@ -298,11 +298,10 @@ class VNPayExpirationHandlerService {
             return {
                 orderCode: order.orderCode,
                 transactionId: transaction.transactionId,
-                message: 'Order marked as FAILED due to expiration',
+                message: 'Đơn hàng đã được đánh dấu là FAILED do hết hạn',
                 changed: true,
             }
         } catch (error) {
-            logger.error(`Error checking order ${orderCode}: ${error.message}`)
             throw error
         }
     }

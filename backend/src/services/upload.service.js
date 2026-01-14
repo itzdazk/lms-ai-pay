@@ -5,7 +5,12 @@ import { fileURLToPath } from 'url'
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
-import { USER_ROLES, HTTP_STATUS, UPLOAD_TYPES, UPLOAD_STATUS } from '../config/constants.js'
+import {
+    USER_ROLES,
+    HTTP_STATUS,
+    UPLOAD_TYPES,
+    UPLOAD_STATUS,
+} from '../config/constants.js'
 import lessonsService from './lessons.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -46,7 +51,7 @@ class UploadService {
             if (file.path && fs.existsSync(file.path)) {
                 fs.unlinkSync(file.path)
             }
-            throw new Error('Failed to upload image')
+            throw new Error('Tải ảnh lên thất bại')
         }
     }
 
@@ -136,7 +141,7 @@ class UploadService {
             if (file.path && fs.existsSync(file.path)) {
                 fs.unlinkSync(file.path)
             }
-            throw new Error('Failed to upload video')
+            throw new Error('Tải video lên thất bại')
         }
     }
 
@@ -188,7 +193,7 @@ class UploadService {
             if (file.path && fs.existsSync(file.path)) {
                 fs.unlinkSync(file.path)
             }
-            throw new Error('Failed to upload document')
+            throw new Error('Tải tài liệu lên thất bại')
         }
     }
 
@@ -219,7 +224,7 @@ class UploadService {
             }
 
             if (!fileFound) {
-                const error = new Error('File not found')
+                const error = new Error('Không tìm thấy tệp')
                 error.statusCode = HTTP_STATUS.NOT_FOUND
                 throw error
             }
@@ -233,9 +238,7 @@ class UploadService {
                 fileUserId &&
                 fileUserId !== userId
             ) {
-                const error = new Error(
-                    'You do not have permission to delete this file'
-                )
+                const error = new Error('Bạn không có quyền xóa tệp này')
                 error.statusCode = HTTP_STATUS.FORBIDDEN
                 throw error
             }
@@ -253,7 +256,7 @@ class UploadService {
             return {
                 deleted: true,
                 fileId,
-                message: 'File deleted successfully',
+                message: 'Tệp đã được xóa thành công',
             }
         } catch (error) {
             logger.error('Error deleting file:', error)
@@ -298,7 +301,7 @@ class UploadService {
                     id: fileId,
                     exists: false,
                     status: 'not_found',
-                    message: 'File not found or upload not completed',
+                    message: 'Không tìm thấy tệp hoặc tải lên chưa hoàn tất',
                 }
             }
 
@@ -309,7 +312,7 @@ class UploadService {
             return fileInfo
         } catch (error) {
             logger.error('Error checking upload status:', error)
-            const err = new Error('Failed to check upload status')
+            const err = new Error('Kiểm tra trạng thái tải lên thất bại')
             err.statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR
             throw err
         }
@@ -399,7 +402,7 @@ class UploadService {
             }
         } catch (error) {
             logger.error('Error getting user files:', error)
-            throw new Error('Failed to get user files')
+            throw new Error('Không thể truy xuất tệp của người dùng')
         }
     }
 

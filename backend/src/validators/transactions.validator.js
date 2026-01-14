@@ -6,49 +6,49 @@ const getTransactionsValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải nằm trong khoảng từ 1 đến 100'),
     query('status')
         .optional()
         .isIn(Object.values(TRANSACTION_STATUS))
         .withMessage(
-            `status must be one of: ${Object.values(TRANSACTION_STATUS).join(', ')}`
+            `Trạng thái phải là một trong các giá trị: ${Object.values(TRANSACTION_STATUS).join(', ')}`
         ),
     query('paymentGateway')
         .optional()
         .isIn(Object.values(PAYMENT_GATEWAY))
         .withMessage(
-            `paymentGateway must be one of: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
+            `Cổng thanh toán phải là một trong các giá trị: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
         ),
     query('startDate')
         .optional()
         .isISO8601()
-        .withMessage('startDate must be a valid ISO 8601 date'),
+        .withMessage('Ngày bắt đầu phải là định dạng ISO 8601 hợp lệ'),
     query('endDate')
         .optional()
         .isISO8601()
-        .withMessage('endDate must be a valid ISO 8601 date'),
+        .withMessage('Ngày kết thúc phải là định dạng ISO 8601 hợp lệ'),
     query('userId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('userId must be a positive integer'),
+        .withMessage('ID người dùng phải là số nguyên dương'),
     query('transactionId')
         .optional()
         .trim()
         .notEmpty()
-        .withMessage('transactionId cannot be empty'),
+        .withMessage('ID giao dịch không được để trống'),
     validate,
 ]
 
 const getTransactionByIdValidator = [
     param('transactionId')
         .notEmpty()
-        .withMessage('transactionId is required')
+        .withMessage('ID giao dịch là bắt buộc')
         .isInt({ min: 1 })
-        .withMessage('transactionId must be a positive integer'),
+        .withMessage('ID giao dịch phải là số nguyên dương'),
     validate,
 ]
 

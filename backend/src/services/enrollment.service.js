@@ -6,7 +6,6 @@ import {
     PAYMENT_STATUS,
     HTTP_STATUS,
 } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 import ordersService from './orders.service.js'
 import notificationsService from './notifications.service.js'
 import emailService from './email.service.js'
@@ -109,10 +108,6 @@ class EnrollmentService {
             prisma.enrollment.count({ where }),
         ])
 
-        logger.info(
-            `Retrieved ${enrollments.length} enrollments for user ID: ${userId}`
-        )
-
         return {
             enrollments,
             total,
@@ -179,14 +174,10 @@ class EnrollmentService {
         })
 
         if (!enrollment) {
-            const error = new Error('Enrollment not found')
+            const error = new Error('Không tìm thấy đăng ký')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
-
-        logger.info(
-            `Retrieved enrollment ID: ${enrollmentId} for user ID: ${userId}`
-        )
 
         return enrollment
     }
@@ -236,10 +227,6 @@ class EnrollmentService {
                 },
             },
         })
-
-        logger.info(
-            `Retrieved ${enrollments.length} active enrollments for user ID: ${userId}`
-        )
 
         return enrollments
     }
@@ -297,10 +284,6 @@ class EnrollmentService {
             prisma.enrollment.count({ where }),
         ])
 
-        logger.info(
-            `Retrieved ${enrollments.length} completed enrollments for user ID: ${userId}`
-        )
-
         return {
             enrollments,
             total,
@@ -342,13 +325,13 @@ class EnrollmentService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            const error = new Error('Course is not available for enrollment')
+            const error = new Error('Khóa học không khả dụng để đăng ký')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -364,7 +347,7 @@ class EnrollmentService {
         })
 
         if (existingEnrollment) {
-            const error = new Error('You are already enrolled in this course')
+            const error = new Error('Bạn đã đăng ký khóa học này')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -416,10 +399,6 @@ class EnrollmentService {
                 },
             })
 
-            logger.info(
-                `User ID: ${userId} enrolled in free course ID: ${courseId}`
-            )
-
             // Create notification for enrollment success (student)
             await notificationsService.notifyEnrollmentSuccess(
                 userId,
@@ -443,9 +422,6 @@ class EnrollmentService {
                     )
                 }
             } catch (error) {
-                logger.error(
-                    `Failed to notify instructor about new enrollment: ${error.message}`
-                )
                 // Don't fail enrollment if notification fails
             }
 
@@ -467,9 +443,6 @@ class EnrollmentService {
                     )
                 }
             } catch (error) {
-                logger.error(
-                    `Failed to notify admins about new enrollment: ${error.message}`
-                )
                 // Don't fail enrollment if notification fails
             }
 
@@ -489,17 +462,8 @@ class EnrollmentService {
                             instructor: course.instructor,
                         }
                     )
-                    logger.info(
-                        `Enrollment success email sent to user ${userId} for course ${courseId}`
-                    )
                 }
-            } catch (error) {
-                // Log error but don't fail the enrollment process
-                logger.error(
-                    `Failed to send enrollment success email: ${error.message}`,
-                    error
-                )
-            }
+            } catch (error) {}
 
             return {
                 requiresPayment: false,
@@ -510,7 +474,7 @@ class EnrollmentService {
         // If course is PAID, create order automatically
         if (!paymentGateway) {
             const error = new Error(
-                'Payment gateway is required for paid courses. Please provide paymentGateway (VNPay or MoMo).'
+                'Cổng thanh toán là bắt buộc đối với các khóa học có phí. Vui lòng cung cấp cổng thanh toán (VNPay hoặc MoMo).'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -524,14 +488,11 @@ class EnrollmentService {
             billingAddress
         )
 
-        logger.info(
-            `Order created automatically for user ID: ${userId}, course ID: ${courseId}, order ID: ${order.id}`
-        )
-
         return {
             requiresPayment: true,
             order,
-            message: 'Order created successfully. Please proceed to payment.',
+            message:
+                'Đơn hàng được tạo thành công. Vui lòng tiến hành thanh toán.',
         }
     }
 
@@ -575,19 +536,19 @@ class EnrollmentService {
         })
 
         if (!order) {
-            const error = new Error('Order not found')
+            const error = new Error('Không tìm thấy đơn hàng')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
             const error = new Error(
-                `Cannot enroll from unpaid order. Status: ${order.paymentStatus}`
+                `Không thể đăng ký từ đơn hàng chưa thanh toán. Trạng thái: ${order.paymentStatus}`
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
         if (order.course.status !== COURSE_STATUS.PUBLISHED) {
-            const error = new Error('Course is not available for enrollment')
+            const error = new Error('Khóa học không khả dụng để đăng ký')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -603,9 +564,6 @@ class EnrollmentService {
         })
 
         if (existingEnrollment) {
-            logger.info(
-                `User ${order.userId} already enrolled in course ${order.courseId}`
-            )
             return existingEnrollment
         }
 
@@ -648,10 +606,6 @@ class EnrollmentService {
             data: { enrolledCount: { increment: 1 } },
         })
 
-        logger.info(
-            `User ${order.userId} enrolled in course ${order.courseId} from order ${orderId}`
-        )
-
         // Gửi notification (fire-and-forget)
         notificationsService
             .notifyEnrollmentSuccess(
@@ -659,9 +613,7 @@ class EnrollmentService {
                 order.courseId,
                 order.course.title
             )
-            .catch((err) => {
-                logger.error('Failed to send enrollment notification:', err)
-            })
+            .catch((err) => {})
 
         // Notify instructor about new enrollment from payment (fire-and-forget)
         ;(async () => {
@@ -679,11 +631,7 @@ class EnrollmentService {
                         order.userId
                     )
                 }
-            } catch (error) {
-                logger.error(
-                    `Failed to notify instructor about enrollment from payment: ${error.message}`
-                )
-            }
+            } catch (error) {}
         })()
 
         // Notify admins about new enrollment from payment (fire-and-forget)
@@ -704,11 +652,7 @@ class EnrollmentService {
                         order.finalPrice
                     )
                 }
-            } catch (error) {
-                logger.error(
-                    `Failed to notify admins about enrollment from payment: ${error.message}`
-                )
-            }
+            } catch (error) {}
         })()
 
         // Gửi email (fire-and-forget – không được await trong transaction)
@@ -728,13 +672,9 @@ class EnrollmentService {
                             instructor: order.course.instructor,
                         }
                     )
-                    logger.info(`Enrollment email sent to ${user.email}`)
                 }
             } catch (error) {
-                logger.error(
-                    `Failed to send enrollment email: ${error.message}`,
-                    error
-                )
+                // Don't fail enrollment if email fails
             }
         })()
 
@@ -767,10 +707,6 @@ class EnrollmentService {
         const isEnrolled = !!enrollment
         const isActive =
             enrollment && enrollment.status === ENROLLMENT_STATUS.ACTIVE
-
-        logger.info(
-            `Enrollment check for user ID: ${userId}, course ID: ${courseId} - Enrolled: ${isEnrolled}`
-        )
 
         return {
             isEnrolled,

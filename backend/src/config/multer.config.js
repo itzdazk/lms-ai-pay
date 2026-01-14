@@ -54,7 +54,7 @@ const videoPreviewsDir = path.join(sharedDir, 'previews')
 ].forEach((dir) => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
-        console.log(`Created upload directory: ${dir}`)
+        console.log(`Đã tạo thư mục tải lên: ${dir}`)
     }
 })
 
@@ -71,7 +71,7 @@ const ensureCourseDir = (courseId) => {
     dirs.forEach((dir) => {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true })
-            console.log(`Created course directory: ${dir}`)
+            console.log(`Đã tạo thư mục khóa học: ${dir}`)
         }
     })
 }
@@ -97,7 +97,7 @@ const avatarFileFilter = (req, file, cb) => {
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_IMAGE_TYPES.join(', ')}`
             ),
             false
         )
@@ -117,7 +117,7 @@ const videoStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const courseId = req.body.courseId || req.params.courseId
         if (!courseId) {
-            return cb(new Error('courseId is required for video upload'))
+            return cb(new Error('Yêu cầu courseId để tải lên video'))
         }
         ensureCourseDir(courseId)
         const videoDir = pathUtil.getVideoDir(courseId)
@@ -139,7 +139,7 @@ const videoFileFilter = (req, file, cb) => {
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_VIDEO_TYPES.join(', ')}`
             ),
             false
         )
@@ -159,7 +159,7 @@ const transcriptStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const courseId = req.body.courseId || req.params.courseId
         if (!courseId) {
-            return cb(new Error('courseId is required for transcript upload'))
+            return cb(new Error('Yêu cầu courseId để tải lên transcript'))
         }
         ensureCourseDir(courseId)
         const transcriptDir = pathUtil.getTranscriptDir(courseId)
@@ -181,7 +181,7 @@ const transcriptFileFilter = (req, file, cb) => {
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`
             ),
             false
         )
@@ -215,7 +215,7 @@ const thumbnailFileFilter = (req, file, cb) => {
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_IMAGE_TYPES.join(', ')}`
             ),
             false
         )
@@ -249,7 +249,7 @@ const videoPreviewFileFilter = (req, file, cb) => {
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_VIDEO_TYPES.join(', ')}`
             ),
             false
         )
@@ -283,7 +283,7 @@ const categoryImageFileFilter = (req, file, cb) => {
     } else {
         cb(
             new Error(
-                `Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_IMAGE_TYPES.join(', ')}`
             ),
             false
         )
@@ -305,7 +305,7 @@ export {
     uploadTranscript,
     uploadThumbnail,
     uploadVideoPreview,
-    uploadCategoryImage, 
+    uploadCategoryImage,
     uploadsDir,
     avatarsDir,
     videosDir,
@@ -313,5 +313,5 @@ export {
     hlsDir,
     thumbnailsDir,
     videoPreviewsDir,
-    categoriesDir
+    categoriesDir,
 }

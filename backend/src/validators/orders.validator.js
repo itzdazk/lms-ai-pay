@@ -9,39 +9,39 @@ import { PAYMENT_STATUS, PAYMENT_GATEWAY } from '../config/constants.js'
 export const createOrderValidator = [
     body('courseId')
         .notEmpty()
-        .withMessage('Course ID is required')
+        .withMessage('ID khóa học là bắt buộc')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     body('paymentGateway')
         .notEmpty()
-        .withMessage('Payment gateway is required')
+        .withMessage('Cổng thanh toán là bắt buộc')
         .isIn(Object.values(PAYMENT_GATEWAY))
         .withMessage(
-            `Payment gateway must be one of: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
+            `Cổng thanh toán phải là một trong: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
         ),
     body('billingAddress')
         .optional()
         .isObject()
-        .withMessage('Billing address must be an object'),
+        .withMessage('Địa chỉ thanh toán phải là một đối tượng'),
     body('billingAddress.fullName')
         .optional()
         .trim()
         .isLength({ min: 1, max: 100 })
-        .withMessage('Full name must be between 1 and 100 characters'),
+        .withMessage('Họ và tên phải có độ dài từ 1 đến 100 ký tự'),
     body('billingAddress.email')
         .optional()
         .isEmail()
-        .withMessage('Email must be valid'),
+        .withMessage('Email phải hợp lệ'),
     body('billingAddress.phone')
         .optional()
         .trim()
         .isLength({ min: 10, max: 20 })
-        .withMessage('Phone must be between 10 and 20 characters'),
+        .withMessage('Số điện thoại phải có độ dài từ 10 đến 20 ký tự'),
     body('billingAddress.address')
         .optional()
         .trim()
         .isLength({ min: 1, max: 255 })
-        .withMessage('Address must be between 1 and 255 characters'),
+        .withMessage('Địa chỉ phải có độ dài từ 1 đến 255 ký tự'),
     validate,
 ]
 
@@ -52,36 +52,36 @@ export const getOrdersValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
     query('paymentStatus')
         .optional()
         .isIn(Object.values(PAYMENT_STATUS))
         .withMessage(
-            `Payment status must be one of: ${Object.values(PAYMENT_STATUS).join(', ')}`
+            `Trạng thái thanh toán phải là một trong: ${Object.values(PAYMENT_STATUS).join(', ')}`
         ),
     query('paymentGateway')
         .optional()
         .isIn(Object.values(PAYMENT_GATEWAY))
         .withMessage(
-            `Payment gateway must be one of: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
+            `Cổng thanh toán phải là một trong: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
         ),
     query('startDate')
         .optional()
         .isISO8601()
-        .withMessage('Start date must be a valid ISO 8601 date'),
+        .withMessage('Ngày bắt đầu phải là định dạng ISO 8601 hợp lệ'),
     query('endDate')
         .optional()
         .isISO8601()
-        .withMessage('End date must be a valid ISO 8601 date'),
+        .withMessage('Ngày kết thúc phải là định dạng ISO 8601 hợp lệ'),
     query('sort')
         .optional()
         .isIn(['newest', 'oldest', 'amount_asc', 'amount_desc'])
         .withMessage(
-            'Sort must be one of: newest, oldest, amount_asc, amount_desc'
+            'Sắp xếp phải là một trong: newest, oldest, amount_asc, amount_desc'
         ),
     validate,
 ]
@@ -92,7 +92,7 @@ export const getOrdersValidator = [
 export const getOrderByIdValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Order ID must be a positive integer'),
+        .withMessage('ID đơn hàng phải là số nguyên dương'),
     validate,
 ]
 
@@ -102,10 +102,10 @@ export const getOrderByIdValidator = [
 export const getOrderByCodeValidator = [
     param('orderCode')
         .notEmpty()
-        .withMessage('Order code is required')
+        .withMessage('Mã đơn hàng là bắt buộc')
         .trim()
         .isLength({ min: 1, max: 50 })
-        .withMessage('Order code must be between 1 and 50 characters'),
+        .withMessage('Mã đơn hàng phải có độ dài từ 1 đến 50 ký tự'),
     validate,
 ]
 
@@ -115,6 +115,6 @@ export const getOrderByCodeValidator = [
 export const cancelOrderValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Order ID must be a positive integer'),
+        .withMessage('ID đơn hàng phải là số nguyên dương'),
     validate,
 ]

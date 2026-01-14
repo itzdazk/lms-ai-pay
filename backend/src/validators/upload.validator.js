@@ -12,7 +12,7 @@ const uploadFileValidator = [
     query('type')
         .optional()
         .isString()
-        .withMessage('Type must be a string')
+        .withMessage('Loại phải là chuỗi ký tự')
         .isIn([
             UPLOAD_TYPES.IMAGE.AVATAR,
             UPLOAD_TYPES.IMAGE.THUMBNAIL,
@@ -24,17 +24,17 @@ const uploadFileValidator = [
             UPLOAD_TYPES.DOCUMENT.MATERIAL,
             UPLOAD_TYPES.DOCUMENT.GENERAL,
         ])
-        .withMessage('Invalid file type'),
+        .withMessage('Loại tệp không hợp lệ'),
 
     query('courseId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     query('lessonId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     validate,
 
@@ -43,7 +43,7 @@ const uploadFileValidator = [
         if (!req.file) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
-                message: 'No file uploaded',
+                message: 'Chưa có tệp nào được tải lên',
             })
         }
         next()
@@ -57,9 +57,9 @@ const deleteFileValidator = [
     param('fileId')
         .trim()
         .notEmpty()
-        .withMessage('File ID is required')
+        .withMessage('ID tệp là bắt buộc')
         .isLength({ min: 1, max: 255 })
-        .withMessage('File ID must be between 1 and 255 characters'),
+        .withMessage('ID tệp phải có độ dài từ 1 đến 255 ký tự'),
 
     validate,
 ]
@@ -71,9 +71,9 @@ const getUploadStatusValidator = [
     param('fileId')
         .trim()
         .notEmpty()
-        .withMessage('File ID is required')
+        .withMessage('ID tệp là bắt buộc')
         .isLength({ min: 1, max: 255 })
-        .withMessage('File ID must be between 1 and 255 characters'),
+        .withMessage('ID tệp phải có độ dài từ 1 đến 255 ký tự'),
 
     validate,
 ]
@@ -85,21 +85,21 @@ const getUserFilesValidator = [
     query('type')
         .optional()
         .isString()
-        .withMessage('Type must be a string')
+        .withMessage('Loại phải là chuỗi ký tự')
         .isIn(['image', 'video', 'document'])
         .withMessage(
-            'Invalid file category. Must be: image, video, or document'
+            'Danh mục tệp không hợp lệ. Phải là: image, video hoặc document'
         ),
 
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải nằm trong khoảng từ 1 đến 100'),
 
     validate,
 ]

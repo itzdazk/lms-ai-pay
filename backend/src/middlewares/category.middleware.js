@@ -12,7 +12,7 @@ const checkCategoryExists = async (req, res, next) => {
         const categoryId = parseInt(req.params.id)
 
         if (!categoryId || isNaN(categoryId)) {
-            return ApiResponse.badRequest(res, 'Valid Category ID is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu mã danh mục hợp lệ')
         }
 
         const category = await prisma.category.findUnique({
@@ -26,7 +26,7 @@ const checkCategoryExists = async (req, res, next) => {
         })
 
         if (!category) {
-            return ApiResponse.notFound(res, 'Category not found')
+            return ApiResponse.notFound(res, 'Không tìm thấy danh mục')
         }
 
         // Attach category to request for later use
@@ -35,7 +35,7 @@ const checkCategoryExists = async (req, res, next) => {
     } catch (error) {
         return ApiResponse.error(
             res,
-            'Error checking category',
+            'Lỗi kiểm tra danh mục',
             HTTP_STATUS.INTERNAL_SERVER_ERROR
         )
     }

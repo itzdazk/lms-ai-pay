@@ -9,7 +9,6 @@ import logger from '../config/logger.config.js'
 import { prisma } from '../config/database.config.js'
 import { TRANSCRIPT_STATUS } from '../config/constants.js'
 import { enqueueTranscriptionJob } from '../queues/transcription.queue.js'
-import pathUtil from '../utils/path.util.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -53,10 +52,14 @@ class TranscriptionService {
         if (job) {
             try {
                 if (process.platform === 'win32') {
-                    const killProcess = spawn('taskkill', ['/pid', job.pid.toString(), '/t', '/f'], {
-                        stdio: 'ignore',
-                        detached: true
-                    })
+                    const killProcess = spawn(
+                        'taskkill',
+                        ['/pid', job.pid.toString(), '/t', '/f'],
+                        {
+                            stdio: 'ignore',
+                            detached: true,
+                        }
+                    )
                     killProcess.unref()
                 } else {
                     try {
@@ -65,24 +68,36 @@ class TranscriptionService {
                             if (this.activeJobs.has(lessonId)) {
                                 try {
                                     job.kill('SIGKILL')
-                                    logger.warn(`Force killed transcription job for lesson ${lessonId} after SIGTERM timeout`)
+                                    logger.warn(
+                                        `Force killed transcription job for lesson ${lessonId} after SIGTERM timeout`
+                                    )
                                 } catch (err) {
-                                    logger.error(`Failed to force kill transcription job for lesson ${lessonId}: ${err.message}`)
+                                    logger.error(
+                                        `Failed to force kill transcription job for lesson ${lessonId}: ${err.message}`
+                                    )
                                 }
                             }
                         }, 2000)
                     } catch (err) {
-                        logger.error(`Failed to send SIGTERM to transcription job for lesson ${lessonId}: ${err.message}`)
+                        logger.error(
+                            `Failed to send SIGTERM to transcription job for lesson ${lessonId}: ${err.message}`
+                        )
                         try {
                             job.kill('SIGKILL')
                         } catch (killErr) {
-                            logger.error(`Failed to kill transcription job for lesson ${lessonId}: ${killErr.message}`)
+                            logger.error(
+                                `Failed to kill transcription job for lesson ${lessonId}: ${killErr.message}`
+                            )
                         }
                     }
                 }
-                logger.info(`Cancelled transcription job for lesson ${lessonId} (PID: ${job.pid})`)
+                logger.info(
+                    `Cancelled transcription job for lesson ${lessonId} (PID: ${job.pid})`
+                )
             } catch (error) {
-                logger.error(`Failed to cancel transcription job for lesson ${lessonId}: ${error.message}`)
+                logger.error(
+                    `Failed to cancel transcription job for lesson ${lessonId}: ${error.message}`
+                )
             } finally {
                 this.activeJobs.delete(lessonId)
             }
@@ -109,7 +124,12 @@ class TranscriptionService {
     /**
      * Queue transcription job via BullMQ
      */
-    async queueTranscription({ videoPath, lessonId, userId, source = 'upload' }) {
+    async queueTranscription({
+        videoPath,
+        lessonId,
+        userId,
+        source = 'upload',
+    }) {
         try {
             const job = await enqueueTranscriptionJob({
                 lessonId,
@@ -117,10 +137,14 @@ class TranscriptionService {
                 userId,
                 courseId: await this._getCourseId(lessonId),
             })
-            logger.info(`Queued transcription job ${job.id} for lesson ${lessonId}`)
+            logger.info(
+                `Queued transcription job ${job.id} for lesson ${lessonId}`
+            )
             return job
         } catch (error) {
-            logger.error(`Failed to queue transcription job for lesson ${lessonId}: ${error.message}`)
+            logger.error(
+                `Failed to queue transcription job for lesson ${lessonId}: ${error.message}`
+            )
             throw error
         }
     }
@@ -131,7 +155,7 @@ class TranscriptionService {
     async _getCourseId(lessonId) {
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
-            select: { courseId: true }
+            select: { courseId: true },
         })
         return lesson?.courseId
     }
@@ -152,7 +176,9 @@ class TranscriptionService {
         }
 
         if (!videoPath || !lessonId) {
-            logger.warn('Missing videoPath or lessonId. Skip Whisper transcription.')
+            logger.warn(
+                'Missing videoPath or lessonId. Skip Whisper transcription.'
+            )
             return null
         }
 
@@ -247,12 +273,16 @@ class TranscriptionService {
                         },
                     })
                     // Job cancelled, return early
-                    return reject(new Error('Transcription cancelled'))
+                    return reject(
+                        new Error(
+                            'Việc chuyển đổi âm thanh thành văn bản đã bị hủy'
+                        )
+                    )
                 }
 
                 if (code !== 0) {
                     const error = new Error(
-                        `Whisper process exited with code ${code}`
+                        `Tiến trình Whisper đã thoát với mã lỗi ${code}`
                     )
                     logger.error(error.message)
                     await prisma.lesson.update({
@@ -285,7 +315,9 @@ class TranscriptionService {
                     })
 
                     if (!lesson) {
-                        logger.error(`Lesson ${lessonId} not found for transcript save`)
+                        logger.error(
+                            `Lesson ${lessonId} not found for transcript save`
+                        )
                         return resolve(null)
                     }
 
@@ -311,13 +343,13 @@ class TranscriptionService {
                             'utf-8'
                         )
                         transcriptJsonUrl = `/uploads/courses/${lesson.courseId}/transcripts/${jsonFilename}`
-                        
+
                         // Update database with JSON URL after successful creation
                         await prisma.lesson.update({
                             where: { id: lessonId },
                             data: { transcriptJsonUrl },
                         })
-                        
+
                         logger.info(
                             `Generated transcript JSON for lesson ${lessonId}: ${transcriptJsonUrl}`
                         )
@@ -363,11 +395,14 @@ class TranscriptionService {
     _convertSrtToWebVtt(srtContent) {
         // Add WEBVTT header
         let webvttContent = 'WEBVTT\n\n'
-        
+
         // Replace comma with dot in timestamps (SRT format: 00:00:00,000 --> 00:00:05,000)
         // WebVTT format: 00:00:00.000 --> 00:00:05.000
-        webvttContent += srtContent.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
-        
+        webvttContent += srtContent.replace(
+            /(\d{2}:\d{2}:\d{2}),(\d{3})/g,
+            '$1.$2'
+        )
+
         return webvttContent
     }
 
@@ -378,14 +413,14 @@ class TranscriptionService {
      */
     _convertSrtToJson(transcriptPath) {
         const srtContent = fs.readFileSync(transcriptPath, 'utf-8')
-        
+
         try {
             // Convert SRT to WebVTT format
             const webvttContent = this._convertSrtToWebVtt(srtContent)
-            
+
             // Parse using node-webvtt
             const parsed = parse(webvttContent, { strict: false })
-            
+
             if (!parsed.valid) {
                 logger.warn(
                     `Invalid subtitle format, falling back to manual parsing. Errors: ${parsed.errors.join(', ')}`
@@ -393,7 +428,7 @@ class TranscriptionService {
                 // Fallback to manual parsing if node-webvtt fails
                 return this._convertSrtToJsonManual(srtContent)
             }
-            
+
             // Convert cues to our format
             const segments = parsed.cues.map((cue, index) => ({
                 index: index + 1,
@@ -401,11 +436,11 @@ class TranscriptionService {
                 end: cue.end,
                 text: cue.text.trim(),
             }))
-            
+
             logger.debug(
                 `Successfully parsed ${segments.length} segments using node-webvtt`
             )
-            
+
             return segments
         } catch (error) {
             logger.error(

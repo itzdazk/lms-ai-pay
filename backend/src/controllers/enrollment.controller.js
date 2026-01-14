@@ -34,7 +34,7 @@ class EnrollmentController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Enrollments retrieved successfully'
+            'Truy xuất danh sách ghi danh thành công'
         )
     })
 
@@ -49,7 +49,7 @@ class EnrollmentController {
         const userId = req.user.id
 
         if (isNaN(enrollmentId)) {
-            return ApiResponse.badRequest(res, 'Invalid enrollment ID')
+            return ApiResponse.badRequest(res, 'ID ghi danh không hợp lệ')
         }
 
         const enrollment = await enrollmentService.getEnrollmentById(
@@ -60,7 +60,7 @@ class EnrollmentController {
         return ApiResponse.success(
             res,
             enrollment,
-            'Enrollment retrieved successfully'
+            'Truy xuất chi tiết ghi danh thành công'
         )
     })
 
@@ -82,7 +82,7 @@ class EnrollmentController {
         return ApiResponse.success(
             res,
             enrollments,
-            'Active enrollments retrieved successfully'
+            'Truy xuất danh sách ghi danh thành công'
         )
     })
 
@@ -113,7 +113,7 @@ class EnrollmentController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Completed enrollments retrieved successfully'
+            'Truy xuất danh sách ghi danh thành công'
         )
     })
 
@@ -128,7 +128,7 @@ class EnrollmentController {
         const { courseId, paymentGateway, billingAddress } = req.body
 
         if (!courseId) {
-            return ApiResponse.badRequest(res, 'Course ID is required')
+            return ApiResponse.badRequest(res, 'ID khóa học là bắt buộc')
         }
 
         const result = await enrollmentService.enrollInCourse(
@@ -143,7 +143,7 @@ class EnrollmentController {
             return ApiResponse.created(
                 res,
                 result.enrollment,
-                'Successfully enrolled in free course'
+                'Đã ghi danh thành công'
             )
         }
 
@@ -151,7 +151,8 @@ class EnrollmentController {
         return ApiResponse.created(
             res,
             result.order,
-            result.message || 'Order created successfully. Please proceed to payment.'
+            result.message ||
+                'Đã tạo đơn hàng thành công. Vui lòng tiến hành thanh toán.'
         )
     })
 
@@ -166,7 +167,7 @@ class EnrollmentController {
         const courseIdNum = parseInt(courseId)
 
         if (isNaN(courseIdNum)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const result = await enrollmentService.checkEnrollment(
@@ -177,7 +178,7 @@ class EnrollmentController {
         return ApiResponse.success(
             res,
             result,
-            'Enrollment status retrieved successfully'
+            'Truy xuất trạng thái ghi danh thành công'
         )
     })
 }

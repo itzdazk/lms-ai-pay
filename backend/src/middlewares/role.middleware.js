@@ -1,7 +1,11 @@
 // src/middlewares/role.middleware.js
-import ApiResponse from '../utils/response.util.js';
-import { USER_ROLES, ENROLLMENT_STATUS, COURSE_STATUS } from '../config/constants.js';
-import { prisma } from '../config/database.config.js';
+import ApiResponse from '../utils/response.util.js'
+import {
+    USER_ROLES,
+    ENROLLMENT_STATUS,
+    COURSE_STATUS,
+} from '../config/constants.js'
+import { prisma } from '../config/database.config.js'
 
 /**
  * Check if user has required role(s)
@@ -15,7 +19,7 @@ const authorize = (...allowedRoles) => {
         if (!allowedRoles.includes(req.user.role)) {
             return ApiResponse.forbidden(
                 res,
-                'You do not have permission to access this resource'
+                'Bạn không có quyền truy cập tài nguyên này.'
             )
         }
 
@@ -65,7 +69,7 @@ const isOwnerOrAdmin = (getUserId) => {
 
         return ApiResponse.forbidden(
             res,
-            'You do not have permission to access this resource'
+            'Bạn không có quyền truy cập tài nguyên này.'
         )
     }
 }
@@ -75,10 +79,10 @@ const isOwnerOrAdmin = (getUserId) => {
  */
 const isCourseInstructorOrAdmin = async (req, res, next) => {
     try {
-        const courseId = parseInt(req.params.courseId || req.params.id);
+        const courseId = parseInt(req.params.courseId || req.params.id)
 
         if (!courseId) {
-            return ApiResponse.badRequest(res, 'Course ID is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu mã khóa học')
         }
 
         const course = await prisma.course.findUnique({
@@ -87,7 +91,7 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
         })
 
         if (!course) {
-            return ApiResponse.notFound(res, 'Course not found')
+            return ApiResponse.notFound(res, 'Không tìm thấy khóa học')
         }
 
         if (
@@ -99,10 +103,10 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
 
         return ApiResponse.forbidden(
             res,
-            'You do not have permission to manage this course'
+            'Bạn không có quyền quản lý khóa học này.'
         )
     } catch (error) {
-        return ApiResponse.error(res, 'Error checking course permissions')
+        return ApiResponse.error(res, 'Lỗi kiểm tra quyền truy cập khóa học')
     }
 }
 
@@ -113,11 +117,15 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
  * @param {string} courseSlugParam - Optional parameter name for course slug
  * @param {string} lessonSlugParam - Optional parameter name for lesson slug
  */
-const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = null, lessonSlugParam = null) => {
+const isEnrolledOrInstructorOrAdmin = (
+    lessonIdParam = 'id',
+    courseSlugParam = null,
+    lessonSlugParam = null
+) => {
     return async (req, res, next) => {
         try {
             if (!req.user) {
-                return ApiResponse.unauthorized(res, 'Authentication required')
+                return ApiResponse.unauthorized(res, 'Yêu cầu xác thực')
             }
 
             let lesson = null
@@ -128,7 +136,10 @@ const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = n
                 const lessonSlug = req.params[lessonSlugParam]
 
                 if (!courseSlug || !lessonSlug) {
-                    return ApiResponse.badRequest(res, 'Course slug and lesson slug are required')
+                    return ApiResponse.badRequest(
+                        res,
+                        'Yêu cầu slug khóa học và slug bài học'
+                    )
                 }
 
                 // Find course by slug
@@ -138,7 +149,7 @@ const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = n
                 })
 
                 if (!course) {
-                    return ApiResponse.notFound(res, 'Course not found')
+                    return ApiResponse.notFound(res, 'Không tìm thấy khóa học')
                 }
 
                 // Find lesson by slug within course
@@ -164,7 +175,7 @@ const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = n
                 const lessonId = parseInt(req.params[lessonIdParam])
 
                 if (!lessonId || isNaN(lessonId)) {
-                    return ApiResponse.badRequest(res, 'Lesson ID is required')
+                    return ApiResponse.badRequest(res, 'Yêu cầu mã bài học')
                 }
 
                 lesson = await prisma.lesson.findUnique({
@@ -180,15 +191,19 @@ const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = n
                     },
                 })
             } else {
-                return ApiResponse.badRequest(res, 'Either lesson ID or course slug and lesson slug are required')
+                return ApiResponse.badRequest(
+                    res,
+                    'Yêu cầu mã bài học hoặc slug khóa học và slug bài học'
+                )
             }
 
             if (!lesson) {
-                return ApiResponse.notFound(res, 'Lesson not found')
+                return ApiResponse.notFound(res, 'Không tìm thấy bài học')
             }
 
             const isAdmin = req.user.role === USER_ROLES.ADMIN
-            const isCourseInstructor = req.user.id === lesson.course.instructorId
+            const isCourseInstructor =
+                req.user.id === lesson.course.instructorId
 
             // Admin and course instructor have full access
             if (isAdmin || isCourseInstructor) {
@@ -201,7 +216,10 @@ const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = n
                     userId: req.user.id,
                     courseId: lesson.course.id,
                     status: {
-                        in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
+                        in: [
+                            ENROLLMENT_STATUS.ACTIVE,
+                            ENROLLMENT_STATUS.COMPLETED,
+                        ],
                     },
                 },
             })
@@ -209,29 +227,23 @@ const isEnrolledOrInstructorOrAdmin = (lessonIdParam = 'id', courseSlugParam = n
             if (!enrollment) {
                 return ApiResponse.forbidden(
                     res,
-                    'You do not have access to this lesson'
+                    'Bạn không có quyền truy cập bài học này.'
                 )
             }
 
             // Check if lesson is published
             if (!lesson.isPublished) {
-                return ApiResponse.forbidden(
-                    res,
-                    'This lesson is not available'
-                )
+                return ApiResponse.forbidden(res, 'Bài học này không khả dụng')
             }
 
             // Check if course is published
             if (lesson.course.status !== COURSE_STATUS.PUBLISHED) {
-                return ApiResponse.forbidden(
-                    res,
-                    'This lesson is not available'
-                )
+                return ApiResponse.forbidden(res, 'Bài học này không khả dụng')
             }
 
             next()
         } catch (error) {
-            return ApiResponse.error(res, 'Error checking lesson access')
+            return ApiResponse.error(res, 'Lỗi kiểm tra truy cập bài học')
         }
     }
 }
@@ -244,5 +256,4 @@ export {
     isOwnerOrAdmin,
     isCourseInstructorOrAdmin,
     isEnrolledOrInstructorOrAdmin,
-};
-
+}

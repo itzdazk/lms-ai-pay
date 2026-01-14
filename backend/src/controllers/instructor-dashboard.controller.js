@@ -27,7 +27,7 @@ class InstructorDashboardController {
         return ApiResponse.success(
             res,
             dashboard,
-            'Instructor dashboard retrieved successfully'
+            'Truy xuất bảng điều khiển giảng viên thành công'
         )
     })
 
@@ -53,7 +53,7 @@ class InstructorDashboardController {
         return ApiResponse.success(
             res,
             stats,
-            'Instructor statistics retrieved successfully'
+            'Truy xuất thống kê giảng viên thành công'
         )
     })
 
@@ -66,18 +66,27 @@ class InstructorDashboardController {
         const instructorId = req.user.id
         const period = req.query.period || 'month' // day, week, month, year
         // Parse courseId: if provided and valid, parse it; otherwise null (all courses)
-        const courseId = req.query.courseId && !isNaN(parseInt(req.query.courseId))
-            ? parseInt(req.query.courseId)
-            : null
+        const courseId =
+            req.query.courseId && !isNaN(parseInt(req.query.courseId))
+                ? parseInt(req.query.courseId)
+                : null
         // Parse year (required) and month (optional)
         // Year must be a valid 4-digit year
-        const year = req.query.year && !isNaN(parseInt(req.query.year)) && parseInt(req.query.year) > 2000 && parseInt(req.query.year) < 2100
-            ? parseInt(req.query.year)
-            : new Date().getFullYear() // Default to current year
+        const year =
+            req.query.year &&
+            !isNaN(parseInt(req.query.year)) &&
+            parseInt(req.query.year) > 2000 &&
+            parseInt(req.query.year) < 2100
+                ? parseInt(req.query.year)
+                : new Date().getFullYear() // Default to current year
         // Month: 1-12 or null (all months)
-        const month = req.query.month && !isNaN(parseInt(req.query.month)) && parseInt(req.query.month) >= 1 && parseInt(req.query.month) <= 12
-            ? parseInt(req.query.month)
-            : null
+        const month =
+            req.query.month &&
+            !isNaN(parseInt(req.query.month)) &&
+            parseInt(req.query.month) >= 1 &&
+            parseInt(req.query.month) <= 12
+                ? parseInt(req.query.month)
+                : null
 
         // Admin can view any instructor's revenue by passing instructorId in query
         const targetInstructorId =
@@ -93,7 +102,7 @@ class InstructorDashboardController {
         return ApiResponse.success(
             res,
             revenue,
-            'Instructor revenue retrieved successfully'
+            'Truy xuất doanh thu giảng viên thành công'
         )
     })
 
@@ -119,7 +128,7 @@ class InstructorDashboardController {
         return ApiResponse.success(
             res,
             analytics,
-            'Instructor analytics retrieved successfully'
+            'Truy xuất phân tích giảng viên thành công'
         )
     })
 
@@ -173,7 +182,7 @@ class InstructorDashboardController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Instructor orders retrieved successfully'
+            'Truy xuất hóa đơn giảng viên thành công'
         )
     })
 
@@ -185,17 +194,26 @@ class InstructorDashboardController {
     getInstructorRevenueOrders = asyncHandler(async (req, res) => {
         const instructorId = req.user.id
         // Parse year (required, default to current year)
-        const year = req.query.year && !isNaN(parseInt(req.query.year)) && parseInt(req.query.year) > 2000 && parseInt(req.query.year) < 2100
-            ? parseInt(req.query.year)
-            : new Date().getFullYear()
+        const year =
+            req.query.year &&
+            !isNaN(parseInt(req.query.year)) &&
+            parseInt(req.query.year) > 2000 &&
+            parseInt(req.query.year) < 2100
+                ? parseInt(req.query.year)
+                : new Date().getFullYear()
         // Parse month (optional, 1-12 or null for all months)
-        const month = req.query.month && !isNaN(parseInt(req.query.month)) && parseInt(req.query.month) >= 1 && parseInt(req.query.month) <= 12
-            ? parseInt(req.query.month)
-            : null
+        const month =
+            req.query.month &&
+            !isNaN(parseInt(req.query.month)) &&
+            parseInt(req.query.month) >= 1 &&
+            parseInt(req.query.month) <= 12
+                ? parseInt(req.query.month)
+                : null
         // Parse courseId (optional)
-        const courseId = req.query.courseId && !isNaN(parseInt(req.query.courseId))
-            ? parseInt(req.query.courseId)
-            : null
+        const courseId =
+            req.query.courseId && !isNaN(parseInt(req.query.courseId))
+                ? parseInt(req.query.courseId)
+                : null
         // Parse pagination
         const page = parseInt(req.query.page) || 1
         const limit = parseInt(req.query.limit) || 20
@@ -206,10 +224,11 @@ class InstructorDashboardController {
                 ? parseInt(req.query.instructorId)
                 : instructorId
 
-        const result = await instructorDashboardService.getInstructorRevenueOrders(
-            targetInstructorId,
-            { year, month, courseId, page, limit }
-        )
+        const result =
+            await instructorDashboardService.getInstructorRevenueOrders(
+                targetInstructorId,
+                { year, month, courseId, page, limit }
+            )
 
         return ApiResponse.success(
             res,
@@ -223,7 +242,7 @@ class InstructorDashboardController {
                     totalPages: Math.ceil(result.total / limit),
                 },
             },
-            'Instructor revenue orders retrieved successfully'
+            'Truy xuất hóa đơn doanh thu giảng viên thành công'
         )
     })
 
@@ -262,15 +281,16 @@ class InstructorDashboardController {
                 ? parseInt(req.query.instructorId)
                 : instructorId
 
-        const chartData = await instructorDashboardService.getInstructorRevenueChartData(
-            targetInstructorId,
-            { year, month, courseId }
-        )
+        const chartData =
+            await instructorDashboardService.getInstructorRevenueChartData(
+                targetInstructorId,
+                { year, month, courseId }
+            )
 
         return ApiResponse.success(
             res,
             chartData,
-            'Instructor revenue chart data retrieved successfully'
+            'Truy xuất biểu đồ doanh thu giảng viên thành công'
         )
     })
 
@@ -323,7 +343,7 @@ class InstructorDashboardController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Instructor enrollments retrieved successfully'
+            'Truy xuất danh sách ghi danh giảng viên thành công'
         )
     })
 
@@ -352,7 +372,7 @@ class InstructorDashboardController {
         return ApiResponse.success(
             res,
             result,
-            'Instructor students retrieved successfully'
+            'Truy xuất danh sách học viên giảng viên thành công'
         )
     })
 }
