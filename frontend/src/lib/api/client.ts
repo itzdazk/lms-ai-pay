@@ -14,13 +14,20 @@ export const getServerBaseUrl = () => {
 }
 
 // Convert relative URL to absolute URL
-export const getAbsoluteUrl = (relativeUrl: string | null | undefined): string => {
+export const getAbsoluteUrl = (
+    relativeUrl: string | null | undefined
+): string => {
     if (!relativeUrl) return ''
-    if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+    if (
+        relativeUrl.startsWith('http://') ||
+        relativeUrl.startsWith('https://')
+    ) {
         return relativeUrl
     }
     const baseUrl = getServerBaseUrl()
-    const cleanUrl = relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
+    const cleanUrl = relativeUrl.startsWith('/')
+        ? relativeUrl
+        : `/${relativeUrl}`
     return `${baseUrl}${cleanUrl}`
 }
 
@@ -53,7 +60,12 @@ apiClient.interceptors.response.use(
     (response) => {
         return response
     },
-    (error: AxiosError<{ message?: string; error?: string | { message?: string; code?: string } }>) => {
+    (
+        error: AxiosError<{
+            message?: string
+            error?: string | { message?: string; code?: string }
+        }>
+    ) => {
         // Handle network errors
         if (!error.response) {
             toast.error('Lỗi kết nối mạng. Vui lòng kiểm tra lại kết nối.')
@@ -65,20 +77,32 @@ apiClient.interceptors.response.use(
         const requestMethod = error.config?.method?.toUpperCase() || ''
 
         // Skip toast for transcript endpoint (transcript is optional) - check early
-        if (status === 404 && requestUrl.includes('/lessons/') && requestUrl.includes('/transcript')) {
+        if (
+            status === 404 &&
+            requestUrl.includes('/lessons/') &&
+            requestUrl.includes('/transcript')
+        ) {
             // Don't show toast, let component handle it silently
             return Promise.reject(error)
         }
 
         // Skip toast for lesson by slug endpoint (404) - let component handle it
-        if (status === 404 && requestUrl.includes('/courses/slug/') && requestUrl.includes('/lessons/')) {
+        if (
+            status === 404 &&
+            requestUrl.includes('/courses/slug/') &&
+            requestUrl.includes('/lessons/')
+        ) {
             // Don't show toast, let component handle it with error page
             return Promise.reject(error)
         }
 
         // Skip toast for validation errors from lesson/course endpoints (422)
         // Let components handle validation errors themselves to avoid duplicates
-        if (status === 422 && (requestUrl.includes('/lessons/') || requestUrl.includes('/courses/'))) {
+        if (
+            status === 422 &&
+            (requestUrl.includes('/lessons/') ||
+                requestUrl.includes('/courses/'))
+        ) {
             // Don't show toast, let component handle it
             return Promise.reject(error)
         }
@@ -98,16 +122,23 @@ apiClient.interceptors.response.use(
                 ) {
                     message = error.response.data.error.message
                 }
-                if (typeof error.response.data.error === 'object' && error.response.data.error.code) {
+                if (
+                    typeof error.response.data.error === 'object' &&
+                    error.response.data.error.code
+                ) {
                     errorCode = error.response.data.error.code
                 }
             }
         }
 
         // Suppress toast for backend rate limit seek update error
-        if (typeof message === 'string' && message.toLowerCase().includes('rate limit') && message.toLowerCase().includes('seek update')) {
+        if (
+            typeof message === 'string' &&
+            message.toLowerCase().includes('rate limit') &&
+            message.toLowerCase().includes('seek update')
+        ) {
             // Do not show toast, let VideoPlayer handle UX
-            return Promise.reject(error);
+            return Promise.reject(error)
         }
 
         // Translate common error messages to Vietnamese
@@ -116,7 +147,8 @@ apiClient.interceptors.response.use(
         // Check for Prisma error codes (P2003 = Foreign key constraint)
         if (errorCode === 'NOT_FOUND' || errorCode === 'P2003') {
             if (requestUrl.includes('/users/') && requestMethod === 'DELETE') {
-                message = 'Không thể xóa người dùng này vì có dữ liệu liên quan (khóa học đã tạo, đăng ký khóa học, hoặc đơn hàng). Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước.'
+                message =
+                    'Không thể xóa người dùng này vì có dữ liệu liên quan (khóa học đã tạo, đăng ký khóa học, hoặc đơn hàng). Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước.'
             }
         }
 
@@ -128,14 +160,31 @@ apiClient.interceptors.response.use(
             lowerMessage.includes('database operation failed')
         ) {
             if (requestUrl.includes('/users/') && requestMethod === 'DELETE') {
-                if (lowerMessage.includes('courses') || lowerMessage.includes('instructor') || lowerMessage.includes('course')) {
-                    message = 'Không thể xóa người dùng này vì họ đã tạo khóa học. Vui lòng xóa hoặc chuyển quyền sở hữu các khóa học trước.'
-                } else if (lowerMessage.includes('enrollments') || lowerMessage.includes('enrollment')) {
-                    message = 'Không thể xóa người dùng này vì họ đã đăng ký khóa học. Vui lòng hủy đăng ký trước.'
-                } else if (lowerMessage.includes('orders') || lowerMessage.includes('order')) {
-                    message = 'Không thể xóa người dùng này vì họ có đơn hàng. Vui lòng xử lý các đơn hàng trước.'
-                } else if (message === 'Đã xảy ra lỗi' || lowerMessage.includes('related record not found')) {
-                    message = 'Không thể xóa người dùng này vì có dữ liệu liên quan (khóa học đã tạo, đăng ký khóa học, hoặc đơn hàng). Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước.'
+                if (
+                    lowerMessage.includes('courses') ||
+                    lowerMessage.includes('instructor') ||
+                    lowerMessage.includes('course')
+                ) {
+                    message =
+                        'Không thể xóa người dùng này vì họ đã tạo khóa học. Vui lòng xóa hoặc chuyển quyền sở hữu các khóa học trước.'
+                } else if (
+                    lowerMessage.includes('enrollments') ||
+                    lowerMessage.includes('enrollment')
+                ) {
+                    message =
+                        'Không thể xóa người dùng này vì họ đã đăng ký khóa học. Vui lòng hủy đăng ký trước.'
+                } else if (
+                    lowerMessage.includes('orders') ||
+                    lowerMessage.includes('order')
+                ) {
+                    message =
+                        'Không thể xóa người dùng này vì họ có đơn hàng. Vui lòng xử lý các đơn hàng trước.'
+                } else if (
+                    message === 'Đã xảy ra lỗi' ||
+                    lowerMessage.includes('related record not found')
+                ) {
+                    message =
+                        'Không thể xóa người dùng này vì có dữ liệu liên quan (khóa học đã tạo, đăng ký khóa học, hoặc đơn hàng). Vui lòng xóa hoặc xử lý các dữ liệu liên quan trước.'
                 }
             }
         } else if (lowerMessage.includes('cannot delete admin')) {
@@ -156,7 +205,8 @@ apiClient.interceptors.response.use(
                 // These endpoints should handle 401 gracefully in their components
                 const isPublicEndpointThatMayFail =
                     requestUrl.includes('/enrollments/check/') ||
-                    requestUrl.includes('/enrollments') && requestMethod === 'GET'
+                    (requestUrl.includes('/enrollments') &&
+                        requestMethod === 'GET')
 
                 if (isAuthRequest) {
                     // For login/register, don't show toast or redirect
@@ -169,22 +219,35 @@ apiClient.interceptors.response.use(
                 } else {
                     // For other requests, session has expired
                     localStorage.removeItem('user')
-                    toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
-                    // Avoid redirect loop
-                    if (window.location.pathname !== '/login') {
-                        window.location.href = '/login'
+                    toast.error(
+                        'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+                    )
+                    // Avoid redirect loop - redirect to unauthorized page
+                    if (
+                        window.location.pathname !== '/login' &&
+                        window.location.pathname !== '/unauthorized'
+                    ) {
+                        window.location.href = '/unauthorized'
                     }
                 }
                 break
 
             case 403:
                 toast.error('Bạn không có quyền truy cập.')
+                // Redirect to forbidden page - avoid redirect loop
+                if (window.location.pathname !== '/forbidden') {
+                    window.location.href = '/forbidden'
+                }
                 break
 
             case 404:
                 // Skip toast for transcript endpoint is already handled above
                 // Only show default message if we haven't translated it already
-                if (message === 'Đã xảy ra lỗi' || (message.toLowerCase().includes('not found') && !lowerMessage.includes('user not found'))) {
+                if (
+                    message === 'Đã xảy ra lỗi' ||
+                    (message.toLowerCase().includes('not found') &&
+                        !lowerMessage.includes('user not found'))
+                ) {
                     toast.error('Không tìm thấy dữ liệu.')
                 } else {
                     toast.error(message)
