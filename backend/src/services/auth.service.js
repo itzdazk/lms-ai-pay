@@ -6,8 +6,153 @@ import DeviceUtil from '../utils/device.util.js'
 import { USER_STATUS, USER_ROLES, HTTP_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 import emailService from './email.service.js'
+import admin from '../config/firebase.config.js'
+
 
 class AuthService {
+    /**
+     * Login with Google
+     */
+    async loginWithGoogle(idToken, req) {
+        try {
+            // Verify Firebase ID Token
+            const decodedToken = await admin.auth().verifyIdToken(idToken)
+            const { uid, email, name, picture } = decodedToken
+
+            if (!email) {
+                const error = new Error('Google account must have an email')
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
+
+            // Find user by Google ID or Email
+            let user = await prisma.user.findFirst({
+                where: {
+                    OR: [{ googleId: uid }, { email: email }],
+                },
+            })
+
+            if (user) {
+                // If user exists but no googleId (linked by email), update it
+                if (!user.googleId) {
+                    user = await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            googleId: uid,
+                            avatarUrl: user.avatarUrl || picture, // Update avatar if missing
+                            emailVerified: true, // Google emails are verified
+                        },
+                    })
+                }
+            } else {
+                // Create new user
+                // Generate a unique username based on email or name
+                let baseUserName = email.split('@')[0]
+                let userName = baseUserName
+                let counter = 1
+                while (await prisma.user.findUnique({ where: { userName } })) {
+                    userName = `${baseUserName}${counter}`
+                    counter++
+                }
+
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        userName,
+                        fullName: name || 'Google User',
+                        googleId: uid,
+                        avatarUrl: picture,
+                        role: USER_ROLES.STUDENT,
+                        status: USER_STATUS.ACTIVE,
+                        emailVerified: true,
+                        passwordHash: null, // Optional
+                    },
+                })
+            }
+
+            // Check if user is active
+            if (user.status !== USER_STATUS.ACTIVE) {
+                const error = new Error('Tài khoản của bạn không hoạt động')
+                error.statusCode = HTTP_STATUS.UNAUTHORIZED
+                throw error
+            }
+
+            // Single session: Delete all existing active sessions for this user
+            await prisma.userSession.deleteMany({
+                where: {
+                    userId: user.id,
+                    isActive: true,
+                },
+            })
+
+            // Increment tokenVersion
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    lastLoginAt: new Date(),
+                    tokenVersion: {
+                        increment: 1,
+                    },
+                },
+            })
+
+            // Get updated user
+            const updatedUser = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { tokenVersion: true },
+            })
+
+            // Create new session
+            const deviceInfo = req ? DeviceUtil.getDeviceInfo(req) : null
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+
+            const session = await prisma.userSession.create({
+                data: {
+                    userId: user.id,
+                    deviceId: deviceInfo?.deviceId || null,
+                    deviceName: deviceInfo?.deviceName || 'Unknown Device',
+                    ipAddress: deviceInfo?.ipAddress || null,
+                    userAgent: deviceInfo?.userAgent || null,
+                    expiresAt,
+                },
+            })
+
+            // Generate tokens
+            const tokens = JWTUtil.generateTokens({
+                userId: user.id,
+                role: user.role,
+                tokenVersion: updatedUser.tokenVersion,
+                sessionId: session.id,
+            })
+
+            logger.info(
+                `User logged in via Google: ${user.email} (Session: ${session.id})`
+            )
+
+            return {
+                user: {
+                    id: user.id,
+                    userName: user.userName,
+                    email: user.email,
+                    fullName: user.fullName,
+                    role: user.role,
+                    status: user.status,
+                    avatarUrl: user.avatarUrl,
+                    emailVerified: user.emailVerified,
+                },
+                tokens,
+            }
+        } catch (error) {
+            logger.error('Google login error:', error)
+            if (error.code && error.code.startsWith('auth/')) {
+                 const authError = new Error('Token Google không hợp lệ')
+                 authError.statusCode = HTTP_STATUS.UNAUTHORIZED
+                 throw authError
+            }
+            throw error
+        }
+    }
+
     /**
      * Register new user
      */

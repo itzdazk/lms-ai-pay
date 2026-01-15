@@ -8,7 +8,9 @@ import {
     verifyEmailValidator,
     forgotPasswordValidator,
     resetPasswordValidator,
+    googleLoginValidator,
 } from '../validators/auth.validator.js'
+
 import rateLimit from 'express-rate-limit'
 import config from '../config/app.config.js'
 import { RATE_LIMITS } from '../config/constants.js'
@@ -44,6 +46,18 @@ router.post(
  * @access  Public
  */
 router.post('/login', authLimiter, loginValidator, authController.login)
+
+/**
+ * @route   POST /api/v1/auth/google
+ * @desc    Login with Google
+ * @access  Public
+ */
+router.post(
+    '/google',
+    authLimiter,
+    googleLoginValidator,
+    authController.googleLogin
+)
 
 /**
  * @route   POST /api/v1/auth/logout

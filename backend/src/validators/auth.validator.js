@@ -124,6 +124,12 @@ const changePasswordValidator = [
     validate,
 ]
 
+
+const googleLoginValidator = [
+    body('idToken').notEmpty().withMessage('ID Token không được để trống'),
+    validate,
+]
+
 export {
     registerValidator,
     loginValidator,
@@ -131,4 +137,5 @@ export {
     forgotPasswordValidator,
     resetPasswordValidator,
     changePasswordValidator,
+    googleLoginValidator,
 }

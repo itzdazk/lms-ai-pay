@@ -60,6 +60,26 @@ class AuthController {
     })
 
     /**
+     * @route   POST /api/v1/auth/google
+     * @desc    Login with Google
+     * @access  Public
+     */
+    googleLogin = asyncHandler(async (req, res) => {
+        const { idToken } = req.body
+        const result = await authService.loginWithGoogle(idToken, req)
+
+        CookieUtil.setAuthTokens(res, result.tokens)
+
+        return ApiResponse.success(
+            res,
+            {
+                user: result.user,
+            },
+            'Đăng nhập Google thành công'
+        )
+    })
+
+    /**
      * @route   POST /api/v1/auth/logout
      * @desc    Logout user (current session)
      * @access  Private
