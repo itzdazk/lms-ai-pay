@@ -23,6 +23,8 @@ import {
     LogOut,
     User as UserIcon,
     ChevronRight,
+    ChevronDown,
+    ChevronUp,
     Shield,
     GraduationCap,
     Tag,
@@ -210,6 +212,34 @@ export function AdminDashboard() {
         useState<AdminSection>('dashboard')
     const [sectionLoading, setSectionLoading] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(true)
+    
+    // Load expanded groups from localStorage on mount
+    const loadExpandedGroups = (): Set<string> => {
+        try {
+            const saved = localStorage.getItem('admin-sidebar-expanded-groups')
+            if (saved) {
+                const parsed = JSON.parse(saved) as string[]
+                return new Set(parsed)
+            }
+        } catch (error) {
+            console.error('Error loading expanded groups from localStorage:', error)
+        }
+        // Default: all groups expanded
+        return new Set(menuGroups.map((_, index) => index.toString()))
+    }
+    
+    // Track expanded menu groups
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(loadExpandedGroups)
+    
+    // Save expanded groups to localStorage whenever they change
+    useEffect(() => {
+        try {
+            const groupsArray = Array.from(expandedGroups)
+            localStorage.setItem('admin-sidebar-expanded-groups', JSON.stringify(groupsArray))
+        } catch (error) {
+            console.error('Error saving expanded groups to localStorage:', error)
+        }
+    }, [expandedGroups])
 
     // Check if user is admin
     useEffect(() => {
@@ -227,28 +257,24 @@ export function AdminDashboard() {
     }, [currentUser, authLoading, navigate])
 
     const getBreadcrumb = () => {
-        if (activeSection === 'dashboard') {
-            return (
-                <div className='flex items-center gap-2'>
-                    <LayoutDashboard className='h-5 w-5 text-blue-500' />
-                    <span className='text-white'>Dashboard</span>
-                </div>
-            )
+        // Find the group and item for current section
+        let currentGroup: MenuGroup | undefined
+        let currentItem: MenuItem | undefined
+        
+        for (const group of menuGroups) {
+            const item = group.items.find((item) => item.id === activeSection)
+            if (item) {
+                currentGroup = group
+                currentItem = item
+                break
+            }
         }
-        const currentItem = menuGroups
-            .flatMap((group) => group.items)
-            .find((item) => item.id === activeSection)
-        if (currentItem) {
+        
+        if (currentItem && currentGroup) {
             const CurrentIcon = currentItem.icon
             return (
                 <div className='flex items-center gap-2'>
-                    <button
-                        onClick={() => setActiveSection('dashboard')}
-                        className='flex items-center gap-2 text-gray-400 hover:text-white transition-colors'
-                    >
-                        <LayoutDashboard className='h-5 w-5' />
-                        <span>Dashboard</span>
-                    </button>
+                    <span className='text-gray-400'>{currentGroup.label}</span>
                     <ChevronRight className='h-4 w-4 text-gray-500' />
                     <div className='flex items-center gap-2'>
                         <CurrentIcon className='h-5 w-5 text-blue-500' />
@@ -257,6 +283,7 @@ export function AdminDashboard() {
                 </div>
             )
         }
+        
         return (
             <div className='flex items-center gap-2'>
                 <LayoutDashboard className='h-5 w-5 text-blue-500' />
@@ -375,17 +402,41 @@ export function AdminDashboard() {
 
                 {/* Menu Items */}
                 <nav className='flex-1 overflow-y-auto p-3 custom-scrollbar space-y-4'>
-                    {menuGroups.map((group, groupIndex) => (
-                        <div key={groupIndex} className='space-y-1'>
-                            {/* Group Label */}
-                            <div className='px-4 py-2'>
-                                <span className='text-xs font-semibold text-gray-500 uppercase tracking-wider'>
-                                    {group.label}
-                                </span>
-                            </div>
+                    {menuGroups.map((group, groupIndex) => {
+                        const groupKey = groupIndex.toString()
+                        const isExpanded = expandedGroups.has(groupKey)
+                        
+                        const toggleGroup = () => {
+                            setExpandedGroups((prev) => {
+                                const newSet = new Set(prev)
+                                if (newSet.has(groupKey)) {
+                                    newSet.delete(groupKey)
+                                } else {
+                                    newSet.add(groupKey)
+                                }
+                                return newSet
+                            })
+                        }
 
-                            {/* Group Items */}
-                            {group.items.map((item) => {
+                        return (
+                            <div key={groupIndex} className=''>
+                                {/* Group Label with Toggle */}
+                                <button
+                                    onClick={toggleGroup}
+                                    className='w-full px-4 py-2 flex items-center justify-between hover:bg-[#1F1F1F] rounded-lg transition-colors group'
+                                >
+                                    <span className='text-xs font-semibold text-gray-500 uppercase tracking-wider group-hover:text-gray-400'>
+                                        {group.label}
+                                    </span>
+                                    {isExpanded ? (
+                                        <ChevronUp className='h-4 w-4 text-gray-500 group-hover:text-gray-400' />
+                                    ) : (
+                                        <ChevronDown className='h-4 w-4 text-gray-500 group-hover:text-gray-400' />
+                                    )}
+                                </button>
+
+                                {/* Group Items - Conditionally rendered */}
+                                {isExpanded && group.items.map((item) => {
                                 const Icon = item.icon
                                 const isActive = activeSection === item.id
                                 const itemColor = item.color || 'text-gray-400'
@@ -423,8 +474,9 @@ export function AdminDashboard() {
                                     </button>
                                 )
                             })}
-                        </div>
-                    ))}
+                            </div>
+                        )
+                    })}
                 </nav>
 
                 {/* Sidebar Footer */}

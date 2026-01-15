@@ -554,18 +554,18 @@ export function UsersPage({ defaultRole }: UsersPageProps = {}) {
     }
 
     return (
-        <div className='w-full px-4 py-4 bg-white dark:bg-black min-h-screen'>
+        <div className='w-full bg-white dark:bg-black min-h-screen'>
             <div className='w-full'>
                 <div className='mb-6'>
-                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-black dark:text-white flex items-center gap-3'>
-                        <Users className='h-8 w-8' />
+                    <h1 className='text-2xl font-bold text-foreground flex items-center gap-2'>
+                        <Users className='h-6 w-6' />
                         {defaultRole === 'STUDENT'
                             ? 'Quản lý học viên'
                             : defaultRole === 'INSTRUCTOR'
                             ? 'Quản lý giảng viên'
                             : 'Quản lý người dùng'}
                     </h1>
-                    <p className='text-gray-600 dark:text-gray-300'>
+                    <p className='text-sm text-muted-foreground mt-1'>
                         {defaultRole === 'STUDENT'
                             ? 'Quản lý tất cả học viên trong hệ thống'
                             : defaultRole === 'INSTRUCTOR'

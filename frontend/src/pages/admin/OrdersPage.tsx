@@ -316,16 +316,16 @@ export function OrdersPage() {
     }
 
     return (
-        <div className='w-full px-4 py-4 bg-white dark:bg-black min-h-screen'>
+        <div className='w-full bg-white dark:bg-black min-h-screen'>
             <div className='w-full'>
                 <div className='mb-6'>
                     <div className='flex items-start justify-between gap-4 mb-2'>
                         <div>
-                            <h1 className='text-3xl md:text-4xl font-bold mb-2 text-black dark:text-white flex items-center gap-3'>
-                                <ShoppingCart className='h-8 w-8' />
+                            <h1 className='text-2xl font-bold text-foreground flex items-center gap-2'>
+                                <ShoppingCart className='h-6 w-6' />
                                 Quản lý Đơn hàng
                             </h1>
-                            <p className='text-gray-600 dark:text-gray-300'>
+                            <p className='text-sm text-muted-foreground mt-1'>
                                 Xem và quản lý tất cả đơn hàng trong hệ thống
                             </p>
                         </div>

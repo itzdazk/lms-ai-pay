@@ -417,14 +417,14 @@ export function TagsPage() {
     }
 
     return (
-        <div className='w-full px-4 py-4 bg-white dark:bg-black min-h-screen'>
+        <div className='w-full bg-white dark:bg-black min-h-screen'>
             <div className='w-full'>
                 <div className='mb-6'>
-                    <h1 className='text-3xl md:text-4xl font-bold mb-2 text-black dark:text-white flex items-center gap-3'>
-                        <TagIcon className='h-8 w-8' />
+                    <h1 className='text-2xl font-bold text-foreground flex items-center gap-2'>
+                        <TagIcon className='h-6 w-6' />
                         Quản lý Tags
                     </h1>
-                    <p className='text-gray-600 dark:text-gray-300'>
+                    <p className='text-sm text-muted-foreground mt-1'>
                         Quản lý và theo dõi tất cả tags của khóa học
                     </p>
                 </div>
