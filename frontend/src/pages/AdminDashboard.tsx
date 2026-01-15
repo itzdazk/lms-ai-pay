@@ -202,6 +202,17 @@ const menuGroups: MenuGroup[] = [
             },
         ],
     },
+    {
+        label: 'Cấu hình hệ thống',
+        items: [
+            {
+                id: 'settings',
+                label: 'Cài đặt chung',
+                icon: Settings,
+                color: 'text-gray-400',
+            },
+        ],
+    },
 ]
 
 export function AdminDashboard() {
@@ -789,6 +800,20 @@ function TagsManagement() {
 function SettingsView() {
     return (
         <div className='space-y-6'>
+            {/* Header */}
+            <div className='flex items-center justify-between'>
+                <div>
+                    <h1 className='text-2xl font-bold text-foreground flex items-center gap-2'>
+                        <Settings className='h-6 w-6' />
+                        Cài đặt chung
+                    </h1>
+                    <p className='text-sm text-muted-foreground mt-1'>
+                        Quản lý các cài đặt chung của hệ thống
+                    </p>
+                </div>
+            </div>
+
+            {/* Settings Content */}
             <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                 <CardHeader>
                     <CardTitle className='text-white'>
