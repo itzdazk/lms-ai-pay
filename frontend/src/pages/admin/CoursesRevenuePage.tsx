@@ -137,7 +137,6 @@ export function CoursesRevenuePage() {
                 selectedYear={selectedYear}
                 selectedMonth={selectedMonth}
                 selectedInstructorId={selectedInstructorId}
-                searchQuery={searchQuery}
                 sortBy={sortBy}
                 onYearChange={(year) => {
                     setSelectedYear(year)
@@ -151,8 +150,6 @@ export function CoursesRevenuePage() {
                     setSelectedInstructorId(instructorId)
                     setCurrentPage(1)
                 }}
-                onSearchChange={setSearchQuery}
-                onSearch={handleSearch}
                 onSortChange={(sort) => {
                     setSortBy(sort)
                     setCurrentPage(1)
@@ -175,6 +172,7 @@ export function CoursesRevenuePage() {
                 totalPages={data?.pagination.totalPages || 0}
                 totalItems={data?.pagination.total || 0}
                 sortBy={sortBy}
+                searchInput={searchQuery}
                 onPageChange={(page) => {
                     setCurrentPage(page)
                     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -182,6 +180,13 @@ export function CoursesRevenuePage() {
                 onSort={() => {
                     setSortBy(sortBy === 'revenue' ? 'orderCount' : 'revenue')
                     setCurrentPage(1)
+                }}
+                onSearchChange={setSearchQuery}
+                onSearch={handleSearch}
+                onClearSearch={() => {
+                    setSearchQuery('')
+                    setCurrentPage(1)
+                    fetchData()
                 }}
                 formatPrice={formatPrice}
             />

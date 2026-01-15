@@ -1,6 +1,6 @@
+import { useState, useEffect } from 'react'
 import { Button } from '../../../../components/ui/button'
 import { Card, CardContent } from '../../../../components/ui/card'
-import { Input } from '../../../../components/ui/input'
 import {
     Select,
     SelectContent,
@@ -8,18 +8,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../../../../components/ui/select'
-import { Calendar, Search } from 'lucide-react'
-import { useState } from 'react'
+import { Calendar } from 'lucide-react'
+import apiClient from '../../../../lib/api/client'
 
 interface InstructorsRevenueFiltersProps {
     selectedYear: number | null
     selectedMonth: number | null
-    searchQuery: string
     sortBy: 'revenue' | 'courseCount'
     onYearChange: (year: number | null) => void
     onMonthChange: (month: number | null) => void
-    onSearchChange: (query: string) => void
-    onSearch: () => void
     onSortChange: (sortBy: 'revenue' | 'courseCount') => void
 }
 
@@ -41,22 +38,34 @@ const MONTHS = [
 export function InstructorsRevenueFilters({
     selectedYear,
     selectedMonth,
-    searchQuery,
     sortBy,
     onYearChange,
     onMonthChange,
-    onSearchChange,
-    onSearch,
     onSortChange,
 }: InstructorsRevenueFiltersProps) {
-    const currentYear = new Date().getFullYear()
-    const years = Array.from({ length: 20 }, (_, i) => currentYear - i)
+    const [years, setYears] = useState<number[]>([])
+    const [loadingYears, setLoadingYears] = useState(true)
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            onSearch()
+    useEffect(() => {
+        const fetchAvailableYears = async () => {
+            try {
+                setLoadingYears(true)
+                const response = await apiClient.get('/admin/revenue/years')
+                const availableYears = response.data?.data || []
+                // Sort descending (newest first)
+                setYears(availableYears.sort((a: number, b: number) => b - a))
+            } catch (error) {
+                console.error('Error fetching available years:', error)
+                // Fallback to current year if API fails
+                const currentYear = new Date().getFullYear()
+                setYears([currentYear])
+            } finally {
+                setLoadingYears(false)
+            }
         }
-    }
+
+        fetchAvailableYears()
+    }, [])
 
     return (
         <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
@@ -90,15 +99,21 @@ export function InstructorsRevenueFilters({
                                 >
                                     Tất cả
                                 </SelectItem>
-                                {years.map((year) => (
-                                    <SelectItem
-                                        key={year}
-                                        value={year.toString()}
-                                        className='text-gray-300 hover:bg-[#2A2A2A] focus:bg-[#2A2A2A]'
-                                    >
-                                        {year}
-                                    </SelectItem>
-                                ))}
+                                {loadingYears ? (
+                                    <div className='p-2 text-sm text-gray-400'>Đang tải...</div>
+                                ) : years.length === 0 ? (
+                                    <div className='p-2 text-sm text-gray-400'>Chưa có dữ liệu</div>
+                                ) : (
+                                    years.map((year) => (
+                                        <SelectItem
+                                            key={year}
+                                            value={year.toString()}
+                                            className='text-gray-300 hover:bg-[#2A2A2A] focus:bg-[#2A2A2A]'
+                                        >
+                                            {year}
+                                        </SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -137,25 +152,6 @@ export function InstructorsRevenueFilters({
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className='flex items-center gap-2 flex-1 min-w-[200px]'>
-                        <Input
-                            type='text'
-                            placeholder='Tìm kiếm tên hoặc email...'
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            className='h-8 bg-[#1F1F1F] border-[#2D2D2D] text-gray-300 dark:bg-[#1F1F1F] dark:border-[#2D2D2D]'
-                        />
-                        <Button
-                            onClick={onSearch}
-                            size='sm'
-                            className='h-8 px-4 bg-blue-600 hover:bg-blue-700 text-white'
-                        >
-                            <Search className='h-4 w-4 mr-1' />
-                            Tìm kiếm
-                        </Button>
-                    </div>
 
                     {/* Sort */}
                     <div className='flex items-center gap-2'>

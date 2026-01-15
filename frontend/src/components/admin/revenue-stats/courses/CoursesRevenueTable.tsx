@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { Button } from '../../../../components/ui/button'
+import { DarkOutlineInput } from '../../../../components/ui/dark-outline-input'
 import {
     DarkOutlineTable,
     DarkOutlineTableBody,
@@ -8,7 +9,7 @@ import {
     DarkOutlineTableRow,
     DarkOutlineTableCell,
 } from '../../../../components/ui/dark-outline-table'
-import { BookOpen, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, ArrowUpDown, Search, X } from 'lucide-react'
 
 interface CourseRevenue {
     courseId: number
@@ -27,8 +28,12 @@ interface CoursesRevenueTableProps {
     totalPages: number
     totalItems: number
     sortBy: 'revenue' | 'orderCount'
+    searchInput: string
     onPageChange: (page: number) => void
     onSort: () => void
+    onSearchChange: (value: string) => void
+    onSearch: () => void
+    onClearSearch: () => void
     formatPrice: (price: number) => string
 }
 
@@ -39,8 +44,12 @@ export function CoursesRevenueTable({
     totalPages,
     totalItems,
     sortBy,
+    searchInput,
     onPageChange,
     onSort,
+    onSearchChange,
+    onSearch,
+    onClearSearch,
     formatPrice,
 }: CoursesRevenueTableProps) {
     if (loading) {
@@ -82,15 +91,51 @@ export function CoursesRevenueTable({
         )
     }
 
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            onSearch()
+        }
+    }
+
     return (
         <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
             <CardHeader>
                 <CardTitle className='text-foreground flex items-center gap-2'>
                     <BookOpen className='h-5 w-5 text-blue-400' />
-                    Danh sách khóa học
+                    Danh sách khóa học ({totalItems})
                 </CardTitle>
             </CardHeader>
             <CardContent>
+                {/* Search Bar */}
+                <div className='flex gap-2 mb-4'>
+                    <div className='relative flex-1'>
+                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+                        <DarkOutlineInput
+                            type='text'
+                            placeholder='Tìm kiếm theo tiêu đề khóa học...'
+                            value={searchInput}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className='pl-10 pr-10'
+                        />
+                        {searchInput && (
+                            <button
+                                type='button'
+                                onClick={onClearSearch}
+                                className='absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors z-10'
+                            >
+                                <X className='h-4 w-4' />
+                            </button>
+                        )}
+                    </div>
+                    <Button
+                        onClick={onSearch}
+                        className='px-6 bg-blue-600 hover:bg-blue-700 text-white'
+                        disabled={!searchInput.trim()}
+                    >
+                        Tìm Kiếm
+                    </Button>
+                </div>
                 <div className='overflow-x-auto'>
                     <DarkOutlineTable>
                         <DarkOutlineTableHeader>

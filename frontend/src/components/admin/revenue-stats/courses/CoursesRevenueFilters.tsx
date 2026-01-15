@@ -8,7 +8,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../../../../components/ui/select'
-import { Calendar, Search } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import apiClient from '../../../../lib/api/client'
 
@@ -22,13 +22,10 @@ interface CoursesRevenueFiltersProps {
     selectedYear: number | null
     selectedMonth: number | null
     selectedInstructorId: number | null
-    searchQuery: string
     sortBy: 'revenue' | 'orderCount'
     onYearChange: (year: number | null) => void
     onMonthChange: (month: number | null) => void
     onInstructorChange: (instructorId: number | null) => void
-    onSearchChange: (query: string) => void
-    onSearch: () => void
     onSortChange: (sortBy: 'revenue' | 'orderCount') => void
 }
 
@@ -51,21 +48,17 @@ export function CoursesRevenueFilters({
     selectedYear,
     selectedMonth,
     selectedInstructorId,
-    searchQuery,
     sortBy,
     onYearChange,
     onMonthChange,
     onInstructorChange,
-    onSearchChange,
-    onSearch,
     onSortChange,
 }: CoursesRevenueFiltersProps) {
     const [instructors, setInstructors] = useState<Instructor[]>([])
     const [instructorSearch, setInstructorSearch] = useState('')
     const [loadingInstructors, setLoadingInstructors] = useState(false)
-
-    const currentYear = new Date().getFullYear()
-    const years = Array.from({ length: 20 }, (_, i) => currentYear - i)
+    const [years, setYears] = useState<number[]>([])
+    const [loadingYears, setLoadingYears] = useState(true)
 
     useEffect(() => {
         const loadInstructors = async () => {
@@ -83,6 +76,27 @@ export function CoursesRevenueFilters({
         loadInstructors()
     }, [])
 
+    useEffect(() => {
+        const fetchAvailableYears = async () => {
+            try {
+                setLoadingYears(true)
+                const response = await apiClient.get('/admin/revenue/years')
+                const availableYears = response.data?.data || []
+                // Sort descending (newest first)
+                setYears(availableYears.sort((a: number, b: number) => b - a))
+            } catch (error) {
+                console.error('Error fetching available years:', error)
+                // Fallback to current year if API fails
+                const currentYear = new Date().getFullYear()
+                setYears([currentYear])
+            } finally {
+                setLoadingYears(false)
+            }
+        }
+
+        fetchAvailableYears()
+    }, [])
+
     const filteredInstructors = instructors.filter((inst) => {
         const searchLower = instructorSearch.toLowerCase()
         return (
@@ -91,11 +105,6 @@ export function CoursesRevenueFilters({
         )
     })
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            onSearch()
-        }
-    }
 
     return (
         <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
@@ -129,15 +138,21 @@ export function CoursesRevenueFilters({
                                 >
                                     Tất cả
                                 </SelectItem>
-                                {years.map((year) => (
-                                    <SelectItem
-                                        key={year}
-                                        value={year.toString()}
-                                        className='text-gray-300 hover:bg-[#2A2A2A] focus:bg-[#2A2A2A]'
-                                    >
-                                        {year}
-                                    </SelectItem>
-                                ))}
+                                {loadingYears ? (
+                                    <div className='p-2 text-sm text-gray-400'>Đang tải...</div>
+                                ) : years.length === 0 ? (
+                                    <div className='p-2 text-sm text-gray-400'>Chưa có dữ liệu</div>
+                                ) : (
+                                    years.map((year) => (
+                                        <SelectItem
+                                            key={year}
+                                            value={year.toString()}
+                                            className='text-gray-300 hover:bg-[#2A2A2A] focus:bg-[#2A2A2A]'
+                                        >
+                                            {year}
+                                        </SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -227,25 +242,6 @@ export function CoursesRevenueFilters({
                         </Select>
                     </div>
 
-                    {/* Search */}
-                    <div className='flex items-center gap-2 flex-1 min-w-[200px]'>
-                        <Input
-                            type='text'
-                            placeholder='Tìm kiếm tiêu đề khóa học...'
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            className='h-8 bg-[#1F1F1F] border-[#2D2D2D] text-gray-300 dark:bg-[#1F1F1F] dark:border-[#2D2D2D]'
-                        />
-                        <Button
-                            onClick={onSearch}
-                            size='sm'
-                            className='h-8 px-4 bg-blue-600 hover:bg-blue-700 text-white'
-                        >
-                            <Search className='h-4 w-4 mr-1' />
-                            Tìm kiếm
-                        </Button>
-                    </div>
 
                     {/* Sort */}
                     <div className='flex items-center gap-2'>

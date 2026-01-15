@@ -1,15 +1,22 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Loader2, DollarSign, ShoppingCart, TrendingUp } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { Select, SelectValue } from '../ui/select'
+import {
+    DarkOutlineSelectTrigger,
+    DarkOutlineSelectContent,
+    DarkOutlineSelectItem,
+} from '../ui/dark-outline-select-trigger'
 import { Label } from '../ui/label'
 import { DarkOutlineButton } from '../ui/buttons'
 import { useInstructorRevenue } from '../../hooks/useInstructorRevenue'
+import { useInstructorRevenueByCourses } from '../../hooks/useInstructorRevenueByCourses'
 import { useInstructorRevenueOrders } from '../../hooks/useInstructorRevenueOrders'
 import { useInstructorRevenueChartData } from '../../hooks/useInstructorRevenueChartData'
 import { instructorCoursesApi } from '../../lib/api/instructor-courses'
+import apiClient from '../../lib/api/client'
 import type { Course } from '../../lib/api/types'
-import { RevenueOrdersTable } from './RevenueOrdersTable'
+import { RevenueCoursesTable } from './RevenueCoursesTable'
 import {
     BarChart,
     Bar,
@@ -65,15 +72,8 @@ export function RevenueChart({ className }: RevenueChartProps) {
     const currentYear = new Date().getFullYear()
     const [selectedYear, setSelectedYear] = useState<number>(currentYear)
     const [selectedMonth, setSelectedMonth] = useState<number | null>(null) // null = all months
-
-    // Generate year options (last 5 years + current year)
-    const yearOptions = useMemo(() => {
-        const years = []
-        for (let i = 0; i <= 5; i++) {
-            years.push(currentYear - i)
-        }
-        return years
-    }, [currentYear])
+    const [yearOptions, setYearOptions] = useState<number[]>([])
+    const [loadingYears, setLoadingYears] = useState(true)
 
     // Fetch courses list for dropdown
     useEffect(() => {
@@ -94,6 +94,37 @@ export function RevenueChart({ className }: RevenueChartProps) {
         fetchCourses()
     }, [])
 
+    // Fetch available years
+    useEffect(() => {
+        const fetchAvailableYears = async () => {
+            try {
+                setLoadingYears(true)
+                const response = await apiClient.get('/dashboard/instructor/revenue/years')
+                const availableYears = response.data?.data || []
+                // Sort descending (newest first)
+                const sortedYears = availableYears.sort((a: number, b: number) => b - a)
+                setYearOptions(sortedYears)
+                
+                // Set selected year to the newest available year if current year is not in the list
+                if (sortedYears.length > 0 && !sortedYears.includes(currentYear)) {
+                    setSelectedYear(sortedYears[0])
+                }
+            } catch (error) {
+                console.error('Error fetching available years:', error)
+                // Fallback to current year and last 5 years if API fails
+                const fallbackYears = []
+                for (let i = 0; i <= 5; i++) {
+                    fallbackYears.push(currentYear - i)
+                }
+                setYearOptions(fallbackYears)
+            } finally {
+                setLoadingYears(false)
+            }
+        }
+
+        fetchAvailableYears()
+    }, [currentYear])
+
     // Memoize params to avoid recreating object on each render
     const stableCourseId = selectedCourseId === undefined ? null : selectedCourseId
     const stableYear = selectedYear
@@ -109,22 +140,21 @@ export function RevenueChart({ className }: RevenueChartProps) {
     // Fetch revenue data
     const { revenue: revenueData, isLoading, isError } = useInstructorRevenue(revenueParams)
 
-    // Pagination for orders table
-    const [ordersPage, setOrdersPage] = useState(1)
-    const ordersLimit = 20
+    // Pagination for courses table
+    const [coursesPage, setCoursesPage] = useState(1)
+    const coursesLimit = 20
 
-    // Fetch revenue orders for table (paginated)
+    // Fetch revenue by courses for table (paginated, optimized)
     const {
-        orders,
-        totalRevenue: ordersTotalRevenue,
-        pagination: ordersPagination,
-        isLoading: ordersLoading,
-    } = useInstructorRevenueOrders({
+        courses: coursesData,
+        pagination: coursesPagination,
+        isLoading: coursesLoading,
+    } = useInstructorRevenueByCourses({
         year: stableYear,
         month: stableMonth,
         courseId: stableCourseId,
-        page: ordersPage,
-        limit: ordersLimit,
+        page: coursesPage,
+        limit: coursesLimit,
     })
 
     // Fetch all revenue orders for pie chart (no pagination, limit 1000)
@@ -148,14 +178,14 @@ export function RevenueChart({ className }: RevenueChartProps) {
         courseId: stableCourseId,
     })
 
-    // Reset orders page when filters change
+    // Reset courses page when filters change
     useEffect(() => {
-        setOrdersPage(1)
+        setCoursesPage(1)
     }, [stableYear, stableMonth, stableCourseId])
 
     // Handle pagination
     const handlePageChange = useCallback((page: number) => {
-        setOrdersPage(page)
+        setCoursesPage(page)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [])
 
@@ -209,7 +239,7 @@ export function RevenueChart({ className }: RevenueChartProps) {
         // Group orders by course
         const revenueByCourse = new Map<number, { title: string; revenue: number }>()
 
-        allOrdersForPie.forEach((order) => {
+        allOrdersForPie.forEach((order: any) => {
             if (!order.course) return
             
             const courseId = order.course.id
@@ -240,9 +270,10 @@ export function RevenueChart({ className }: RevenueChartProps) {
     const dailyRevenueData = useMemo(() => {
         if (!revenueChartData || revenueChartData.length === 0) return []
 
-        return revenueChartData.map((item: { date: string; revenue: number; periodLabel: string }) => ({
+        return revenueChartData.map((item) => ({
             date: item.date,
             revenue: item.revenue,
+            orders: item.orders || 0,
             dateLabel: item.periodLabel,
         }))
     }, [revenueChartData])
@@ -295,29 +326,22 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                 }}
                                 disabled={loadingCourses}
                             >
-                                <SelectTrigger
-                                    id="course-select"
-                                    className="bg-[#2D2D2D] border-[#3D3D3D] text-white"
-                                >
+                                <DarkOutlineSelectTrigger id="course-select">
                                     <SelectValue placeholder="Chọn khóa học" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#1F1F1F] border-[#2D2D2D]">
-                                    <SelectItem
-                                        value="all"
-                                        className="text-white hover:bg-[#2D2D2D] focus:bg-[#2D2D2D]"
-                                    >
+                                </DarkOutlineSelectTrigger>
+                                <DarkOutlineSelectContent>
+                                    <DarkOutlineSelectItem value="all">
                                         Tổng khóa học
-                                    </SelectItem>
+                                    </DarkOutlineSelectItem>
                                     {courses.map((course) => (
-                                        <SelectItem
+                                        <DarkOutlineSelectItem
                                             key={course.id}
                                             value={course.id.toString()}
-                                            className="text-white hover:bg-[#2D2D2D] focus:bg-[#2D2D2D]"
                                         >
                                             {course.title}
-                                        </SelectItem>
+                                        </DarkOutlineSelectItem>
                                     ))}
-                                </SelectContent>
+                                </DarkOutlineSelectContent>
                             </Select>
                         </div>
 
@@ -332,23 +356,25 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                     setSelectedYear(parseInt(value))
                                 }}
                             >
-                                <SelectTrigger
-                                    id="year-select"
-                                    className="bg-[#2D2D2D] border-[#3D3D3D] text-white"
-                                >
+                                <DarkOutlineSelectTrigger id="year-select">
                                     <SelectValue placeholder="Chọn năm" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#1F1F1F] border-[#2D2D2D]">
-                                    {yearOptions.map((year) => (
-                                        <SelectItem
-                                            key={year}
-                                            value={year.toString()}
-                                            className="text-white hover:bg-[#2D2D2D] focus:bg-[#2D2D2D]"
-                                        >
-                                            {year}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
+                                </DarkOutlineSelectTrigger>
+                                <DarkOutlineSelectContent>
+                                    {loadingYears ? (
+                                        <div className='p-2 text-sm text-gray-400'>Đang tải...</div>
+                                    ) : yearOptions.length === 0 ? (
+                                        <div className='p-2 text-sm text-gray-400'>Chưa có dữ liệu</div>
+                                    ) : (
+                                        yearOptions.map((year) => (
+                                            <DarkOutlineSelectItem
+                                                key={year}
+                                                value={year.toString()}
+                                            >
+                                                {year}
+                                            </DarkOutlineSelectItem>
+                                        ))
+                                    )}
+                                </DarkOutlineSelectContent>
                             </Select>
                         </div>
 
@@ -363,23 +389,19 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                     setSelectedMonth(value === 'all' ? null : parseInt(value))
                                 }}
                             >
-                                <SelectTrigger
-                                    id="month-select"
-                                    className="bg-[#2D2D2D] border-[#3D3D3D] text-white"
-                                >
+                                <DarkOutlineSelectTrigger id="month-select">
                                     <SelectValue placeholder="Chọn tháng" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#1F1F1F] border-[#2D2D2D]">
+                                </DarkOutlineSelectTrigger>
+                                <DarkOutlineSelectContent>
                                     {MONTHS.map((month) => (
-                                        <SelectItem
+                                        <DarkOutlineSelectItem
                                             key={month.value}
                                             value={month.value}
-                                            className="text-white hover:bg-[#2D2D2D] focus:bg-[#2D2D2D]"
                                         >
                                             {month.label}
-                                        </SelectItem>
+                                        </DarkOutlineSelectItem>
                                     ))}
-                                </SelectContent>
+                                </DarkOutlineSelectContent>
                             </Select>
                         </div>
                     </div>
@@ -443,41 +465,42 @@ export function RevenueChart({ className }: RevenueChartProps) {
                             </div>
                         </div>
 
-                        {/* Revenue Orders Table */}
+                        {/* Revenue Courses Table */}
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-lg font-semibold text-white mb-4">
-                                    Chi tiết đơn hàng đã thanh toán
+                                    Khóa học
                                 </h3>
-                                <RevenueOrdersTable
-                                    orders={orders}
-                                    totalRevenue={ordersTotalRevenue}
-                                    loading={ordersLoading}
-                                    pagination={ordersPagination}
+                                <RevenueCoursesTable
+                                    courses={coursesData}
+                                    loading={coursesLoading}
+                                    pagination={coursesPagination}
+                                    year={stableYear}
+                                    month={stableMonth}
                                 />
                             </div>
 
                             {/* Pagination */}
-                            {ordersPagination && ordersPagination.totalPages > 1 && (
+                            {coursesPagination && coursesPagination.totalPages > 1 && (
                                 <div className="flex items-center justify-center gap-2 flex-wrap">
                                     <DarkOutlineButton
                                         onClick={() => handlePageChange(1)}
-                                        disabled={ordersPage === 1 || ordersLoading}
+                                        disabled={coursesPage === 1 || coursesLoading}
                                         size="sm"
                                     >
                                         &lt;&lt;
                                     </DarkOutlineButton>
                                     <DarkOutlineButton
-                                        onClick={() => handlePageChange(ordersPage - 1)}
-                                        disabled={ordersPage === 1 || ordersLoading}
+                                        onClick={() => handlePageChange(coursesPage - 1)}
+                                        disabled={coursesPage === 1 || coursesLoading}
                                         size="sm"
                                     >
                                         &lt;
                                     </DarkOutlineButton>
-                                    {Array.from({ length: ordersPagination.totalPages }, (_, i) => i + 1)
+                                    {Array.from({ length: coursesPagination.totalPages }, (_, i) => i + 1)
                                         .filter((page) => {
-                                            const totalPages = ordersPagination.totalPages
-                                            const currentPage = ordersPage
+                                            const totalPages = coursesPagination.totalPages
+                                            const currentPage = coursesPage
                                             if (totalPages <= 7) return true
                                             if (page === 1 || page === totalPages) return true
                                             if (Math.abs(page - currentPage) <= 1) return true
@@ -498,10 +521,10 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                                 <DarkOutlineButton
                                                     key={page}
                                                     onClick={() => handlePageChange(page)}
-                                                    disabled={ordersLoading}
+                                                    disabled={coursesLoading}
                                                     size="sm"
                                                     className={
-                                                        ordersPage === page
+                                                        coursesPage === page
                                                             ? '!bg-blue-600 !text-white !border-blue-600 hover:!bg-blue-700'
                                                             : ''
                                                     }
@@ -511,18 +534,18 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                             )
                                         })}
                                     <DarkOutlineButton
-                                        onClick={() => handlePageChange(ordersPage + 1)}
+                                        onClick={() => handlePageChange(coursesPage + 1)}
                                         disabled={
-                                            ordersPage === ordersPagination.totalPages || ordersLoading
+                                            coursesPage === coursesPagination.totalPages || coursesLoading
                                         }
                                         size="sm"
                                     >
                                         &gt;
                                     </DarkOutlineButton>
                                     <DarkOutlineButton
-                                        onClick={() => handlePageChange(ordersPagination.totalPages)}
+                                        onClick={() => handlePageChange(coursesPagination.totalPages)}
                                         disabled={
-                                            ordersPage === ordersPagination.totalPages || ordersLoading
+                                            coursesPage === coursesPagination.totalPages || coursesLoading
                                         }
                                         size="sm"
                                     >
@@ -536,7 +559,7 @@ export function RevenueChart({ className }: RevenueChartProps) {
                         {dailyRevenueData.length > 0 && (
                             <div className="mt-6">
                                 <h3 className="text-lg font-semibold text-white mb-4">
-                                    Doanh thu theo ngày
+                                    Biểu đồ doanh thu
                                 </h3>
                                 <div className="bg-[#1F1F1F] rounded-lg p-4 border border-[#2D2D2D]">
                                     <ResponsiveContainer width="100%" height={400}>
@@ -583,11 +606,21 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                                     color: '#fff',
                                                 }}
                                                 labelStyle={{ color: '#fff', marginBottom: '8px' }}
-                                                formatter={(value: number | undefined) => [
-                                                    formatPrice(value || 0),
-                                                    'Doanh thu',
-                                                ]}
-                                                labelFormatter={(label) => `Ngày: ${label}`}
+                                                content={({ active, payload, label }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const data = payload[0].payload
+                                                        const orders = data?.orders || 0
+                                                        const revenue = payload[0].value as number
+                                                        return (
+                                                            <div className="bg-[#1A1A1A] border border-[#2D2D2D] rounded-lg p-3">
+                                                                <p className="text-white font-semibold mb-2">{`Ngày: ${label}`}</p>
+                                                                <p className="text-white mb-1">{formatPrice(revenue || 0)}</p>
+                                                                <p className="text-xs text-gray-400">Số đơn: {orders.toLocaleString('vi-VN')}</p>
+                                                            </div>
+                                                        )
+                                                    }
+                                                    return null
+                                                }}
                                             />
                                             <Bar
                                                 dataKey="revenue"
@@ -686,7 +719,7 @@ export function RevenueChart({ className }: RevenueChartProps) {
                             {courseStructureData.length > 0 && (
                                 <div>
                                     <h3 className="text-lg font-semibold text-white mb-4">
-                                        Cơ cấu danh mục sản phẩm
+                                        Biểu đồ doanh thu theo khóa học
                                     </h3>
                                     <div className="bg-[#1F1F1F] rounded-lg p-4 border border-[#2D2D2D]">
                                         <ResponsiveContainer width="100%" height={400}>
@@ -717,6 +750,8 @@ export function RevenueChart({ className }: RevenueChartProps) {
                                                         borderRadius: '8px',
                                                         color: '#fff',
                                                     }}
+                                                    labelStyle={{ color: '#fff' }}
+                                                    itemStyle={{ color: '#fff' }}
                                                     formatter={(value: number | undefined) => [
                                                         formatPrice(value || 0),
                                                         'Doanh thu',

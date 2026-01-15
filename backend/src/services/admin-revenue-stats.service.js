@@ -779,6 +779,31 @@ class AdminRevenueStatsService {
             },
         }
     }
+
+    /**
+     * Get available years that have revenue data
+     * @returns {Promise<number[]>} Array of years with data, sorted ascending
+     */
+    async getAvailableYears() {
+        try {
+            const yearsWithData = await prisma.$queryRaw`
+                SELECT DISTINCT EXTRACT(YEAR FROM paid_at)::INTEGER as year
+                FROM orders
+                WHERE payment_status = ${PAYMENT_STATUS.PAID}
+                  AND paid_at IS NOT NULL
+                ORDER BY year ASC
+            `
+
+            const years = yearsWithData.map((row) => Number(row.year))
+            
+            logger.info(`Retrieved ${years.length} available years with revenue data`)
+            
+            return years
+        } catch (error) {
+            logger.error(`Error getting available years: ${error.message}`)
+            throw error
+        }
+    }
 }
 
 export default new AdminRevenueStatsService()

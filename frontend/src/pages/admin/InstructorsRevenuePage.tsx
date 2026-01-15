@@ -133,7 +133,6 @@ export function InstructorsRevenuePage() {
             <InstructorsRevenueFilters
                 selectedYear={selectedYear}
                 selectedMonth={selectedMonth}
-                searchQuery={searchQuery}
                 sortBy={sortBy}
                 onYearChange={(year) => {
                     setSelectedYear(year)
@@ -143,8 +142,6 @@ export function InstructorsRevenuePage() {
                     setSelectedMonth(month)
                     setCurrentPage(1)
                 }}
-                onSearchChange={setSearchQuery}
-                onSearch={handleSearch}
                 onSortChange={(sort) => {
                     setSortBy(sort)
                     setCurrentPage(1)
@@ -166,6 +163,7 @@ export function InstructorsRevenuePage() {
                 currentPage={data?.pagination.page || 1}
                 totalPages={data?.pagination.totalPages || 0}
                 totalItems={data?.pagination.total || 0}
+                searchInput={searchQuery}
                 onPageChange={(page) => {
                     setCurrentPage(page)
                     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -173,6 +171,13 @@ export function InstructorsRevenuePage() {
                 onSort={() => {
                     setSortBy(sortBy === 'revenue' ? 'courseCount' : 'revenue')
                     setCurrentPage(1)
+                }}
+                onSearchChange={setSearchQuery}
+                onSearch={handleSearch}
+                onClearSearch={() => {
+                    setSearchQuery('')
+                    setCurrentPage(1)
+                    fetchData()
                 }}
                 formatPrice={formatPrice}
             />

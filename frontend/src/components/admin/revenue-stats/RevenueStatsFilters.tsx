@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent } from '../../../components/ui/card'
 import {
@@ -8,6 +9,7 @@ import {
     SelectValue,
 } from '../../../components/ui/select'
 import { Calendar } from 'lucide-react'
+import apiClient from '../../../lib/api/client'
 
 interface RevenueStatsFiltersProps {
     selectedYear: number | null
@@ -37,9 +39,29 @@ export function RevenueStatsFilters({
     onYearChange,
     onMonthChange,
 }: RevenueStatsFiltersProps) {
-    const currentYear = new Date().getFullYear()
-    // Tạo danh sách năm từ năm hiện tại trở về trước 20 năm
-    const years = Array.from({ length: 20 }, (_, i) => currentYear - i)
+    const [years, setYears] = useState<number[]>([])
+    const [loadingYears, setLoadingYears] = useState(true)
+
+    useEffect(() => {
+        const fetchAvailableYears = async () => {
+            try {
+                setLoadingYears(true)
+                const response = await apiClient.get('/admin/revenue/years')
+                const availableYears = response.data?.data || []
+                // Sort descending (newest first)
+                setYears(availableYears.sort((a: number, b: number) => b - a))
+            } catch (error) {
+                console.error('Error fetching available years:', error)
+                // Fallback to current year if API fails
+                const currentYear = new Date().getFullYear()
+                setYears([currentYear])
+            } finally {
+                setLoadingYears(false)
+            }
+        }
+
+        fetchAvailableYears()
+    }, [])
 
     return (
         <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
@@ -73,15 +95,21 @@ export function RevenueStatsFilters({
                                 >
                                     Tất cả
                                 </SelectItem>
-                                {years.map((year) => (
-                                    <SelectItem
-                                        key={year}
-                                        value={year.toString()}
-                                        className='text-gray-300 hover:bg-[#2A2A2A] focus:bg-[#2A2A2A]'
-                                    >
-                                        {year}
-                                    </SelectItem>
-                                ))}
+                                {loadingYears ? (
+                                    <div className='p-2 text-sm text-gray-400'>Đang tải...</div>
+                                ) : years.length === 0 ? (
+                                    <div className='p-2 text-sm text-gray-400'>Chưa có dữ liệu</div>
+                                ) : (
+                                    years.map((year) => (
+                                        <SelectItem
+                                            key={year}
+                                            value={year.toString()}
+                                            className='text-gray-300 hover:bg-[#2A2A2A] focus:bg-[#2A2A2A]'
+                                        >
+                                            {year}
+                                        </SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>

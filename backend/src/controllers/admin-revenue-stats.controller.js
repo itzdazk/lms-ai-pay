@@ -120,6 +120,21 @@ class AdminRevenueStatsController {
             'Courses revenue statistics retrieved successfully'
         )
     })
+
+    /**
+     * @route   GET /api/v1/admin/revenue/years
+     * @desc    Get list of available years that have revenue data
+     * @access  Private (Admin)
+     */
+    getAvailableYears = asyncHandler(async (req, res) => {
+        const years = await adminRevenueStatsService.getAvailableYears()
+
+        return ApiResponse.success(
+            res,
+            years,
+            'Available years retrieved successfully'
+        )
+    })
 }
 
 export default new AdminRevenueStatsController()

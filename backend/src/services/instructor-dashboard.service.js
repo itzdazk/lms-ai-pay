@@ -667,6 +667,125 @@ class InstructorDashboardService {
     }
 
     /**
+     * Get instructor revenue grouped by courses (optimized for courses table)
+     * @param {number} instructorId - Instructor ID
+     * @param {Object} options - Options (year, month, courseId, page, limit)
+     * @returns {Promise<Object>} Courses with revenue data
+     */
+    async getInstructorRevenueByCourses(instructorId, options = {}) {
+        const {
+            year = new Date().getFullYear(),
+            month = null, // null = all months, 1-12 = specific month
+            courseId = null,
+            page = 1,
+            limit = 20,
+        } = options
+
+        const skip = (page - 1) * limit
+
+        // Calculate date range based on year and month
+        const startDate = new Date(year, month ? month - 1 : 0, 1)
+        startDate.setHours(0, 0, 0, 0)
+
+        let endDate
+        if (month) {
+            endDate = new Date(year, month, 0)
+        } else {
+            endDate = new Date(year, 11, 31)
+        }
+        endDate.setHours(23, 59, 59, 999)
+
+        // Build where clause
+        const where = {
+            course: {
+                instructorId,
+                ...(courseId && !isNaN(Number(courseId)) ? { id: Number(courseId) } : {}),
+            },
+            paymentStatus: PAYMENT_STATUS.PAID,
+            paidAt: {
+                not: null,
+                gte: startDate,
+                lte: endDate,
+            },
+        }
+
+        // Group orders by courseId and aggregate
+        const courseRevenueGroups = await prisma.order.groupBy({
+            by: ['courseId'],
+            where,
+            _sum: {
+                finalPrice: true,
+            },
+            _count: {
+                id: true,
+            },
+        })
+
+        // Get total count of unique courses
+        const total = courseRevenueGroups.length
+
+        // Apply pagination to grouped results
+        const paginatedGroups = courseRevenueGroups
+            .sort((a, b) => {
+                // Sort by revenue descending
+                const revenueA = parseFloat(a._sum.finalPrice?.toString() || '0')
+                const revenueB = parseFloat(b._sum.finalPrice?.toString() || '0')
+                return revenueB - revenueA
+            })
+            .slice(skip, skip + limit)
+
+        // Get course IDs from paginated groups
+        const courseIds = paginatedGroups.map((group) => group.courseId).filter(Boolean)
+
+        // Fetch course details
+        const courses = await prisma.course.findMany({
+            where: {
+                id: { in: courseIds },
+                instructorId, // Security: ensure courses belong to instructor
+            },
+            select: {
+                id: true,
+                title: true,
+                thumbnailUrl: true,
+                price: true,
+            },
+        })
+
+        // Combine course data with revenue stats
+        const coursesWithRevenue = paginatedGroups.map((group) => {
+            const course = courses.find((c) => c.id === group.courseId)
+            return {
+                courseId: group.courseId,
+                courseTitle: course?.title || 'N/A',
+                courseThumbnailUrl: course?.thumbnailUrl || null,
+                coursePrice: course?.price ? parseFloat(course.price.toString()) : 0,
+                orderCount: group._count.id,
+                revenue: parseFloat(group._sum.finalPrice?.toString() || '0'),
+            }
+        })
+
+        // Calculate total revenue across all courses (not just paginated)
+        const totalRevenueResult = await prisma.order.aggregate({
+            where,
+            _sum: {
+                finalPrice: true,
+            },
+        })
+        const totalRevenue = parseFloat(totalRevenueResult._sum.finalPrice?.toString() || '0')
+
+        return {
+            courses: coursesWithRevenue,
+            totalRevenue,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        }
+    }
+
+    /**
      * Get instructor revenue chart data (aggregated by month or day)
      * @param {number} instructorId - Instructor ID
      * @param {Object} options - Options (year, month, courseId)
@@ -726,21 +845,20 @@ class InstructorDashboardService {
             // Group by month (12 months)
             const revenueByMonth = new Map()
 
-            // Initialize all 12 months with 0 revenue
+            // Initialize all 12 months with 0 revenue and 0 orders
             for (let m = 1; m <= 12; m++) {
-                revenueByMonth.set(m, 0)
+                revenueByMonth.set(m, { revenue: 0, orders: 0 })
             }
 
-            // Aggregate revenue by month
+            // Aggregate revenue and orders by month
             orders.forEach((order) => {
                 if (!order.paidAt) return
                 const orderDate = new Date(order.paidAt)
                 const orderMonth = orderDate.getMonth() + 1 // 1-12
                 const revenue = parseFloat(order.finalPrice.toString())
-                revenueByMonth.set(
-                    orderMonth,
-                    revenueByMonth.get(orderMonth) + revenue
-                )
+                const monthData = revenueByMonth.get(orderMonth)
+                monthData.revenue += revenue
+                monthData.orders += 1
             })
 
             // Convert to array and format
@@ -760,10 +878,12 @@ class InstructorDashboardService {
             ]
 
             for (let m = 1; m <= 12; m++) {
+                const monthData = revenueByMonth.get(m)
                 chartData.push({
                     period: monthNames[m - 1],
                     periodLabel: monthNames[m - 1],
-                    revenue: revenueByMonth.get(m),
+                    revenue: monthData.revenue,
+                    orders: monthData.orders,
                     date: `${year}-${String(m).padStart(2, '0')}-01`,
                 })
             }
@@ -774,27 +894,31 @@ class InstructorDashboardService {
             // Get number of days in the month
             const daysInMonth = new Date(year, month, 0).getDate()
 
-            // Initialize all days with 0 revenue
+            // Initialize all days with 0 revenue and 0 orders
             for (let d = 1; d <= daysInMonth; d++) {
-                revenueByDay.set(d, 0)
+                revenueByDay.set(d, { revenue: 0, orders: 0 })
             }
 
-            // Aggregate revenue by day
+            // Aggregate revenue and orders by day
             orders.forEach((order) => {
                 if (!order.paidAt) return
                 const orderDate = new Date(order.paidAt)
                 const orderDay = orderDate.getDate() // 1-31
                 const revenue = parseFloat(order.finalPrice.toString())
-                revenueByDay.set(orderDay, revenueByDay.get(orderDay) + revenue)
+                const dayData = revenueByDay.get(orderDay)
+                dayData.revenue += revenue
+                dayData.orders += 1
             })
 
             // Convert to array and format
             for (let d = 1; d <= daysInMonth; d++) {
                 const date = new Date(year, month - 1, d)
+                const dayData = revenueByDay.get(d)
                 chartData.push({
                     period: d,
                     periodLabel: `${String(d).padStart(2, '0')}/${String(month).padStart(2, '0')}`,
-                    revenue: revenueByDay.get(d),
+                    revenue: dayData.revenue,
+                    orders: dayData.orders,
                     date: date.toISOString().split('T')[0],
                 })
             }
@@ -1045,6 +1169,30 @@ class InstructorDashboardService {
                 total: uniqueStudentsCount.length,
                 totalPages: Math.ceil(uniqueStudentsCount.length / limit),
             },
+        }
+    }
+    /**
+     * Get available years that have revenue data for a specific instructor
+     * @param {number} instructorId - Instructor ID
+     * @returns {Promise<number[]>} Array of years with data, sorted ascending
+     */
+    async getAvailableYears(instructorId) {
+        try {
+            const yearsWithData = await prisma.$queryRaw`
+                SELECT DISTINCT EXTRACT(YEAR FROM o.paid_at)::INTEGER as year
+                FROM orders o
+                INNER JOIN courses c ON o.course_id = c.id
+                WHERE o.payment_status = ${PAYMENT_STATUS.PAID}
+                  AND o.paid_at IS NOT NULL
+                  AND c.instructor_id = ${instructorId}
+                ORDER BY year ASC
+            `
+
+            const years = yearsWithData.map((row) => Number(row.year))
+            
+            return years
+        } catch (error) {
+            throw error
         }
     }
 }

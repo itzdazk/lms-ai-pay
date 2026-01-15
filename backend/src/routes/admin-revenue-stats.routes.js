@@ -34,4 +34,11 @@ router.get('/instructors', adminRevenueStatsController.getInstructorsRevenue)
  */
 router.get('/courses', adminRevenueStatsController.getCoursesRevenue)
 
+/**
+ * @route   GET /api/v1/admin/revenue/years
+ * @desc    Get list of available years that have revenue data
+ * @access  Private (Admin)
+ */
+router.get('/years', adminRevenueStatsController.getAvailableYears)
+
 export default router

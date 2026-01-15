@@ -70,7 +70,7 @@ export function RevenueMonthlyChart({
         }))
     } else {
         // Show by day (all days in selected month)
-        chartTitle = `Biểu đồ doanh thu theo ngày (Tháng ${selectedMonth}/${selectedYear})`
+        chartTitle = `Biểu đồ doanh thu (Tháng ${selectedMonth}/${selectedYear})`
         chartData = dailyData.map((item) => {
             const date = new Date(item.date)
             return {
