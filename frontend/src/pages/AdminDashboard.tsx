@@ -40,6 +40,7 @@ import { TagsPage } from './admin/TagsPage'
 import { OrdersPage } from './admin/OrdersPage'
 import { AIMonitoringPage } from './admin/AIMonitoringPage'
 import { RevenueStatsPage } from './admin/RevenueStatsPage'
+import { InstructorsRevenuePage } from './admin/InstructorsRevenuePage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -84,6 +85,7 @@ type AdminSection =
     | 'tags'
     | 'ai-monitoring'
     | 'revenue-stats'
+    | 'instructors-revenue'
 
 interface MenuItem {
     id: AdminSection
@@ -160,11 +162,22 @@ const menuGroups: MenuGroup[] = [
                 icon: RotateCcw,
                 color: 'text-yellow-400',
             },
+        ],
+    },
+    {
+        label: 'Thống kê doanh thu',
+        items: [
             {
                 id: 'revenue-stats',
-                label: 'Thống kê doanh thu',
+                label: 'Tổng quan',
                 icon: ReceiptText,
                 color: 'text-green-400',
+            },
+            {
+                id: 'instructors-revenue',
+                label: 'Giảng viên',
+                icon: Users,
+                color: 'text-blue-400',
             },
         ],
     },
@@ -288,6 +301,12 @@ export function AdminDashboard() {
                         <RevenueStatsPage />
                     </div>
                 )
+            case 'instructors-revenue':
+                return (
+                    <div className='h-full'>
+                        <InstructorsRevenuePage />
+                    </div>
+                )
             default:
                 return <DashboardOverview />
         }
@@ -373,8 +392,8 @@ export function AdminDashboard() {
                                         disabled={sectionLoading}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ${
                                             isActive
-                                                ? 'bg-gradient-to-r from-[#2D2D2D] to-[#252525] text-white shadow-lg shadow-purple-500/10 border border-purple-500/20'
-                                                : 'text-gray-400 hover:bg-gradient-to-r hover:from-[#1F1F1F] hover:to-[#1A1A1A] hover:text-white hover:shadow-md border border-transparent'
+                                                ? 'bg-gradient-to-r from-[#2D2D2D] to-[#252525] text-white shadow-lg'
+                                                : 'text-gray-400 hover:bg-gradient-to-r hover:from-[#1F1F1F] hover:to-[#1A1A1A] hover:text-white hover:shadow-md'
                                         } ${
                                             sectionLoading
                                                 ? 'opacity-50 cursor-wait'

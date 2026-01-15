@@ -3,6 +3,38 @@ import { prisma } from '../config/database.config.js'
 import { PAYMENT_STATUS } from '../config/constants.js'
 import logger from '../config/logger.config.js'
 
+/**
+ * Convert Prisma Decimal to number
+ * @param {any} value - Decimal value from Prisma
+ * @returns {number} - Number value
+ */
+function decimalToNumber(value) {
+    if (value == null || value === undefined) {
+        return 0
+    }
+    // If it's a Prisma Decimal object, use toNumber()
+    if (typeof value === 'object' && typeof value.toNumber === 'function') {
+        try {
+            return value.toNumber()
+        } catch (error) {
+            logger.warn(`Error converting Decimal to number: ${error.message}`)
+            return 0
+        }
+    }
+    // If it's already a number, return it
+    if (typeof value === 'number') {
+        return isNaN(value) ? 0 : value
+    }
+    // If it's a string, parse it
+    if (typeof value === 'string') {
+        const num = parseFloat(value)
+        return isNaN(num) ? 0 : num
+    }
+    // Try to convert to number
+    const num = Number(value)
+    return isNaN(num) ? 0 : num
+}
+
 class AdminRevenueStatsService {
     /**
      * Get revenue statistics by year and month
@@ -85,7 +117,7 @@ class AdminRevenueStatsService {
 
                 yearlyData.push({
                     year: y,
-                    revenue: parseFloat(yearStats._sum.finalPrice || 0),
+                    revenue: decimalToNumber(yearStats._sum.finalPrice),
                     orders: yearStats._count,
                 })
             }
@@ -110,7 +142,7 @@ class AdminRevenueStatsService {
                 monthlyData.push({
                     month: m,
                     year: year,
-                    revenue: parseFloat(monthStats._sum.finalPrice || 0),
+                    revenue: decimalToNumber(monthStats._sum.finalPrice),
                     orders: monthStats._count,
                 })
             }
@@ -142,12 +174,12 @@ class AdminRevenueStatsService {
                 
                 if (dailyMap.has(dayKey)) {
                     const existing = dailyMap.get(dayKey)
-                    existing.revenue += parseFloat(order.finalPrice || 0)
+                    existing.revenue += decimalToNumber(order.finalPrice)
                     existing.orders += 1
                 } else {
                     dailyMap.set(dayKey, {
                         date: dayKey,
-                        revenue: parseFloat(order.finalPrice || 0),
+                        revenue: decimalToNumber(order.finalPrice),
                         orders: 1,
                     })
                 }
@@ -211,7 +243,7 @@ class AdminRevenueStatsService {
             if (course && course.instructor) {
                 const instructorId = course.instructor.id
                 const instructorName = course.instructor.fullName || 'Unknown'
-                const revenue = parseFloat(item._sum.finalPrice || 0)
+                const revenue = decimalToNumber(item._sum.finalPrice)
 
                 if (instructorRevenueMap.has(instructorId)) {
                     const existing = instructorRevenueMap.get(instructorId)
@@ -267,7 +299,7 @@ class AdminRevenueStatsService {
                 courseId: item.courseId,
                 courseTitle: course?.title || 'Unknown Course',
                 instructorName: course?.instructor?.fullName || 'Unknown',
-                revenue: parseFloat(item._sum.finalPrice || 0),
+                revenue: decimalToNumber(item._sum.finalPrice),
             }
         })
 
@@ -281,6 +313,242 @@ class AdminRevenueStatsService {
             dailyData,
             topInstructors,
             topCourses: topCoursesWithRevenue,
+        }
+    }
+
+    /**
+     * Get instructors revenue statistics with filters, search, sort, and pagination
+     * @param {number|null} year - Year to filter (null for all years)
+     * @param {number|null} month - Month to filter (null for all months)
+     * @param {string} search - Search query for instructor name or email
+     * @param {string} sortBy - Sort by 'revenue' or 'courseCount'
+     * @param {number} page - Page number (1-based)
+     * @param {number} limit - Items per page
+     * @returns {Promise<object>} Instructors revenue data with pagination
+     */
+    async getInstructorsRevenue(
+        year = null,
+        month = null,
+        search = '',
+        sortBy = 'revenue',
+        page = 1,
+        limit = 10
+    ) {
+        // Build date filter
+        const dateFilter = {}
+        if (year) {
+            if (month) {
+                // Filter by specific month
+                const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0))
+                const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0))
+                dateFilter.paidAt = {
+                    gte: monthStart,
+                    lt: monthEnd,
+                }
+            } else {
+                // Filter by entire year
+                const yearStart = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0))
+                const yearEnd = new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0, 0))
+                dateFilter.paidAt = {
+                    gte: yearStart,
+                    lt: yearEnd,
+                }
+            }
+        }
+
+        // Get all paid orders with date filter
+        const whereClause = {
+            paymentStatus: PAYMENT_STATUS.PAID,
+            ...dateFilter,
+        }
+
+        // Get all orders (not grouped) to get accurate counts
+        const allOrders = await prisma.order.findMany({
+            where: whereClause,
+            select: {
+                courseId: true,
+                finalPrice: true,
+            },
+        })
+
+        // Get unique course IDs from orders
+        const courseIds = [...new Set(allOrders.map((order) => order.courseId))]
+
+        // Build instructor filter for search
+        const instructorWhere = {}
+        if (search && search.trim()) {
+            instructorWhere.OR = [
+                { fullName: { contains: search.trim(), mode: 'insensitive' } },
+                { email: { contains: search.trim(), mode: 'insensitive' } },
+            ]
+        }
+
+        // Get course details with instructors (filtered by search if provided)
+        const courses = await prisma.course.findMany({
+            where: {
+                id: { in: courseIds },
+                ...(Object.keys(instructorWhere).length > 0
+                    ? { instructor: instructorWhere }
+                    : {}),
+            },
+            select: {
+                id: true,
+                instructorId: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        email: true,
+                    },
+                },
+            },
+        })
+
+        // Build set of valid course IDs (after search filter)
+        const validCourseIds = new Set(courses.map((c) => c.id))
+
+        // Group orders by instructor (only for valid courses)
+        const instructorRevenueMap = new Map()
+        const courseInstructorMap = new Map()
+
+        // Build course to instructor map
+        courses.forEach((course) => {
+            if (course.instructor) {
+                courseInstructorMap.set(course.id, course.instructor)
+            }
+        })
+
+        // Process only orders from valid courses
+        allOrders.forEach((order) => {
+            // Only process if course is in valid courses (after search filter)
+            if (validCourseIds.has(order.courseId)) {
+                const instructor = courseInstructorMap.get(order.courseId)
+                if (instructor) {
+                    const instructorId = instructor.id
+                    const instructorName = instructor.fullName || 'Unknown'
+                    const email = instructor.email || ''
+                    // Convert Decimal to number properly
+                    const revenue = decimalToNumber(order.finalPrice)
+                    
+                    // Debug logging if revenue is invalid
+                    if (isNaN(revenue) || revenue === null || revenue === undefined) {
+                        logger.warn(
+                            `Invalid revenue for order: courseId=${order.courseId}, finalPrice=${order.finalPrice}, type=${typeof order.finalPrice}`
+                        )
+                    }
+
+                    if (instructorRevenueMap.has(instructorId)) {
+                        const existing = instructorRevenueMap.get(instructorId)
+                        existing.revenue = (existing.revenue || 0) + (revenue || 0)
+                        existing.orderCount += 1
+                    } else {
+                        instructorRevenueMap.set(instructorId, {
+                            instructorId,
+                            instructorName,
+                            email,
+                            courseCount: 0,
+                            orderCount: 1,
+                            revenue: revenue || 0,
+                        })
+                    }
+                }
+            }
+        })
+
+        // Count unique courses per instructor (only from valid courses)
+        const instructorCourseSet = new Map()
+        allOrders.forEach((order) => {
+            if (validCourseIds.has(order.courseId)) {
+                const instructor = courseInstructorMap.get(order.courseId)
+                if (instructor) {
+                    const instructorId = instructor.id
+                    if (!instructorCourseSet.has(instructorId)) {
+                        instructorCourseSet.set(instructorId, new Set())
+                    }
+                    instructorCourseSet.get(instructorId).add(order.courseId)
+                }
+            }
+        })
+
+        // Update courseCount for each instructor
+        instructorCourseSet.forEach((courseSet, instructorId) => {
+            if (instructorRevenueMap.has(instructorId)) {
+                instructorRevenueMap.get(instructorId).courseCount = courseSet.size
+            }
+        })
+
+        // Convert to array
+        let instructors = Array.from(instructorRevenueMap.values())
+
+        // Sort
+        if (sortBy === 'courseCount') {
+            instructors.sort((a, b) => b.courseCount - a.courseCount)
+        } else {
+            // Default: sort by revenue descending
+            instructors.sort((a, b) => b.revenue - a.revenue)
+        }
+
+        // Calculate summary statistics BEFORE pagination
+        // Total revenue: sum from all valid orders (after date and search filters)
+        const totalRevenue = allOrders
+            .filter((order) => validCourseIds.has(order.courseId))
+            .reduce((sum, order) => {
+                const revenue = decimalToNumber(order.finalPrice)
+                return sum + (revenue || 0)
+            }, 0)
+        
+        // Instructor count: number of unique instructors (after search filter)
+        const instructorCount = instructors.length
+        
+        // Total courses sold: sum of all order counts from valid orders
+        const totalCoursesSold = allOrders
+            .filter((order) => validCourseIds.has(order.courseId))
+            .length
+
+        // Convert all instructors to proper format with rank
+        // Map revenue to totalRevenue to match frontend interface
+        const formattedInstructors = instructors.map((inst, index) => {
+            const revenueValue = typeof inst.revenue === 'number' 
+                ? inst.revenue 
+                : decimalToNumber(inst.revenue)
+            
+            return {
+                instructorId: Number(inst.instructorId),
+                instructorName: inst.instructorName || 'Unknown',
+                email: inst.email || '',
+                courseCount: Number(inst.courseCount || 0),
+                orderCount: Number(inst.orderCount || 0),
+                totalRevenue: Number(revenueValue) || 0, // Convert to number and ensure it's not NaN
+                rank: index + 1,
+            }
+        })
+
+        // Prepare chart data (top 10 instructors for pie chart, before pagination)
+        const chartData = formattedInstructors.slice(0, 10)
+
+        // Pagination
+        const skip = (page - 1) * limit
+        const total = formattedInstructors.length
+        const paginatedInstructors = formattedInstructors.slice(skip, skip + limit)
+
+        logger.info(
+            `Instructors revenue retrieved: year=${year}, month=${month}, search=${search}, sortBy=${sortBy}, page=${page}, limit=${limit}`
+        )
+
+        return {
+            instructors: paginatedInstructors,
+            chartData: chartData, // Top 10 for pie chart
+            summary: {
+                totalRevenue: Number(totalRevenue),
+                instructorCount: Number(instructorCount),
+                totalCoursesSold: Number(totalCoursesSold),
+            },
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total: Number(total),
+                totalPages: Number(Math.ceil(total / limit)),
+            },
         }
     }
 }

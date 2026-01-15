@@ -106,11 +106,11 @@ export function RevenueStatsPage() {
             {/* Header */}
             <div className='flex items-center justify-between'>
                 <div>
-                    <h1 className='text-2xl font-bold text-white flex items-center gap-2'>
+                    <h1 className='text-2xl font-bold text-foreground flex items-center gap-2'>
                         <DollarSign className='h-6 w-6 text-green-400' />
                         Thống kê doanh thu
                     </h1>
-                    <p className='text-sm text-gray-400 mt-1'>
+                    <p className='text-sm text-muted-foreground mt-1'>
                         Phân tích doanh thu theo thời gian, giảng viên và khóa học
                     </p>
                 </div>
