@@ -489,7 +489,12 @@ class AdminRevenueStatsService {
         }
 
         // Calculate summary statistics BEFORE pagination
-        // Total revenue: sum from all valid orders (after date and search filters)
+        // These stats reflect ALL data matching the filters (date + search), not just the current page
+        
+        // Total revenue: sum from ALL valid orders (after date and search filters)
+        // This is calculated from ALL orders, not just the paginated results
+        // If search filter is applied, only includes orders from matching instructors
+        // If no search filter, includes all orders within the date range
         const totalRevenue = allOrders
             .filter((order) => validCourseIds.has(order.courseId))
             .reduce((sum, order) => {
@@ -497,10 +502,12 @@ class AdminRevenueStatsService {
                 return sum + (revenue || 0)
             }, 0)
         
-        // Instructor count: number of unique instructors (after search filter)
+        // Instructor count: number of unique instructors (after search filter, before pagination)
+        // This represents ALL instructors matching the filters, not just the current page
         const instructorCount = instructors.length
         
-        // Total courses sold: sum of all order counts from valid orders
+        // Total courses sold: total number of orders from ALL valid courses (after date and search filters)
+        // This is calculated from ALL orders, not just the paginated results
         const totalCoursesSold = allOrders
             .filter((order) => validCourseIds.has(order.courseId))
             .length
@@ -523,8 +530,9 @@ class AdminRevenueStatsService {
             }
         })
 
-        // Prepare chart data (top 10 instructors for pie chart, before pagination)
-        const chartData = formattedInstructors.slice(0, 10)
+        // Prepare chart data (all instructors for pie chart, before pagination)
+        // Frontend will group remaining instructors into "Khác"
+        const chartData = formattedInstructors
 
         // Pagination
         const skip = (page - 1) * limit

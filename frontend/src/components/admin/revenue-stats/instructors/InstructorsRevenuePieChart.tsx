@@ -35,17 +35,54 @@ export function InstructorsRevenuePieChart({
     data,
     formatPrice,
 }: InstructorsRevenuePieChartProps) {
-    // Prepare data for pie chart (top 10 instructors by revenue)
-    const chartData = data
-        .slice(0, 10)
-        .map((instructor) => ({
-            name: instructor.instructorName,
-            value: instructor.totalRevenue,
-            instructorId: instructor.instructorId,
-        }))
+    if (!data || data.length === 0) {
+        return (
+            <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
+                <CardHeader>
+                    <CardTitle className='text-foreground flex items-center gap-2'>
+                        <Users className='h-5 w-5 text-blue-400' />
+                        Phân bố doanh thu theo giảng viên
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className='text-center py-12 text-gray-400'>
+                        Chưa có dữ liệu
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    // Get top 10 instructors
+    const top10 = data.slice(0, 10)
+    
+    // Calculate revenue for "Khác" (remaining instructors)
+    const others = data.slice(10)
+    const othersRevenue = others.reduce((sum, inst) => sum + inst.totalRevenue, 0)
+    const othersCount = others.length
+    
+    // Prepare chart data: top 10 + "Khác" if there are more than 10
+    const chartData = top10.map((instructor) => ({
+        name: instructor.instructorName,
+        value: instructor.totalRevenue,
+        instructorId: instructor.instructorId,
+        isOther: false,
+        othersCount: 0,
+    }))
+
+    // Add "Khác" if there are more than 10 instructors
+    if (data.length > 10 && othersRevenue > 0) {
+        chartData.push({
+            name: 'Khác',
+            value: othersRevenue,
+            instructorId: -1, // Special ID for "Khác"
+            isOther: true,
+            othersCount: othersCount,
+        })
+    }
 
     // Calculate total revenue for percentage calculation
-    const totalRevenue = chartData.reduce((sum, item) => sum + item.value, 0)
+    const totalRevenue = data.reduce((sum, item) => sum + item.totalRevenue, 0)
 
     // Custom tooltip
     const CustomTooltip = ({ active, payload }: any) => {
@@ -66,6 +103,11 @@ export function InstructorsRevenuePieChart({
                     <p className='text-xs text-gray-400 mt-1'>
                         Tỷ lệ: {percentage}%
                     </p>
+                    {data.payload?.isOther && data.payload?.othersCount > 0 && (
+                        <p className='text-xs text-gray-500 mt-1 italic'>
+                            ({data.payload.othersCount} giảng viên khác)
+                        </p>
+                    )}
                 </div>
             )
         }
@@ -77,29 +119,11 @@ export function InstructorsRevenuePieChart({
         const percentage = totalRevenue > 0 
             ? ((entry.value / totalRevenue) * 100).toFixed(1) 
             : 0
-        // Only show label if percentage >= 5% to avoid clutter
-        if (parseFloat(percentage) >= 5) {
+        // Only show label if percentage >= 3% to avoid clutter
+        if (parseFloat(percentage) >= 3) {
             return `${percentage}%`
         }
         return ''
-    }
-
-    if (chartData.length === 0) {
-        return (
-            <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
-                <CardHeader>
-                    <CardTitle className='text-foreground flex items-center gap-2'>
-                        <Users className='h-5 w-5 text-blue-400' />
-                        Phân bố doanh thu theo giảng viên
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className='text-center py-12 text-gray-400'>
-                        Chưa có dữ liệu
-                    </div>
-                </CardContent>
-            </Card>
-        )
     }
 
     return (
@@ -110,7 +134,10 @@ export function InstructorsRevenuePieChart({
                     Phân bố doanh thu theo giảng viên
                 </CardTitle>
                 <p className='text-sm text-gray-400 mt-1'>
-                    Top {Math.min(10, chartData.length)} giảng viên có doanh thu cao nhất
+                    {data.length > 10 
+                        ? `Top 10 giảng viên + ${data.length - 10} giảng viên khác`
+                        : `${data.length} giảng viên có doanh thu`
+                    }
                 </p>
             </CardHeader>
             <CardContent>
@@ -128,8 +155,11 @@ export function InstructorsRevenuePieChart({
                         >
                             {chartData.map((entry, index) => (
                                 <Cell
-                                    key={`cell-${index}`}
-                                    fill={COLORS[index % COLORS.length]}
+                                    key={`cell-${entry.instructorId || `other-${index}`}`}
+                                    fill={entry.isOther 
+                                        ? '#6B7280' // Gray color for "Khác"
+                                        : COLORS[index % COLORS.length]
+                                    }
                                 />
                             ))}
                         </Pie>
@@ -157,20 +187,29 @@ export function InstructorsRevenuePieChart({
                         const percentage = totalRevenue > 0 
                             ? ((item.value / totalRevenue) * 100).toFixed(1) 
                             : 0
+                        const color = item.isOther 
+                            ? '#6B7280' 
+                            : COLORS[index % COLORS.length]
+                        
                         return (
                             <div
-                                key={item.instructorId}
+                                key={item.instructorId || `other-${index}`}
                                 className='flex items-center gap-2 p-2 rounded bg-[#1F1F1F] hover:bg-[#2A2A2A] transition-colors'
                             >
                                 <div
                                     className='w-3 h-3 rounded'
                                     style={{
-                                        backgroundColor: COLORS[index % COLORS.length],
+                                        backgroundColor: color,
                                     }}
                                 />
                                 <div className='flex-1 min-w-0'>
                                     <p className='text-xs text-gray-300 truncate'>
                                         {item.name}
+                                        {item.isOther && item.othersCount > 0 && (
+                                            <span className='text-gray-500 ml-1'>
+                                                ({item.othersCount} giảng viên)
+                                            </span>
+                                        )}
                                     </p>
                                     <p className='text-xs text-gray-400'>
                                         {formatPrice(item.value)} ({percentage}%)
