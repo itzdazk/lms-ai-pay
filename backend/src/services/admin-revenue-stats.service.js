@@ -399,6 +399,7 @@ class AdminRevenueStatsService {
                         id: true,
                         fullName: true,
                         email: true,
+                        avatarUrl: true,
                     },
                 },
             },
@@ -427,6 +428,7 @@ class AdminRevenueStatsService {
                     const instructorId = instructor.id
                     const instructorName = instructor.fullName || 'Unknown'
                     const email = instructor.email || ''
+                    const avatarUrl = instructor.avatarUrl || null
                     // Convert Decimal to number properly
                     const revenue = decimalToNumber(order.finalPrice)
                     
@@ -441,11 +443,16 @@ class AdminRevenueStatsService {
                         const existing = instructorRevenueMap.get(instructorId)
                         existing.revenue = (existing.revenue || 0) + (revenue || 0)
                         existing.orderCount += 1
+                        // Keep avatarUrl if not set
+                        if (!existing.avatarUrl && avatarUrl) {
+                            existing.avatarUrl = avatarUrl
+                        }
                     } else {
                         instructorRevenueMap.set(instructorId, {
                             instructorId,
                             instructorName,
                             email,
+                            avatarUrl,
                             courseCount: 0,
                             orderCount: 1,
                             revenue: revenue || 0,
@@ -489,12 +496,7 @@ class AdminRevenueStatsService {
         }
 
         // Calculate summary statistics BEFORE pagination
-        // These stats reflect ALL data matching the filters (date + search), not just the current page
-        
-        // Total revenue: sum from ALL valid orders (after date and search filters)
-        // This is calculated from ALL orders, not just the paginated results
-        // If search filter is applied, only includes orders from matching instructors
-        // If no search filter, includes all orders within the date range
+
         const totalRevenue = allOrders
             .filter((order) => validCourseIds.has(order.courseId))
             .reduce((sum, order) => {
@@ -523,6 +525,7 @@ class AdminRevenueStatsService {
                 instructorId: Number(inst.instructorId),
                 instructorName: inst.instructorName || 'Unknown',
                 email: inst.email || '',
+                avatarUrl: inst.avatarUrl || null,
                 courseCount: Number(inst.courseCount || 0),
                 orderCount: Number(inst.orderCount || 0),
                 totalRevenue: Number(revenueValue) || 0, // Convert to number and ensure it's not NaN
@@ -550,6 +553,223 @@ class AdminRevenueStatsService {
                 totalRevenue: Number(totalRevenue),
                 instructorCount: Number(instructorCount),
                 totalCoursesSold: Number(totalCoursesSold),
+            },
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total: Number(total),
+                totalPages: Number(Math.ceil(total / limit)),
+            },
+        }
+    }
+
+    /**
+     * Get courses revenue statistics with filters, search, sort, and pagination
+     * @param {number|null} year - Year to filter (null for all years)
+     * @param {number|null} month - Month to filter (null for all months)
+     * @param {number|null} instructorId - Instructor ID to filter (null for all instructors)
+     * @param {string} search - Search query for course title
+     * @param {string} sortBy - Sort by 'revenue' or 'orderCount'
+     * @param {number} page - Page number (1-based)
+     * @param {number} limit - Items per page
+     * @returns {Promise<object>} Courses revenue data with pagination
+     */
+    async getCoursesRevenue(
+        year = null,
+        month = null,
+        instructorId = null,
+        search = '',
+        sortBy = 'revenue',
+        page = 1,
+        limit = 10
+    ) {
+        // Build date filter
+        const dateFilter = {}
+        if (year) {
+            if (month) {
+                // Filter by specific month
+                const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0))
+                const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0))
+                dateFilter.paidAt = {
+                    gte: monthStart,
+                    lt: monthEnd,
+                }
+            } else {
+                // Filter by entire year
+                const yearStart = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0))
+                const yearEnd = new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0, 0))
+                dateFilter.paidAt = {
+                    gte: yearStart,
+                    lt: yearEnd,
+                }
+            }
+        }
+
+        // Get all paid orders with date filter
+        const whereClause = {
+            paymentStatus: PAYMENT_STATUS.PAID,
+            ...dateFilter,
+        }
+
+        // Get all orders (not grouped) to get accurate counts
+        const allOrders = await prisma.order.findMany({
+            where: whereClause,
+            select: {
+                courseId: true,
+                finalPrice: true,
+            },
+        })
+
+        // Get unique course IDs from orders
+        const courseIds = [...new Set(allOrders.map((order) => order.courseId))]
+
+        // Build course filter
+        const courseWhere = {
+            id: { in: courseIds },
+        }
+
+        // Add instructor filter if provided
+        if (instructorId) {
+            courseWhere.instructorId = instructorId
+        }
+
+        // Add search filter if provided
+        if (search && search.trim()) {
+            courseWhere.title = { contains: search.trim(), mode: 'insensitive' }
+        }
+
+        // Get course details with instructors
+        const courses = await prisma.course.findMany({
+            where: courseWhere,
+            select: {
+                id: true,
+                title: true,
+                thumbnailUrl: true,
+                price: true,
+                instructorId: true,
+                instructor: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                    },
+                },
+            },
+        })
+
+        // Build set of valid course IDs (after all filters)
+        const validCourseIds = new Set(courses.map((c) => c.id))
+
+        // Group orders by course (only for valid courses)
+        const courseRevenueMap = new Map()
+
+        // Process only orders from valid courses
+        allOrders.forEach((order) => {
+            // Only process if course is in valid courses (after all filters)
+            if (validCourseIds.has(order.courseId)) {
+                const revenue = decimalToNumber(order.finalPrice)
+                
+                // Debug logging if revenue is invalid
+                if (isNaN(revenue) || revenue === null || revenue === undefined) {
+                    logger.warn(
+                        `Invalid revenue for order: courseId=${order.courseId}, finalPrice=${order.finalPrice}, type=${typeof order.finalPrice}`
+                    )
+                }
+
+                if (courseRevenueMap.has(order.courseId)) {
+                    const existing = courseRevenueMap.get(order.courseId)
+                    existing.revenue = (existing.revenue || 0) + (revenue || 0)
+                    existing.orderCount += 1
+                } else {
+                    courseRevenueMap.set(order.courseId, {
+                        courseId: order.courseId,
+                        revenue: revenue || 0,
+                        orderCount: 1,
+                    })
+                }
+            }
+        })
+
+        // Combine course data with revenue data
+        let coursesWithRevenue = courses
+            .map((course) => {
+                const revenueData = courseRevenueMap.get(course.id) || {
+                    revenue: 0,
+                    orderCount: 0,
+                }
+
+                return {
+                    courseId: course.id,
+                    courseTitle: course.title || 'Unknown Course',
+                    thumbnailUrl: course.thumbnailUrl || null,
+                    instructorName: course.instructor?.fullName || 'Unknown',
+                    coursePrice: decimalToNumber(course.price),
+                    orderCount: revenueData.orderCount,
+                    totalRevenue: revenueData.revenue,
+                }
+            })
+            .filter((course) => course.orderCount > 0) // Only courses with orders
+
+        // Sort
+        if (sortBy === 'orderCount') {
+            coursesWithRevenue.sort((a, b) => b.orderCount - a.orderCount)
+        } else {
+            // Default: sort by revenue descending
+            coursesWithRevenue.sort((a, b) => b.totalRevenue - a.totalRevenue)
+        }
+
+        // Calculate summary statistics BEFORE pagination
+        // Total revenue: sum from ALL valid orders (after all filters)
+        const totalRevenue = allOrders
+            .filter((order) => validCourseIds.has(order.courseId))
+            .reduce((sum, order) => {
+                const revenue = decimalToNumber(order.finalPrice)
+                return sum + (revenue || 0)
+            }, 0)
+        
+        // Course count: number of unique courses (after all filters, before pagination)
+        const courseCount = coursesWithRevenue.length
+        
+        // Total orders: total number of orders from ALL valid courses (after all filters)
+        const totalOrders = allOrders
+            .filter((order) => validCourseIds.has(order.courseId))
+            .length
+
+        // Prepare chart data (all courses for pie chart, before pagination)
+        // Frontend will group remaining courses into "Khác"
+        const chartData = coursesWithRevenue.map((course) => ({
+            courseId: Number(course.courseId),
+            courseTitle: course.courseTitle,
+            thumbnailUrl: course.thumbnailUrl || null,
+            instructorName: course.instructorName,
+            coursePrice: Number(course.coursePrice) || 0,
+            orderCount: Number(course.orderCount || 0),
+            totalRevenue: Number(course.totalRevenue) || 0,
+        }))
+
+        // Pagination
+        const skip = (page - 1) * limit
+        const total = coursesWithRevenue.length
+        const paginatedCourses = coursesWithRevenue.slice(skip, skip + limit).map((course) => ({
+            courseId: Number(course.courseId),
+            courseTitle: course.courseTitle,
+            thumbnailUrl: course.thumbnailUrl || null,
+            instructorName: course.instructorName,
+            coursePrice: Number(course.coursePrice) || 0,
+            orderCount: Number(course.orderCount || 0),
+            totalRevenue: Number(course.totalRevenue) || 0,
+        }))
+
+        logger.info(
+            `Courses revenue retrieved: year=${year}, month=${month}, instructorId=${instructorId}, search=${search}, sortBy=${sortBy}, page=${page}, limit=${limit}`
+        )
+
+        return {
+            courses: paginatedCourses,
+            chartData: chartData, // All courses for pie chart
+            summary: {
+                totalRevenue: Number(totalRevenue),
+                courseCount: Number(courseCount),
+                totalOrders: Number(totalOrders),
             },
             pagination: {
                 page: Number(page),

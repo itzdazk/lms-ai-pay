@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { Button } from '../../../../components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '../../../../components/ui/avatar'
 import {
     DarkOutlineTable,
     DarkOutlineTableBody,
@@ -9,47 +8,48 @@ import {
     DarkOutlineTableRow,
     DarkOutlineTableCell,
 } from '../../../../components/ui/dark-outline-table'
-import { Users, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
 
-interface InstructorRevenue {
-    instructorId: number
+interface CourseRevenue {
+    courseId: number
+    courseTitle: string
+    thumbnailUrl: string | null
     instructorName: string
-    email: string
-    avatarUrl: string | null
-    courseCount: number
+    coursePrice: number
     orderCount: number
     totalRevenue: number
-    rank: number
 }
 
-interface InstructorsRevenueTableProps {
-    data: InstructorRevenue[]
+interface CoursesRevenueTableProps {
+    data: CourseRevenue[]
     loading: boolean
     currentPage: number
     totalPages: number
     totalItems: number
+    sortBy: 'revenue' | 'orderCount'
     onPageChange: (page: number) => void
     onSort: () => void
     formatPrice: (price: number) => string
 }
 
-export function InstructorsRevenueTable({
+export function CoursesRevenueTable({
     data,
     loading,
     currentPage,
     totalPages,
     totalItems,
+    sortBy,
     onPageChange,
     onSort,
     formatPrice,
-}: InstructorsRevenueTableProps) {
+}: CoursesRevenueTableProps) {
     if (loading) {
         return (
             <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
                 <CardHeader>
                     <CardTitle className='text-foreground flex items-center gap-2'>
-                        <Users className='h-5 w-5 text-blue-400' />
-                        Danh sách giảng viên
+                        <BookOpen className='h-5 w-5 text-blue-400' />
+                        Danh sách khóa học
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -69,8 +69,8 @@ export function InstructorsRevenueTable({
             <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
                 <CardHeader>
                     <CardTitle className='text-foreground flex items-center gap-2'>
-                        <Users className='h-5 w-5 text-blue-400' />
-                        Danh sách giảng viên
+                        <BookOpen className='h-5 w-5 text-blue-400' />
+                        Danh sách khóa học
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -86,8 +86,8 @@ export function InstructorsRevenueTable({
         <Card className='bg-[#1A1A1A] border-[#2D2D2D] dark:bg-[#1A1A1A] dark:border-[#2D2D2D]'>
             <CardHeader>
                 <CardTitle className='text-foreground flex items-center gap-2'>
-                    <Users className='h-5 w-5 text-blue-400' />
-                    Danh sách giảng viên
+                    <BookOpen className='h-5 w-5 text-blue-400' />
+                    Danh sách khóa học
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -96,19 +96,22 @@ export function InstructorsRevenueTable({
                         <DarkOutlineTableHeader>
                             <DarkOutlineTableRow>
                                 <DarkOutlineTableHead className='text-left'>
-                                    Chỉ số
+                                    Khóa học
                                 </DarkOutlineTableHead>
                                 <DarkOutlineTableHead className='text-left'>
                                     Tên giảng viên
                                 </DarkOutlineTableHead>
-                                <DarkOutlineTableHead className='text-left'>
-                                    Email
+                                <DarkOutlineTableHead className='text-right'>
+                                    Giá khóa học
                                 </DarkOutlineTableHead>
                                 <DarkOutlineTableHead className='text-center'>
-                                    Số lượng khóa học
-                                </DarkOutlineTableHead>
-                                <DarkOutlineTableHead className='text-center'>
-                                    Số lượng mua
+                                    <button
+                                        onClick={onSort}
+                                        className='flex items-center gap-1 hover:text-white transition-colors'
+                                    >
+                                        Số lượng mua
+                                        <ArrowUpDown className='h-3 w-3' />
+                                    </button>
                                 </DarkOutlineTableHead>
                                 <DarkOutlineTableHead className='text-right'>
                                     <button
@@ -122,52 +125,44 @@ export function InstructorsRevenueTable({
                             </DarkOutlineTableRow>
                         </DarkOutlineTableHeader>
                         <DarkOutlineTableBody>
-                            {data.map((instructor) => (
-                                <DarkOutlineTableRow key={instructor.instructorId}>
-                                    <DarkOutlineTableCell>
-                                        <span className='text-sm font-semibold text-blue-400'>
-                                            #{instructor.rank}
-                                        </span>
-                                    </DarkOutlineTableCell>
+                            {data.map((course) => (
+                                <DarkOutlineTableRow key={course.courseId}>
                                     <DarkOutlineTableCell>
                                         <div className='flex items-center gap-3'>
-                                            <Avatar className='h-10 w-10'>
-                                                <AvatarImage
-                                                    src={instructor.avatarUrl || undefined}
-                                                    alt={instructor.instructorName}
+                                            {course.thumbnailUrl ? (
+                                                <img
+                                                    src={course.thumbnailUrl}
+                                                    alt={course.courseTitle}
+                                                    className='h-16 w-28 object-cover rounded flex-shrink-0'
                                                 />
-                                                <AvatarFallback className='bg-blue-600 text-white'>
-                                                    {instructor.instructorName
-                                                        .split(' ')
-                                                        .map((n) => n[0])
-                                                        .join('')
-                                                        .toUpperCase()
-                                                        .slice(0, 2)}
-                                                </AvatarFallback>
-                                            </Avatar>
+                                            ) : (
+                                                <div className='h-16 w-28 bg-[#2D2D2D] rounded flex items-center justify-center flex-shrink-0'>
+                                                    <BookOpen className='h-6 w-6 text-gray-400' />
+                                                </div>
+                                            )}
                                             <span className='text-sm text-foreground font-medium'>
-                                                {instructor.instructorName}
+                                                {course.courseTitle}
                                             </span>
                                         </div>
                                     </DarkOutlineTableCell>
                                     <DarkOutlineTableCell>
                                         <span className='text-sm text-gray-300'>
-                                            {instructor.email}
+                                            {course.instructorName}
+                                        </span>
+                                    </DarkOutlineTableCell>
+                                    <DarkOutlineTableCell className='text-right'>
+                                        <span className='text-sm text-gray-300'>
+                                            {formatPrice(course.coursePrice)}
                                         </span>
                                     </DarkOutlineTableCell>
                                     <DarkOutlineTableCell className='text-center'>
                                         <span className='text-sm text-gray-300'>
-                                            {instructor.courseCount}
-                                        </span>
-                                    </DarkOutlineTableCell>
-                                    <DarkOutlineTableCell className='text-center'>
-                                        <span className='text-sm text-gray-300'>
-                                            {instructor.orderCount.toLocaleString('vi-VN')}
+                                            {course.orderCount.toLocaleString('vi-VN')}
                                         </span>
                                     </DarkOutlineTableCell>
                                     <DarkOutlineTableCell className='text-right'>
                                         <span className='text-sm font-semibold text-green-400'>
-                                            {formatPrice(instructor.totalRevenue)}
+                                            {formatPrice(course.totalRevenue)}
                                         </span>
                                     </DarkOutlineTableCell>
                                 </DarkOutlineTableRow>
@@ -180,7 +175,7 @@ export function InstructorsRevenueTable({
                 {totalPages > 1 && (
                     <div className='flex items-center justify-between mt-4 pt-4 border-t border-[#2D2D2D]'>
                         <div className='text-sm text-gray-400'>
-                            Hiển thị {data.length} / {totalItems} giảng viên
+                            Hiển thị {data.length} / {totalItems} khóa học
                         </div>
                         <div className='flex items-center gap-2'>
                             <Button

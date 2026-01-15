@@ -1,4 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
+import {
+    DarkOutlineTable,
+    DarkOutlineTableBody,
+    DarkOutlineTableHead,
+    DarkOutlineTableHeader,
+    DarkOutlineTableRow,
+    DarkOutlineTableCell,
+} from '../../../components/ui/dark-outline-table'
 import { BookOpen } from 'lucide-react'
 
 interface TopCoursesTableProps {
@@ -32,27 +40,24 @@ export function TopCoursesTable({
                     </div>
                 ) : (
                     <div className='overflow-x-auto'>
-                        <table className='w-full'>
-                            <thead>
-                                <tr className='border-b border-[#2D2D2D]'>
-                                    <th className='text-left py-3 px-4 text-xs font-semibold text-gray-400'>
+                        <DarkOutlineTable>
+                            <DarkOutlineTableHeader>
+                                <DarkOutlineTableRow>
+                                    <DarkOutlineTableHead className='text-left'>
                                         Khóa học
-                                    </th>
-                                    <th className='text-left py-3 px-4 text-xs font-semibold text-gray-400'>
+                                    </DarkOutlineTableHead>
+                                    <DarkOutlineTableHead className='text-left'>
                                         Giảng viên
-                                    </th>
-                                    <th className='text-right py-3 px-4 text-xs font-semibold text-gray-400'>
+                                    </DarkOutlineTableHead>
+                                    <DarkOutlineTableHead className='text-right'>
                                         Doanh thu
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                                    </DarkOutlineTableHead>
+                                </DarkOutlineTableRow>
+                            </DarkOutlineTableHeader>
+                            <DarkOutlineTableBody>
                                 {top5.map((course, index) => (
-                                    <tr
-                                        key={course.courseId}
-                                        className='border-b border-[#2D2D2D] hover:bg-[#1F1F1F] transition-colors'
-                                    >
-                                        <td className='py-3 px-4'>
+                                    <DarkOutlineTableRow key={course.courseId}>
+                                        <DarkOutlineTableCell>
                                             <div className='flex items-center gap-2'>
                                                 <span className='text-xs text-gray-400 w-6'>
                                                     #{index + 1}
@@ -61,21 +66,21 @@ export function TopCoursesTable({
                                                     {course.courseTitle}
                                                 </span>
                                             </div>
-                                        </td>
-                                        <td className='py-3 px-4'>
+                                        </DarkOutlineTableCell>
+                                        <DarkOutlineTableCell>
                                             <span className='text-sm text-gray-300 truncate max-w-[150px] block'>
                                                 {course.instructorName}
                                             </span>
-                                        </td>
-                                        <td className='py-3 px-4 text-right'>
+                                        </DarkOutlineTableCell>
+                                        <DarkOutlineTableCell className='text-right'>
                                             <span className='text-sm font-semibold text-green-400'>
                                                 {formatPrice(course.revenue)}
                                             </span>
-                                        </td>
-                                    </tr>
+                                        </DarkOutlineTableCell>
+                                    </DarkOutlineTableRow>
                                 ))}
-                            </tbody>
-                        </table>
+                            </DarkOutlineTableBody>
+                        </DarkOutlineTable>
                     </div>
                 )}
             </CardContent>

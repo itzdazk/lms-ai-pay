@@ -26,4 +26,12 @@ router.get('/stats', adminRevenueStatsController.getRevenueStats)
  */
 router.get('/instructors', adminRevenueStatsController.getInstructorsRevenue)
 
+/**
+ * @route   GET /api/v1/admin/revenue/courses
+ * @desc    Get courses revenue statistics with filters, search, sort, and pagination
+ * @access  Private (Admin)
+ * @query   year (optional), month (optional), instructorId (optional), search (optional), sortBy (optional), page (optional), limit (optional)
+ */
+router.get('/courses', adminRevenueStatsController.getCoursesRevenue)
+
 export default router

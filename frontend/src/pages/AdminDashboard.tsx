@@ -41,6 +41,7 @@ import { OrdersPage } from './admin/OrdersPage'
 import { AIMonitoringPage } from './admin/AIMonitoringPage'
 import { RevenueStatsPage } from './admin/RevenueStatsPage'
 import { InstructorsRevenuePage } from './admin/InstructorsRevenuePage'
+import { CoursesRevenuePage } from './admin/CoursesRevenuePage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -86,6 +87,7 @@ type AdminSection =
     | 'ai-monitoring'
     | 'revenue-stats'
     | 'instructors-revenue'
+    | 'courses-revenue'
 
 interface MenuItem {
     id: AdminSection
@@ -178,6 +180,12 @@ const menuGroups: MenuGroup[] = [
                 label: 'Giảng viên',
                 icon: Users,
                 color: 'text-blue-400',
+            },
+            {
+                id: 'courses-revenue',
+                label: 'Khóa học',
+                icon: BookOpen,
+                color: 'text-purple-400',
             },
         ],
     },
@@ -305,6 +313,12 @@ export function AdminDashboard() {
                 return (
                     <div className='h-full'>
                         <InstructorsRevenuePage />
+                    </div>
+                )
+            case 'courses-revenue':
+                return (
+                    <div className='h-full'>
+                        <CoursesRevenuePage />
                     </div>
                 )
             default:
