@@ -39,6 +39,7 @@ import { CategoriesPage } from './admin/CategoriesPage'
 import { TagsPage } from './admin/TagsPage'
 import { OrdersPage } from './admin/OrdersPage'
 import { AIMonitoringPage } from './admin/AIMonitoringPage'
+import { RevenueStatsPage } from './admin/RevenueStatsPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -82,6 +83,7 @@ type AdminSection =
     | 'settings'
     | 'tags'
     | 'ai-monitoring'
+    | 'revenue-stats'
 
 interface MenuItem {
     id: AdminSection
@@ -157,6 +159,12 @@ const menuGroups: MenuGroup[] = [
                 label: 'Hoàn tiền',
                 icon: RotateCcw,
                 color: 'text-yellow-400',
+            },
+            {
+                id: 'revenue-stats',
+                label: 'Thống kê doanh thu',
+                icon: ReceiptText,
+                color: 'text-green-400',
             },
         ],
     },
@@ -274,6 +282,12 @@ export function AdminDashboard() {
                 return <SettingsView />
             case 'ai-monitoring':
                 return <AIMonitoringPage />
+            case 'revenue-stats':
+                return (
+                    <div className='h-full'>
+                        <RevenueStatsPage />
+                    </div>
+                )
             default:
                 return <DashboardOverview />
         }
