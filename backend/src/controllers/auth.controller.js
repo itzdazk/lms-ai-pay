@@ -80,6 +80,26 @@ class AuthController {
     })
 
     /**
+     * @route   POST /api/v1/auth/github
+     * @desc    Login with GitHub
+     * @access  Public
+     */
+    githubLogin = asyncHandler(async (req, res) => {
+        const { idToken } = req.body
+        const result = await authService.loginWithGithub(idToken, req)
+
+        CookieUtil.setAuthTokens(res, result.tokens)
+
+        return ApiResponse.success(
+            res,
+            {
+                user: result.user,
+            },
+            'Đăng nhập GitHub thành công'
+        )
+    })
+
+    /**
      * @route   POST /api/v1/auth/logout
      * @desc    Logout user (current session)
      * @access  Private

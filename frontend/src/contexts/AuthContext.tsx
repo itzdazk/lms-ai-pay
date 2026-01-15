@@ -7,8 +7,9 @@ import {
 } from 'react'
 import { authApi } from '../lib/api/auth'
 import type { User } from '../lib/api/types'
-import { auth, googleProvider } from '../lib/firebase'
-import { signInWithPopup } from 'firebase/auth'
+import { auth, googleProvider, githubProvider } from '../lib/firebase'
+import { signInWithPopup, fetchSignInMethodsForEmail } from 'firebase/auth'
+import { toast } from 'sonner'
 
 interface AuthContextType {
     user: User | null
@@ -16,6 +17,7 @@ interface AuthContextType {
     isAuthenticated: boolean
     login: (identifier: string, password: string) => Promise<void>
     loginWithGoogle: () => Promise<void>
+    loginWithGithub: () => Promise<void>
     register: (data: RegisterData) => Promise<{ user: User }>
     logout: () => void
     refreshUser: () => Promise<void>
@@ -75,11 +77,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const idToken = await result.user.getIdToken()
             const { user } = await authApi.loginWithGoogle(idToken)
             setUser(user)
-        } catch (error) {
-            console.error('Google login error:', error)
+        } catch (error: any) {
+            if (error.code === 'auth/popup-closed-by-user') {
+                // User đóng popup, không cần hiển thị lỗi
+                return
+            }
+
+            if (error.code === 'auth/cancelled-popup-request') {
+                // Multiple popup requests, ignore
+                return
+            }
+
             throw error
         }
     }
+
+    const loginWithGithub = async () => {
+        try {
+            const result = await signInWithPopup(auth, githubProvider)
+            const idToken = await result.user.getIdToken()
+            const { user } = await authApi.loginWithGithub(idToken)
+            setUser(user)
+        } catch (error: any) {
+            console.error('GitHub login error:', error)
+
+            // Handle strict email uniqueness
+            if (
+                error.code === 'auth/account-exists-with-different-credential'
+            ) {
+                const email = error.customData?.email
+                if (email) {
+                    const methods = await fetchSignInMethodsForEmail(
+                        auth,
+                        email
+                    )
+                    const providerId = methods[0]
+                    let providerName = 'Google'
+                    if (providerId === 'google.com') providerName = 'Google'
+                    if (providerId === 'github.com') providerName = 'GitHub'
+
+                    toast.error(
+                        `Email "${email}" đã được đăng ký bằng ${providerName}.`,
+                        {
+                            description: `Vui lòng đăng nhập bằng ${providerName}.`,
+                            duration: 8000,
+                        }
+                    )
+                    // Throw error to prevent caller from thinking login succeeded
+                    throw error
+                }
+            }
+            throw error
+        }
+    }
+
+    // const loginWithGithub = async () => {
+    //     try {
+    //         const result = await signInWithPopup(auth, githubProvider)
+    //         const idToken = await result.user.getIdToken()
+
+    //         const { user } = await authApi.loginWithGithub(idToken)
+    //         setUser(user)
+    //     } catch (error: any) {
+    //         if (error.code === 'auth/popup-closed-by-user') {
+    //             return
+    //         }
+
+    //         if (error.code === 'auth/cancelled-popup-request') {
+    //             return
+    //         }
+
+    //         throw error
+    //     }
+    // }
 
     const register = async (data: RegisterData) => {
         const { user } = await authApi.register(data)
@@ -130,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: !!user,
                 login,
                 loginWithGoogle,
+                loginWithGithub,
                 register,
                 logout,
                 refreshUser,

@@ -26,7 +26,7 @@ import { BookOpen, Loader2, Lock, Eye, EyeOff, Moon, Sun, AlertCircle } from 'lu
 export function RegisterPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { register, loginWithGoogle, isAuthenticated, user } = useAuth()
+    const { register, loginWithGoogle, loginWithGithub, isAuthenticated, user } = useAuth()
     const { theme, toggleTheme } = useTheme()
     const [formData, setFormData] = useState({
         userName: '',
@@ -221,6 +221,20 @@ export function RegisterPage() {
             navigate('/dashboard', { replace: true })
         } catch (error) {
             toast.error('Đăng nhập Google thất bại')
+            console.error(error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleGithubLogin = async () => {
+        try {
+            setIsLoading(true)
+            await loginWithGithub()
+            toast.success('Đăng nhập GitHub thành công2!')
+            navigate('/dashboard', { replace: true })
+        } catch (error) {
+            toast.error('Đăng nhập GitHub thất bại')
             console.error(error)
         } finally {
             setIsLoading(false)
@@ -588,7 +602,7 @@ export function RegisterPage() {
                             <DarkOutlineButton
                                 type='button'
                                 disabled={isLoading}
-                                onClick={handleGoogleLogin}
+                                onClick={handleGithubLogin}
                             >
                                 <svg
                                     className='mr-2 h-4 w-4'

@@ -60,6 +60,18 @@ router.post(
 )
 
 /**
+ * @route   POST /api/v1/auth/github
+ * @desc    Login with GitHub
+ * @access  Public
+ */
+router.post(
+    '/github',
+    authLimiter,
+    googleLoginValidator, // Reuse same validator
+    authController.githubLogin
+)
+
+/**
  * @route   POST /api/v1/auth/logout
  * @desc    Logout user
  * @access  Private

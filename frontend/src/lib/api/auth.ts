@@ -48,6 +48,26 @@ export const authApi = {
         return { user }
     },
 
+    // GitHub Login
+    async loginWithGithub(idToken: string): Promise<AuthResponse> {
+        const response = await apiClient.post<ApiResponse<{ user: User }>>(
+            '/auth/github',
+            { idToken }
+        )
+
+        // Validate response structure
+        if (!response.data?.data?.user) {
+            throw new Error('Invalid response from server')
+        }
+
+        const { user } = response.data.data
+
+        // Store user in localStorage (tokens are in httpOnly cookies)
+        localStorage.setItem('user', JSON.stringify(user))
+
+        return { user }
+    },
+
     // Register
     async register(data: RegisterRequest): Promise<AuthResponse> {
         const response = await apiClient.post<ApiResponse<{ user: User }>>(

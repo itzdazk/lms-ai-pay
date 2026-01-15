@@ -29,7 +29,8 @@ import { toast } from 'sonner'
 export function LoginPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { login, loginWithGoogle, isAuthenticated, user } = useAuth()
+    const { login, loginWithGoogle, loginWithGithub, isAuthenticated, user } =
+        useAuth()
     const { theme, toggleTheme } = useTheme()
     const [identifier, setIdentifier] = useState('')
     const [password, setPassword] = useState('')
@@ -170,8 +171,32 @@ export function LoginPage() {
             await loginWithGoogle()
             toast.success('Đăng nhập Google thành công!')
             navigate('/dashboard', { replace: true })
-        } catch (error) {
-            toast.error('Đăng nhập Google thất bại')
+        } catch (error: any) {
+            // Only show generic error if it's NOT the account-link error (already shown in Context)
+            if (
+                error?.code !== 'auth/account-exists-with-different-credential'
+            ) {
+                toast.error('Đăng nhập Google thất bại')
+            }
+            console.error(error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleGithubLogin = async () => {
+        try {
+            setLoading(true)
+            await loginWithGithub()
+            toast.success('Đăng nhập GitHub thành công1!')
+            navigate('/dashboard', { replace: true })
+        } catch (error: any) {
+            // Only show generic error if it's NOT the account-link error (already shown in Context)
+            if (
+                error?.code !== 'auth/account-exists-with-different-credential'
+            ) {
+                toast.error('Đăng nhập GitHub thất bại')
+            }
             console.error(error)
         } finally {
             setLoading(false)
@@ -416,6 +441,7 @@ export function LoginPage() {
                             <DarkOutlineButton
                                 type='button'
                                 disabled={loading}
+                                onClick={handleGithubLogin}
                             >
                                 <svg
                                     className='mr-2 h-4 w-4'
