@@ -231,7 +231,7 @@ export function RegisterPage() {
         try {
             setIsLoading(true)
             await loginWithGithub()
-            toast.success('Đăng nhập GitHub thành công2!')
+            toast.success('Đăng nhập GitHub thành công!')
             navigate('/dashboard', { replace: true })
         } catch (error) {
             toast.error('Đăng nhập GitHub thất bại')

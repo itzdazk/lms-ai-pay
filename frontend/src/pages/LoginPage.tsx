@@ -188,7 +188,7 @@ export function LoginPage() {
         try {
             setLoading(true)
             await loginWithGithub()
-            toast.success('Đăng nhập GitHub thành công1!')
+            toast.success('Đăng nhập GitHub thành công!')
             navigate('/dashboard', { replace: true })
         } catch (error: any) {
             // Only show generic error if it's NOT the account-link error (already shown in Context)
