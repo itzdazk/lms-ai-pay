@@ -8,7 +8,9 @@ import {
     verifyEmailValidator,
     forgotPasswordValidator,
     resetPasswordValidator,
+    googleLoginValidator,
 } from '../validators/auth.validator.js'
+
 import rateLimit from 'express-rate-limit'
 import config from '../config/app.config.js'
 import { RATE_LIMITS } from '../config/constants.js'
@@ -23,8 +25,7 @@ const authLimiter =
         : rateLimit({
               windowMs: RATE_LIMITS.AUTH.windowMs,
               max: RATE_LIMITS.AUTH.max,
-              message:
-                  'Too many authentication attempts, please try again later',
+              message: 'Quá nhiều lần thử xác thực, vui lòng thử lại sau.',
           })
 
 /**
@@ -45,6 +46,30 @@ router.post(
  * @access  Public
  */
 router.post('/login', authLimiter, loginValidator, authController.login)
+
+/**
+ * @route   POST /api/v1/auth/google
+ * @desc    Login with Google
+ * @access  Public
+ */
+router.post(
+    '/google',
+    authLimiter,
+    googleLoginValidator,
+    authController.googleLogin
+)
+
+/**
+ * @route   POST /api/v1/auth/github
+ * @desc    Login with GitHub
+ * @access  Public
+ */
+router.post(
+    '/github',
+    authLimiter,
+    googleLoginValidator, // Reuse same validator
+    authController.githubLogin
+)
 
 /**
  * @route   POST /api/v1/auth/logout
@@ -120,6 +145,10 @@ router.get('/sessions', authenticate, authController.getSessions)
  * @desc    Logout a specific session
  * @access  Private
  */
-router.delete('/sessions/:sessionId', authenticate, authController.logoutSession)
+router.delete(
+    '/sessions/:sessionId',
+    authenticate,
+    authController.logoutSession
+)
 
 export default router

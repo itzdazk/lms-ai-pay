@@ -8,23 +8,23 @@ const getCoursesValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Số trang phải là số nguyên dương'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
 
     query('search')
         .optional()
         .trim()
         .isLength({ min: 1, max: 200 })
-        .withMessage('Search query must be between 1 and 200 characters'),
+        .withMessage('Từ khóa tìm kiếm phải từ 1 đến 200 ký tự'),
 
     query('categoryId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Category ID must be a positive integer'),
+        .withMessage('ID danh mục phải là số nguyên dương'),
 
     query('level')
         .optional()
@@ -33,51 +33,57 @@ const getCoursesValidator = [
             COURSE_LEVEL.INTERMEDIATE,
             COURSE_LEVEL.ADVANCED,
         ])
-        .withMessage('Invalid course level'),
+        .withMessage('Trình độ khóa học không hợp lệ'),
 
     query('minPrice')
         .optional()
         .isFloat({ min: 0 })
-        .withMessage('Minimum price must be a non-negative number'),
+        .withMessage('Giá tối thiểu phải là số không âm'),
 
     query('maxPrice')
         .optional()
         .isFloat({ min: 0 })
-        .withMessage('Maximum price must be a non-negative number'),
+        .withMessage('Giá tối đa phải là số không âm'),
 
     query('isFeatured')
         .optional()
         .isBoolean()
-        .withMessage('isFeatured must be a boolean'),
+        .withMessage('isFeatured phải là giá trị boolean'),
 
     query('instructorId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Instructor ID must be a positive integer'),
+        .withMessage('ID giảng viên phải là số nguyên dương'),
 
     query('sort')
         .optional()
         .isIn(['newest', 'popular', 'rating', 'price_asc', 'price_desc'])
-        .withMessage('Invalid sort option'),
+        .withMessage('Tùy chọn sắp xếp không hợp lệ'),
 
     query('tagId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Tag ID must be a valid integer'),
+        .withMessage('ID thẻ phải là số nguyên hợp lệ'),
 
     query('tagIds')
         .optional()
         .custom((value) => {
             if (Array.isArray(value)) {
-                return value.every((id) => !isNaN(parseInt(id)) && parseInt(id) > 0)
+                return value.every(
+                    (id) => !isNaN(parseInt(id)) && parseInt(id) > 0
+                )
             }
             if (typeof value === 'string') {
                 const ids = value.split(',').map((id) => id.trim())
-                return ids.every((id) => !isNaN(parseInt(id)) && parseInt(id) > 0)
+                return ids.every(
+                    (id) => !isNaN(parseInt(id)) && parseInt(id) > 0
+                )
             }
             return false
         })
-        .withMessage('Tag IDs must be valid integers (comma-separated or array)'),
+        .withMessage(
+            'ID thẻ phải là số nguyên hợp lệ (phân cách bằng dấu phẩy hoặc mảng)'
+        ),
 
     validate,
 ]
@@ -87,7 +93,7 @@ const getLimitValidator = [
     query('limit')
         .optional()
         .isInt({ min: 1, max: 50 })
-        .withMessage('Limit must be between 1 and 50'),
+        .withMessage('Giới hạn phải từ 1 đến 50'),
 
     validate,
 ]
@@ -96,7 +102,7 @@ const getLimitValidator = [
 const getCourseByIdValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     validate,
 ]
@@ -106,11 +112,11 @@ const getCourseBySlugValidator = [
     param('slug')
         .trim()
         .notEmpty()
-        .withMessage('Course slug is required')
+        .withMessage('Đường dẫn khóa học không được để trống')
         .isLength({ min: 1, max: 200 })
-        .withMessage('Slug must be between 1 and 200 characters')
+        .withMessage('Đường dẫn phải từ 1 đến 200 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-        .withMessage('Invalid slug format'),
+        .withMessage('Định dạng đường dẫn không hợp lệ'),
 
     validate,
 ]

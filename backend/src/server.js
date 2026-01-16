@@ -23,10 +23,12 @@ const startServer = async () => {
         // Clear stuck transcripts from previous server crash
         const stuckTranscripts = await prisma.lesson.updateMany({
             where: { transcriptStatus: TRANSCRIPT_STATUS.PROCESSING },
-            data: { transcriptStatus: TRANSCRIPT_STATUS.PENDING }
+            data: { transcriptStatus: TRANSCRIPT_STATUS.PENDING },
         })
         if (stuckTranscripts.modifiedCount > 0) {
-            logger.info(`Cleared ${stuckTranscripts.modifiedCount} stuck transcripts (from previous crash)`)
+            logger.info(
+                `Cleared ${stuckTranscripts.modifiedCount} stuck transcripts (from previous crash)`
+            )
         }
 
         // Start cron jobs (VNPay expiration handler)

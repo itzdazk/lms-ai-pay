@@ -23,7 +23,7 @@ class AIQuizGenerationService {
             difficulty = 'medium', // 'easy', 'medium', 'hard'
             questionTypes = ['multiple_choice'], // 'multiple_choice', 'true_false', 'short_answer'
             includeExplanation = true,
-            useCache = true // Allow disabling cache for fresh generation
+            useCache = true, // Allow disabling cache for fresh generation
         } = options
 
         // Check cache first (if enabled)
@@ -31,7 +31,6 @@ class AIQuizGenerationService {
             const cacheKey = `quiz:lesson:${lessonId}:${numQuestions}:${difficulty}:${includeExplanation}`
             const cached = this.questionCache.get(cacheKey)
             if (cached && Date.now() - cached.timestamp < this.cacheMaxAge) {
-                logger.info(`Using cached questions for lesson ${lessonId}`)
                 return cached.questions
             }
         }
@@ -41,28 +40,30 @@ class AIQuizGenerationService {
         const existingQuiz = await prisma.quiz.findFirst({
             where: {
                 lessonId,
-                isPublished: true
+                isPublished: true,
             },
             orderBy: {
-                updatedAt: 'desc' // Lấy quiz mới nhất
-            }
+                updatedAt: 'desc', // Lấy quiz mới nhất
+            },
         })
 
         if (existingQuiz && existingQuiz.questions) {
             try {
                 // Parse questions from JSONB
-                const questions = Array.isArray(existingQuiz.questions) 
-                    ? existingQuiz.questions 
-                    : typeof existingQuiz.questions === 'object' && existingQuiz.questions.questions
-                        ? existingQuiz.questions.questions
-                        : []
-                
+                const questions = Array.isArray(existingQuiz.questions)
+                    ? existingQuiz.questions
+                    : typeof existingQuiz.questions === 'object' &&
+                        existingQuiz.questions.questions
+                      ? existingQuiz.questions.questions
+                      : []
+
                 if (questions.length > 0) {
                     // Format questions từ DB (đã được review, chất lượng tốt)
                     const formattedQuestions = questions
-                        .filter(q => {
+                        .filter((q) => {
                             // Filter by explanation requirement
-                            if (includeExplanation && !q.explanation) return false
+                            if (includeExplanation && !q.explanation)
+                                return false
                             return true
                         })
                         .slice(0, numQuestions)
@@ -71,36 +72,32 @@ class AIQuizGenerationService {
                             question: q.question || q.text || '',
                             type: q.type || 'multiple_choice',
                             options: q.options || {},
-                            correctAnswer: q.correctAnswer || q.correct_answer || 'A',
+                            correctAnswer:
+                                q.correctAnswer || q.correct_answer || 'A',
                             explanation: q.explanation || '',
-                            source: 'database' // Đánh dấu là từ DB (đã được review)
+                            source: 'database', // Đánh dấu là từ DB (đã được review)
                         }))
-                    
+
                     if (formattedQuestions.length > 0) {
-                        logger.info(`✅ Using reviewed quiz from database for lesson ${lessonId} (${formattedQuestions.length} questions)`)
-                        
                         // Cache the result
                         if (useCache) {
                             const cacheKey = `quiz:lesson:${lessonId}:${numQuestions}:${difficulty}:${includeExplanation}`
                             this.questionCache.set(cacheKey, {
                                 questions: formattedQuestions,
-                                timestamp: Date.now()
+                                timestamp: Date.now(),
                             })
                         }
-                        
+
                         return formattedQuestions
                     }
                 }
             } catch (error) {
-                logger.warn(`Failed to parse existing quiz for lesson ${lessonId}:`, error)
                 // Fallback to generation
             }
         }
-        
+
         // Nếu không có quiz trong DB → Generate mới (preview/suggest only)
         // Instructor sẽ review và chọn lưu sau
-        logger.info(`📝 No quiz found in database for lesson ${lessonId}, generating new questions...`)
-
         // 1. Get lesson content (nếu không có quiz trong DB, generate mới)
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
@@ -109,14 +106,14 @@ class AIQuizGenerationService {
                     select: {
                         id: true,
                         title: true,
-                        description: true
-                    }
-                }
-            }
+                        description: true,
+                    },
+                },
+            },
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Bài học không tồn tại')
         }
 
         // 2. Extract content
@@ -129,7 +126,8 @@ class AIQuizGenerationService {
         if (content.length > maxContentLength) {
             const headLength = Math.floor(maxContentLength * 0.7) // 70% phần đầu
             const tailLength = maxContentLength - headLength - 50 // Phần còn lại cho phần cuối
-            truncatedContent = content.substring(0, headLength) + 
+            truncatedContent =
+                content.substring(0, headLength) +
                 '\n\n[... Nội dung đã được rút gọn ...]\n\n' +
                 content.substring(content.length - tailLength)
         }
@@ -139,7 +137,7 @@ class AIQuizGenerationService {
             numQuestions,
             difficulty,
             questionTypes,
-            includeExplanation
+            includeExplanation,
         })
 
         // 4. Generate questions using Ollama with retry mechanism
@@ -153,10 +151,13 @@ class AIQuizGenerationService {
         const questions = this._parseAIResponse(generatedText)
 
         // 6. Validate and format questions
-        const validatedQuestions = this._validateAndFormatQuestions(questions, numQuestions)
-        
+        const validatedQuestions = this._validateAndFormatQuestions(
+            questions,
+            numQuestions
+        )
+
         // Đánh dấu là generated (chưa được review)
-        validatedQuestions.forEach(q => {
+        validatedQuestions.forEach((q) => {
             q.source = 'ai_generated' // Đánh dấu là AI generated (cần review)
         })
 
@@ -165,14 +166,12 @@ class AIQuizGenerationService {
             const cacheKey = `quiz:lesson:${lessonId}:${numQuestions}:${difficulty}:${includeExplanation}`
             this.questionCache.set(cacheKey, {
                 questions: validatedQuestions,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             })
-            
+
             // Clean old cache entries
             this._cleanCache()
         }
-
-        logger.info(`✨ Generated ${validatedQuestions.length} new questions for lesson ${lessonId} (preview only - instructor should review before saving)`)
         return validatedQuestions
     }
 
@@ -190,13 +189,15 @@ class AIQuizGenerationService {
             try {
                 // Lấy TOÀN BỘ transcript (không giới hạn số segments)
                 // Vì nội dung chính nằm trong video, cần lấy đầy đủ để có quiz chất lượng
-                const transcriptText = await knowledgeBaseService.getFullTranscriptText(lesson.transcriptUrl)
+                const transcriptText =
+                    await knowledgeBaseService.getFullTranscriptText(
+                        lesson.transcriptUrl
+                    )
                 if (transcriptText && transcriptText.trim().length > 0) {
                     content += `Nội dung bài học (từ video transcript):\n${transcriptText}\n\n`
                     hasTranscript = true
                 }
             } catch (error) {
-                logger.warn('Failed to load transcript:', error)
                 // Fallback: Nếu không có transcript, dùng description/content
             }
         }
@@ -227,7 +228,8 @@ class AIQuizGenerationService {
      * Build prompt for quiz generation
      */
     _buildQuizGenerationPrompt(content, options) {
-        const { numQuestions, difficulty, questionTypes, includeExplanation } = options
+        const { numQuestions, difficulty, questionTypes, includeExplanation } =
+            options
 
         return `Dựa trên nội dung bài học sau đây, hãy tạo ${numQuestions} câu hỏi quiz dạng Multiple Choice.
 
@@ -297,20 +299,27 @@ Lưu ý:
     /**
      * Generate with retry mechanism (exponential backoff)
      */
-    async _generateWithRetry(prompt, context = [], systemPrompt = null, maxRetries = 3) {
+    async _generateWithRetry(
+        prompt,
+        context = [],
+        systemPrompt = null,
+        maxRetries = 3
+    ) {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
-                return await ollamaService.generateResponse(prompt, context, systemPrompt)
+                return await ollamaService.generateResponse(
+                    prompt,
+                    context,
+                    systemPrompt
+                )
             } catch (error) {
                 if (attempt === maxRetries - 1) {
-                    logger.error(`Failed to generate after ${maxRetries} attempts:`, error)
                     throw error
                 }
-                
+
                 // Exponential backoff: 1s, 2s, 4s
                 const delay = Math.pow(2, attempt) * 1000
-                logger.warn(`Generation attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
-                await new Promise(resolve => setTimeout(resolve, delay))
+                await new Promise((resolve) => setTimeout(resolve, delay))
             }
         }
     }
@@ -322,13 +331,13 @@ Lưu ý:
         try {
             // Remove markdown code blocks if present
             let cleanedResponse = aiResponse.trim()
-            
+
             // Remove ```json or ``` markers
             cleanedResponse = cleanedResponse.replace(/^```json\s*/i, '')
             cleanedResponse = cleanedResponse.replace(/^```\s*/i, '')
             cleanedResponse = cleanedResponse.replace(/\s*```$/i, '')
             cleanedResponse = cleanedResponse.trim()
-            
+
             // Try to extract JSON from response
             const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/)
             if (jsonMatch) {
@@ -336,14 +345,14 @@ Lưu ý:
                 const parsed = JSON.parse(jsonStr)
                 return parsed.questions || []
             }
-            
+
             // Fallback: Try to parse entire response as JSON
             const parsed = JSON.parse(cleanedResponse)
             return parsed.questions || []
         } catch (error) {
-            logger.error('Failed to parse AI response:', error)
-            logger.error('AI Response (first 500 chars):', aiResponse.substring(0, 500))
-            throw new Error('Failed to parse AI-generated questions. Please try again.')
+            throw new Error(
+                'Không thể phân tích các câu hỏi do AI tạo ra. Vui lòng thử lại.'
+            )
         }
     }
 
@@ -352,7 +361,7 @@ Lưu ý:
      */
     _validateAndFormatQuestions(questions, expectedCount) {
         if (!Array.isArray(questions)) {
-            throw new Error('Questions must be an array')
+            throw new Error('Câu hỏi phải là một mảng (array).')
         }
 
         return questions
@@ -360,20 +369,18 @@ Lưu ý:
             .map((q, index) => {
                 // Validate required fields
                 if (!q.question || !q.options || !q.correctAnswer) {
-                    logger.warn(`Question ${index + 1} missing required fields`)
                     return null
                 }
 
                 // Validate correct answer exists in options
                 if (!q.options[q.correctAnswer]) {
-                    logger.warn(`Question ${index + 1} has invalid correct answer`)
                     return null
                 }
 
                 // Ensure 4 options
                 const options = ['A', 'B', 'C', 'D']
                 const formattedOptions = {}
-                options.forEach(opt => {
+                options.forEach((opt) => {
                     formattedOptions[opt] = q.options[opt] || `Option ${opt}`
                 })
 
@@ -382,10 +389,10 @@ Lưu ý:
                     question: q.question.trim(),
                     options: formattedOptions,
                     correctAnswer: q.correctAnswer.toUpperCase(),
-                    explanation: q.explanation || ''
+                    explanation: q.explanation || '',
                 }
             })
-            .filter(q => q !== null) // Remove invalid questions
+            .filter((q) => q !== null) // Remove invalid questions
     }
 
     /**
@@ -396,7 +403,7 @@ Lưu ý:
             numQuestions = 10,
             difficulty = 'medium',
             includeExplanation = true,
-            useCache = true
+            useCache = true,
         } = options
 
         // Check cache first (if enabled)
@@ -404,7 +411,6 @@ Lưu ý:
             const cacheKey = `quiz:course:${courseId}:${numQuestions}:${difficulty}:${includeExplanation}`
             const cached = this.questionCache.get(cacheKey)
             if (cached && Date.now() - cached.timestamp < this.cacheMaxAge) {
-                logger.info(`Using cached questions for course ${courseId}`)
                 return cached.questions
             }
         }
@@ -413,20 +419,20 @@ Lưu ý:
         const lessons = await prisma.lesson.findMany({
             where: {
                 courseId,
-                isPublished: true
+                isPublished: true,
             },
             orderBy: {
-                lessonOrder: 'asc'
+                lessonOrder: 'asc',
             },
             select: {
                 id: true,
                 lessonOrder: true,
-                title: true
-            }
+                title: true,
+            },
         })
 
         if (lessons.length === 0) {
-            throw new Error('No lessons found in course')
+            throw new Error('Không có bài học nào trong khóa học này.')
         }
 
         // CÁCH TIẾP CẬN TỐI ƯU: Chỉ tổng hợp từ quiz ĐÃ LƯU trong DB (đã được instructor review)
@@ -434,11 +440,14 @@ Lưu ý:
         // - Quiz trong DB là source of truth (chất lượng tốt, đã được review)
         // - Không generate mới cho course quiz (tránh chất lượng không đảm bảo)
         // - Nếu lesson chưa có quiz → Skip (instructor cần tạo quiz cho lesson đó trước)
-        
-        const questionsPerLesson = Math.max(1, Math.floor(numQuestions / lessons.length))
+
+        const questionsPerLesson = Math.max(
+            1,
+            Math.floor(numQuestions / lessons.length)
+        )
         const allQuestions = []
         const lessonsWithoutQuiz = []
-        
+
         // Lấy quiz từ database của từng lesson
         for (const lesson of lessons) {
             try {
@@ -446,82 +455,86 @@ Lưu ý:
                 const existingQuiz = await prisma.quiz.findFirst({
                     where: {
                         lessonId: lesson.id,
-                        isPublished: true
+                        isPublished: true,
                     },
                     orderBy: {
-                        updatedAt: 'desc'
-                    }
+                        updatedAt: 'desc',
+                    },
                 })
-                
+
                 if (existingQuiz && existingQuiz.questions) {
                     try {
-                        const questions = Array.isArray(existingQuiz.questions) 
-                            ? existingQuiz.questions 
-                            : typeof existingQuiz.questions === 'object' && existingQuiz.questions.questions
-                                ? existingQuiz.questions.questions
-                                : []
-                        
+                        const questions = Array.isArray(existingQuiz.questions)
+                            ? existingQuiz.questions
+                            : typeof existingQuiz.questions === 'object' &&
+                                existingQuiz.questions.questions
+                              ? existingQuiz.questions.questions
+                              : []
+
                         if (questions.length > 0) {
                             // Format và filter questions
                             const formattedQuestions = questions
-                                .filter(q => includeExplanation ? q.explanation : true)
+                                .filter((q) =>
+                                    includeExplanation ? q.explanation : true
+                                )
                                 .slice(0, questionsPerLesson)
                                 .map((q, index) => ({
                                     id: allQuestions.length + index + 1,
                                     question: q.question || q.text || '',
                                     type: q.type || 'multiple_choice',
                                     options: q.options || {},
-                                    correctAnswer: q.correctAnswer || q.correct_answer || 'A',
+                                    correctAnswer:
+                                        q.correctAnswer ||
+                                        q.correct_answer ||
+                                        'A',
                                     explanation: q.explanation || '',
                                     lessonId: lesson.id,
                                     lessonOrder: lesson.lessonOrder,
                                     lessonTitle: lesson.title,
-                                    source: 'database' // Đánh dấu là từ DB (đã được review)
+                                    source: 'database', // Đánh dấu là từ DB (đã được review)
                                 }))
-                            
+
                             allQuestions.push(...formattedQuestions)
-                            logger.debug(
-                                `✅ Added ${formattedQuestions.length} questions from lesson ${lesson.id} (${lesson.title}) - reviewed quiz`
-                            )
                         } else {
                             lessonsWithoutQuiz.push(lesson.title)
                         }
                     } catch (error) {
-                        logger.warn(`Failed to parse quiz for lesson ${lesson.id}:`, error)
                         lessonsWithoutQuiz.push(lesson.title)
                     }
                 } else {
                     lessonsWithoutQuiz.push(lesson.title)
                 }
             } catch (error) {
-                logger.warn(`Failed to get quiz for lesson ${lesson.id}:`, error)
                 lessonsWithoutQuiz.push(lesson.title)
             }
         }
-        
+
         // Nếu không đủ câu hỏi, thông báo
         if (allQuestions.length < numQuestions) {
             logger.warn(
                 `⚠️ Only found ${allQuestions.length}/${numQuestions} questions. ` +
-                `Lessons without quiz: ${lessonsWithoutQuiz.join(', ')}`
+                    `Lessons without quiz: ${lessonsWithoutQuiz.join(', ')}`
             )
         }
-        
+
         // Re-index IDs
-        const validatedQuestions = allQuestions.slice(0, numQuestions).map((q, index) => ({
-            ...q,
-            id: index + 1
-        }))
-        
+        const validatedQuestions = allQuestions
+            .slice(0, numQuestions)
+            .map((q, index) => ({
+                ...q,
+                id: index + 1,
+            }))
+
         // Thêm metadata về lessons thiếu quiz (để frontend có thể hiển thị)
         if (lessonsWithoutQuiz.length > 0) {
             validatedQuestions.metadata = {
                 totalRequested: numQuestions,
                 totalFound: validatedQuestions.length,
                 lessonsWithoutQuiz: lessonsWithoutQuiz,
-                message: lessonsWithoutQuiz.length > 0 
-                    ? `Một số lessons chưa có quiz: ${lessonsWithoutQuiz.join(', ')}. Vui lòng tạo quiz cho các lessons này trước.`
-                    : null
+                message:
+                    lessonsWithoutQuiz.length > 0
+                        ? `Một số lessons chưa có quiz: ${lessonsWithoutQuiz.join(', ')}. Vui lòng tạo quiz cho các lessons này trước.`
+                        : null,
             }
         }
 
@@ -530,9 +543,9 @@ Lưu ý:
             const cacheKey = `quiz:course:${courseId}:${numQuestions}:${difficulty}:${includeExplanation}`
             this.questionCache.set(cacheKey, {
                 questions: validatedQuestions,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             })
-            
+
             // Clean old cache entries
             this._cleanCache()
         }
@@ -546,20 +559,16 @@ Lưu ý:
     _cleanCache() {
         const now = Date.now()
         const maxCacheSize = 100 // Max 100 cached entries
-        
+
         if (this.questionCache.size > maxCacheSize) {
             // Remove oldest entries
             const entries = Array.from(this.questionCache.entries())
             entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
-            
+
             const toRemove = entries.slice(0, entries.length - maxCacheSize)
             toRemove.forEach(([key]) => this.questionCache.delete(key))
-            
-            logger.debug(`Cleaned ${toRemove.length} old cache entries`)
         }
     }
 }
 
 export default new AIQuizGenerationService()
-
-

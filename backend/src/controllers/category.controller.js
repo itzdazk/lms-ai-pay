@@ -35,7 +35,7 @@ class CategoryController {
         return ApiResponse.created(
             res,
             category,
-            'Category created successfully'
+            'Danh mục đã được tạo thành công'
         )
     })
 
@@ -75,7 +75,7 @@ class CategoryController {
         return ApiResponse.success(
             res,
             category,
-            'Category updated successfully'
+            'Danh mục đã được cập nhật thành công'
         )
     })
 
@@ -89,7 +89,7 @@ class CategoryController {
 
         await categoryService.deleteCategory(parseInt(id))
 
-        return ApiResponse.success(res, null, 'Category deleted successfully')
+        return ApiResponse.success(res, null, 'Danh mục đã được xóa thành công')
     })
 
     /**
@@ -98,12 +98,23 @@ class CategoryController {
      * @access  Public
      */
     getCategories = asyncHandler(async (req, res) => {
-        const { page, limit, parentId, categoryId, isActive, search, sort, sortOrder } = req.query
+        const {
+            page,
+            limit,
+            parentId,
+            categoryId,
+            isActive,
+            search,
+            sort,
+            sortOrder,
+        } = req.query
 
         // For public API, default to only active categories unless explicitly requested
         // If user is authenticated admin/instructor, they can see all categories
-        const isAuthenticatedAdmin = req.user && (req.user.role === 'ADMIN' || req.user.role === 'INSTRUCTOR')
-        
+        const isAuthenticatedAdmin =
+            req.user &&
+            (req.user.role === 'ADMIN' || req.user.role === 'INSTRUCTOR')
+
         const filters = {
             page: parseInt(page) || 1,
             limit: parseInt(limit) || 20,
@@ -121,8 +132,8 @@ class CategoryController {
                       ? false
                       : // For public API (not authenticated admin/instructor), default to active only
                         !isAuthenticatedAdmin
-                      ? true
-                      : undefined,
+                        ? true
+                        : undefined,
             search: search || undefined,
             sort: sort || 'sortOrder',
             sortOrder: sortOrder || 'asc',
@@ -138,7 +149,7 @@ class CategoryController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Categories retrieved successfully'
+            'Truy xuất danh sách danh mục thành công'
         )
     })
 
@@ -153,13 +164,13 @@ class CategoryController {
         const category = await categoryService.getCategoryById(parseInt(id))
 
         if (!category) {
-            return ApiResponse.notFound(res, 'Category not found')
+            return ApiResponse.notFound(res, 'Không tìm thấy danh mục')
         }
 
         return ApiResponse.success(
             res,
             category,
-            'Category retrieved successfully'
+            'Truy xuất danh sách danh mục thành công'
         )
     })
 
@@ -192,7 +203,7 @@ class CategoryController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Courses retrieved successfully'
+            'Truy xuất danh sách khóa học thành công'
         )
     })
 
@@ -225,7 +236,7 @@ class CategoryController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Courses retrieved successfully'
+            'Truy xuất danh sách khóa học thành công'
         )
     })
 
@@ -239,7 +250,7 @@ class CategoryController {
 
         // Check if file was uploaded
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'No image file provided')
+            return ApiResponse.badRequest(res, 'Không tìm thấy tệp ảnh')
         }
 
         const result = await categoryService.uploadCategoryImage(
@@ -250,7 +261,7 @@ class CategoryController {
         return ApiResponse.success(
             res,
             result,
-            'Category image uploaded successfully'
+            'Ảnh danh mục đã được tải lên thành công'
         )
     })
 
@@ -269,7 +280,7 @@ class CategoryController {
         return ApiResponse.success(
             res,
             updatedCategory,
-            'Category image deleted successfully'
+            'Ảnh danh mục đã được xóa thành công'
         )
     })
 
@@ -284,7 +295,7 @@ class CategoryController {
         return ApiResponse.success(
             res,
             stats,
-            'Category statistics retrieved successfully'
+            'Truy xuất thống kê danh mục thành công'
         )
     })
 }

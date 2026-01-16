@@ -10,27 +10,27 @@ export const getEnrollmentsValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Số trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
     query('status')
         .optional()
         .isIn(Object.values(ENROLLMENT_STATUS))
         .withMessage(
-            `Status must be one of: ${Object.values(ENROLLMENT_STATUS).join(', ')}`
+            `Trạng thái phải là một trong: ${Object.values(ENROLLMENT_STATUS).join(', ')}`
         ),
     query('search')
         .optional()
         .trim()
         .isLength({ min: 1, max: 200 })
-        .withMessage('Search term must be between 1 and 200 characters'),
+        .withMessage('Từ khóa tìm kiếm phải từ 1 đến 200 ký tự'),
     query('sort')
         .optional()
         .isIn(['newest', 'oldest', 'progress', 'lastAccessed'])
         .withMessage(
-            'Sort must be one of: newest, oldest, progress, lastAccessed'
+            'Sắp xếp phải là một trong: newest, oldest, progress, lastAccessed'
         ),
     validate,
 ]
@@ -41,7 +41,7 @@ export const getEnrollmentsValidator = [
 export const getEnrollmentByIdValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Enrollment ID must be a positive integer'),
+        .withMessage('ID ghi danh phải là số nguyên dương'),
     validate,
 ]
 
@@ -52,7 +52,7 @@ export const getActiveEnrollmentsValidator = [
     query('limit')
         .optional()
         .isInt({ min: 1, max: 50 })
-        .withMessage('Limit must be between 1 and 50'),
+        .withMessage('Giới hạn phải từ 1 đến 50'),
     validate,
 ]
 
@@ -63,11 +63,11 @@ export const getCompletedEnrollmentsValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Số trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
     validate,
 ]
 
@@ -77,9 +77,9 @@ export const getCompletedEnrollmentsValidator = [
 export const enrollInFreeCourseValidator = [
     body('courseId')
         .notEmpty()
-        .withMessage('Course ID is required')
+        .withMessage('ID khóa học không được để trống')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     validate,
 ]
 
@@ -89,7 +89,7 @@ export const enrollInFreeCourseValidator = [
 export const checkEnrollmentValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     validate,
 ]
 
@@ -99,37 +99,37 @@ export const checkEnrollmentValidator = [
 export const enrollInCourseValidator = [
     body('courseId')
         .notEmpty()
-        .withMessage('Course ID is required')
+        .withMessage('ID khóa học không được để trống')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     body('paymentGateway')
         .optional()
         .isIn(Object.values(PAYMENT_GATEWAY))
         .withMessage(
-            `Payment gateway must be one of: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
+            `Cổng thanh toán phải là một trong: ${Object.values(PAYMENT_GATEWAY).join(', ')}`
         ),
     body('billingAddress')
         .optional()
         .isObject()
-        .withMessage('Billing address must be an object'),
+        .withMessage('Địa chỉ thanh toán phải là một đối tượng'),
     body('billingAddress.fullName')
         .optional()
         .trim()
         .isLength({ min: 1, max: 200 })
-        .withMessage('Full name must be between 1 and 200 characters'),
+        .withMessage('Họ và tên phải từ 1 đến 200 ký tự'),
     body('billingAddress.email')
         .optional()
         .isEmail()
-        .withMessage('Email must be a valid email address'),
+        .withMessage('Email phải là địa chỉ email hợp lệ'),
     body('billingAddress.phone')
         .optional()
         .trim()
         .isLength({ min: 1, max: 20 })
-        .withMessage('Phone must be between 1 and 20 characters'),
+        .withMessage('Số điện thoại phải từ 1 đến 20 ký tự'),
     body('billingAddress.address')
         .optional()
         .trim()
         .isLength({ min: 1, max: 500 })
-        .withMessage('Address must be between 1 and 500 characters'),
+        .withMessage('Địa chỉ phải từ 1 đến 500 ký tự'),
     validate,
 ]

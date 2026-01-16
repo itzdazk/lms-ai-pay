@@ -1,9 +1,9 @@
 // src/routes/instructor-quizzes.routes.js
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import instructorQuizzesController from '../controllers/instructor-quizzes.controller.js';
-import { authenticate } from '../middlewares/authenticate.middleware.js';
-import { isInstructor } from '../middlewares/role.middleware.js';
+import express from 'express'
+import rateLimit from 'express-rate-limit'
+import instructorQuizzesController from '../controllers/instructor-quizzes.controller.js'
+import { authenticate } from '../middlewares/authenticate.middleware.js'
+import { isInstructor } from '../middlewares/role.middleware.js'
 import {
     createLessonQuizValidator,
     deleteQuizValidator,
@@ -18,7 +18,7 @@ import {
     updateQuestionValidator,
     deleteQuestionValidator,
     reorderQuestionsValidator,
-} from '../validators/quizzes.validator.js';
+} from '../validators/quizzes.validator.js'
 
 // Rate limiting cho AI generation (10 requests per 15 minutes)
 const aiGenerationLimiter = rateLimit({
@@ -26,14 +26,14 @@ const aiGenerationLimiter = rateLimit({
     max: 10, // 10 requests per window
     message: {
         success: false,
-        message: 'Too many AI generation requests. Please try again later.',
-        retryAfter: '15 minutes'
+        message: 'Quá nhiều yêu cầu tạo bài kiểm tra AI. Vui lòng thử lại sau.',
+        retryAfter: '15 minutes',
     },
     standardHeaders: true,
     legacyHeaders: false,
-});
+})
 
-const router = express.Router();
+const router = express.Router()
 
 /**
  * @route   GET /api/v1/instructor/lessons/:lessonId/quizzes
@@ -46,7 +46,7 @@ router.get(
     isInstructor,
     getLessonQuizzesValidator,
     instructorQuizzesController.getLessonQuizzes
-);
+)
 
 /**
  * @route   POST /api/v1/instructor/lessons/:lessonId/quizzes
@@ -59,7 +59,7 @@ router.post(
     isInstructor,
     createLessonQuizValidator,
     instructorQuizzesController.createLessonQuiz
-);
+)
 
 /**
  * @route   PUT /api/v1/instructor/quizzes/:id
@@ -72,7 +72,7 @@ router.put(
     isInstructor,
     updateQuizValidator,
     instructorQuizzesController.updateQuiz
-);
+)
 
 /**
  * @route   DELETE /api/v1/instructor/quizzes/:id
@@ -85,7 +85,7 @@ router.delete(
     isInstructor,
     deleteQuizValidator,
     instructorQuizzesController.deleteQuiz
-);
+)
 
 /**
  * @route   PATCH /api/v1/instructor/quizzes/:id/publish
@@ -98,7 +98,7 @@ router.patch(
     isInstructor,
     publishQuizValidator,
     instructorQuizzesController.publishQuiz
-);
+)
 
 /**
  * @route   GET /api/v1/instructor/quizzes/:quizId/submissions
@@ -111,7 +111,7 @@ router.get(
     isInstructor,
     getInstructorQuizSubmissionsValidator,
     instructorQuizzesController.getInstructorQuizSubmissions
-);
+)
 
 /**
  * @route   GET /api/v1/instructor/quizzes/:quizId/analytics
@@ -124,7 +124,7 @@ router.get(
     isInstructor,
     getQuizAnalyticsValidator,
     instructorQuizzesController.getQuizAnalytics
-);
+)
 
 /**
  * @route   POST /api/v1/instructor/quizzes/:quizId/questions
@@ -137,7 +137,7 @@ router.post(
     isInstructor,
     createQuestionValidator,
     instructorQuizzesController.createQuestion
-);
+)
 
 /**
  * @route   PUT /api/v1/instructor/quizzes/:quizId/questions/:questionId
@@ -150,7 +150,7 @@ router.put(
     isInstructor,
     updateQuestionValidator,
     instructorQuizzesController.updateQuestion
-);
+)
 
 /**
  * @route   DELETE /api/v1/instructor/quizzes/:quizId/questions/:questionId
@@ -163,7 +163,7 @@ router.delete(
     isInstructor,
     deleteQuestionValidator,
     instructorQuizzesController.deleteQuestion
-);
+)
 
 /**
  * @route   PATCH /api/v1/instructor/quizzes/:quizId/questions/reorder
@@ -176,7 +176,7 @@ router.patch(
     isInstructor,
     reorderQuestionsValidator,
     instructorQuizzesController.reorderQuestions
-);
+)
 
 /**
  * @route   POST /api/v1/instructor/quizzes/generate-from-lesson
@@ -191,7 +191,7 @@ router.post(
     aiGenerationLimiter, // Rate limiting
     generateQuizFromLessonValidator,
     instructorQuizzesController.generateQuizFromLesson
-);
+)
 
 /**
  * @route   POST /api/v1/instructor/quizzes/generate-from-course
@@ -206,7 +206,6 @@ router.post(
     aiGenerationLimiter, // Rate limiting
     generateQuizFromCourseValidator,
     instructorQuizzesController.generateQuizFromCourse
-);
+)
 
-export default router;
-
+export default router

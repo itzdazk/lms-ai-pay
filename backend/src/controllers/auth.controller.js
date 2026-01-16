@@ -35,7 +35,7 @@ class AuthController {
             {
                 user: result.user,
             },
-            'Registration successful'
+            'Đăng ký thành công'
         )
     })
 
@@ -55,7 +55,47 @@ class AuthController {
             {
                 user: result.user,
             },
-            'Login successful'
+            'Đăng nhập thành công'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/auth/google
+     * @desc    Login with Google
+     * @access  Public
+     */
+    googleLogin = asyncHandler(async (req, res) => {
+        const { idToken } = req.body
+        const result = await authService.loginWithGoogle(idToken, req)
+
+        CookieUtil.setAuthTokens(res, result.tokens)
+
+        return ApiResponse.success(
+            res,
+            {
+                user: result.user,
+            },
+            'Đăng nhập Google thành công'
+        )
+    })
+
+    /**
+     * @route   POST /api/v1/auth/github
+     * @desc    Login with GitHub
+     * @access  Public
+     */
+    githubLogin = asyncHandler(async (req, res) => {
+        const { idToken } = req.body
+        const result = await authService.loginWithGithub(idToken, req)
+
+        CookieUtil.setAuthTokens(res, result.tokens)
+
+        return ApiResponse.success(
+            res,
+            {
+                user: result.user,
+            },
+            'Đăng nhập GitHub thành công'
         )
     })
 
@@ -89,7 +129,7 @@ class AuthController {
         // Clear cookies
         CookieUtil.clearAuthTokens(res)
 
-        return ApiResponse.success(res, null, 'Logout successful')
+        return ApiResponse.success(res, null, 'Đăng xuất thành công')
     })
 
     /**
@@ -103,7 +143,7 @@ class AuthController {
         return ApiResponse.success(
             res,
             { sessions },
-            'Sessions retrieved successfully'
+            'Truy xuất danh sách phiên đăng nhập thành công'
         )
     })
 
@@ -117,7 +157,11 @@ class AuthController {
 
         await authService.logoutSession(sessionId, req.user.id)
 
-        return ApiResponse.success(res, null, 'Session logged out successfully')
+        return ApiResponse.success(
+            res,
+            null,
+            'Đăng xuất phiên đăng nhập thành công'
+        )
     })
 
     /**
@@ -129,7 +173,7 @@ class AuthController {
         const refreshToken = req.cookies.refreshToken || req.body.refreshToken
 
         if (!refreshToken) {
-            return ApiResponse.unauthorized(res, 'Refresh token not found')
+            return ApiResponse.unauthorized(res, 'Không tìm thấy token')
         }
 
         const tokens = await authService.refreshToken(refreshToken)
@@ -149,7 +193,7 @@ class AuthController {
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         })
 
-        return ApiResponse.success(res, null, 'Token refreshed successfully')
+        return ApiResponse.success(res, null, 'Đã làm mới token thành công')
     })
 
     /**
@@ -162,7 +206,11 @@ class AuthController {
 
         await authService.verifyEmail(token)
 
-        return ApiResponse.success(res, null, 'Email verified successfully')
+        return ApiResponse.success(
+            res,
+            null,
+            'Email đã được xác thực thành công'
+        )
     })
 
     /**
@@ -189,7 +237,7 @@ class AuthController {
         return ApiResponse.success(
             res,
             null,
-            'If the email exists, a password reset link has been sent'
+            'Nếu email tồn tại, một liên kết đặt lại mật khẩu đã được gửi'
         )
     })
 
@@ -203,7 +251,7 @@ class AuthController {
 
         await authService.resetPassword(token, password)
 
-        return ApiResponse.success(res, null, 'Password reset successful')
+        return ApiResponse.success(res, null, 'Đã đặt lại mật khẩu thành công')
     })
 
     /**
@@ -234,10 +282,14 @@ class AuthController {
         })
 
         if (!fullUser) {
-            return ApiResponse.notFound(res, 'User not found')
+            return ApiResponse.notFound(res, 'Không tìm thấy người dùng')
         }
 
-        return ApiResponse.success(res, fullUser, 'User retrieved successfully')
+        return ApiResponse.success(
+            res,
+            fullUser,
+            'Truy xuất người dùng thành công'
+        )
     })
 }
 

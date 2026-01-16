@@ -13,7 +13,10 @@ const checkLessonExists = async (req, res, next) => {
         const lessonId = parseInt(req.params.id)
 
         if (!courseId || !lessonId) {
-            return ApiResponse.badRequest(res, 'Course ID and Lesson ID are required')
+            return ApiResponse.badRequest(
+                res,
+                'Yêu cầu mã khóa học và mã bài học'
+            )
         }
 
         const lesson = await prisma.lesson.findUnique({
@@ -26,21 +29,27 @@ const checkLessonExists = async (req, res, next) => {
         })
 
         if (!lesson) {
-            return ApiResponse.notFound(res, 'Lesson not found')
+            return ApiResponse.notFound(res, 'Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            return ApiResponse.badRequest(res, 'Lesson does not belong to this course')
+            return ApiResponse.badRequest(
+                res,
+                'Bài học không thuộc về khóa học này'
+            )
         }
 
         // Attach lesson to request for later use
         req.lesson = lesson
         next()
     } catch (error) {
-        return ApiResponse.error(res, 'Error checking lesson', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        return ApiResponse.error(
+            res,
+            'Lỗi kiểm tra bài học',
+            HTTP_STATUS.INTERNAL_SERVER_ERROR
+        )
     }
 }
-
 
 /**
  * Middleware: Only allow access to lesson if previous lesson is completed
@@ -54,29 +63,37 @@ const restrictLessonAccess = async (req, res, next) => {
         const userId = req.user?.id
         const lessonId = parseInt(req.params.id)
         if (!userId || !lessonId) {
-            return ApiResponse.badRequest(res, 'User and lesson ID required')
+            return ApiResponse.badRequest(
+                res,
+                'Yêu cầu mã người dùng và mã bài học'
+            )
         }
         // Get current lesson info
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
-            select: { id: true, courseId: true, chapterId: true, lessonOrder: true },
+            select: {
+                id: true,
+                courseId: true,
+                chapterId: true,
+                lessonOrder: true,
+            },
         })
-        if (!lesson) return ApiResponse.notFound(res, 'Lesson not found')
+        if (!lesson) return ApiResponse.notFound(res, 'Không tìm thấy bài học')
         // Find previous lesson in course order
         const prevLesson = await prisma.lesson.findFirst({
             where: {
                 courseId: lesson.courseId,
                 OR: [
                     // Same chapter, lower order
-                    { chapterId: lesson.chapterId, lessonOrder: { lt: lesson.lessonOrder } },
+                    {
+                        chapterId: lesson.chapterId,
+                        lessonOrder: { lt: lesson.lessonOrder },
+                    },
                     // Previous chapters (any lessonOrder)
                     { chapterId: { lt: lesson.chapterId } },
                 ],
             },
-            orderBy: [
-                { chapterId: 'desc' },
-                { lessonOrder: 'desc' },
-            ],
+            orderBy: [{ chapterId: 'desc' }, { lessonOrder: 'desc' }],
         })
         if (!prevLesson) return next() // First lesson, allow
         // Check progress of previous lesson (phải hoàn thành cả bài học và quiz nếu có)
@@ -97,9 +114,12 @@ const restrictLessonAccess = async (req, res, next) => {
         }
         next()
     } catch (error) {
-        return ApiResponse.error(res, 'Error checking lesson access', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        return ApiResponse.error(
+            res,
+            'Lỗi kiểm tra truy cập bài học',
+            HTTP_STATUS.INTERNAL_SERVER_ERROR
+        )
     }
 }
 
 export { checkLessonExists, restrictLessonAccess }
-

@@ -47,7 +47,7 @@ class SearchController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Courses search completed successfully'
+            'Tìm kiếm khóa học thành công'
         )
     })
 
@@ -77,7 +77,7 @@ class SearchController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Instructors search completed successfully'
+            'Tìm kiếm giảng viên thành công'
         )
     })
 
@@ -93,7 +93,7 @@ class SearchController {
         if (!q || q.trim().length < 2) {
             return ApiResponse.badRequest(
                 res,
-                'Search query must be at least 2 characters'
+                'Truy vấn tìm kiếm phải có ít nhất 2 ký tự'
             )
         }
 
@@ -107,7 +107,7 @@ class SearchController {
         return ApiResponse.success(
             res,
             suggestions,
-            'Search suggestions retrieved successfully'
+            'Truy xuất đề xuất tìm kiếm thành công'
         )
     })
 
@@ -123,7 +123,7 @@ class SearchController {
         if (!transcript || transcript.trim().length === 0) {
             return ApiResponse.badRequest(
                 res,
-                'Transcript is required for voice search'
+                'Transcript là bắt buộc cho tìm kiếm giọng nói'
             )
         }
 
@@ -137,7 +137,7 @@ class SearchController {
                 limit: 20,
                 total: result.total,
             },
-            `Voice search completed for: "${result.transcript}"`
+            `Tìm kiếm giọng nói thành công cho: "${result.transcript}"`
         )
     })
 }

@@ -1,7 +1,11 @@
 // src/services/lessons.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, TRANSCRIPT_STATUS, HTTP_STATUS, HLS_STATUS } from '../config/constants.js'
-import logger from '../config/logger.config.js'
+import {
+    ENROLLMENT_STATUS,
+    TRANSCRIPT_STATUS,
+    HTTP_STATUS,
+    HLS_STATUS,
+} from '../config/constants.js'
 import config from '../config/app.config.js'
 import path from 'path'
 import fs from 'fs'
@@ -35,33 +39,26 @@ class LessonsService {
             const transcriptPath = path.join(transcriptsDir, filename)
             if (fs.existsSync(transcriptPath)) {
                 fs.unlinkSync(transcriptPath)
-                logger.info(`Deleted transcript file: ${transcriptPath}`)
             }
 
             const baseName = filename.replace(path.extname(filename), '')
             const jsonPath = path.join(transcriptsDir, `${baseName}.json`)
             if (fs.existsSync(jsonPath)) {
                 fs.unlinkSync(jsonPath)
-                logger.info(`Deleted transcript JSON file: ${jsonPath}`)
             }
-        } catch (error) {
-            logger.error(
-                `Error deleting transcript artifacts: ${error.message}`,
-                { error: error.stack }
-            )
-        }
+        } catch (error) {}
     }
 
     async _deleteHlsArtifacts(lessonId, courseId) {
         if (!lessonId || !courseId) return
 
-        const lessonHlsDir = path.join(pathUtil.getHlsDir(courseId), String(lessonId))
+        const lessonHlsDir = path.join(
+            pathUtil.getHlsDir(courseId),
+            String(lessonId)
+        )
         try {
             await fs.promises.rm(lessonHlsDir, { recursive: true, force: true })
-            logger.info(`Deleted HLS artifacts for lesson ${lessonId} at ${lessonHlsDir}`)
-        } catch (error) {
-            logger.error(`Error deleting HLS artifacts for lesson ${lessonId}: ${error.message}`)
-        }
+        } catch (error) {}
     }
 
     /**
@@ -97,7 +94,7 @@ class LessonsService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -119,7 +116,7 @@ class LessonsService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -152,7 +149,7 @@ class LessonsService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -189,13 +186,13 @@ class LessonsService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (!lesson.videoUrl) {
-            const error = new Error('Video not available for this lesson')
+            const error = new Error('Video không khả dụng cho bài học này')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -231,7 +228,7 @@ class LessonsService {
         })
 
         if (!lesson) {
-            const error = new Error('Lesson not found')
+            const error = new Error('Không tìm thấy bài học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -249,10 +246,7 @@ class LessonsService {
                 userId,
                 courseId,
                 status: {
-                    in: [
-                        ENROLLMENT_STATUS.ACTIVE,
-                        ENROLLMENT_STATUS.COMPLETED,
-                    ],
+                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
                 },
             },
             select: {
@@ -292,7 +286,7 @@ class LessonsService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            throw new Error('Không tìm thấy khóa học')
         }
 
         // If chapterId is provided, verify it belongs to the course
@@ -307,11 +301,13 @@ class LessonsService {
             })
 
             if (!chapter) {
-                throw new Error('Chapter not found')
+                const error = new Error('Không tìm thấy chương học')
+                error.statusCode = HTTP_STATUS.NOT_FOUND
+                throw error
             }
 
             if (chapter.courseId !== courseId) {
-                throw new Error('Chapter does not belong to this course')
+                throw new Error('Chương không thuộc về khóa học này')
             }
         }
 
@@ -417,8 +413,6 @@ class LessonsService {
             },
         })
 
-        logger.info(`Lesson created: ${lesson.title} (ID: ${lesson.id})`)
-
         // Recalculate course duration based on all lesson video durations
         await this._recalcCourseDuration(courseId)
 
@@ -454,11 +448,11 @@ class LessonsService {
         })
 
         if (!existingLesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (existingLesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         const updateData = {}
@@ -476,14 +470,14 @@ class LessonsService {
             })
 
             if (slugExists) {
-                throw new Error('Slug already exists in this course')
+                throw new Error('Slug đã tồn tại trong khóa học này')
             }
             updateData.slug = slug
         } else if (title !== undefined && title !== existingLesson.title) {
             // Title changed but no slug provided - auto-generate slug
             updateData.title = title
             let generatedSlug = this.generateSlug(title)
-            
+
             // Only update slug if it's different from current slug
             if (generatedSlug !== existingLesson.slug) {
                 // Check if generated slug already exists (excluding current lesson)
@@ -526,7 +520,10 @@ class LessonsService {
         if (isPublished !== undefined) updateData.isPublished = isPublished
 
         // Handle lessonOrder change
-        if (lessonOrder !== undefined && lessonOrder !== existingLesson.lessonOrder) {
+        if (
+            lessonOrder !== undefined &&
+            lessonOrder !== existingLesson.lessonOrder
+        ) {
             const oldOrder = existingLesson.lessonOrder
             const newOrder = lessonOrder
 
@@ -583,8 +580,6 @@ class LessonsService {
             },
         })
 
-        logger.info(`Lesson updated: ${lesson.title} (ID: ${lesson.id})`)
-
         return lesson
     }
 
@@ -606,20 +601,20 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         // Cancel any ongoing transcription job if it exists
         if (lesson.transcriptStatus === TRANSCRIPT_STATUS.PROCESSING) {
-            const wasCancelled = transcriptionService.cancelTranscriptionJob(lessonId)
+            const wasCancelled =
+                transcriptionService.cancelTranscriptionJob(lessonId)
             if (wasCancelled) {
-                logger.info(`Cancelled transcription job for lesson ${lessonId} before deletion`)
                 // Give a small delay to ensure the process is killed
-                await new Promise(resolve => setTimeout(resolve, 500))
+                await new Promise((resolve) => setTimeout(resolve, 500))
             }
         } else {
             // Also try to cancel even if status is not PROCESSING (might be in queue)
@@ -630,14 +625,14 @@ class LessonsService {
         if (lesson.videoUrl) {
             try {
                 const filename = path.basename(lesson.videoUrl)
-                const videoPath = path.join(pathUtil.getVideoDir(courseId), filename)
+                const videoPath = path.join(
+                    pathUtil.getVideoDir(courseId),
+                    filename
+                )
                 if (fs.existsSync(videoPath)) {
                     fs.unlinkSync(videoPath)
-                    logger.info(`Deleted video file: ${videoPath}`)
                 }
-            } catch (error) {
-                logger.error(`Error deleting video file: ${error.message}`)
-            }
+            } catch (error) {}
         }
 
         // Delete HLS artifacts if present
@@ -681,8 +676,6 @@ class LessonsService {
             },
         })
 
-        logger.info(`Lesson deleted: ${lesson.title} (ID: ${lesson.id})`)
-
         // Recalculate course duration after deletion
         await this._recalcCourseDuration(courseId)
 
@@ -697,7 +690,13 @@ class LessonsService {
      * @param {number} userId - User ID
      * @param {boolean} autoCreateTranscript - Whether to automatically create transcript (default: false)
      */
-    async uploadVideo(courseId, lessonId, file, userId, autoCreateTranscript = false) {
+    async uploadVideo(
+        courseId,
+        lessonId,
+        file,
+        userId,
+        autoCreateTranscript = false
+    ) {
         // Check if lesson exists
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
@@ -711,11 +710,11 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         // Delete old video if exists
@@ -723,17 +722,17 @@ class LessonsService {
             try {
                 // Extract filename from URL (e.g., /uploads/courses/{courseId}/videos/filename.mp4 -> filename.mp4)
                 const filename = path.basename(lesson.videoUrl)
-                const oldVideoPath = path.join(pathUtil.getVideoDir(courseId), filename)
-                
+                const oldVideoPath = path.join(
+                    pathUtil.getVideoDir(courseId),
+                    filename
+                )
+
                 if (fs.existsSync(oldVideoPath)) {
                     fs.unlinkSync(oldVideoPath)
-                    logger.info(`Deleted old video: ${oldVideoPath}`)
                 } else {
-                    logger.warn(`Old video file not found: ${oldVideoPath} (from URL: ${lesson.videoUrl})`)
                 }
             } catch (error) {
                 // Log error but don't fail the upload
-                logger.error(`Error deleting old video: ${error.message}`, { error: error.stack })
             }
         }
 
@@ -754,25 +753,23 @@ class LessonsService {
         try {
             videoDuration = await getVideoDuration(file.path)
             if (videoDuration) {
-                logger.info(`Video duration extracted: ${videoDuration} seconds for lesson ${lessonId}`)
             } else {
-                logger.warn(`Could not extract video duration for lesson ${lessonId}`)
             }
         } catch (error) {
-            logger.error(`Error extracting video duration: ${error.message}`, { error: error.stack })
             // Continue without duration - don't fail the upload
         }
 
         // Only transcribe if autoCreateTranscript is true AND Whisper is enabled
-        const shouldTranscribe = autoCreateTranscript && config.WHISPER_ENABLED !== false
+        const shouldTranscribe =
+            autoCreateTranscript && config.WHISPER_ENABLED !== false
 
         // Cancel any existing transcription job BEFORE updating database
         // This ensures the old job is stopped before we start a new one
-        const wasCancelled = transcriptionService.cancelTranscriptionJob(lessonId)
+        const wasCancelled =
+            transcriptionService.cancelTranscriptionJob(lessonId)
         if (wasCancelled) {
-            logger.info(`Cancelled existing transcription job for lesson ${lessonId} before uploading new video`)
             // Give a small delay to ensure the process is killed
-            await new Promise(resolve => setTimeout(resolve, 500))
+            await new Promise((resolve) => setTimeout(resolve, 500))
         }
 
         const updatedLesson = await prisma.lesson.update({
@@ -801,22 +798,14 @@ class LessonsService {
                         source: 'lesson-route-video-upload',
                     })
                     .catch((error) => {
-                        logger.error(
-                            `Whisper transcription failed for lesson ${lessonId}: ${error.message}`
-                        )
                         prisma.lesson
                             .update({
                                 where: { id: lessonId },
                                 data: {
-                                    transcriptStatus:
-                                        TRANSCRIPT_STATUS.FAILED,
+                                    transcriptStatus: TRANSCRIPT_STATUS.FAILED,
                                 },
                             })
-                            .catch((statusError) =>
-                                logger.error(
-                                    `Failed to update transcript status for lesson ${lessonId}: ${statusError.message}`
-                                )
-                            )
+                            .catch((statusError) => {})
                     })
             })
         }
@@ -824,25 +813,20 @@ class LessonsService {
         // Enqueue HLS conversion in the background (non-blocking)
         // Pass courseId to the job so it can use course-based paths
         setImmediate(() => {
-            enqueueHlsJob({ lessonId, videoPath: file.path, courseId }).catch((error) => {
-                logger.error(`Failed to enqueue HLS job for lesson ${lessonId}: ${error.message}`)
-                prisma.lesson
-                    .update({
-                        where: { id: lessonId },
-                        data: {
-                            hlsStatus: HLS_STATUS.FAILED,
-                            hlsUrl: null,
-                        },
-                    })
-                    .catch((updateError) =>
-                        logger.error(
-                            `Failed to update HLS status for lesson ${lessonId}: ${updateError.message}`
-                        )
-                    )
-            })
+            enqueueHlsJob({ lessonId, videoPath: file.path, courseId }).catch(
+                (error) => {
+                    prisma.lesson
+                        .update({
+                            where: { id: lessonId },
+                            data: {
+                                hlsStatus: HLS_STATUS.FAILED,
+                                hlsUrl: null,
+                            },
+                        })
+                        .catch((updateError) => {})
+                }
+            )
         })
-
-        logger.info(`Video uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`)
 
         // Recalculate course duration based on lesson video durations
         await this._recalcCourseDuration(courseId)
@@ -866,11 +850,11 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         // Delete old transcript if exists
@@ -890,10 +874,6 @@ class LessonsService {
                 transcriptStatus: TRANSCRIPT_STATUS.COMPLETED, // Manual upload is always completed
             },
         })
-
-        logger.info(
-            `Transcript uploaded for lesson: ${lesson.title} (ID: ${lesson.id})`
-        )
 
         return updatedLesson
     }
@@ -915,38 +895,43 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         // Check if lesson has video
         if (!lesson.videoUrl) {
-            throw new Error('Lesson does not have a video. Please upload a video first.')
+            throw new Error(
+                'Bài học không có video. Vui lòng tải video lên trước'
+            )
         }
 
         // Check if transcript is already processing or completed
         if (lesson.transcriptStatus === TRANSCRIPT_STATUS.PROCESSING) {
-            throw new Error('Transcript is already being processed')
+            throw new Error('Transcript hiện đang được xử lý')
         }
 
         if (lesson.transcriptStatus === TRANSCRIPT_STATUS.COMPLETED) {
-            throw new Error('Transcript already exists for this lesson')
+            throw new Error('Transcript đã tồn tại trong bài học này')
         }
 
         // Check if Whisper is enabled
         if (config.WHISPER_ENABLED === false) {
-            throw new Error('Whisper transcription is disabled')
+            throw new Error('Whisper transcription bị tắt')
         }
 
         // Get video file path
         const videoFilename = path.basename(lesson.videoUrl)
-        const videoPath = path.join(pathUtil.getVideoDir(courseId), videoFilename)
+        const videoPath = path.join(
+            pathUtil.getVideoDir(courseId),
+            videoFilename
+        )
 
         if (!fs.existsSync(videoPath)) {
-            throw new Error('Video file not found')
+            throw new Error('Không tìm thấy video file')
         }
 
         // Update transcript status to PROCESSING
@@ -970,9 +955,6 @@ class LessonsService {
                     source: 'manual-request',
                 })
                 .catch((error) => {
-                    logger.error(
-                        `Whisper transcription failed for lesson ${lessonId}: ${error.message}`
-                    )
                     prisma.lesson
                         .update({
                             where: { id: lessonId },
@@ -980,17 +962,9 @@ class LessonsService {
                                 transcriptStatus: TRANSCRIPT_STATUS.FAILED,
                             },
                         })
-                        .catch((statusError) =>
-                            logger.error(
-                                `Failed to update transcript status for lesson ${lessonId}: ${statusError.message}`
-                            )
-                        )
+                        .catch((statusError) => {})
                 })
         })
-
-        logger.info(
-            `Transcript creation requested for lesson: ${lesson.title} (ID: ${lesson.id})`
-        )
 
         return updatedLesson
     }
@@ -1010,11 +984,11 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         const oldOrder = lesson.lessonOrder
@@ -1068,10 +1042,6 @@ class LessonsService {
             })
         })
 
-        logger.info(
-            `Lesson reordered: ${lesson.title} from ${oldOrder} to ${newOrder}`
-        )
-
         return updatedLesson
     }
 
@@ -1089,11 +1059,11 @@ class LessonsService {
         })
 
         if (!chapter) {
-            throw new Error('Chapter not found')
+            throw new Error('Không tìm thấy chương học')
         }
 
         if (chapter.courseId !== courseId) {
-            throw new Error('Chapter does not belong to this course')
+            throw new Error('Chương học không thuộc về khóa học này')
         }
 
         // Verify all lessons belong to this chapter
@@ -1109,7 +1079,9 @@ class LessonsService {
         })
 
         if (lessons.length !== lessonIds.length) {
-            throw new Error('Some lessons do not belong to this chapter or do not exist')
+            throw new Error(
+                'Một số bài học không thuộc về chương này hoặc không tồn tại'
+            )
         }
 
         // Update lesson orders in transaction
@@ -1124,10 +1096,6 @@ class LessonsService {
                 })
             }
         })
-
-        logger.info(
-            `Lessons reordered in chapter ${chapterId}: ${lessonIds.join(', ')}`
-        )
     }
 
     /**
@@ -1145,11 +1113,11 @@ class LessonsService {
         })
 
         if (!lesson) {
-            throw new Error('Lesson not found')
+            throw new Error('Không tìm thấy bài học')
         }
 
         if (lesson.courseId !== courseId) {
-            throw new Error('Lesson does not belong to this course')
+            throw new Error('Bài học không thuộc về khóa học này')
         }
 
         const updatedLesson = await prisma.lesson.update({
@@ -1159,13 +1127,8 @@ class LessonsService {
             },
         })
 
-        logger.info(
-            `Lesson ${isPublished ? 'published' : 'unpublished'}: ${lesson.title} (ID: ${lesson.id})`
-        )
-
         return updatedLesson
     }
 }
 
 export default new LessonsService()
-

@@ -23,7 +23,10 @@ const authenticate = async (req, res, next) => {
 
         // Bây giờ mới check xem có token không
         if (!token) {
-            return ApiResponse.unauthorized(res, 'No token provided')
+            return ApiResponse.unauthorized(
+                res,
+                'Không có token nào được cung cấp.'
+            )
         }
 
         // Verify token (giữ nguyên)
@@ -51,18 +54,21 @@ const authenticate = async (req, res, next) => {
         })
 
         if (!user) {
-            return ApiResponse.unauthorized(res, 'User not found')
+            return ApiResponse.unauthorized(res, 'Không tìm thấy người dùng')
         }
 
         if (user.status !== USER_STATUS.ACTIVE) {
-            return ApiResponse.forbidden(res, 'Your account is not active')
+            return ApiResponse.forbidden(
+                res,
+                'Tài khoản của bạn không hoạt động'
+            )
         }
 
         // Check tokenVersion
         if (decoded.tokenVersion !== user.tokenVersion) {
             return ApiResponse.unauthorized(
                 res,
-                'Token has been invalidated. Please login again.'
+                'Token đã bị hết hạn. Vui lòng đăng nhập lại.'
             )
         }
 
@@ -81,21 +87,21 @@ const authenticate = async (req, res, next) => {
             if (!session) {
                 return ApiResponse.unauthorized(
                     res,
-                    'Session not found. Please login again.'
+                    'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.'
                 )
             }
 
             if (!session.isActive) {
                 return ApiResponse.unauthorized(
                     res,
-                    'Session has been logged out. Please login again.'
+                    'Phiên đăng nhập đã bị đăng xuất. Vui lòng đăng nhập lại.'
                 )
             }
 
             if (session.userId !== user.id) {
                 return ApiResponse.unauthorized(
                     res,
-                    'Session does not belong to this user.'
+                    'Phiên đăng nhập không thuộc về người dùng này.'
                 )
             }
 
@@ -107,7 +113,7 @@ const authenticate = async (req, res, next) => {
                 })
                 return ApiResponse.unauthorized(
                     res,
-                    'Session has expired. Please login again.'
+                    'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
                 )
             }
 
@@ -122,8 +128,8 @@ const authenticate = async (req, res, next) => {
         req.user = user
         next()
     } catch (error) {
-        logger.error('Authentication error:', error)
-        return ApiResponse.error(res, 'Authentication failed')
+        logger.error('Lỗi xác thực:', error)
+        return ApiResponse.error(res, 'Xác thực thất bại')
     }
 }
 
@@ -168,12 +174,12 @@ const optionalAuthenticate = async (req, res, next) => {
             }
         } catch (error) {
             // Silently fail for optional auth
-            logger.debug('Optional auth failed:', error.message)
+            logger.debug('Xác thực tùy chọn thất bại:', error.message)
         }
 
         next()
     } catch (error) {
-        logger.error('Optional authentication error:', error)
+        logger.error('Lỗi xác thực tùy chọn:', error)
         next()
     }
 }
@@ -185,7 +191,7 @@ const requireEmailVerification = (req, res, next) => {
     if (!req.user.emailVerified) {
         return ApiResponse.forbidden(
             res,
-            'Please verify your email address to access this resource'
+            'Vui lòng xác thực địa chỉ email của bạn để truy cập tài nguyên này.'
         )
     }
     next()

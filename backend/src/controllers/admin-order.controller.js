@@ -45,7 +45,7 @@ class AdminOrderController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Orders retrieved successfully'
+            'Truy xuất danh sách hóa đơn thành công'
         )
     })
 
@@ -61,7 +61,7 @@ class AdminOrderController {
         return ApiResponse.success(
             res,
             stats,
-            'Order statistics retrieved successfully'
+            'Truy xuất thống kê hóa đơn thành công'
         )
     })
 
@@ -77,7 +77,7 @@ class AdminOrderController {
         return ApiResponse.success(
             res,
             trend,
-            'Revenue trend retrieved successfully'
+            'Truy xuất xu hướng doanh thu thành công'
         )
     })
 
@@ -91,12 +91,16 @@ class AdminOrderController {
         const orderId = parseInt(id)
 
         if (isNaN(orderId)) {
-            return ApiResponse.badRequest(res, 'Invalid order ID')
+            return ApiResponse.badRequest(res, 'ID hóa đơn không hợp lệ')
         }
 
         const order = await adminOrderService.getOrderById(orderId)
 
-        return ApiResponse.success(res, order, 'Order retrieved successfully')
+        return ApiResponse.success(
+            res,
+            order,
+            'Truy xuất chi tiết hóa đơn thành công'
+        )
     })
 }
 

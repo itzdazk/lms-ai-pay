@@ -38,7 +38,7 @@ class InstructorCourseController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Courses retrieved successfully'
+            'Truy xuất danh sách khóa học thành công'
         )
     })
 
@@ -54,7 +54,7 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const course = await instructorCourseService.getInstructorCourseById(
@@ -63,7 +63,11 @@ class InstructorCourseController {
             isAdmin
         )
 
-        return ApiResponse.success(res, course, 'Course retrieved successfully')
+        return ApiResponse.success(
+            res,
+            course,
+            'Truy xuất danh sách khóa học thành công'
+        )
     })
 
     /**
@@ -80,7 +84,7 @@ class InstructorCourseController {
             courseData
         )
 
-        return ApiResponse.created(res, course, 'Course created successfully')
+        return ApiResponse.created(res, course, 'Đã tạo khóa học thành công')
     })
 
     /**
@@ -95,7 +99,7 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const updateData = req.body
@@ -107,7 +111,11 @@ class InstructorCourseController {
             isAdmin
         )
 
-        return ApiResponse.success(res, course, 'Course updated successfully')
+        return ApiResponse.success(
+            res,
+            course,
+            'Đã cập nhật khóa học thành công'
+        )
     })
 
     /**
@@ -122,12 +130,16 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
-        await instructorCourseService.deleteCourse(courseId, instructorId, isAdmin)
+        await instructorCourseService.deleteCourse(
+            courseId,
+            instructorId,
+            isAdmin
+        )
 
-        return ApiResponse.success(res, null, 'Course deleted successfully')
+        return ApiResponse.success(res, null, 'Đã xóa khóa học thành công')
     })
 
     /**
@@ -143,11 +155,11 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         if (!status) {
-            return ApiResponse.badRequest(res, 'Status is required')
+            return ApiResponse.badRequest(res, 'Trạng thái là bắt buộc')
         }
 
         const course = await instructorCourseService.changeCourseStatus(
@@ -160,7 +172,7 @@ class InstructorCourseController {
         return ApiResponse.success(
             res,
             course,
-            `Course status changed to ${status} successfully`
+            `Trạng thái khóa học đã được thay đổi thành ${status} thành công`
         )
     })
 
@@ -178,7 +190,7 @@ class InstructorCourseController {
         return ApiResponse.success(
             res,
             statistics,
-            'Course statistics retrieved successfully'
+            'Truy xuất thống kê khóa học thành công'
         )
     })
 
@@ -195,11 +207,14 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'No thumbnail file uploaded')
+            return ApiResponse.badRequest(
+                res,
+                'Không có tệp tin thumbnail được tải lên'
+            )
         }
 
         const course = await instructorCourseService.uploadThumbnail(
@@ -213,7 +228,7 @@ class InstructorCourseController {
         return ApiResponse.success(
             res,
             course,
-            'Thumbnail uploaded successfully'
+            'Thumbnail đã được tải lên thành công'
         )
     })
 
@@ -230,11 +245,14 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         if (!req.file) {
-            return ApiResponse.badRequest(res, 'No video preview file uploaded')
+            return ApiResponse.badRequest(
+                res,
+                'Không có tệp tin video preview được tải lên'
+            )
         }
 
         const course = await instructorCourseService.uploadVideoPreview(
@@ -248,7 +266,7 @@ class InstructorCourseController {
         return ApiResponse.success(
             res,
             course,
-            'Video preview uploaded successfully'
+            'Video preview đã được tải lên thành công'
         )
     })
 
@@ -265,13 +283,13 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0) {
             return ApiResponse.badRequest(
                 res,
-                'Tag IDs array is required and must not be empty'
+                'Mảng ID thẻ là bắt buộc và không được để trống'
             )
         }
 
@@ -282,7 +300,7 @@ class InstructorCourseController {
             isAdmin
         )
 
-        return ApiResponse.success(res, course, 'Tags added successfully')
+        return ApiResponse.success(res, course, 'Đã thêm thẻ thành công')
     })
 
     /**
@@ -298,11 +316,11 @@ class InstructorCourseController {
         const tagIdInt = parseInt(tagId)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         if (isNaN(tagIdInt)) {
-            return ApiResponse.badRequest(res, 'Invalid tag ID')
+            return ApiResponse.badRequest(res, 'ID thẻ không hợp lệ')
         }
 
         const course = await instructorCourseService.removeTagFromCourse(
@@ -312,7 +330,7 @@ class InstructorCourseController {
             isAdmin
         )
 
-        return ApiResponse.success(res, course, 'Tag removed successfully')
+        return ApiResponse.success(res, course, 'Đã xóa thẻ thành công')
     })
 
     /**
@@ -327,7 +345,7 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const analytics = await instructorCourseService.getCourseAnalytics(
@@ -339,7 +357,7 @@ class InstructorCourseController {
         return ApiResponse.success(
             res,
             analytics,
-            'Course analytics retrieved successfully'
+            'Truy xuất thống kê khóa học thành công'
         )
     })
 
@@ -355,7 +373,7 @@ class InstructorCourseController {
         const courseId = parseInt(id)
 
         if (isNaN(courseId)) {
-            return ApiResponse.badRequest(res, 'Invalid course ID')
+            return ApiResponse.badRequest(res, 'ID khóa học không hợp lệ')
         }
 
         const filters = {
@@ -376,7 +394,7 @@ class InstructorCourseController {
         return ApiResponse.success(
             res,
             result,
-            'Course enrollments retrieved successfully'
+            'Truy xuất danh sách học viên thành công'
         )
     })
 }

@@ -18,7 +18,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             dashboard,
-            'Student dashboard retrieved successfully'
+            'Truy xuất bảng điều khiển học viên thành công'
         )
     })
 
@@ -35,7 +35,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             stats,
-            'Student statistics retrieved successfully'
+            'Truy xuất thống kê học viên thành công'
         )
     })
 
@@ -57,7 +57,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             enrolledCourses,
-            'Enrolled courses retrieved successfully'
+            'Truy xuất khóa học đã đăng ký thành công'
         )
     })
 
@@ -79,7 +79,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             continueWatching,
-            'Continue watching lessons retrieved successfully'
+            'Truy xuất danh sách bài học đang xem thành công'
         )
     })
 
@@ -106,7 +106,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             result.activities,
-            'Recent activities retrieved successfully',
+            'Truy xuất hoạt động gần đây thành công',
             undefined,
             result.meta
         )
@@ -126,7 +126,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             performance,
-            'Quiz performance retrieved successfully'
+            'Truy xuất thành tích bài trắc nghiệm thành công'
         )
     })
 
@@ -144,7 +144,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             analytics,
-            'Study time analytics retrieved successfully'
+            'Truy xuất phân tích thời gian học thành công'
         )
     })
 
@@ -163,7 +163,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             recommendations,
-            'Recommendations retrieved successfully'
+            'Truy xuất đề xuất khóa học thành công'
         )
     })
 
@@ -180,7 +180,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             streak,
-            'Learning streak retrieved successfully'
+            'Truy xuất đề xuất học liên tục thành công'
         )
     })
 
@@ -203,7 +203,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             heatmap,
-            'Calendar heatmap retrieved successfully'
+            'Truy xuất bản đồ lịch thành công'
         )
     })
 
@@ -221,7 +221,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             certificates,
-            'Certificates retrieved successfully'
+            'Truy xuất chứng chỉ thành công'
         )
     })
 
@@ -238,7 +238,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             goals,
-            'Learning goals retrieved successfully'
+            'Truy xuất mục tiêu học tập thành công'
         )
     })
 
@@ -258,7 +258,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             goal,
-            'Learning goal created successfully',
+            'Mục tiêu học tập đã được tạo thành công',
             201
         )
     })
@@ -281,7 +281,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             goal,
-            'Learning goal updated successfully'
+            'Mục tiêu học tập đã được cập nhật thành công'
         )
     })
 
@@ -299,7 +299,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             null,
-            'Learning goal deleted successfully',
+            'Mục tiêu học tập đã bị xóa thành công',
             204
         )
     })
@@ -317,7 +317,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             bookmarks,
-            'Bookmarks retrieved successfully'
+            'Truy xuất đánh dấu thành công'
         )
     })
 
@@ -337,7 +337,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             bookmark,
-            'Bookmark created successfully',
+            'Đánh dấu đã được tạo thành công',
             201
         )
     })
@@ -356,7 +356,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             null,
-            'Bookmark deleted successfully',
+            'Đánh dấu đã bị xóa thành công',
             204
         )
     })
@@ -374,7 +374,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             summary,
-            'Notes summary retrieved successfully'
+            'Truy xuất tóm tắt ghi chú thành công'
         )
     })
 
@@ -395,7 +395,7 @@ class StudentDashboardController {
         return ApiResponse.success(
             res,
             detail,
-            'Course progress detail retrieved successfully'
+            'Truy xuất chi tiết tiến độ khóa học thành công'
         )
     })
 }

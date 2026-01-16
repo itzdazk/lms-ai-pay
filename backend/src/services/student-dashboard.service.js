@@ -1,6 +1,6 @@
 // src/services/student-dashboard.service.js
 import { prisma } from '../config/database.config.js'
-import { ENROLLMENT_STATUS, COURSE_STATUS } from '../config/constants.js'
+import { ENROLLMENT_STATUS } from '../config/constants.js'
 import aiRecommendationService from './ai-recommendation.service.js'
 
 class StudentDashboardService {
@@ -1210,7 +1210,7 @@ class StudentDashboardService {
         })
 
         if (!existingGoal) {
-            throw new Error('Learning goal not found')
+            throw new Error('Không tìm thấy mục tiêu học tập')
         }
 
         const updateData = {}
@@ -1270,7 +1270,7 @@ class StudentDashboardService {
         })
 
         if (!goal) {
-            throw new Error('Learning goal not found')
+            throw new Error('Không tìm thấy mục tiêu học tập')
         }
 
         await prisma.learningGoal.delete({
@@ -1335,11 +1335,11 @@ class StudentDashboardService {
         const { type, courseId, lessonId, note } = data
 
         if (type === 'COURSE' && !courseId) {
-            throw new Error('Course ID is required for course bookmark')
+            throw new Error('Yêu cầu ID khóa học cho bookmark khóa học')
         }
         if (type === 'LESSON' && (!courseId || !lessonId)) {
             throw new Error(
-                'Course ID and Lesson ID are required for lesson bookmark'
+                'Yêu cầu ID khóa học và ID bài học cho bookmark bài học'
             )
         }
 
@@ -1402,7 +1402,7 @@ class StudentDashboardService {
         })
 
         if (!bookmark) {
-            throw new Error('Bookmark not found')
+            throw new Error('Không tìm thấy bookmark')
         }
 
         await prisma.bookmark.delete({
@@ -1494,7 +1494,7 @@ class StudentDashboardService {
         })
 
         if (!enrollment) {
-            throw new Error('Course not enrolled')
+            throw new Error('Khóa học chưa được đăng ký')
         }
 
         // Get course with chapters and lessons
@@ -1522,7 +1522,7 @@ class StudentDashboardService {
         })
 
         if (!course) {
-            throw new Error('Course not found')
+            throw new Error('Không tìm thấy khóa học')
         }
 
         // Get all progress for this course

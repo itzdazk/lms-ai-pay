@@ -14,7 +14,7 @@ class TagsController {
         return ApiResponse.success(
             res,
             result,
-            'Tags retrieved successfully'
+            'Truy xuất danh sách thẻ thành công'
         )
     })
 
@@ -26,7 +26,11 @@ class TagsController {
     getTagById = asyncHandler(async (req, res) => {
         const { id } = req.params
         const tag = await tagsService.getTagById(parseInt(id))
-        return ApiResponse.success(res, tag, 'Tag retrieved successfully')
+        return ApiResponse.success(
+            res,
+            tag,
+            'Truy xuất danh sách thẻ thành công'
+        )
     })
 
     /**
@@ -40,7 +44,7 @@ class TagsController {
         return ApiResponse.success(
             res,
             result,
-            'Courses retrieved successfully'
+            'Truy xuất danh sách khóa học thành công'
         )
     })
 
@@ -60,7 +64,7 @@ class TagsController {
 
         const tag = await tagsService.createTag(tagData)
 
-        return ApiResponse.created(res, tag, 'Tag created successfully')
+        return ApiResponse.created(res, tag, 'Thẻ đã được tạo thành công')
     })
 
     /**
@@ -80,7 +84,7 @@ class TagsController {
 
         const tag = await tagsService.updateTag(parseInt(id), updateData)
 
-        return ApiResponse.success(res, tag, 'Tag updated successfully')
+        return ApiResponse.success(res, tag, 'Thẻ đã được cập nhật thành công')
     })
 
     /**
@@ -93,11 +97,8 @@ class TagsController {
 
         await tagsService.deleteTag(parseInt(id))
 
-        return ApiResponse.success(res, null, 'Tag deleted successfully')
+        return ApiResponse.success(res, null, 'Thẻ đã bị xóa thành công')
     })
 }
 
 export default new TagsController()
-
-
-

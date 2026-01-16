@@ -2,20 +2,24 @@
 import { prisma } from '../config/database.config.js'
 import { Prisma } from '@prisma/client'
 import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 
 class TagsService {
     /**
      * Get tags list with pagination and search
      */
     async getTags(query) {
-        const { page = 1, limit = 20, search, sort = 'createdAt', sortOrder = 'desc' } = query
+        const {
+            page = 1,
+            limit = 20,
+            search,
+            sort = 'createdAt',
+            sortOrder = 'desc',
+        } = query
 
         // Parse page and limit to integers
         const pageNum = parseInt(page, 10) || 1
         const limitNum = parseInt(limit, 10) || 20
         const skip = (pageNum - 1) * limitNum
-
 
         // Build where clause for search
         const where = {}
@@ -31,10 +35,12 @@ class TagsService {
         const orderBy = {}
         const validSortFields = ['createdAt', 'name']
         const validSortOrders = ['asc', 'desc']
-        
+
         const sortField = validSortFields.includes(sort) ? sort : 'createdAt'
-        const sortOrderValue = validSortOrders.includes(sortOrder) ? sortOrder : 'desc'
-        
+        const sortOrderValue = validSortOrders.includes(sortOrder)
+            ? sortOrder
+            : 'desc'
+
         // Use raw query to get tags with published courses count efficiently
         // This is much faster than querying each tag separately
         const searchCondition = search
@@ -44,13 +50,15 @@ class TagsService {
         // Build ORDER BY clause for raw query
         let orderByClause = Prisma.sql`t.created_at DESC`
         if (sortField === 'name') {
-            orderByClause = sortOrderValue === 'asc' 
-                ? Prisma.sql`t.name ASC` 
-                : Prisma.sql`t.name DESC`
+            orderByClause =
+                sortOrderValue === 'asc'
+                    ? Prisma.sql`t.name ASC`
+                    : Prisma.sql`t.name DESC`
         } else {
-            orderByClause = sortOrderValue === 'asc' 
-                ? Prisma.sql`t.created_at ASC` 
-                : Prisma.sql`t.created_at DESC`
+            orderByClause =
+                sortOrderValue === 'asc'
+                    ? Prisma.sql`t.created_at ASC`
+                    : Prisma.sql`t.created_at DESC`
         }
 
         const tagsWithCountsRaw = await prisma.$queryRaw`
@@ -114,7 +122,7 @@ class TagsService {
         })
 
         if (!tag) {
-            const error = new Error('Tag not found')
+            const error = new Error('Không tìm thấy tag')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -150,7 +158,7 @@ class TagsService {
         })
 
         if (!tag) {
-            const error = new Error('Tag not found')
+            const error = new Error('Không tìm thấy tag')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -267,7 +275,7 @@ class TagsService {
         })
 
         if (existingTag) {
-            const error = new Error('Tag with this slug already exists')
+            const error = new Error('Tag với slug này đã tồn tại rồi')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -278,7 +286,7 @@ class TagsService {
         })
 
         if (existingTagByName) {
-            const error = new Error('Tag with this name already exists')
+            const error = new Error('Tag với tên này đã tồn tại rồi')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -290,8 +298,6 @@ class TagsService {
                 description,
             },
         })
-
-        logger.info(`Tag created: ${tag.name} (ID: ${tag.id})`)
 
         return tag
     }
@@ -306,7 +312,7 @@ class TagsService {
         })
 
         if (!existingTag) {
-            const error = new Error('Tag not found')
+            const error = new Error('Không tìm thấy tag')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -318,7 +324,7 @@ class TagsService {
             })
 
             if (slugExists) {
-                const error = new Error('Tag with this slug already exists')
+                const error = new Error('Tag với slug này đã tồn tại rồi')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -331,7 +337,7 @@ class TagsService {
             })
 
             if (nameExists) {
-                const error = new Error('Tag with this name already exists')
+                const error = new Error('Tag với tên này đã tồn tại rồi')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -341,8 +347,6 @@ class TagsService {
             where: { id: tagId },
             data: updateData,
         })
-
-        logger.info(`Tag updated: ${tag.name} (ID: ${tag.id})`)
 
         return tag
     }
@@ -364,7 +368,7 @@ class TagsService {
         })
 
         if (!tag) {
-            const error = new Error('Tag not found')
+            const error = new Error('Không tìm thấy tag')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -381,8 +385,6 @@ class TagsService {
         await prisma.tag.delete({
             where: { id: tagId },
         })
-
-        logger.info(`Tag deleted: ${tag.name} (ID: ${tag.id})`)
 
         return true
     }

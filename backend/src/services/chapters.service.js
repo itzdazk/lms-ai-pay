@@ -1,7 +1,6 @@
 // src/services/chapters.service.js
 import { prisma } from '../config/database.config.js'
 import { HTTP_STATUS } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 import slugify from '../utils/slugify.util.js'
 
 class ChaptersService {
@@ -19,7 +18,7 @@ class ChaptersService {
         try {
             const parsedCourseId = parseInt(courseId)
             if (isNaN(parsedCourseId)) {
-                const error = new Error('Invalid course ID')
+                const error = new Error('ID khóa học không hợp lệ')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -79,16 +78,8 @@ class ChaptersService {
                 })
             )
 
-            logger.info(
-                `Retrieved ${chaptersWithCounts.length} chapters for course ${parsedCourseId}`
-            )
-
             return chaptersWithCounts
         } catch (error) {
-            logger.error(
-                `Error getting chapters for course ${courseId}:`,
-                error
-            )
             throw error
         }
     }
@@ -128,7 +119,7 @@ class ChaptersService {
         })
 
         if (!chapter) {
-            const error = new Error('Chapter not found')
+            const error = new Error('Không tìm thấy chương học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -153,13 +144,15 @@ class ChaptersService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.instructorId !== userId) {
-            const error = new Error('Unauthorized: You are not the instructor of this course')
+            const error = new Error(
+                'Truy cập không hợp lệ: Bạn không phải là giảng viên của khóa học này'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -247,8 +240,6 @@ class ChaptersService {
             },
         })
 
-        logger.info(`Chapter created: ${chapter.id} for course ${courseId}`)
-
         return {
             ...chapter,
             lessonsCount: chapter._count.lessons,
@@ -276,13 +267,15 @@ class ChaptersService {
         })
 
         if (!chapter) {
-            const error = new Error('Chapter not found')
+            const error = new Error('Không tìm thấy chương học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (chapter.course.instructorId !== userId) {
-            const error = new Error('Unauthorized: You are not the instructor of this course')
+            const error = new Error(
+                'Truy cập không hợp lệ: Bạn không phải là giảng viên của khóa học này'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -343,7 +336,10 @@ class ChaptersService {
         }
 
         // Handle chapter order update
-        if (chapterOrder !== undefined && chapterOrder !== chapter.chapterOrder) {
+        if (
+            chapterOrder !== undefined &&
+            chapterOrder !== chapter.chapterOrder
+        ) {
             const oldOrder = chapter.chapterOrder
             const newOrder = chapterOrder
 
@@ -404,8 +400,6 @@ class ChaptersService {
             },
         })
 
-        logger.info(`Chapter updated: ${chapterId}`)
-
         return {
             ...updatedChapter,
             lessonsCount: updatedChapter._count.lessons,
@@ -436,20 +430,24 @@ class ChaptersService {
         })
 
         if (!chapter) {
-            const error = new Error('Chapter not found')
+            const error = new Error('Không tìm thấy chương học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (chapter.course.instructorId !== userId) {
-            const error = new Error('Unauthorized: You are not the instructor of this course')
+            const error = new Error(
+                'Truy cập không hợp lệ: Bạn không phải là giảng viên của khóa học này'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
 
         // Check if chapter has lessons
         if (chapter._count.lessons > 0) {
-            const error = new Error('Cannot delete chapter with lessons. Please delete or move lessons first.')
+            const error = new Error(
+                'Không thể xóa chương mục có chứa bài học. Vui lòng xóa hoặc di chuyển các bài học trước.'
+            )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -477,9 +475,7 @@ class ChaptersService {
             },
         })
 
-        logger.info(`Chapter deleted: ${chapterId}`)
-
-        return { message: 'Chapter deleted successfully' }
+        return { message: 'Xóa chương thành công' }
     }
 
     /**
@@ -496,13 +492,15 @@ class ChaptersService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Khóa học không tồn tại')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.instructorId !== userId) {
-            const error = new Error('Unauthorized: You are not the instructor of this course')
+            const error = new Error(
+                'Truy cập không hợp lệ: Bạn không phải là giảng viên của khóa học này'
+            )
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -519,7 +517,7 @@ class ChaptersService {
         })
 
         if (chapters.length !== chapterIds.length) {
-            const error = new Error('Some chapters not found')
+            const error = new Error('Một số chương không tìm thấy')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -528,7 +526,7 @@ class ChaptersService {
             (ch) => ch.courseId !== parseInt(courseId)
         )
         if (invalidChapters.length > 0) {
-            const error = new Error('Some chapters do not belong to this course')
+            const error = new Error('Một số chương không thuộc về khóa học này')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -543,11 +541,8 @@ class ChaptersService {
 
         await Promise.all(updatePromises)
 
-        logger.info(`Chapters reordered for course ${courseId}`)
-
-        return { message: 'Chapters reordered successfully' }
+        return { message: 'Sắp xếp lại chương thành công' }
     }
 }
 
 export default new ChaptersService()
-

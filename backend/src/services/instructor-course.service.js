@@ -133,10 +133,6 @@ class InstructorCourseService {
             prisma.course.count({ where }),
         ])
 
-        logger.info(
-            `Instructor ${instructorId} retrieved ${courses.length} courses`
-        )
-
         return {
             courses: courses.map((course) => ({
                 ...course,
@@ -219,7 +215,7 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -233,8 +229,6 @@ class InstructorCourseService {
             courseTags: undefined,
             _count: undefined,
         }
-
-        logger.info(`Instructor ${instructorId} retrieved course ${courseId}`)
 
         return transformedCourse
     }
@@ -277,7 +271,7 @@ class InstructorCourseService {
         })
 
         if (existingCourse) {
-            const error = new Error('Course with this slug already exists')
+            const error = new Error('Khóa học với slug này đã tồn tại')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -288,7 +282,7 @@ class InstructorCourseService {
         })
 
         if (!category) {
-            const error = new Error('Category not found')
+            const error = new Error('Không tìm thấy danh mục')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -373,10 +367,6 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} created course: ${course.title} (ID: ${course.id})`
-        )
-
         // Format response
         return {
             ...course,
@@ -407,16 +397,14 @@ class InstructorCourseService {
         })
 
         if (!existingCourse) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (existingCourse.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -466,13 +454,7 @@ class InstructorCourseService {
                 if (fs.existsSync(oldPath)) {
                     try {
                         fs.unlinkSync(oldPath)
-                        logger.info(
-                            `Thumbnail file deleted: ${oldThumbnailUrl}`
-                        )
                     } catch (error) {
-                        logger.error(
-                            `Error deleting thumbnail file: ${error.message}`
-                        )
                         // Don't throw error, just log it
                     }
                 }
@@ -489,13 +471,7 @@ class InstructorCourseService {
                 if (fs.existsSync(oldPath)) {
                     try {
                         fs.unlinkSync(oldPath)
-                        logger.info(
-                            `Video preview file deleted: ${oldVideoPreviewUrl}`
-                        )
                     } catch (error) {
-                        logger.error(
-                            `Error deleting video preview file: ${error.message}`
-                        )
                         // Don't throw error, just log it
                     }
                 }
@@ -529,7 +505,7 @@ class InstructorCourseService {
             })
 
             if (slugExists) {
-                const error = new Error('Course with this slug already exists')
+                const error = new Error('Khóa học với slug này đã tồn tại')
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
             }
@@ -544,7 +520,7 @@ class InstructorCourseService {
             })
 
             if (!category) {
-                const error = new Error('Category not found')
+                const error = new Error('Không tìm thấy danh mục')
                 error.statusCode = HTTP_STATUS.NOT_FOUND
                 throw error
             }
@@ -637,10 +613,6 @@ class InstructorCourseService {
             course.courseTags = updatedCourseTags
         }
 
-        logger.info(
-            `Instructor ${instructorId} updated course: ${course.title} (ID: ${courseId})`
-        )
-
         // Format response
         return {
             ...course,
@@ -672,16 +644,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -689,7 +659,7 @@ class InstructorCourseService {
         // Check if course has enrollments
         if (course._count.enrollments > 0) {
             const error = new Error(
-                'Cannot delete course with active enrollments. Please archive it instead.'
+                'Không thể xóa khóa học đã có người đăng ký. Vui lòng lưu trữ khóa học thay vì xóa.'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -699,10 +669,6 @@ class InstructorCourseService {
         await prisma.course.delete({
             where: { id: courseId },
         })
-
-        logger.info(
-            `Instructor ${instructorId} deleted course: ${course.title} (ID: ${courseId})`
-        )
 
         return true
     }
@@ -717,7 +683,7 @@ class InstructorCourseService {
     async changeCourseStatus(courseId, instructorId, status, isAdmin = false) {
         // Validate status
         if (!Object.values(COURSE_STATUS).includes(status)) {
-            const error = new Error('Invalid status')
+            const error = new Error('Trạng thái không hợp lệ')
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
@@ -744,16 +710,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership FIRST before any validation - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -762,7 +726,7 @@ class InstructorCourseService {
         if (status === COURSE_STATUS.PUBLISHED) {
             if (course._count.lessons === 0) {
                 const error = new Error(
-                    'Cannot publish course without any published lessons'
+                    'Không thể xuất bản khóa học mà không có bài giảng nào được xuất bản'
                 )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
@@ -795,10 +759,6 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} changed status of course: ${course.title} (ID: ${courseId}) to ${status}`
-        )
-
         // Notify admins when course is published for the first time
         if (status === COURSE_STATUS.PUBLISHED && !course.publishedAt) {
             try {
@@ -816,9 +776,6 @@ class InstructorCourseService {
                     )
                 }
             } catch (error) {
-                logger.error(
-                    `Failed to notify admins about course publish: ${error.message}`
-                )
                 // Don't fail course publish if notification fails
             }
         }
@@ -923,16 +880,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -983,14 +938,9 @@ class InstructorCourseService {
 
                     // Replace original with processed image
                     fs.renameSync(filePath + '.processed', filePath)
-
-                    logger.info(
-                        `Thumbnail auto-cropped to 16:9: ${width}×${height} → ${newWidth}×${newHeight} (Course ${courseId})`
-                    )
                 }
             }
         } catch (error) {
-            logger.error(`Error processing thumbnail: ${error.message}`)
             // Continue with original file if processing fails
         }
 
@@ -1015,13 +965,9 @@ class InstructorCourseService {
             )
             if (fs.existsSync(oldPath)) {
                 fs.unlinkSync(oldPath)
-                logger.info(`Old thumbnail deleted: ${course.thumbnailUrl}`)
             }
         }
 
-        logger.info(
-            `Thumbnail uploaded: Course ${course.title} (ID: ${courseId})`
-        )
         return updatedCourse
     }
 
@@ -1050,16 +996,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1071,19 +1015,9 @@ class InstructorCourseService {
         try {
             videoPreviewDuration = await getVideoDuration(file.path)
             if (videoPreviewDuration) {
-                logger.info(
-                    `Video preview duration extracted: ${videoPreviewDuration} seconds for course ${courseId}`
-                )
             } else {
-                logger.warn(
-                    `Could not extract video preview duration for course ${courseId}`
-                )
             }
         } catch (error) {
-            logger.error(
-                `Error extracting video preview duration: ${error.message}`,
-                { error: error.stack }
-            )
             // Continue without duration - don't fail the upload
         }
 
@@ -1106,15 +1040,9 @@ class InstructorCourseService {
 
             if (fs.existsSync(oldPath)) {
                 fs.unlinkSync(oldPath)
-                logger.info(
-                    `Deleted old video preview: ${course.videoPreviewUrl}`
-                )
             }
         }
 
-        logger.info(
-            `Video preview uploaded for course: ${course.title} (ID: ${courseId})`
-        )
         return updatedCourse
     }
 
@@ -1137,16 +1065,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1161,7 +1087,7 @@ class InstructorCourseService {
         })
 
         if (tags.length !== tagIds.length) {
-            const error = new Error('One or more tags not found')
+            const error = new Error('Một hoặc nhiều thẻ không tìm thấy')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -1181,7 +1107,7 @@ class InstructorCourseService {
 
         if (newTagIds.length === 0) {
             const error = new Error(
-                'All tags are already associated with this course'
+                'Tất cả các thẻ đã được liên kết với khóa học này'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -1216,10 +1142,6 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} added ${newTagIds.length} tags to course: ${course.title} (ID: ${courseId})`
-        )
-
         return {
             ...updatedCourse,
             tags: updatedCourse.courseTags.map((ct) => ct.tag),
@@ -1246,16 +1168,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1271,7 +1191,7 @@ class InstructorCourseService {
         })
 
         if (!courseTag) {
-            const error = new Error('Tag is not associated with this course')
+            const error = new Error('Thẻ không được liên kết với khóa học này')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -1307,10 +1227,6 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} removed tag ${tagId} from course: ${course.title} (ID: ${courseId})`
-        )
-
         return {
             ...updatedCourse,
             tags: updatedCourse.courseTags.map((ct) => ct.tag),
@@ -1338,16 +1254,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check ownership - allow if instructor is the owner OR if user is admin
         if (course.instructorId !== instructorId && !isAdmin) {
-            const error = new Error(
-                'You do not have permission to manage this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1491,10 +1405,6 @@ class InstructorCourseService {
             },
         })
 
-        logger.info(
-            `Instructor ${instructorId} retrieved analytics for course ID: ${courseId}`
-        )
-
         return {
             courseInfo: {
                 id: course.id,
@@ -1570,16 +1480,14 @@ class InstructorCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Check authorization (admin can access all, instructor only their own)
         if (!isAdmin && course.instructorId !== instructorId) {
-            const error = new Error(
-                'You do not have permission to view enrollments for this course'
-            )
+            const error = new Error('Bạn không có quyền quản lý khóa học này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
             throw error
         }
@@ -1654,10 +1562,6 @@ class InstructorCourseService {
             }),
             prisma.enrollment.count({ where }),
         ])
-
-        logger.info(
-            `Retrieved ${enrollments.length} enrollments for course ${courseId} (Instructor: ${instructorId})`
-        )
 
         return {
             enrollments,

@@ -1,10 +1,10 @@
 // src/controllers/instructor-quizzes.controller.js
-import { asyncHandler } from '../middlewares/error.middleware.js';
-import { PAGINATION, HTTP_STATUS } from '../config/constants.js';
-import ApiResponse from '../utils/response.util.js';
-import instructorQuizzesService from '../services/instructor-quizzes.service.js';
-import aiQuizGenerationService from '../services/ai-quiz-generation.service.js';
-import { prisma } from '../config/database.config.js';
+import { asyncHandler } from '../middlewares/error.middleware.js'
+import { PAGINATION, HTTP_STATUS } from '../config/constants.js'
+import ApiResponse from '../utils/response.util.js'
+import instructorQuizzesService from '../services/instructor-quizzes.service.js'
+import aiQuizGenerationService from '../services/ai-quiz-generation.service.js'
+import { prisma } from '../config/database.config.js'
 
 class InstructorQuizzesController {
     /**
@@ -12,140 +12,141 @@ class InstructorQuizzesController {
      * List all quizzes for a lesson (include drafts) for instructor/admin
      */
     getLessonQuizzes = asyncHandler(async (req, res) => {
-        const lessonId = parseInt(req.params.lessonId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const lessonId = parseInt(req.params.lessonId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         const quizzes = await instructorQuizzesService.getLessonQuizzes({
             lessonId,
             userId,
             userRole,
-        });
+        })
 
         return ApiResponse.success(
             res,
             quizzes,
-            'Instructor lesson quizzes retrieved successfully'
-        );
-    });
+            'Truy xuất bài kiểm tra giảng viên thành công'
+        )
+    })
     /**
      * POST /api/v1/instructor/lessons/:lessonId/quizzes
      */
     createLessonQuiz = asyncHandler(async (req, res) => {
-        const lessonId = parseInt(req.params.lessonId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const lessonId = parseInt(req.params.lessonId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         const quiz = await instructorQuizzesService.createQuizForLesson({
             lessonId,
             userId,
             userRole,
             payload: req.body,
-        });
+        })
 
         return ApiResponse.created(
             res,
             quiz,
-            'Quiz created successfully for lesson'
-        );
-    });
+            'Tạo bài kiểm tra thành công cho bài giảng'
+        )
+    })
 
     /**
      * PUT /api/v1/instructor/quizzes/:id
      */
     updateQuiz = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.id, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.id, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         const quiz = await instructorQuizzesService.updateQuiz({
             quizId,
             userId,
             userRole,
             payload: req.body,
-        });
+        })
 
         return ApiResponse.success(
             res,
             quiz,
-            'Quiz updated successfully'
-        );
-    });
+            'Cập nhật bài kiểm tra thành công'
+        )
+    })
 
     /**
      * DELETE /api/v1/instructor/quizzes/:id
      */
     deleteQuiz = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.id, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.id, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         await instructorQuizzesService.deleteQuiz({
             quizId,
             userId,
             userRole,
-        });
+        })
 
-        return ApiResponse.noContent(res);
-    });
+        return ApiResponse.noContent(res)
+    })
 
     /**
      * PATCH /api/v1/instructor/quizzes/:id/publish
      */
     publishQuiz = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.id, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
-        const { isPublished } = req.body;
+        const quizId = parseInt(req.params.id, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
+        const { isPublished } = req.body
 
         const quiz = await instructorQuizzesService.setQuizPublishStatus({
             quizId,
             userId,
             userRole,
             isPublished,
-        });
+        })
 
         return ApiResponse.success(
             res,
             quiz,
-            `Quiz ${isPublished ? 'published' : 'unpublished'} successfully`
-        );
-    });
+            `Bài kiểm tra đã được ${isPublished ? 'xuất bản' : 'không xuất bản'} thành công`
+        )
+    })
 
     /**
      * GET /api/v1/instructor/quizzes/:quizId/submissions
      */
     getInstructorQuizSubmissions = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.quizId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.quizId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
         const page = req.query.page
             ? parseInt(req.query.page, 10)
-            : PAGINATION.DEFAULT_PAGE;
+            : PAGINATION.DEFAULT_PAGE
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : Math.min(20, PAGINATION.MAX_LIMIT);
+            : Math.min(20, PAGINATION.MAX_LIMIT)
         const studentId = req.query.studentId
             ? parseInt(req.query.studentId, 10)
-            : undefined;
+            : undefined
         const isPassed =
             typeof req.query.isPassed === 'boolean'
                 ? req.query.isPassed
                 : req.query.isPassed === 'true'
-                ? true
-                : req.query.isPassed === 'false'
-                ? false
-                : undefined;
+                  ? true
+                  : req.query.isPassed === 'false'
+                    ? false
+                    : undefined
 
-        const result = await instructorQuizzesService.getInstructorQuizSubmissions({
-            quizId,
-            userId,
-            userRole,
-            page,
-            limit,
-            studentId,
-            isPassed,
-        });
+        const result =
+            await instructorQuizzesService.getInstructorQuizSubmissions({
+                quizId,
+                userId,
+                userRole,
+                page,
+                limit,
+                studentId,
+                isPassed,
+            })
 
         return ApiResponse.paginated(
             res,
@@ -155,59 +156,59 @@ class InstructorQuizzesController {
                 limit: result.limit,
                 total: result.total,
             },
-            'Quiz submissions retrieved successfully'
-        );
-    });
+            'Truy xuất danh sách bài nộp trắc nghiệm thành công'
+        )
+    })
 
     /**
      * GET /api/v1/instructor/quizzes/:quizId/analytics
      */
     getQuizAnalytics = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.quizId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.quizId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         const analytics = await instructorQuizzesService.getQuizAnalytics({
             quizId,
             userId,
             userRole,
-        });
+        })
 
         return ApiResponse.success(
             res,
             analytics,
-            'Quiz analytics retrieved successfully'
-        );
-    });
+            'Truy xuất thống kê bài kiểm tra thành công'
+        )
+    })
 
     /**
      * POST /api/v1/instructor/quizzes/:quizId/questions
      * Create a single question
      */
     createQuestion = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.quizId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.quizId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         const question = await instructorQuizzesService.createQuestion({
             quizId,
             userId,
             userRole,
             payload: req.body,
-        });
+        })
 
-        return ApiResponse.created(res, question, 'Question created successfully');
-    });
+        return ApiResponse.created(res, question, 'Tạo câu hỏi thành công')
+    })
 
     /**
      * PUT /api/v1/instructor/quizzes/:quizId/questions/:questionId
      * Update a single question
      */
     updateQuestion = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.quizId, 10);
-        const questionId = parseInt(req.params.questionId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.quizId, 10)
+        const questionId = parseInt(req.params.questionId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         const question = await instructorQuizzesService.updateQuestion({
             quizId,
@@ -215,63 +216,67 @@ class InstructorQuizzesController {
             userId,
             userRole,
             payload: req.body,
-        });
+        })
 
-        return ApiResponse.success(res, question, 'Question updated successfully');
-    });
+        return ApiResponse.success(res, question, 'Cập nhật câu hỏi thành công')
+    })
 
     /**
      * DELETE /api/v1/instructor/quizzes/:quizId/questions/:questionId
      * Delete a single question
      */
     deleteQuestion = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.quizId, 10);
-        const questionId = parseInt(req.params.questionId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
+        const quizId = parseInt(req.params.quizId, 10)
+        const questionId = parseInt(req.params.questionId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
 
         await instructorQuizzesService.deleteQuestion({
             quizId,
             questionId,
             userId,
             userRole,
-        });
+        })
 
-        return ApiResponse.noContent(res);
-    });
+        return ApiResponse.noContent(res)
+    })
 
     /**
      * PATCH /api/v1/instructor/quizzes/:quizId/questions/reorder
      * Reorder multiple questions
      */
     reorderQuestions = asyncHandler(async (req, res) => {
-        const quizId = parseInt(req.params.quizId, 10);
-        const userId = req.user.id;
-        const userRole = req.user.role;
-        const { orders } = req.body;
+        const quizId = parseInt(req.params.quizId, 10)
+        const userId = req.user.id
+        const userRole = req.user.role
+        const { orders } = req.body
 
         const quiz = await instructorQuizzesService.reorderQuestions({
             quizId,
             userId,
             userRole,
             orders,
-        });
+        })
 
-        return ApiResponse.success(res, quiz, 'Questions reordered successfully');
-    });
+        return ApiResponse.success(
+            res,
+            quiz,
+            'Thay đổi thứ tự câu hỏi thành công'
+        )
+    })
 
     /**
      * POST /api/v1/instructor/quizzes/generate-from-lesson
      * Generate quiz questions from lesson using AI
      */
     generateQuizFromLesson = asyncHandler(async (req, res) => {
-        const { lessonId } = req.body;
+        const { lessonId } = req.body
         const {
             numQuestions = 5,
             difficulty = 'medium',
             includeExplanation = true,
-            useCache = true
-        } = req.body;
+            useCache = true,
+        } = req.body
 
         // Verify lesson ownership
         const lesson = await prisma.lesson.findUnique({
@@ -279,26 +284,29 @@ class InstructorQuizzesController {
             include: {
                 course: {
                     select: {
-                        instructorId: true
-                    }
-                }
-            }
-        });
+                        instructorId: true,
+                    },
+                },
+            },
+        })
 
         if (!lesson) {
             return ApiResponse.error(
                 res,
-                'Lesson not found',
+                'Không tìm thấy bài học',
                 HTTP_STATUS.NOT_FOUND
-            );
+            )
         }
 
-        if (lesson.course.instructorId !== req.user.id && req.user.role !== 'admin') {
+        if (
+            lesson.course.instructorId !== req.user.id &&
+            req.user.role !== 'admin'
+        ) {
             return ApiResponse.error(
                 res,
-                'Unauthorized: You do not have permission to generate quiz for this lesson',
+                'Không có quyền truy cập: Bạn không có quyền tạo bài trắc nghiệm cho bài học này',
                 HTTP_STATUS.FORBIDDEN
-            );
+            )
         }
 
         // Generate questions
@@ -308,9 +316,9 @@ class InstructorQuizzesController {
                 numQuestions: parseInt(numQuestions),
                 difficulty,
                 includeExplanation,
-                useCache
+                useCache,
             }
-        );
+        )
 
         return ApiResponse.success(
             res,
@@ -321,50 +329,50 @@ class InstructorQuizzesController {
                 metadata: {
                     difficulty,
                     includeExplanation,
-                    generatedAt: new Date().toISOString()
-                }
+                    generatedAt: new Date().toISOString(),
+                },
             },
-            'Quiz questions generated successfully',
+            'Đã tạo thành công các câu hỏi bài kiểm tra từ bài học',
             HTTP_STATUS.OK
-        );
-    });
+        )
+    })
 
     /**
      * POST /api/v1/instructor/quizzes/generate-from-course
      * Generate quiz questions from course using AI
      */
     generateQuizFromCourse = asyncHandler(async (req, res) => {
-        const { courseId } = req.body;
+        const { courseId } = req.body
         const {
             numQuestions = 10,
             difficulty = 'medium',
             includeExplanation = true,
-            useCache = true
-        } = req.body;
+            useCache = true,
+        } = req.body
 
         // Verify course ownership
         const course = await prisma.course.findUnique({
             where: { id: courseId },
             select: {
                 instructorId: true,
-                title: true
-            }
-        });
+                title: true,
+            },
+        })
 
         if (!course) {
             return ApiResponse.error(
                 res,
-                'Course not found',
+                'Không tìm thấy khóa học',
                 HTTP_STATUS.NOT_FOUND
-            );
+            )
         }
 
         if (course.instructorId !== req.user.id && req.user.role !== 'admin') {
             return ApiResponse.error(
                 res,
-                'Unauthorized: You do not have permission to generate quiz for this course',
+                'Không có quyền truy cập: Bạn không có quyền tạo bài trắc nghiệm cho khóa học này',
                 HTTP_STATUS.FORBIDDEN
-            );
+            )
         }
 
         // Generate questions
@@ -374,9 +382,9 @@ class InstructorQuizzesController {
                 numQuestions: parseInt(numQuestions),
                 difficulty,
                 includeExplanation,
-                useCache
+                useCache,
             }
-        );
+        )
 
         return ApiResponse.success(
             res,
@@ -387,14 +395,13 @@ class InstructorQuizzesController {
                 metadata: {
                     difficulty,
                     includeExplanation,
-                    generatedAt: new Date().toISOString()
-                }
+                    generatedAt: new Date().toISOString(),
+                },
             },
-            'Quiz questions generated successfully',
+            'Đã tạo thành công các câu hỏi bài kiểm tra từ khóa học',
             HTTP_STATUS.OK
-        );
-    });
+        )
+    })
 }
 
-export default new InstructorQuizzesController();
-
+export default new InstructorQuizzesController()

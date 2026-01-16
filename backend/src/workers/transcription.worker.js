@@ -18,10 +18,14 @@ const worker = new Worker(
     async (job) => {
         const { lessonId, videoPath, userId, courseId } = job.data
         if (!lessonId || !videoPath || !userId || !courseId) {
-            throw new Error('Invalid job data: lessonId, videoPath, userId, and courseId are required')
+            throw new Error(
+                'Dữ liệu công việc không hợp lệ: yêu cầu phải có lessonId, videoPath, userId và courseId'
+            )
         }
 
-        logger.info(`[Transcription][Job ${job.id}] Start transcribing lesson ${lessonId}`)
+        logger.info(
+            `[Transcription][Job ${job.id}] Start transcribing lesson ${lessonId}`
+        )
 
         try {
             // Execute actual transcription (internal method)
@@ -32,10 +36,14 @@ const worker = new Worker(
                 source: 'queue',
             })
 
-            logger.info(`[Transcription][Job ${job.id}] Completed lesson ${lessonId}`)
+            logger.info(
+                `[Transcription][Job ${job.id}] Completed lesson ${lessonId}`
+            )
             return result
         } catch (error) {
-            logger.error(`[Transcription][Job ${job.id}] Error: ${error.message}`)
+            logger.error(
+                `[Transcription][Job ${job.id}] Error: ${error.message}`
+            )
             throw error
         }
     },
@@ -55,7 +63,9 @@ worker.on('failed', async (job, err) => {
                 },
             })
         } catch (updateError) {
-            logger.error(`[Transcription][Job ${job?.id}] Failed to update lesson status: ${updateError.message}`)
+            logger.error(
+                `[Transcription][Job ${job?.id}] Failed to update lesson status: ${updateError.message}`
+            )
         }
     }
 })

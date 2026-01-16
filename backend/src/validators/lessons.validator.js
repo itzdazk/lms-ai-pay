@@ -5,77 +5,75 @@ import { validate } from '../middlewares/validate.middleware.js'
 const getLessonByIdValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
     validate,
 ]
 
 const getLessonVideoValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
     validate,
 ]
 
 const getLessonTranscriptValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
     validate,
 ]
 
 const createLessonValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     body('title')
         .trim()
         .notEmpty()
-        .withMessage('Lesson title is required')
+        .withMessage('Tiêu đề bài học là bắt buộc')
         .isLength({ min: 2, max: 200 })
-        .withMessage('Lesson title must be between 2 and 200 characters'),
+        .withMessage('Tiêu đề bài học phải có độ dài từ 2 đến 200 ký tự'),
 
     body('slug')
         .optional()
         .trim()
         .isLength({ min: 2, max: 200 })
-        .withMessage('Lesson slug must be between 2 and 200 characters')
+        .withMessage('Slug bài học phải có độ dài từ 2 đến 200 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-        .withMessage(
-            'Slug must contain only lowercase letters, numbers and hyphens'
-        ),
+        .withMessage('Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
 
     body('description')
         .optional()
         .trim()
         .isLength({ max: 2000 })
-        .withMessage('Description must not exceed 2000 characters'),
+        .withMessage('Mô tả không được vượt quá 2000 ký tự'),
 
     body('content')
         .optional()
         .trim()
         .isLength({ max: 10000 })
-        .withMessage('Content must not exceed 10000 characters'),
+        .withMessage('Nội dung không được vượt quá 10000 ký tự'),
 
     body('lessonOrder')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Lesson order must be a positive integer'),
+        .withMessage('Thứ tự bài học phải là số nguyên dương'),
 
     body('isPreview')
         .optional()
         .isBoolean()
-        .withMessage('isPreview must be a boolean'),
+        .withMessage('isPreview phải là giá trị boolean'),
 
     body('isPublished')
         .optional()
         .isBoolean()
-        .withMessage('isPublished must be a boolean'),
+        .withMessage('isPublished phải là giá trị boolean'),
 
     body('chapterId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Chapter ID must be a positive integer'),
+        .withMessage('ID chương phải là số nguyên dương'),
 
     validate,
 ]
@@ -83,54 +81,52 @@ const createLessonValidator = [
 const updateLessonValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     body('title')
         .optional()
         .trim()
         .isLength({ min: 2, max: 200 })
-        .withMessage('Lesson title must be between 2 and 200 characters'),
+        .withMessage('Tiêu đề bài học phải có độ dài từ 2 đến 200 ký tự'),
 
     body('slug')
         .optional()
         .trim()
         .isLength({ min: 2, max: 200 })
-        .withMessage('Lesson slug must be between 2 and 200 characters')
+        .withMessage('Slug bài học phải có độ dài từ 2 đến 200 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-        .withMessage(
-            'Slug must contain only lowercase letters, numbers and hyphens'
-        ),
+        .withMessage('Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
 
     body('description')
         .optional()
         .trim()
         .isLength({ max: 2000 })
-        .withMessage('Description must not exceed 2000 characters'),
+        .withMessage('Mô tả không được vượt quá 2000 ký tự'),
 
     body('content')
         .optional()
         .trim()
         .isLength({ max: 10000 })
-        .withMessage('Content must not exceed 10000 characters'),
+        .withMessage('Nội dung không được vượt quá 10000 ký tự'),
 
     body('lessonOrder')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Lesson order must be a positive integer'),
+        .withMessage('Thứ tự bài học phải là số nguyên dương'),
 
     body('isPreview')
         .optional()
         .isBoolean()
-        .withMessage('isPreview must be a boolean'),
+        .withMessage('isPreview phải là giá trị boolean'),
 
     body('isPublished')
         .optional()
         .isBoolean()
-        .withMessage('isPublished must be a boolean'),
+        .withMessage('isPublished phải là giá trị boolean'),
 
     validate,
 ]
@@ -138,11 +134,11 @@ const updateLessonValidator = [
 const deleteLessonValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     validate,
 ]
@@ -150,11 +146,11 @@ const deleteLessonValidator = [
 const uploadVideoValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     validate,
 ]
@@ -162,11 +158,11 @@ const uploadVideoValidator = [
 const uploadTranscriptValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     validate,
 ]
@@ -174,15 +170,15 @@ const uploadTranscriptValidator = [
 const reorderLessonValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     body('newOrder')
         .isInt({ min: 1 })
-        .withMessage('New order must be a positive integer'),
+        .withMessage('Thứ tự mới phải là số nguyên dương'),
 
     validate,
 ]
@@ -190,15 +186,15 @@ const reorderLessonValidator = [
 const publishLessonValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     body('isPublished')
         .isBoolean()
-        .withMessage('isPublished must be a boolean'),
+        .withMessage('isPublished phải là giá trị boolean'),
 
     validate,
 ]
@@ -206,21 +202,21 @@ const publishLessonValidator = [
 const reorderLessonsValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('chapterId')
         .isInt({ min: 1 })
-        .withMessage('Chapter ID must be a positive integer'),
+        .withMessage('ID chương phải là số nguyên dương'),
 
     body('lessonIds')
         .isArray()
-        .withMessage('Lesson IDs must be an array')
+        .withMessage('Danh sách ID bài học phải là một mảng')
         .notEmpty()
-        .withMessage('Lesson IDs array cannot be empty'),
+        .withMessage('Danh sách ID bài học không được để trống'),
 
     body('lessonIds.*')
         .isInt({ min: 1 })
-        .withMessage('Each lesson ID must be a positive integer'),
+        .withMessage('Mỗi ID bài học phải là số nguyên dương'),
 
     validate,
 ]
@@ -228,11 +224,11 @@ const reorderLessonsValidator = [
 const requestTranscriptValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
 
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Lesson ID must be a positive integer'),
+        .withMessage('ID bài học phải là số nguyên dương'),
 
     validate,
 ]
@@ -251,6 +247,3 @@ export {
     publishLessonValidator,
     requestTranscriptValidator,
 }
-
-
-

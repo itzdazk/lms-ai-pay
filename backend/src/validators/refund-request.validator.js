@@ -5,18 +5,18 @@ import { validate } from '../middlewares/validate.middleware.js'
 export const createRefundRequestValidator = [
     body('orderId')
         .isInt({ min: 1 })
-        .withMessage('Order ID must be a positive integer'),
+        .withMessage('ID đơn hàng phải là số nguyên dương'),
     body('reason')
         .trim()
         .notEmpty()
-        .withMessage('Reason is required')
+        .withMessage('Lý do là bắt buộc')
         .isLength({ min: 10, max: 1000 })
-        .withMessage('Reason must be between 10 and 1000 characters'),
+        .withMessage('Lý do phải có độ dài từ 10 đến 1000 ký tự'),
     body('reasonType')
         .optional()
         .isIn(['MEDICAL', 'FINANCIAL_EMERGENCY', 'DISSATISFACTION', 'OTHER'])
         .withMessage(
-            'Reason type must be one of: MEDICAL, FINANCIAL_EMERGENCY, DISSATISFACTION, OTHER'
+            'Loại lý do phải là một trong: MEDICAL, FINANCIAL_EMERGENCY, DISSATISFACTION, OTHER'
         ),
     validate,
 ]
@@ -24,14 +24,14 @@ export const createRefundRequestValidator = [
 export const getRefundRequestByIdValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Refund request ID must be a positive integer'),
+        .withMessage('ID yêu cầu hoàn tiền phải là số nguyên dương'),
     validate,
 ]
 
 export const getRefundRequestByOrderIdValidator = [
     param('orderId')
         .isInt({ min: 1 })
-        .withMessage('Order ID must be a positive integer'),
+        .withMessage('ID đơn hàng phải là số nguyên dương'),
     validate,
 ]
 
@@ -39,14 +39,16 @@ export const getStudentRefundRequestsValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
     query('status')
         .optional()
         .isIn(['PENDING', 'APPROVED', 'REJECTED'])
-        .withMessage('Status must be one of: PENDING, APPROVED, REJECTED'),
+        .withMessage(
+            'Trạng thái phải là một trong: PENDING, APPROVED, REJECTED'
+        ),
     validate,
 ]

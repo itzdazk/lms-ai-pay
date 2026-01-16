@@ -2,14 +2,11 @@
 import { prisma } from '../config/database.config.js'
 import {
     COURSE_STATUS,
-    COURSE_LEVEL,
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
     USER_ROLES,
-    USER_STATUS,
     HTTP_STATUS,
 } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 
 class AdminCourseService {
     /**
@@ -215,8 +212,6 @@ class AdminCourseService {
             prisma.course.count({ where }),
         ])
 
-        logger.info(`Admin retrieved ${courses.length} courses`)
-
         return {
             courses: courses.map((course) => ({
                 ...course,
@@ -248,7 +243,7 @@ class AdminCourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
@@ -256,7 +251,7 @@ class AdminCourseService {
         // Only published courses can be featured
         if (isFeatured && course.status !== COURSE_STATUS.PUBLISHED) {
             const error = new Error(
-                'Only published courses can be marked as featured'
+                'Chỉ những khóa học đã xuất bản mới có thể được đánh dấu là nổi bật'
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -283,10 +278,6 @@ class AdminCourseService {
             },
         })
 
-        logger.info(
-            `Admin ${isFeatured ? 'featured' : 'unfeatured'} course: ${course.title} (ID: ${courseId})`
-        )
-
         return updatedCourse
     }
 
@@ -299,7 +290,6 @@ class AdminCourseService {
         const now = new Date()
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
         const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
         // 1. Course Statistics
         const [
@@ -594,8 +584,6 @@ class AdminCourseService {
             })
         }
 
-        logger.info('Admin retrieved platform analytics')
-
         return {
             overview: {
                 courses: {
@@ -670,8 +658,6 @@ class AdminCourseService {
      */
     async getInstructorsForCourses(limit = 1000) {
         try {
-            console.log('getInstructorsForCourses called with limit:', limit)
-
             const instructors = await prisma.user.findMany({
                 where: {
                     role: USER_ROLES.INSTRUCTOR,
@@ -692,10 +678,8 @@ class AdminCourseService {
                 take: Math.min(limit, 1000),
             })
 
-            console.log('Found instructors:', instructors.length)
             return instructors
         } catch (error) {
-            console.error('Error in getInstructorsForCourses:', error)
             throw error
         }
     }

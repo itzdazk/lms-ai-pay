@@ -7,7 +7,6 @@ import {
     COURSE_STATUS,
     ENROLLMENT_STATUS,
 } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 import QuizzesService from './quizzes.service.js'
 
 class StudentQuizzesService extends QuizzesService {
@@ -23,10 +22,6 @@ class StudentQuizzesService extends QuizzesService {
         // Check access permission
         await this.ensureQuizAccess(quiz, userId, userRole)
 
-        logger.info(
-            `Retrieved quiz ${quizId} by user ${userId} (role: ${userRole})`
-        )
-
         return this.sanitizeQuiz(quiz)
     }
 
@@ -39,7 +34,7 @@ class StudentQuizzesService extends QuizzesService {
         const lesson = await this.fetchLessonWithCourse(lessonId)
 
         if (!lesson) {
-            throw this.buildNotFoundError('Lesson not found')
+            throw this.buildNotFoundError('Không tìm thấy bài học')
         }
 
         // Check if user has access to this lesson's course
@@ -48,7 +43,7 @@ class StudentQuizzesService extends QuizzesService {
                 // Check if instructor owns the course
                 if (lesson.course.instructorId !== userId) {
                     throw this.buildForbiddenError(
-                        'You do not have permission to access quizzes for this lesson'
+                        'Bạn không có quyền truy cập vào các bài trắc nghiệm của bài học này'
                     )
                 }
             } else {
@@ -70,7 +65,7 @@ class StudentQuizzesService extends QuizzesService {
                     enrollment.status === ENROLLMENT_STATUS.DROPPED
                 ) {
                     throw this.buildForbiddenError(
-                        'You are not enrolled in this course'
+                        'Bạn chưa đăng ký khóa học này'
                     )
                 }
             }
@@ -119,10 +114,6 @@ class StudentQuizzesService extends QuizzesService {
             },
         })
 
-        logger.info(
-            `Retrieved ${quizzes.length} quizzes for lesson ${lessonId} by user ${userId} (role: ${userRole})`
-        )
-
         return quizzes.map((quiz) => this.sanitizeQuiz(quiz))
     }
 
@@ -142,7 +133,7 @@ class StudentQuizzesService extends QuizzesService {
         })
 
         if (!course) {
-            throw this.buildNotFoundError('Course not found')
+            throw this.buildNotFoundError('Không tìm thấy khóa học')
         }
 
         // Check if user has access to this course
@@ -151,7 +142,7 @@ class StudentQuizzesService extends QuizzesService {
                 // Check if instructor owns the course
                 if (course.instructorId !== userId) {
                     throw this.buildForbiddenError(
-                        'You do not have permission to access quizzes for this course'
+                        'Bạn không có quyền truy cập vào các bài trắc nghiệm của khóa học này'
                     )
                 }
             } else {
@@ -173,7 +164,7 @@ class StudentQuizzesService extends QuizzesService {
                     enrollment.status === ENROLLMENT_STATUS.DROPPED
                 ) {
                     throw this.buildForbiddenError(
-                        'You are not enrolled in this course'
+                        'Bạn chưa đăng ký khóa học này'
                     )
                 }
             }
@@ -218,10 +209,6 @@ class StudentQuizzesService extends QuizzesService {
                 },
             },
         })
-
-        logger.info(
-            `Retrieved ${quizzes.length} quizzes for course ${courseId} by user ${userId} (role: ${userRole})`
-        )
 
         return quizzes.map((quiz) => this.sanitizeQuiz(quiz))
     }
@@ -283,10 +270,6 @@ class StudentQuizzesService extends QuizzesService {
                 },
             })
         }
-
-        logger.info(
-            `User ${userId} submitted quiz ${quizId} (score: ${grading.score})`
-        )
 
         const attemptsUsed = attemptsCount + 1
         const attemptsRemaining = null
@@ -400,7 +383,7 @@ class StudentQuizzesService extends QuizzesService {
         })
 
         if (!submission || submission.quizId !== quizId) {
-            throw this.buildNotFoundError('Quiz submission not found')
+            throw this.buildNotFoundError('Không tìm thấy bài nộp trắc nghiệm')
         }
 
         if (
@@ -409,7 +392,7 @@ class StudentQuizzesService extends QuizzesService {
             userRole !== USER_ROLES.INSTRUCTOR
         ) {
             throw this.buildForbiddenError(
-                'You do not have permission to view this submission'
+                'Bạn không có quyền xem bài nộp trắc nghiệm này'
             )
         }
 

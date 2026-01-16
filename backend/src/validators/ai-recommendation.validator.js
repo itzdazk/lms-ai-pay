@@ -3,44 +3,44 @@ import { param, query } from 'express-validator'
 import { validate } from '../middlewares/validate.middleware.js'
 
 /**
- * Validate get recommendations query params
+ * Xác thực tham số truy vấn lấy đề xuất
  */
 const getRecommendationsValidator = [
     query('limit')
         .optional()
         .isInt({ min: 1, max: 50 })
-        .withMessage('Limit must be between 1 and 50')
+        .withMessage('Limit phải nằm trong khoảng 1 đến 50')
         .toInt(),
     query('forceRefresh')
         .optional()
         .isBoolean()
-        .withMessage('forceRefresh must be boolean'),
+        .withMessage('forceRefresh phải là kiểu boolean'),
     validate,
 ]
 
 /**
- * Validate get similar courses params and query
+ * Xác thực tham số và truy vấn lấy các khóa học tương tự
  */
 const getSimilarCoursesValidator = [
     param('courseId')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer')
+        .withMessage('ID khóa học phải là một số nguyên dương')
         .toInt(),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 20 })
-        .withMessage('Limit must be between 1 and 20')
+        .withMessage('Limit phải nằm trong khoảng 1 đến 20')
         .toInt(),
     validate,
 ]
 
 /**
- * Validate mark as viewed params
+ * Xác thực tham số đánh dấu đã xem
  */
 const markAsViewedValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Recommendation ID must be a positive integer')
+        .withMessage('ID đề xuất phải là một số nguyên dương')
         .toInt(),
     validate,
 ]

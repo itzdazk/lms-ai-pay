@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import {
+    BrowserRouter as Router,
+    Routes,
+    Route,
+    Navigate,
+} from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ProtectedRoute } from './components/routes/ProtectedRoute'
@@ -10,63 +15,250 @@ import { Loader2 } from 'lucide-react'
 
 // Loading fallback component
 const PageLoading = () => (
-    <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div className='flex items-center justify-center min-h-screen'>
+        <Loader2 className='h-8 w-8 animate-spin text-primary' />
     </div>
 )
 
 // Auth Pages - Lazy loaded
-const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })))
-const RegisterPage = lazy(() => import('./pages/RegisterPage').then(module => ({ default: module.RegisterPage })))
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(module => ({ default: module.ForgotPasswordPage })))
-const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })))
-const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage').then(module => ({ default: module.EmailVerificationPage })))
+const LoginPage = lazy(() =>
+    import('./pages/LoginPage').then((module) => ({
+        default: module.LoginPage,
+    }))
+)
+const RegisterPage = lazy(() =>
+    import('./pages/RegisterPage').then((module) => ({
+        default: module.RegisterPage,
+    }))
+)
+const ForgotPasswordPage = lazy(() =>
+    import('./pages/ForgotPasswordPage').then((module) => ({
+        default: module.ForgotPasswordPage,
+    }))
+)
+const ResetPasswordPage = lazy(() =>
+    import('./pages/ResetPasswordPage').then((module) => ({
+        default: module.ResetPasswordPage,
+    }))
+)
+const EmailVerificationPage = lazy(() =>
+    import('./pages/EmailVerificationPage').then((module) => ({
+        default: module.EmailVerificationPage,
+    }))
+)
 
 // Public Pages - Lazy loaded
-const LandingPage = lazy(() => import('./pages/LandingPage').then(module => ({ default: module.LandingPage })))
-const CoursesPage = lazy(() => import('./pages/CoursesPage').then(module => ({ default: module.CoursesPage })))
-const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage').then(module => ({ default: module.CourseDetailPage })))
-const CoursePreviewPage = lazy(() => import('./pages/CoursePreviewPage').then(module => ({ default: module.CoursePreviewPage })))
-const AboutPage = lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })))
-const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then(module => ({ default: module.CategoriesPage })))
-const CategoriesDetailPage = lazy(() => import('./pages/CategoriesDetailPage').then(module => ({ default: module.CategoriesDetailPage })))
+const LandingPage = lazy(() =>
+    import('./pages/LandingPage').then((module) => ({
+        default: module.LandingPage,
+    }))
+)
+const CoursesPage = lazy(() =>
+    import('./pages/CoursesPage').then((module) => ({
+        default: module.CoursesPage,
+    }))
+)
+const CourseDetailPage = lazy(() =>
+    import('./pages/CourseDetailPage').then((module) => ({
+        default: module.CourseDetailPage,
+    }))
+)
+const CoursePreviewPage = lazy(() =>
+    import('./pages/CoursePreviewPage').then((module) => ({
+        default: module.CoursePreviewPage,
+    }))
+)
+const AboutPage = lazy(() =>
+    import('./pages/AboutPage').then((module) => ({
+        default: module.AboutPage,
+    }))
+)
+const CategoriesPage = lazy(() =>
+    import('./pages/CategoriesPage').then((module) => ({
+        default: module.CategoriesPage,
+    }))
+)
+const CategoriesDetailPage = lazy(() =>
+    import('./pages/CategoriesDetailPage').then((module) => ({
+        default: module.CategoriesDetailPage,
+    }))
+)
 
 // Student Pages - Lazy loaded
-const StudentDashboard = lazy(() => import('./pages/StudentDashboard').then(module => ({ default: module.StudentDashboard })))
-const LessonPage = lazy(() => import('./pages/LessonPage').then(module => ({ default: module.LessonPage })))
-const AIChatPage = lazy(() => import('./pages/AIChatPage').then(module => ({ default: module.AIChatPage })))
-const PaymentCheckoutPage = lazy(() => import('./pages/PaymentCheckoutPage').then(module => ({ default: module.PaymentCheckoutPage })))
-const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage').then(module => ({ default: module.PaymentResultPage })))
-const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage').then(module => ({ default: module.PaymentSuccessPage })))
-const PaymentFailurePage = lazy(() => import('./pages/PaymentFailurePage').then(module => ({ default: module.PaymentFailurePage })))
-const QuizPage = lazy(() => import('./pages/QuizPage').then(module => ({ default: module.QuizPage })))
-const CertificatePage = lazy(() => import('./pages/CertificatePage').then(module => ({ default: module.CertificatePage })))
-const CertificatesPage = lazy(() => import('./pages/CertificatesPage').then(module => ({ default: module.CertificatesPage })))
-const ProfilePage = lazy(() => import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })))
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then(module => ({ default: module.SettingsPage })))
-const EnrollmentDetailPage = lazy(() => import('./pages/EnrollmentDetailPage').then(module => ({ default: module.EnrollmentDetailPage })))
-const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage').then(module => ({ default: module.OrderHistoryPage })))
-const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
-const TransactionHistoryPage = lazy(() => import('./pages/TransactionHistoryPage').then(module => ({ default: module.TransactionHistoryPage })))
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(module => ({ default: module.NotificationsPage })))
+const StudentDashboard = lazy(() =>
+    import('./pages/StudentDashboard').then((module) => ({
+        default: module.StudentDashboard,
+    }))
+)
+const LessonPage = lazy(() =>
+    import('./pages/LessonPage').then((module) => ({
+        default: module.LessonPage,
+    }))
+)
+const AIChatPage = lazy(() =>
+    import('./pages/AIChatPage').then((module) => ({
+        default: module.AIChatPage,
+    }))
+)
+const PaymentCheckoutPage = lazy(() =>
+    import('./pages/PaymentCheckoutPage').then((module) => ({
+        default: module.PaymentCheckoutPage,
+    }))
+)
+const PaymentResultPage = lazy(() =>
+    import('./pages/PaymentResultPage').then((module) => ({
+        default: module.PaymentResultPage,
+    }))
+)
+const PaymentSuccessPage = lazy(() =>
+    import('./pages/PaymentSuccessPage').then((module) => ({
+        default: module.PaymentSuccessPage,
+    }))
+)
+const PaymentFailurePage = lazy(() =>
+    import('./pages/PaymentFailurePage').then((module) => ({
+        default: module.PaymentFailurePage,
+    }))
+)
+const QuizPage = lazy(() =>
+    import('./pages/QuizPage').then((module) => ({ default: module.QuizPage }))
+)
+const CertificatePage = lazy(() =>
+    import('./pages/CertificatePage').then((module) => ({
+        default: module.CertificatePage,
+    }))
+)
+const CertificatesPage = lazy(() =>
+    import('./pages/CertificatesPage').then((module) => ({
+        default: module.CertificatesPage,
+    }))
+)
+const ProfilePage = lazy(() =>
+    import('./pages/ProfilePage').then((module) => ({
+        default: module.ProfilePage,
+    }))
+)
+const SettingsPage = lazy(() =>
+    import('./pages/SettingsPage').then((module) => ({
+        default: module.SettingsPage,
+    }))
+)
+const EnrollmentDetailPage = lazy(() =>
+    import('./pages/EnrollmentDetailPage').then((module) => ({
+        default: module.EnrollmentDetailPage,
+    }))
+)
+const OrderHistoryPage = lazy(() =>
+    import('./pages/OrderHistoryPage').then((module) => ({
+        default: module.OrderHistoryPage,
+    }))
+)
+const OrderDetailPage = lazy(() =>
+    import('./pages/OrderDetailPage').then((module) => ({
+        default: module.OrderDetailPage,
+    }))
+)
+const TransactionHistoryPage = lazy(() =>
+    import('./pages/TransactionHistoryPage').then((module) => ({
+        default: module.TransactionHistoryPage,
+    }))
+)
+const NotificationsPage = lazy(() =>
+    import('./pages/NotificationsPage').then((module) => ({
+        default: module.NotificationsPage,
+    }))
+)
 
 // Instructor Pages - Lazy loaded
-const InstructorDashboard = lazy(() => import('./pages/InstructorDashboard').then(module => ({ default: module.InstructorDashboard })))
-const CourseLayout = lazy(() => import('./pages/instructor/CourseLayout').then(module => ({ default: module.CourseLayout })))
-const CourseCreatePage = lazy(() => import('./pages/instructor/CourseCreatePage').then(module => ({ default: module.CourseCreatePage })))
-const CourseEditPage = lazy(() => import('./pages/instructor/CourseEditPage').then(module => ({ default: module.CourseEditPage })))
-const CourseChaptersPage = lazy(() => import('./pages/instructor/CourseChaptersPage').then(module => ({ default: module.CourseChaptersPage })))
-const InstructorOrdersPage = lazy(() => import('./pages/instructor/InstructorOrdersPage').then(module => ({ default: module.InstructorOrdersPage })))
-const InstructorEnrollmentsPage = lazy(() => import('./pages/instructor/InstructorEnrollmentsPage').then(module => ({ default: module.InstructorEnrollmentsPage })))
-const InstructorCoursesManagementPage = lazy(() => import('./pages/instructor/InstructorCoursesManagementPage').then(module => ({ default: module.InstructorCoursesManagementPage })))
-const QuizzesPage = lazy(() => import('./pages/instructor/QuizzesPage').then(module => ({ default: module.QuizzesPage })))
+const InstructorDashboard = lazy(() =>
+    import('./pages/InstructorDashboard').then((module) => ({
+        default: module.InstructorDashboard,
+    }))
+)
+const CourseLayout = lazy(() =>
+    import('./pages/instructor/CourseLayout').then((module) => ({
+        default: module.CourseLayout,
+    }))
+)
+const CourseCreatePage = lazy(() =>
+    import('./pages/instructor/CourseCreatePage').then((module) => ({
+        default: module.CourseCreatePage,
+    }))
+)
+const CourseEditPage = lazy(() =>
+    import('./pages/instructor/CourseEditPage').then((module) => ({
+        default: module.CourseEditPage,
+    }))
+)
+const CourseChaptersPage = lazy(() =>
+    import('./pages/instructor/CourseChaptersPage').then((module) => ({
+        default: module.CourseChaptersPage,
+    }))
+)
+const InstructorOrdersPage = lazy(() =>
+    import('./pages/instructor/InstructorOrdersPage').then((module) => ({
+        default: module.InstructorOrdersPage,
+    }))
+)
+const InstructorEnrollmentsPage = lazy(() =>
+    import('./pages/instructor/InstructorEnrollmentsPage').then((module) => ({
+        default: module.InstructorEnrollmentsPage,
+    }))
+)
+const InstructorCoursesManagementPage = lazy(() =>
+    import('./pages/instructor/InstructorCoursesManagementPage').then(
+        (module) => ({ default: module.InstructorCoursesManagementPage })
+    )
+)
+const QuizzesPage = lazy(() =>
+    import('./pages/instructor/QuizzesPage').then((module) => ({
+        default: module.QuizzesPage,
+    }))
+)
 
 // Admin Pages - Lazy loaded
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })))
-const UsersPage = lazy(() => import('./pages/admin/UsersPage').then(module => ({ default: module.UsersPage })))
-const AdminCoursesPage = lazy(() => import('./pages/admin/CoursesPage').then(module => ({ default: module.CoursesPage })))
-const OrdersPage = lazy(() => import('./pages/admin/OrdersPage').then(module => ({ default: module.OrdersPage })))
-const RefundsPage = lazy(() => import('./pages/admin/RefundsPage').then(module => ({ default: module.RefundsPage })))
+const AdminDashboard = lazy(() =>
+    import('./pages/AdminDashboard').then((module) => ({
+        default: module.AdminDashboard,
+    }))
+)
+const UsersPage = lazy(() =>
+    import('./pages/admin/UsersPage').then((module) => ({
+        default: module.UsersPage,
+    }))
+)
+const AdminCoursesPage = lazy(() =>
+    import('./pages/admin/CoursesPage').then((module) => ({
+        default: module.CoursesPage,
+    }))
+)
+const OrdersPage = lazy(() =>
+    import('./pages/admin/OrdersPage').then((module) => ({
+        default: module.OrdersPage,
+    }))
+)
+const RefundsPage = lazy(() =>
+    import('./pages/admin/RefundsPage').then((module) => ({
+        default: module.RefundsPage,
+    }))
+)
+
+// Error Pages - Lazy loaded
+const NotFoundPage = lazy(() =>
+    import('./pages/NotFoundPage').then((module) => ({
+        default: module.NotFoundPage,
+    }))
+)
+const UnauthorizedPage = lazy(() =>
+    import('./pages/UnauthorizedPage').then((module) => ({
+        default: module.UnauthorizedPage,
+    }))
+)
+const ForbiddenPage = lazy(() =>
+    import('./pages/ForbiddenPage').then((module) => ({
+        default: module.ForbiddenPage,
+    }))
+)
 
 export default function App() {
     return (
@@ -75,16 +267,22 @@ export default function App() {
             <div className='flex flex-col min-h-screen bg-background text-foreground'>
                 <Routes>
                     {/* ========== AUTH ROUTES (No Layout) ========== */}
-                    <Route path='/login' element={
-                        <Suspense fallback={<PageLoading />}>
-                            <LoginPage />
-                        </Suspense>
-                    } />
-                    <Route path='/register' element={
-                        <Suspense fallback={<PageLoading />}>
-                            <RegisterPage />
-                        </Suspense>
-                    } />
+                    <Route
+                        path='/login'
+                        element={
+                            <Suspense fallback={<PageLoading />}>
+                                <LoginPage />
+                            </Suspense>
+                        }
+                    />
+                    <Route
+                        path='/register'
+                        element={
+                            <Suspense fallback={<PageLoading />}>
+                                <RegisterPage />
+                            </Suspense>
+                        }
+                    />
                     <Route
                         path='/forgot-password'
                         element={
@@ -98,6 +296,32 @@ export default function App() {
                         element={
                             <Suspense fallback={<PageLoading />}>
                                 <ResetPasswordPage />
+                            </Suspense>
+                        }
+                    />
+
+                    {/* ========== ERROR ROUTES (No Layout) ========== */}
+                    <Route
+                        path='/unauthorized'
+                        element={
+                            <Suspense fallback={<PageLoading />}>
+                                <UnauthorizedPage />
+                            </Suspense>
+                        }
+                    />
+                    <Route
+                        path='/forbidden'
+                        element={
+                            <Suspense fallback={<PageLoading />}>
+                                <ForbiddenPage />
+                            </Suspense>
+                        }
+                    />
+                    <Route
+                        path='/404'
+                        element={
+                            <Suspense fallback={<PageLoading />}>
+                                <NotFoundPage />
                             </Suspense>
                         }
                     />
@@ -130,15 +354,22 @@ export default function App() {
                         element={
                             <PublicLayout>
                                 <Routes>
-                                    <Route path='/' element={
-                                        <Suspense fallback={<PageLoading />}>
-                                            <LandingPage />
-                                        </Suspense>
-                                    } />
+                                    <Route
+                                        path='/'
+                                        element={
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
+                                                <LandingPage />
+                                            </Suspense>
+                                        }
+                                    />
                                     <Route
                                         path='/verify-email'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <EmailVerificationPage />
                                             </Suspense>
                                         }
@@ -146,7 +377,9 @@ export default function App() {
                                     <Route
                                         path='/courses'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <CoursesPage />
                                             </Suspense>
                                         }
@@ -154,7 +387,9 @@ export default function App() {
                                     <Route
                                         path='/courses/preview'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <CoursePreviewPage />
                                             </Suspense>
                                         }
@@ -162,7 +397,9 @@ export default function App() {
                                     <Route
                                         path='/courses/:slug'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <CourseDetailPage />
                                             </Suspense>
                                         }
@@ -170,7 +407,9 @@ export default function App() {
                                     <Route
                                         path='/courses/:id'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <CourseDetailPage />
                                             </Suspense>
                                         }
@@ -178,7 +417,9 @@ export default function App() {
                                     <Route
                                         path='/categories'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <CategoriesPage />
                                             </Suspense>
                                         }
@@ -186,7 +427,9 @@ export default function App() {
                                     <Route
                                         path='/categories/:id'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <CategoriesDetailPage />
                                             </Suspense>
                                         }
@@ -194,7 +437,9 @@ export default function App() {
                                     <Route
                                         path='/about'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <AboutPage />
                                             </Suspense>
                                         }
@@ -212,7 +457,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <StudentDashboard />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -230,7 +479,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <EnrollmentDetailPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -248,7 +501,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <OrderHistoryPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -266,7 +523,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <OrderDetailPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -284,7 +545,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <TransactionHistoryPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -296,7 +561,9 @@ export default function App() {
                                         path='/ai-chat'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <AIChatPage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -306,7 +573,9 @@ export default function App() {
                                         path='/checkout/:slug'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <PaymentCheckoutPage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -315,7 +584,9 @@ export default function App() {
                                     <Route
                                         path='/payment/result'
                                         element={
-                                            <Suspense fallback={<PageLoading />}>
+                                            <Suspense
+                                                fallback={<PageLoading />}
+                                            >
                                                 <PaymentResultPage />
                                             </Suspense>
                                         }
@@ -324,7 +595,9 @@ export default function App() {
                                         path='/payment/success'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <PaymentSuccessPage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -334,7 +607,9 @@ export default function App() {
                                         path='/payment/failure'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <PaymentFailurePage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -344,7 +619,9 @@ export default function App() {
                                         path='/quiz/:id'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <QuizPage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -354,7 +631,9 @@ export default function App() {
                                         path='/certificate/:courseId'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <CertificatePage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -371,7 +650,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <CertificatesPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -382,7 +665,9 @@ export default function App() {
                                         path='/profile'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <ProfilePage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -392,7 +677,9 @@ export default function App() {
                                         path='/settings'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <SettingsPage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -402,7 +689,9 @@ export default function App() {
                                         path='/notifications'
                                         element={
                                             <ProtectedRoute>
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <NotificationsPage />
                                                 </Suspense>
                                             </ProtectedRoute>
@@ -420,7 +709,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <InstructorDashboard />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -437,7 +730,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <InstructorCoursesManagementPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -455,7 +752,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <CourseLayout />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -465,7 +766,9 @@ export default function App() {
                                         <Route
                                             path='create'
                                             element={
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <CourseCreatePage />
                                                 </Suspense>
                                             }
@@ -473,7 +776,9 @@ export default function App() {
                                         <Route
                                             path=':id/edit'
                                             element={
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <CourseEditPage />
                                                 </Suspense>
                                             }
@@ -481,7 +786,9 @@ export default function App() {
                                         <Route
                                             path=':id/chapters'
                                             element={
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <CourseChaptersPage />
                                                 </Suspense>
                                             }
@@ -489,7 +796,9 @@ export default function App() {
                                         <Route
                                             path=':id/quizzes/lessons/:lessonId'
                                             element={
-                                                <Suspense fallback={<PageLoading />}>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
                                                     <QuizzesPage />
                                                 </Suspense>
                                             }
@@ -505,7 +814,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <InstructorOrdersPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -522,7 +835,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <InstructorEnrollmentsPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -539,7 +856,11 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <QuizzesPage />
                                                     </Suspense>
                                                 </RoleRoute>
@@ -557,12 +878,22 @@ export default function App() {
                                                         'ADMIN',
                                                     ]}
                                                 >
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <QuizzesPage />
                                                     </Suspense>
                                                 </RoleRoute>
                                             </ProtectedRoute>
                                         }
+                                    />
+
+                                    {/* ========== CATCH-ALL - Redirect to 404 (No Layout) ========== */}
+                                    <Route
+                                        path='*'
+                                        element={<Navigate to='/404' replace />}
                                     />
                                 </Routes>
                             </PublicLayout>
@@ -583,7 +914,11 @@ export default function App() {
                                             <Route
                                                 path='/dashboard'
                                                 element={
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <AdminDashboard />
                                                     </Suspense>
                                                 }
@@ -591,7 +926,11 @@ export default function App() {
                                             <Route
                                                 path='/users'
                                                 element={
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <UsersPage />
                                                     </Suspense>
                                                 }
@@ -599,7 +938,11 @@ export default function App() {
                                             <Route
                                                 path='/courses'
                                                 element={
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <AdminCoursesPage />
                                                     </Suspense>
                                                 }
@@ -607,7 +950,11 @@ export default function App() {
                                             <Route
                                                 path='/orders'
                                                 element={
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <OrdersPage />
                                                     </Suspense>
                                                 }
@@ -615,9 +962,24 @@ export default function App() {
                                             <Route
                                                 path='/refunds'
                                                 element={
-                                                    <Suspense fallback={<PageLoading />}>
+                                                    <Suspense
+                                                        fallback={
+                                                            <PageLoading />
+                                                        }
+                                                    >
                                                         <RefundsPage />
                                                     </Suspense>
+                                                }
+                                            />
+
+                                            {/* ========== CATCH-ALL - Redirect to 404 (No Layout) ========== */}
+                                            <Route
+                                                path='*'
+                                                element={
+                                                    <Navigate
+                                                        to='/404'
+                                                        replace
+                                                    />
                                                 }
                                             />
                                         </Routes>

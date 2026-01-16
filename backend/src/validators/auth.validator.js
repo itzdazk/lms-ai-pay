@@ -6,45 +6,45 @@ const registerValidator = [
     body('userName')
         .trim()
         .notEmpty()
-        .withMessage('userName is required')
+        .withMessage('Tên đăng nhập không được để trống')
         .isLength({ min: 3, max: 50 })
-        .withMessage('userName must be between 3 and 50 characters')
+        .withMessage('Tên đăng nhập phải từ 3 đến 50 ký tự')
         .matches(/^[a-zA-Z0-9_]+$/)
         .withMessage(
-            'userName can only contain letters, numbers and underscores'
+            'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới'
         ),
 
     body('email')
         .trim()
         .notEmpty()
-        .withMessage('Email is required')
+        .withMessage('Email không được để trống')
         .isEmail()
-        .withMessage('Please provide a valid email')
+        .withMessage('Vui lòng nhập email hợp lệ')
         .normalizeEmail(),
 
     body('password')
         .notEmpty()
-        .withMessage('Password is required')
+        .withMessage('Mật khẩu không được để trống')
         .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters')
+        .withMessage('Mật khẩu phải có ít nhất 8 ký tự')
         .matches(
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]/
         )
         .withMessage(
-            'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+            'Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường, một chữ số và một ký tự đặc biệt'
         ),
 
     body('fullName')
         .trim()
         .notEmpty()
-        .withMessage('Full name is required')
+        .withMessage('Họ và tên không được để trống')
         .isLength({ min: 2, max: 100 })
-        .withMessage('Full name must be between 2 and 100 characters'),
+        .withMessage('Họ và tên phải từ 2 đến 100 ký tự'),
 
     body('role')
         .optional()
         .isIn(['STUDENT', 'INSTRUCTOR', 'ADMIN'])
-        .withMessage('Invalid role'),
+        .withMessage('Vai trò không hợp lệ'),
 
     validate,
 ]
@@ -53,15 +53,15 @@ const loginValidator = [
     body('identifier')
         .trim()
         .notEmpty()
-        .withMessage('Email or username is required'),
+        .withMessage('Email hoặc tên đăng nhập không được để trống'),
 
-    body('password').notEmpty().withMessage('Password is required'),
+    body('password').notEmpty().withMessage('Mật khẩu không được để trống'),
 
     validate,
 ]
 
 const verifyEmailValidator = [
-    body('token').notEmpty().withMessage('Verification token is required'),
+    body('token').notEmpty().withMessage('Mã xác thực không được để trống'),
 
     validate,
 ]
@@ -70,27 +70,29 @@ const forgotPasswordValidator = [
     body('email')
         .trim()
         .notEmpty()
-        .withMessage('Email is required')
+        .withMessage('Email không được để trống')
         .isEmail()
-        .withMessage('Please provide a valid email')
+        .withMessage('Vui lòng nhập email hợp lệ')
         .normalizeEmail(),
 
     validate,
 ]
 
 const resetPasswordValidator = [
-    body('token').notEmpty().withMessage('Reset token is required'),
+    body('token')
+        .notEmpty()
+        .withMessage('Mã đặt lại mật khẩu không được để trống'),
 
     body('password')
         .notEmpty()
-        .withMessage('Password is required')
+        .withMessage('Mật khẩu không được để trống')
         .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters')
+        .withMessage('Mật khẩu phải có ít nhất 8 ký tự')
         .matches(
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]/
         )
         .withMessage(
-            'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+            'Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường, một chữ số và một ký tự đặc biệt'
         ),
 
     validate,
@@ -99,28 +101,32 @@ const resetPasswordValidator = [
 const changePasswordValidator = [
     body('currentPassword')
         .notEmpty()
-        .withMessage('Current password is required'),
+        .withMessage('Mật khẩu hiện tại không được để trống'),
 
     body('newPassword')
         .notEmpty()
-        .withMessage('New password is required')
+        .withMessage('Mật khẩu mới không được để trống')
         .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters')
+        .withMessage('Mật khẩu phải có ít nhất 8 ký tự')
         .matches(
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]/
         )
         .withMessage(
-            'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+            'Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường, một chữ số và một ký tự đặc biệt'
         )
         .custom((value, { req }) => {
             if (value === req.body.currentPassword) {
-                throw new Error(
-                    'New password must be different from current password'
-                )
+                throw new Error('Mật khẩu mới phải khác với mật khẩu hiện tại')
             }
             return true
         }),
 
+    validate,
+]
+
+
+const googleLoginValidator = [
+    body('idToken').notEmpty().withMessage('ID Token không được để trống'),
     validate,
 ]
 
@@ -131,4 +137,5 @@ export {
     forgotPasswordValidator,
     resetPasswordValidator,
     changePasswordValidator,
+    googleLoginValidator,
 }

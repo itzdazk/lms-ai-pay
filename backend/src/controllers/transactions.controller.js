@@ -8,7 +8,7 @@ class TransactionsController {
         return ApiResponse.success(
             res,
             result,
-            'Transactions fetched successfully'
+            'Truy xuất giao dịch thành công'
         )
     })
 
@@ -21,11 +21,9 @@ class TransactionsController {
         return ApiResponse.success(
             res,
             result,
-            'Transaction detail fetched successfully'
+            'Truy xuất chi tiết giao dịch thành công'
         )
     })
 }
 
 export default new TransactionsController()
-
-

@@ -9,28 +9,30 @@ import { COURSE_STATUS, COURSE_LEVEL } from '../config/constants.js'
 export const getCourseEnrollmentsValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Số trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
     query('search')
         .optional()
         .trim()
         .isLength({ min: 1, max: 100 })
-        .withMessage('Search query must be between 1 and 100 characters'),
+        .withMessage('Từ khóa tìm kiếm phải từ 1 đến 100 ký tự'),
     query('status')
         .optional()
         .isIn(['ACTIVE', 'COMPLETED', 'DROPPED', 'EXPIRED'])
-        .withMessage('Invalid enrollment status'),
+        .withMessage('Trạng thái ghi danh không hợp lệ'),
     query('sort')
         .optional()
         .isIn(['newest', 'oldest', 'progress', 'lastAccessed'])
-        .withMessage('Sort must be one of: newest, oldest, progress, lastAccessed'),
+        .withMessage(
+            'Sắp xếp phải là một trong: newest, oldest, progress, lastAccessed'
+        ),
     validate,
 ]
 
@@ -41,37 +43,44 @@ export const getInstructorCoursesValidator = [
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Số trang phải là số nguyên dương'),
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
     query('search')
         .optional()
         .trim()
         .isLength({ min: 1, max: 200 })
-        .withMessage('Search term must be between 1 and 200 characters'),
+        .withMessage('Từ khóa tìm kiếm phải từ 1 đến 200 ký tự'),
     query('status')
         .optional()
         .isIn(Object.values(COURSE_STATUS))
         .withMessage(
-            `Status must be one of: ${Object.values(COURSE_STATUS).join(', ')}`
+            `Trạng thái phải là một trong: ${Object.values(COURSE_STATUS).join(', ')}`
         ),
     query('categoryId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Category ID must be a positive integer'),
+        .withMessage('ID danh mục phải là số nguyên dương'),
     query('level')
         .optional()
         .isIn(Object.values(COURSE_LEVEL))
         .withMessage(
-            `Level must be one of: ${Object.values(COURSE_LEVEL).join(', ')}`
+            `Trình độ phải là một trong: ${Object.values(COURSE_LEVEL).join(', ')}`
         ),
     query('sort')
         .optional()
-        .isIn(['newest', 'oldest', 'updated', 'updated-oldest', 'popular', 'rating'])
+        .isIn([
+            'newest',
+            'oldest',
+            'updated',
+            'updated-oldest',
+            'popular',
+            'rating',
+        ])
         .withMessage(
-            'Sort must be one of: newest, oldest, updated, updated-oldest, popular, rating'
+            'Sắp xếp phải là một trong: newest, oldest, updated, updated-oldest, popular, rating'
         ),
     validate,
 ]
@@ -83,28 +92,28 @@ export const createCourseValidator = [
     body('title')
         .trim()
         .notEmpty()
-        .withMessage('Title is required')
+        .withMessage('Tiêu đề không được để trống')
         .isLength({ min: 5, max: 200 })
-        .withMessage('Title must be between 5 and 200 characters'),
+        .withMessage('Tiêu đề phải từ 5 đến 200 ký tự'),
     body('slug')
         .optional()
         .trim()
         .isLength({ min: 5, max: 200 })
-        .withMessage('Slug must be between 5 and 200 characters')
+        .withMessage('Đường dẫn phải từ 5 đến 200 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
         .withMessage(
-            'Slug must be lowercase alphanumeric with hyphens (e.g., my-course-slug)'
+            'Đường dẫn phải là chữ thường và số với dấu gạch ngang (ví dụ: khoa-hoc-cua-toi)'
         ),
     body('description')
         .optional()
         .trim()
         .isLength({ max: 10000 })
-        .withMessage('Description must not exceed 10000 characters'),
+        .withMessage('Mô tả không được vượt quá 10000 ký tự'),
     body('shortDescription')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage('Short description must not exceed 500 characters'),
+        .withMessage('Mô tả ngắn không được vượt quá 500 ký tự'),
     body('thumbnailUrl')
         .optional()
         .custom((value) => {
@@ -119,7 +128,7 @@ export const createCourseValidator = [
             }
             const urlPattern = /^https?:\/\/.+/i
             if (!urlPattern.test(trimmedValue)) {
-                throw new Error('Thumbnail URL must be a valid URL')
+                throw new Error('URL ảnh đại diện phải là đường dẫn hợp lệ')
             }
             return true
         }),
@@ -137,19 +146,19 @@ export const createCourseValidator = [
             }
             const urlPattern = /^https?:\/\/.+/i
             if (!urlPattern.test(trimmedValue)) {
-                throw new Error('Video preview URL must be a valid URL')
+                throw new Error('URL video giới thiệu phải là đường dẫn hợp lệ')
             }
             return true
         }),
     body('videoPreviewDuration')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Video preview duration must be a non-negative integer'),
+        .withMessage('Thời lượng video giới thiệu phải là số nguyên không âm'),
     body('price')
         .notEmpty()
-        .withMessage('Price is required')
+        .withMessage('Giá không được để trống')
         .isFloat({ min: 0 })
-        .withMessage('Price must be a non-negative number'),
+        .withMessage('Giá phải là số không âm'),
     body('discountPrice')
         .optional({ nullable: true, checkFalsy: true })
         .custom((value, { req }) => {
@@ -160,71 +169,69 @@ export const createCourseValidator = [
             // If value is provided, it must be a non-negative number
             const numValue = parseFloat(value)
             if (isNaN(numValue) || numValue < 0) {
-                throw new Error('Discount price must be a non-negative number')
+                throw new Error('Giá khuyến mãi phải là số không âm')
             }
             // If price exists, discount price must be <= price
             if (req.body.price && numValue > parseFloat(req.body.price)) {
-                throw new Error(
-                    'Discount price must be less than or equal to price'
-                )
+                throw new Error('Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc')
             }
             return true
         }),
     body('categoryId')
         .notEmpty()
-        .withMessage('Category ID is required')
+        .withMessage('ID danh mục không được để trống')
         .isInt({ min: 1 })
-        .withMessage('Category ID must be a positive integer'),
+        .withMessage('ID danh mục phải là số nguyên dương'),
     body('level')
         .optional()
         .isIn(Object.values(COURSE_LEVEL))
         .withMessage(
-            `Level must be one of: ${Object.values(COURSE_LEVEL).join(', ')}`
+            `Trình độ phải là một trong: ${Object.values(COURSE_LEVEL).join(', ')}`
         ),
     body('durationHours')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Duration hours must be a non-negative integer'),
+        .withMessage('Thời lượng (giờ) phải là số nguyên không âm'),
     body('language')
         .optional()
         .trim()
         .isLength({ min: 2, max: 10 })
-        .withMessage('Language must be between 2 and 10 characters'),
+        .withMessage('Ngôn ngữ phải từ 2 đến 10 ký tự'),
     body('requirements')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('Requirements must not exceed 5000 characters'),
+        .withMessage('Yêu cầu không được vượt quá 5000 ký tự'),
     body('whatYouLearn')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('What you learn must not exceed 5000 characters'),
+        .withMessage('Nội dung học được không được vượt quá 5000 ký tự'),
     body('courseObjectives')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('Course objectives must not exceed 5000 characters'),
+        .withMessage('Mục tiêu khóa học không được vượt quá 5000 ký tự'),
     body('targetAudience')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('Target audience must not exceed 5000 characters'),
+        .withMessage('Đối tượng học viên không được vượt quá 5000 ký tự'),
     body('status')
         .optional()
         .isIn(Object.values(COURSE_STATUS))
         .withMessage(
-            `Status must be one of: ${Object.values(COURSE_STATUS).join(', ')}`
+            `Trạng thái phải là một trong: ${Object.values(COURSE_STATUS).join(', ')}`
         ),
     body('isFeatured')
         .optional()
         .isBoolean()
-        .withMessage('isFeatured must be a boolean'),
-    body('tags').optional().isArray().withMessage('Tags must be an array'),
+        .withMessage('isFeatured phải là giá trị boolean'),
+    body('tags').optional().isArray().withMessage('Thẻ phải là mảng'),
     body('tags.*')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Each tag ID must be a positive integer'),
+        .withMessage('Mỗi ID thẻ phải là số nguyên dương'),
     validate,
 ]
 
@@ -234,31 +241,31 @@ export const createCourseValidator = [
 export const updateCourseValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     body('title')
         .optional()
         .trim()
         .isLength({ min: 5, max: 200 })
-        .withMessage('Title must be between 5 and 200 characters'),
+        .withMessage('Tiêu đề phải từ 5 đến 200 ký tự'),
     body('slug')
         .optional()
         .trim()
         .isLength({ min: 5, max: 200 })
-        .withMessage('Slug must be between 5 and 200 characters')
+        .withMessage('Đường dẫn phải từ 5 đến 200 ký tự')
         .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
         .withMessage(
-            'Slug must be lowercase alphanumeric with hyphens (e.g., my-course-slug)'
+            'Đường dẫn phải là chữ thường và số với dấu gạch ngang (ví dụ: khoa-hoc-cua-toi)'
         ),
     body('description')
         .optional()
         .trim()
         .isLength({ max: 10000 })
-        .withMessage('Description must not exceed 10000 characters'),
+        .withMessage('Mô tả không được vượt quá 10000 ký tự'),
     body('shortDescription')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage('Short description must not exceed 500 characters'),
+        .withMessage('Mô tả ngắn không được vượt quá 500 ký tự'),
     body('thumbnailUrl')
         .optional()
         .custom((value) => {
@@ -273,7 +280,7 @@ export const updateCourseValidator = [
             }
             const urlPattern = /^https?:\/\/.+/i
             if (!urlPattern.test(trimmedValue)) {
-                throw new Error('Thumbnail URL must be a valid URL')
+                throw new Error('URL ảnh đại diện phải là đường dẫn hợp lệ')
             }
             return true
         }),
@@ -291,18 +298,18 @@ export const updateCourseValidator = [
             }
             const urlPattern = /^https?:\/\/.+/i
             if (!urlPattern.test(trimmedValue)) {
-                throw new Error('Video preview URL must be a valid URL')
+                throw new Error('URL video giới thiệu phải là đường dẫn hợp lệ')
             }
             return true
         }),
     body('videoPreviewDuration')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Video preview duration must be a non-negative integer'),
+        .withMessage('Thời lượng video giới thiệu phải là số nguyên không âm'),
     body('price')
         .optional()
         .isFloat({ min: 0 })
-        .withMessage('Price must be a non-negative number'),
+        .withMessage('Giá phải là số không âm'),
     body('discountPrice')
         .optional({ nullable: true, checkFalsy: true })
         .custom((value, { req }) => {
@@ -313,68 +320,66 @@ export const updateCourseValidator = [
             // If value is provided, it must be a non-negative number
             const numValue = parseFloat(value)
             if (isNaN(numValue) || numValue < 0) {
-                throw new Error('Discount price must be a non-negative number')
+                throw new Error('Giá khuyến mãi phải là số không âm')
             }
             // If price exists, discount price must be <= price
             if (req.body.price && numValue > parseFloat(req.body.price)) {
-                throw new Error(
-                    'Discount price must be less than or equal to price'
-                )
+                throw new Error('Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc')
             }
             return true
         }),
     body('categoryId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Category ID must be a positive integer'),
+        .withMessage('ID danh mục phải là số nguyên dương'),
     body('level')
         .optional()
         .isIn(Object.values(COURSE_LEVEL))
         .withMessage(
-            `Level must be one of: ${Object.values(COURSE_LEVEL).join(', ')}`
+            `Trình độ phải là một trong: ${Object.values(COURSE_LEVEL).join(', ')}`
         ),
     body('durationHours')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Duration hours must be a non-negative integer'),
+        .withMessage('Thời lượng (giờ) phải là số nguyên không âm'),
     body('totalLessons')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Total lessons must be a non-negative integer'),
+        .withMessage('Tổng số bài học phải là số nguyên không âm'),
     body('language')
         .optional()
         .trim()
         .isLength({ min: 2, max: 10 })
-        .withMessage('Language must be between 2 and 10 characters'),
+        .withMessage('Ngôn ngữ phải từ 2 đến 10 ký tự'),
     body('requirements')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('Requirements must not exceed 5000 characters'),
+        .withMessage('Yêu cầu không được vượt quá 5000 ký tự'),
     body('whatYouLearn')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('What you learn must not exceed 5000 characters'),
+        .withMessage('Nội dung học được không được vượt quá 5000 ký tự'),
     body('courseObjectives')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('Course objectives must not exceed 5000 characters'),
+        .withMessage('Mục tiêu khóa học không được vượt quá 5000 ký tự'),
     body('targetAudience')
         .optional()
         .trim()
         .isLength({ max: 5000 })
-        .withMessage('Target audience must not exceed 5000 characters'),
+        .withMessage('Đối tượng học viên không được vượt quá 5000 ký tự'),
     body('isFeatured')
         .optional()
         .isBoolean()
-        .withMessage('isFeatured must be a boolean'),
-    body('tags').optional().isArray().withMessage('Tags must be an array'),
+        .withMessage('isFeatured phải là giá trị boolean'),
+    body('tags').optional().isArray().withMessage('Thẻ phải là mảng'),
     body('tags.*')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Each tag ID must be a positive integer'),
+        .withMessage('Mỗi ID thẻ phải là số nguyên dương'),
     validate,
 ]
 
@@ -384,7 +389,7 @@ export const updateCourseValidator = [
 export const deleteCourseValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     validate,
 ]
 
@@ -394,13 +399,13 @@ export const deleteCourseValidator = [
 export const changeCourseStatusValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     body('status')
         .notEmpty()
-        .withMessage('Status is required')
+        .withMessage('Trạng thái không được để trống')
         .isIn(Object.values(COURSE_STATUS))
         .withMessage(
-            `Status must be one of: ${Object.values(COURSE_STATUS).join(', ')}`
+            `Trạng thái phải là một trong: ${Object.values(COURSE_STATUS).join(', ')}`
         ),
     validate,
 ]
@@ -411,17 +416,17 @@ export const changeCourseStatusValidator = [
 export const uploadVideoPreviewValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     body('videoPreviewUrl')
         .notEmpty()
-        .withMessage('Video preview URL is required')
+        .withMessage('URL video giới thiệu không được để trống')
         .trim()
         .isURL()
-        .withMessage('Video preview URL must be a valid URL'),
+        .withMessage('URL video giới thiệu phải là đường dẫn hợp lệ'),
     body('videoPreviewDuration')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Video preview duration must be a non-negative integer'),
+        .withMessage('Thời lượng video giới thiệu phải là số nguyên không âm'),
     validate,
 ]
 
@@ -431,7 +436,7 @@ export const uploadVideoPreviewValidator = [
 export const getInstructorCourseByIdValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     validate,
 ]
 
@@ -441,7 +446,7 @@ export const getInstructorCourseByIdValidator = [
 export const getCourseAnalyticsValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     validate,
 ]
 
@@ -451,15 +456,15 @@ export const getCourseAnalyticsValidator = [
 export const addTagsToCourseValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     body('tagIds')
         .notEmpty()
-        .withMessage('Tag IDs are required')
+        .withMessage('ID thẻ không được để trống')
         .isArray({ min: 1 })
-        .withMessage('Tag IDs must be a non-empty array'),
+        .withMessage('ID thẻ phải là mảng không rỗng'),
     body('tagIds.*')
         .isInt({ min: 1 })
-        .withMessage('Each tag ID must be a positive integer'),
+        .withMessage('Mỗi ID thẻ phải là số nguyên dương'),
     validate,
 ]
 
@@ -469,9 +474,9 @@ export const addTagsToCourseValidator = [
 export const removeTagFromCourseValidator = [
     param('id')
         .isInt({ min: 1 })
-        .withMessage('Course ID must be a positive integer'),
+        .withMessage('ID khóa học phải là số nguyên dương'),
     param('tagId')
         .isInt({ min: 1 })
-        .withMessage('Tag ID must be a positive integer'),
+        .withMessage('ID thẻ phải là số nguyên dương'),
     validate,
 ]

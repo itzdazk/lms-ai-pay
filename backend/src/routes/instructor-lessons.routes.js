@@ -81,11 +81,9 @@ router.patch(
         uploadVideo.single('video')(req, res, (err) => {
             if (err) {
                 if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-                    // Log the field name that was sent for debugging
-                    console.log('Received fields:', req.body, req.files)
                     return ApiResponse.badRequest(
                         res,
-                        'Unexpected field. Please use field name "video" for the file upload. Make sure your form-data uses the field name "video".'
+                        'Trường không hợp lệ. Vui lòng sử dụng tên trường là "video" để tải tệp lên. Đảm bảo form-data của bạn sử dụng tên trường là "video"'
                     )
                 }
                 return next(err)
@@ -114,7 +112,7 @@ router.patch(
                 if (err.code === 'LIMIT_UNEXPECTED_FILE') {
                     return ApiResponse.badRequest(
                         res,
-                        'Unexpected field. Please use field name "transcript" for the file upload.'
+                        'Trường không hợp lệ. Vui lòng sử dụng tên trường là "transcript" để tải tệp lên.'
                     )
                 }
                 return next(err)

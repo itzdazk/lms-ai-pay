@@ -25,7 +25,7 @@ class AIController {
         return ApiResponse.success(
             res,
             result.conversations,
-            'Conversations retrieved successfully',
+            'Truy xuất danh sách cuộc hội thoại thành công',
             200,
             result.pagination
         )
@@ -67,7 +67,7 @@ class AIController {
         })
 
         if (!conversation) {
-            return ApiResponse.notFound(res, 'Conversation not found')
+            return ApiResponse.notFound(res, 'Không tìm thấy cuộc hội thoại')
         }
 
         return ApiResponse.success(res, conversation)
@@ -83,15 +83,17 @@ class AIController {
         const { courseId, lessonId, title, mode } = req.body
         const userId = req.user?.id // Optional - undefined for advisor
 
-        const conversation = await aiChatService.createConversation(
-            userId,
-            { courseId, lessonId, title, mode }
-        )
+        const conversation = await aiChatService.createConversation(userId, {
+            courseId,
+            lessonId,
+            title,
+            mode,
+        })
 
         return ApiResponse.created(
             res,
             conversation,
-            'Conversation created successfully'
+            'Tạo cuộc hội thoại thành công'
         )
     })
 
@@ -105,11 +107,7 @@ class AIController {
 
         await aiChatService.deleteConversation(parseInt(id), req.user.id)
 
-        return ApiResponse.success(
-            res,
-            null,
-            'Conversation deleted successfully'
-        )
+        return ApiResponse.success(res, null, 'Xóa cuộc hội thoại thành công')
     })
 
     /**
@@ -130,7 +128,7 @@ class AIController {
         return ApiResponse.success(
             res,
             conversation,
-            'Conversation updated successfully'
+            'Cập nhật cuộc hội thoại thành công'
         )
     })
 
@@ -147,7 +145,7 @@ class AIController {
         return ApiResponse.success(
             res,
             null,
-            'Conversation archived successfully'
+            'Lưu trữ cuộc hội thoại thành công'
         )
     })
 
@@ -173,7 +171,7 @@ class AIController {
         return ApiResponse.success(
             res,
             null,
-            'Conversation activated successfully'
+            'Kích hoạt cuộc hội thoại thành công'
         )
     })
 
@@ -197,7 +195,7 @@ class AIController {
         return ApiResponse.success(
             res,
             result.messages,
-            'Messages retrieved successfully',
+            'Truy xuất danh sách tin nhắn thành công',
             200,
             result.pagination
         )
@@ -255,7 +253,7 @@ class AIController {
             responseLength: result?.aiMessage?.message?.length || 0,
         })
 
-        return ApiResponse.success(res, result, 'Message sent successfully')
+        return ApiResponse.success(res, result, 'Đã gửi tin nhắn thành công')
     })
 
     /**
@@ -280,7 +278,9 @@ class AIController {
                 mode,
                 (chunk) => {
                     // Send chunk to client
-                    res.write(`data: ${JSON.stringify({ chunk, done: false })}\n\n`)
+                    res.write(
+                        `data: ${JSON.stringify({ chunk, done: false })}\n\n`
+                    )
                 },
                 lessonId ? parseInt(lessonId) : null
             )
@@ -289,7 +289,9 @@ class AIController {
             res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
             res.end()
         } catch (error) {
-            res.write(`data: ${JSON.stringify({ error: error.message, done: true })}\n\n`)
+            res.write(
+                `data: ${JSON.stringify({ error: error.message, done: true })}\n\n`
+            )
             res.end()
         }
     })
@@ -310,7 +312,7 @@ class AIController {
             feedbackText
         )
 
-        return ApiResponse.success(res, null, 'Feedback submitted successfully')
+        return ApiResponse.success(res, null, 'Đã gửi phản hồi thành công')
     })
 
     /**
@@ -324,7 +326,7 @@ class AIController {
         if (!q || q.trim().length < 2) {
             return ApiResponse.badRequest(
                 res,
-                'Query must be at least 2 characters'
+                'Truy vấn phải có ít nhất 2 ký tự'
             )
         }
 
@@ -334,7 +336,7 @@ class AIController {
             null
         )
 
-        return ApiResponse.success(res, context, 'Search completed')
+        return ApiResponse.success(res, context, 'Hoàn thành tìm kiếm')
     })
 
     /**
@@ -343,9 +345,14 @@ class AIController {
      * @access  Private
      */
     getOllamaStatus = asyncHandler(async (req, res) => {
-        const ollamaService = (await import('../services/ollama.service.js')).default
+        const ollamaService = (await import('../services/ollama.service.js'))
+            .default
         const status = await ollamaService.getStatus()
-        return ApiResponse.success(res, status, 'Ollama status retrieved')
+        return ApiResponse.success(
+            res,
+            status,
+            'Truy xuất trạng thái Ollama thành công'
+        )
     })
 }
 

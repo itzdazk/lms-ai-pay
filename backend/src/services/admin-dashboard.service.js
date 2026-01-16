@@ -7,7 +7,6 @@ import {
     ENROLLMENT_STATUS,
     PAYMENT_STATUS,
 } from '../config/constants.js'
-import logger from '../config/logger.config.js'
 
 class AdminDashboardService {
     /**
@@ -181,8 +180,6 @@ class AdminDashboardService {
                   ).toFixed(2)
                 : 0
 
-        logger.info('Admin dashboard overview retrieved')
-
         return {
             summary: {
                 users: {
@@ -258,8 +255,6 @@ class AdminDashboardService {
             ]
         )
 
-        logger.info('User statistics retrieved')
-
         return {
             totalUsers,
             totalInstructors,
@@ -303,8 +298,6 @@ class AdminDashboardService {
             prisma.paymentTransaction.count(),
             prisma.paymentTransaction.count({ where: { status: 'SUCCESS' } }),
         ])
-
-        logger.info('System statistics retrieved')
 
         return {
             content: {
@@ -440,8 +433,6 @@ class AdminDashboardService {
             take: 10,
         })
 
-        logger.info('User analytics retrieved')
-
         return {
             registrationTrend,
             distribution: {
@@ -558,8 +549,6 @@ class AdminDashboardService {
                 completionRate: true,
             },
         })
-
-        logger.info('Course analytics retrieved')
 
         return {
             distribution: {
@@ -717,8 +706,6 @@ class AdminDashboardService {
             }),
         ])
 
-        logger.info('Revenue analytics retrieved')
-
         return {
             trend: revenueTrend,
             byPaymentGateway: revenueByGateway.map((item) => ({
@@ -860,8 +847,6 @@ class AdminDashboardService {
             },
             take: limit,
         })
-
-        logger.info('Recent activities retrieved')
 
         return {
             recentOrders: recentOrders.map((order) => ({

@@ -11,44 +11,44 @@ export const searchCoursesValidator = [
         .optional()
         .trim()
         .isLength({ min: 1, max: 200 })
-        .withMessage('Search query must be between 1 and 200 characters'),
+        .withMessage('Từ khóa tìm kiếm phải có độ dài từ 1 đến 200 ký tự'),
 
     query('category')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Category must be a positive integer'),
+        .withMessage('Danh mục phải là số nguyên dương'),
 
     query('tags')
         .optional()
         .trim()
         .isLength({ min: 1, max: 500 })
-        .withMessage('Tags must be between 1 and 500 characters')
+        .withMessage('Thẻ phải có độ dài từ 1 đến 500 ký tự')
         .matches(/^[a-z0-9,\-]+$/i)
         .withMessage(
-            'Tags must be comma-separated alphanumeric values with hyphens'
+            'Thẻ phải là các giá trị chữ và số cách nhau bởi dấu phẩy và gạch ngang'
         ),
 
     query('level')
         .optional()
         .isIn(Object.values(COURSE_LEVEL))
         .withMessage(
-            `Level must be one of: ${Object.values(COURSE_LEVEL).join(', ')}`
+            `Trình độ phải là một trong: ${Object.values(COURSE_LEVEL).join(', ')}`
         ),
 
     query('price')
         .optional()
         .isIn(['free', 'paid'])
-        .withMessage('Price filter must be either "free" or "paid"'),
+        .withMessage('Lọc giá phải là "free" hoặc "paid"'),
 
     query('rating')
         .optional()
         .isFloat({ min: 0, max: 5 })
-        .withMessage('Rating must be between 0 and 5'),
+        .withMessage('Đánh giá phải từ 0 đến 5'),
 
     query('featured')
         .optional()
         .isBoolean()
-        .withMessage('Featured must be a boolean'),
+        .withMessage('Featured phải là giá trị boolean'),
 
     query('sort')
         .optional()
@@ -61,18 +61,18 @@ export const searchCoursesValidator = [
             'enrolled',
         ])
         .withMessage(
-            'Sort must be one of: newest, oldest, price_asc, price_desc, rating, enrolled'
+            'Sắp xếp phải là một trong: newest, oldest, price_asc, price_desc, rating, enrolled'
         ),
 
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
 
     validate,
 ]
@@ -85,22 +85,22 @@ export const searchInstructorsValidator = [
         .optional()
         .trim()
         .isLength({ min: 1, max: 200 })
-        .withMessage('Search query must be between 1 and 200 characters'),
+        .withMessage('Từ khóa tìm kiếm phải có độ dài từ 1 đến 200 ký tự'),
 
     query('sort')
         .optional()
         .isIn(['popular', 'name', 'newest'])
-        .withMessage('Sort must be one of: popular, name, newest'),
+        .withMessage('Sắp xếp phải là một trong: popular, name, newest'),
 
     query('page')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Page must be a positive integer'),
+        .withMessage('Trang phải là số nguyên dương'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
-        .withMessage('Limit must be between 1 and 100'),
+        .withMessage('Giới hạn phải từ 1 đến 100'),
 
     validate,
 ]
@@ -112,14 +112,14 @@ export const getSearchSuggestionsValidator = [
     query('q')
         .trim()
         .notEmpty()
-        .withMessage('Search query is required')
+        .withMessage('Từ khóa tìm kiếm là bắt buộc')
         .isLength({ min: 2, max: 200 })
-        .withMessage('Search query must be between 2 and 200 characters'),
+        .withMessage('Từ khóa tìm kiếm phải có độ dài từ 2 đến 200 ký tự'),
 
     query('limit')
         .optional()
         .isInt({ min: 1, max: 50 })
-        .withMessage('Limit must be between 1 and 50'),
+        .withMessage('Giới hạn phải từ 1 đến 50'),
 
     validate,
 ]
@@ -131,9 +131,9 @@ export const processVoiceSearchValidator = [
     body('transcript')
         .trim()
         .notEmpty()
-        .withMessage('Transcript is required')
+        .withMessage('Nội dung phiên âm là bắt buộc')
         .isLength({ min: 2, max: 1000 })
-        .withMessage('Transcript must be between 2 and 1000 characters'),
+        .withMessage('Nội dung phiên âm phải có độ dài từ 2 đến 1000 ký tự'),
 
     validate,
 ]

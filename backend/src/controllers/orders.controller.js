@@ -14,11 +14,11 @@ class OrdersController {
         const { courseId, paymentGateway, billingAddress } = req.body
 
         if (!courseId) {
-            return ApiResponse.badRequest(res, 'Course ID is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu ID khóa học')
         }
 
         if (!paymentGateway) {
-            return ApiResponse.badRequest(res, 'Payment gateway is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu cổng thanh toán')
         }
 
         const order = await ordersService.createOrder(
@@ -28,7 +28,7 @@ class OrdersController {
             billingAddress
         )
 
-        return ApiResponse.created(res, order, 'Order created successfully')
+        return ApiResponse.created(res, order, 'Tạo hóa đơn thành công')
     })
 
     /**
@@ -70,7 +70,7 @@ class OrdersController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Orders retrieved successfully'
+            'Truy xuất hóa đơn thành công'
         )
     })
 
@@ -85,12 +85,16 @@ class OrdersController {
         const orderId = parseInt(id)
 
         if (isNaN(orderId)) {
-            return ApiResponse.badRequest(res, 'Invalid order ID')
+            return ApiResponse.badRequest(res, 'ID hóa đơn không hợp lệ')
         }
 
         const order = await ordersService.getOrderById(orderId, userId)
 
-        return ApiResponse.success(res, order, 'Order retrieved successfully')
+        return ApiResponse.success(
+            res,
+            order,
+            'Truy xuất chi tiết hóa đơn thành công'
+        )
     })
 
     /**
@@ -103,12 +107,16 @@ class OrdersController {
         const userId = req.user.id
 
         if (!orderCode) {
-            return ApiResponse.badRequest(res, 'Order code is required')
+            return ApiResponse.badRequest(res, 'Yêu cầu mã hóa đơn')
         }
 
         const order = await ordersService.getOrderByCode(orderCode, userId)
 
-        return ApiResponse.success(res, order, 'Order retrieved successfully')
+        return ApiResponse.success(
+            res,
+            order,
+            'Truy xuất chi tiết hóa đơn thành công'
+        )
     })
 
     /**
@@ -122,12 +130,12 @@ class OrdersController {
         const orderId = parseInt(id)
 
         if (isNaN(orderId)) {
-            return ApiResponse.badRequest(res, 'Invalid order ID')
+            return ApiResponse.badRequest(res, 'ID đơn hàng không hợp lệ.')
         }
 
         const order = await ordersService.cancelOrder(orderId, userId)
 
-        return ApiResponse.success(res, order, 'Order cancelled successfully')
+        return ApiResponse.success(res, order, 'Hủy đơn hàng thành công.')
     })
 
     /**
@@ -143,7 +151,7 @@ class OrdersController {
         return ApiResponse.success(
             res,
             stats,
-            'Order statistics retrieved successfully'
+            'Truy xuất thống kê hóa đơn thành công'
         )
     })
 }

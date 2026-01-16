@@ -13,7 +13,7 @@ class HealthController {
     checkHealth = asyncHandler(async (req, res) => {
         const healthStatus = await healthService.checkBasicHealth()
 
-        return ApiResponse.success(res, healthStatus, 'API is healthy')
+        return ApiResponse.success(res, healthStatus, 'API hoạt động ổn định')
     })
 
     /**
@@ -26,10 +26,13 @@ class HealthController {
             const dbStatus = await healthService.checkDatabaseHealth()
 
             if (!dbStatus.isHealthy) {
-                logger.error('Database health check failed:', dbStatus.error)
+                logger.error(
+                    'Kiểm tra trạng thái cơ sở dữ liệu thất bại',
+                    dbStatus.error
+                )
                 return ApiResponse.error(
                     res,
-                    'Database connection failed',
+                    'Kết nối cơ sở dữ liệu thất bại',
                     503,
                     { details: dbStatus }
                 )
@@ -38,11 +41,15 @@ class HealthController {
             return ApiResponse.success(
                 res,
                 dbStatus,
-                'Database connection is healthy'
+                'Kết nối cơ sở dữ liệu hoạt động ổn định'
             )
         } catch (error) {
-            logger.error('Database health check error:', error)
-            return ApiResponse.error(res, 'Database health check failed', 503)
+            logger.error('Kiểm tra trạng thái cơ sở dữ liệu thất bại', error)
+            return ApiResponse.error(
+                res,
+                'Kiểm tra trạng thái cơ sở dữ liệu thất bại',
+                503
+            )
         }
     })
 
@@ -57,18 +64,31 @@ class HealthController {
 
             if (!storageStatus.isHealthy) {
                 logger.error(
-                    'Storage health check failed:',
+                    'Kiểm tra trạng thái lưu trữ thất bại:',
                     storageStatus.error
                 )
-                return ApiResponse.error(res, 'Storage check failed', 503, {
-                    details: storageStatus,
-                })
+                return ApiResponse.error(
+                    res,
+                    'Kiểm tra trạng thái lưu trữ thất bại',
+                    503,
+                    {
+                        details: storageStatus,
+                    }
+                )
             }
 
-            return ApiResponse.success(res, storageStatus, 'Storage is healthy')
+            return ApiResponse.success(
+                res,
+                storageStatus,
+                'Lưu trữ hoạt động ổn định'
+            )
         } catch (error) {
-            logger.error('Storage health check error:', error)
-            return ApiResponse.error(res, 'Storage health check failed', 503)
+            logger.error('Kiểm tra trạng thái lưu trữ thất bại', error)
+            return ApiResponse.error(
+                res,
+                'Kiểm tra trạng thái lưu trữ thất bại',
+                503
+            )
         }
     })
 
@@ -87,7 +107,7 @@ class HealthController {
         if (!isAllHealthy) {
             return ApiResponse.error(
                 res,
-                'Some services are unhealthy',
+                'Một số dịch vụ không hoạt động ổn định',
                 503,
                 fullHealthStatus
             )
@@ -96,7 +116,7 @@ class HealthController {
         return ApiResponse.success(
             res,
             fullHealthStatus,
-            'All services are healthy'
+            'Tất cả các dịch vụ hoạt động ổn định'
         )
     })
 }

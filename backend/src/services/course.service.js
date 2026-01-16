@@ -1,12 +1,7 @@
 // src/services/course.service.js
 import { prisma } from '../config/database.config.js'
 import { Prisma } from '@prisma/client'
-import {
-    COURSE_STATUS,
-    COURSE_LEVEL,
-    HTTP_STATUS,
-} from '../config/constants.js'
-import logger from '../config/logger.config.js'
+import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
 
 class CourseService {
     /**
@@ -134,25 +129,26 @@ class CourseService {
             // OR use a simpler approach: sort by publishedAt first, then createdAt
             // But to properly handle COALESCE, we need to fetch all matching courses first
             // then sort and paginate. This is not ideal for performance but works correctly.
-            
+
             // First, get all matching course IDs with proper sorting using raw query
             // We'll use Prisma.sql for safe parameterized queries
             // Handle tagIds filter - course must have ALL selected tags (AND logic)
-            const tagFilter = tagIds && tagIds.length > 0 
-                ? Prisma.sql`AND c.id IN (
+            const tagFilter =
+                tagIds && tagIds.length > 0
+                    ? Prisma.sql`AND c.id IN (
                     SELECT ct.course_id 
                     FROM course_tags ct 
-                    WHERE ct.tag_id IN (${Prisma.join(tagIds.map(id => parseInt(id, 10)))})
+                    WHERE ct.tag_id IN (${Prisma.join(tagIds.map((id) => parseInt(id, 10)))})
                     GROUP BY ct.course_id
                     HAVING COUNT(DISTINCT ct.tag_id) = ${tagIds.length}
                 )`
-                : tagId 
-                ? Prisma.sql`AND EXISTS (
+                    : tagId
+                      ? Prisma.sql`AND EXISTS (
                     SELECT 1 FROM course_tags ct 
                     WHERE ct.course_id = c.id 
                     AND ct.tag_id = ${parseInt(tagId, 10)}
                 )`
-                : Prisma.empty
+                      : Prisma.empty
 
             const searchFilter = search
                 ? Prisma.sql`AND (
@@ -175,17 +171,20 @@ class CourseService {
                 ? Prisma.sql`AND c.level = ${level}`
                 : Prisma.empty
 
-            const minPriceFilter = minPrice !== undefined
-                ? Prisma.sql`AND c.price >= ${parseFloat(minPrice)}`
-                : Prisma.empty
+            const minPriceFilter =
+                minPrice !== undefined
+                    ? Prisma.sql`AND c.price >= ${parseFloat(minPrice)}`
+                    : Prisma.empty
 
-            const maxPriceFilter = maxPrice !== undefined
-                ? Prisma.sql`AND c.price <= ${parseFloat(maxPrice)}`
-                : Prisma.empty
+            const maxPriceFilter =
+                maxPrice !== undefined
+                    ? Prisma.sql`AND c.price <= ${parseFloat(maxPrice)}`
+                    : Prisma.empty
 
-            const featuredFilter = isFeatured !== undefined
-                ? Prisma.sql`AND c.is_featured = ${isFeatured === 'true' || isFeatured === true}`
-                : Prisma.empty
+            const featuredFilter =
+                isFeatured !== undefined
+                    ? Prisma.sql`AND c.is_featured = ${isFeatured === 'true' || isFeatured === true}`
+                    : Prisma.empty
 
             const instructorFilter = instructorId
                 ? Prisma.sql`AND c.instructor_id = ${parseInt(instructorId, 10)}`
@@ -351,8 +350,6 @@ class CourseService {
             courseTags: undefined,
         }))
 
-        logger.info(`Retrieved ${coursesWithTags.length} courses`)
-
         return {
             courses: coursesWithTags,
             total,
@@ -403,8 +400,6 @@ class CourseService {
                 },
             },
         })
-
-        logger.info(`Retrieved ${courses.length} featured courses`)
 
         return courses
     }
@@ -467,8 +462,6 @@ class CourseService {
                 },
             },
         })
-
-        logger.info(`Retrieved ${courses.length} trending courses`)
 
         return courses
     }
@@ -550,14 +543,14 @@ class CourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Only return published courses
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available')
+            throw new Error('Khóa học không khả dụng')
         }
 
         // Format tags
@@ -571,10 +564,6 @@ class CourseService {
         // Remove internal fields
         delete formattedCourse.courseTags
         delete formattedCourse._count
-
-        logger.info(
-            `Retrieved course details by slug: ${course.title} (slug: ${slug})`
-        )
 
         return formattedCourse
     }
@@ -656,14 +645,14 @@ class CourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         // Only return published courses or provide limited info for unpublished
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available')
+            throw new Error('Khóa học không khả dụng')
         }
 
         // Format tags
@@ -677,10 +666,6 @@ class CourseService {
         // Remove internal fields
         delete formattedCourse.courseTags
         delete formattedCourse._count
-
-        logger.info(
-            `Retrieved course details: ${course.title} (ID: ${course.id})`
-        )
 
         return formattedCourse
     }
@@ -700,13 +685,13 @@ class CourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available')
+            throw new Error('Khóa học không khả dụng')
         }
 
         // Get lessons (only published lessons, and only preview or basic info)
@@ -729,10 +714,6 @@ class CourseService {
                 // Don't include videoUrl, content, transcriptUrl for non-enrolled users
             },
         })
-
-        logger.info(
-            `Retrieved ${lessons.length} lessons for course ID: ${courseId}`
-        )
 
         return {
             course: {
@@ -777,13 +758,13 @@ class CourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available')
+            throw new Error('Khóa học không khả dụng')
         }
 
         // Get instructor's other courses
@@ -821,8 +802,6 @@ class CourseService {
         // Remove _count field
         delete instructor._count
 
-        logger.info(`Retrieved instructor details for course ID: ${courseId}`)
-
         return instructor
     }
 
@@ -841,13 +820,13 @@ class CourseService {
         })
 
         if (!course) {
-            const error = new Error('Course not found')
+            const error = new Error('Không tìm thấy khóa học')
             error.statusCode = HTTP_STATUS.NOT_FOUND
             throw error
         }
 
         if (course.status !== COURSE_STATUS.PUBLISHED) {
-            throw new Error('Course is not available')
+            throw new Error('Khóa học không khả dụng')
         }
 
         // Increment view count
@@ -863,10 +842,6 @@ class CourseService {
                 viewsCount: true,
             },
         })
-
-        logger.info(
-            `Incremented view count for course ID: ${courseId}. New count: ${updatedCourse.viewsCount}`
-        )
 
         return updatedCourse
     }
@@ -898,8 +873,6 @@ class CourseService {
             }
         })
 
-        logger.info('Retrieved course counts by level')
-
         return levelCounts
     }
 
@@ -925,8 +898,6 @@ class CourseService {
                 },
             }),
         ])
-
-        logger.info('Retrieved course counts by price')
 
         return {
             free: freeCount,

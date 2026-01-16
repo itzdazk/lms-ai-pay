@@ -17,7 +17,7 @@ class PaymentsController {
         return ApiResponse.created(
             res,
             result,
-            'MoMo payment URL created successfully'
+            'Tạo URL thanh toán MoMo thành công'
         )
     })
 
@@ -37,8 +37,8 @@ class PaymentsController {
                 alreadyPaid: result.alreadyPaid,
             },
             result.alreadyPaid
-                ? 'Payment already processed previously'
-                : 'MoMo payment callback processed successfully'
+                ? 'Thanh toán đã được xử lý trước đó'
+                : 'Thanh toán MoMo đã được xử lý thành công'
         )
     })
 
@@ -56,7 +56,7 @@ class PaymentsController {
         } catch (error) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 resultCode: -1,
-                message: error.message || 'Webhook processing failed',
+                message: error.message || 'Xử lý Webhook thất bại.',
             })
         }
     }
@@ -79,7 +79,7 @@ class PaymentsController {
         return ApiResponse.created(
             res,
             result,
-            'VNPay payment URL created successfully'
+            'Tạo URL thanh toán VNPay thành công'
         )
     })
 
@@ -106,10 +106,10 @@ class PaymentsController {
                 message: result.message,
             },
             result.alreadyPaid
-                ? 'Payment already processed previously'
+                ? 'Thanh toán đã được xử lý trước đó'
                 : result.responseCode === '00'
-                  ? 'VNPay payment callback processed successfully'
-                  : 'VNPay payment failed'
+                  ? 'Thanh toán VNPay đã được xử lý thành công'
+                  : 'Thanh toán VNPay thất bại'
         )
     })
 
@@ -129,12 +129,12 @@ class PaymentsController {
             // VNPay expects specific response format
             return res.status(HTTP_STATUS.OK).json({
                 RspCode: result.RspCode || '00',
-                Message: result.Message || 'Confirm Success',
+                Message: result.Message || 'Xác nhận thành công',
             })
         } catch (error) {
             return res.status(HTTP_STATUS.OK).json({
                 RspCode: '99',
-                Message: error.message || 'Webhook processing failed',
+                Message: error.message || 'Xử lý Webhook thất bại.',
             })
         }
     }
@@ -160,7 +160,7 @@ class PaymentsController {
         return ApiResponse.success(
             res,
             result,
-            result.message || 'Refund processed successfully'
+            result.message || 'Hoàn tiền thành công'
         )
     })
 }

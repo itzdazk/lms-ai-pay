@@ -21,13 +21,23 @@ const worker = new Worker(
     async (job) => {
         const { lessonId, videoPath, courseId } = job.data
         if (!lessonId || !videoPath || !courseId) {
-            throw new Error('Invalid job data: lessonId, videoPath, and courseId are required')
+            throw new Error(
+                'Dữ liệu công việc không hợp lệ: yêu cầu phải có lessonId, videoPath và courseId'
+            )
         }
 
-        const outputDir = path.join(pathUtil.getHlsDir(courseId), String(lessonId))
-        logger.info(`[HLS][Job ${job.id}] Start convert lesson ${lessonId} in course ${courseId}`)
+        const outputDir = path.join(
+            pathUtil.getHlsDir(courseId),
+            String(lessonId)
+        )
+        logger.info(
+            `[HLS][Job ${job.id}] Start convert lesson ${lessonId} in course ${courseId}`
+        )
 
-        const masterPath = await convertToHLS({ inputPath: videoPath, outputDir })
+        const masterPath = await convertToHLS({
+            inputPath: videoPath,
+            outputDir,
+        })
         const masterUrl = pathUtil.getHlsPlaylistUrl(courseId, lessonId)
 
         await prisma.lesson.update({
@@ -56,7 +66,9 @@ worker.on('failed', async (job, err) => {
                 },
             })
         } catch (updateError) {
-            logger.error(`[HLS][Job ${job?.id}] Failed to update lesson status: ${updateError.message}`)
+            logger.error(
+                `[HLS][Job ${job?.id}] Failed to update lesson status: ${updateError.message}`
+            )
         }
     }
 })

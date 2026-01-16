@@ -67,8 +67,8 @@ const tracker = new ConcurrentLimitTracker()
 export function concurrentLimit(maxConcurrent = 5, type = 'generic') {
     return async (req, res, next) => {
         // Generate key: use userId for authenticated, IP for public
-        const key = req.user?.id 
-            ? `user-${req.user.id}` 
+        const key = req.user?.id
+            ? `user-${req.user.id}`
             : `ip-${req.ip || req.connection.remoteAddress}`
 
         const currentCount = tracker.getCount(key)
@@ -77,7 +77,7 @@ export function concurrentLimit(maxConcurrent = 5, type = 'generic') {
         // Check if limit exceeded
         if (currentCount >= maxConcurrent) {
             logger.warn({
-                message: `[Concurrent Limit] ${type} - Limit exceeded`,
+                message: `[Giới hạn đồng thời] ${type} - Đã vượt quá giới hạn`,
                 key,
                 currentCount,
                 maxConcurrent,
@@ -101,7 +101,7 @@ export function concurrentLimit(maxConcurrent = 5, type = 'generic') {
 
         // Log for monitoring
         logger.info({
-            message: `[Concurrent Limit] ${type} - Request started`,
+            message: `[Giới hạn đồng thời] ${type} - Yêu cầu đã bắt đầu`,
             key,
             concurrent: currentCount + 1,
             totalActive: totalCount + 1,
@@ -112,7 +112,7 @@ export function concurrentLimit(maxConcurrent = 5, type = 'generic') {
         const cleanup = () => {
             tracker.decrement(key)
             logger.info({
-                message: `[Concurrent Limit] ${type} - Request finished`,
+                message: `[Giới hạn đồng thời] ${type} - Yêu cầu đã hoàn tất`,
                 key,
                 concurrent: tracker.getCount(key),
                 totalActive: tracker.getTotalCount(),
@@ -134,9 +134,11 @@ export function concurrentLimit(maxConcurrent = 5, type = 'generic') {
 export function getConcurrentStats() {
     return {
         totalActive: tracker.getTotalCount(),
-        activeRequests: Array.from(tracker.activeRequests.entries()).map(([key, count]) => ({
-            key,
-            count,
-        })),
+        activeRequests: Array.from(tracker.activeRequests.entries()).map(
+            ([key, count]) => ({
+                key,
+                count,
+            })
+        ),
     }
 }
