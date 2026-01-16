@@ -1,16 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { instructorDashboardApi } from '../lib/api/instructor-dashboard'
+import { instructorDashboardApi, type CourseRevenueData } from '../lib/api/instructor-dashboard'
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error'
-
-type ChartDataItem = {
-    period: string | number
-    periodLabel: string
-    revenue: number
-    orders: number
-    date: string
-}
 
 const parseErrorMessage = (error: unknown): string => {
     if (error && typeof error === 'object') {
@@ -26,14 +18,23 @@ const parseErrorMessage = (error: unknown): string => {
 }
 
 /**
- * Hook: fetch instructor revenue chart data (grouped by month or day)
+ * Hook: fetch instructor revenue grouped by courses (optimized)
  */
-export function useInstructorRevenueChartData(params?: {
+export function useInstructorRevenueByCourses(params?: {
     year?: number
     month?: number | null
     courseId?: number | null
+    page?: number
+    limit?: number
 }) {
-    const [chartData, setChartData] = useState<ChartDataItem[]>([])
+    const [courses, setCourses] = useState<CourseRevenueData[]>([])
+    const [totalRevenue, setTotalRevenue] = useState<number>(0)
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+    })
     const [status, setStatus] = useState<FetchStatus>('idle')
     const [error, setError] = useState<string | null>(null)
 
@@ -41,17 +42,23 @@ export function useInstructorRevenueChartData(params?: {
     const year = params?.year ?? new Date().getFullYear()
     const month = params?.month ?? null
     const courseId = params?.courseId ?? null
+    const page = params?.page ?? 1
+    const limit = params?.limit ?? 20
 
-    const fetchChartData = useCallback(async () => {
+    const fetchCourses = useCallback(async () => {
         setStatus('loading')
         setError(null)
         try {
-            const data = await instructorDashboardApi.getInstructorRevenueChartData({
+            const data = await instructorDashboardApi.getInstructorRevenueByCourses({
                 year,
                 month,
                 courseId,
+                page,
+                limit,
             })
-            setChartData(data)
+            setCourses(data.courses)
+            setTotalRevenue(data.totalRevenue)
+            setPagination(data.pagination)
             setStatus('success')
         } catch (err) {
             const message = parseErrorMessage(err)
@@ -59,18 +66,20 @@ export function useInstructorRevenueChartData(params?: {
             setStatus('error')
             toast.error(message)
         }
-    }, [year, month, courseId])
+    }, [year, month, courseId, page, limit])
 
     useEffect(() => {
-        fetchChartData()
-    }, [fetchChartData])
+        fetchCourses()
+    }, [fetchCourses])
 
     return {
-        chartData,
+        courses,
+        totalRevenue,
+        pagination,
         status,
         isLoading: status === 'loading',
         isError: status === 'error',
         error,
-        refetch: fetchChartData,
+        refetch: fetchCourses,
     }
 }

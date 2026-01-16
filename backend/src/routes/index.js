@@ -33,6 +33,7 @@ import chaptersRoutes from './chapters.routes.js'
 import refundRequestRoutes from './refund-request.routes.js'
 import adminRefundRequestRoutes from './admin-refund-request.routes.js'
 import adminAIRoutes from './admin-ai.routes.js'
+import adminRevenueStatsRoutes from './admin-revenue-stats.routes.js'
 
 const router = express.Router()
 
@@ -121,6 +122,7 @@ router.use('/', chaptersRoutes)
 router.use('/refund-requests', refundRequestRoutes)
 router.use('/admin/refund-requests', adminRefundRequestRoutes)
 router.use('/admin/ai', adminAIRoutes)
+router.use('/admin/revenue', adminRevenueStatsRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

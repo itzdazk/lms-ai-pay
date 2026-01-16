@@ -76,6 +76,17 @@ router.get(
 )
 
 /**
+ * @route   GET /api/v1/dashboard/instructor/revenue/courses
+ * @desc    Get instructor revenue grouped by courses (optimized)
+ * @access  Private (Instructor, Admin)
+ */
+router.get(
+    '/revenue/courses',
+    isInstructor,
+    instructorDashboardController.getInstructorRevenueByCourses
+)
+
+/**
  * @route   GET /api/v1/dashboard/instructor/revenue/chart
  * @desc    Get instructor revenue chart data (grouped by month or day)
  * @access  Private (Instructor, Admin)
@@ -84,6 +95,17 @@ router.get(
     '/revenue/chart',
     isInstructor,
     instructorDashboardController.getInstructorRevenueChartData
+)
+
+/**
+ * @route   GET /api/v1/dashboard/instructor/revenue/years
+ * @desc    Get list of available years that have revenue data for the instructor
+ * @access  Private (Instructor, Admin)
+ */
+router.get(
+    '/revenue/years',
+    isInstructor,
+    instructorDashboardController.getAvailableYears
 )
 
 /**

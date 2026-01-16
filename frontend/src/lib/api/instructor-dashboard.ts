@@ -32,6 +32,15 @@ export interface RevenueChartData {
     orders: number
 }
 
+export interface CourseRevenueData {
+    courseId: number
+    courseTitle: string
+    courseThumbnailUrl: string | null
+    coursePrice: number
+    orderCount: number
+    revenue: number
+}
+
 export interface InstructorRevenueData {
     totalRevenue: number
     totalOrders: number
@@ -222,6 +231,55 @@ export const instructorDashboardApi = {
     },
 
     /**
+     * Get instructor revenue grouped by courses (optimized)
+     */
+    async getInstructorRevenueByCourses(params?: {
+        year?: number
+        month?: number | null
+        courseId?: number | null
+        page?: number
+        limit?: number
+    }): Promise<{
+        courses: CourseRevenueData[]
+        totalRevenue: number
+        pagination: {
+            page: number
+            limit: number
+            total: number
+            totalPages: number
+        }
+    }> {
+        const queryParams = new URLSearchParams()
+        const year = params?.year ?? new Date().getFullYear()
+        queryParams.append('year', year.toString())
+        if (params?.month !== null && params?.month !== undefined && params.month >= 1 && params.month <= 12) {
+            queryParams.append('month', params.month.toString())
+        }
+        if (params?.courseId !== null && params?.courseId !== undefined) {
+            queryParams.append('courseId', params.courseId.toString())
+        }
+        if (params?.page) queryParams.append('page', params.page.toString())
+        if (params?.limit) queryParams.append('limit', params.limit.toString())
+
+        const url = `/dashboard/instructor/revenue/courses${
+            queryParams.toString() ? `?${queryParams.toString()}` : ''
+        }`
+        const response = await apiClient.get<
+            ApiResponse<{
+                courses: CourseRevenueData[]
+                totalRevenue: number
+                pagination: {
+                    page: number
+                    limit: number
+                    total: number
+                    totalPages: number
+                }
+            }>
+        >(url)
+        return response.data.data
+    },
+
+    /**
      * Get instructor analytics
      */
     async getInstructorAnalytics(): Promise<InstructorAnalyticsData> {
@@ -266,6 +324,7 @@ export const instructorDashboardApi = {
             period: string | number
             periodLabel: string
             revenue: number
+            orders: number
             date: string
         }>
     > {

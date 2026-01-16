@@ -127,11 +127,11 @@ export function CategoryRow({
                             <img
                                 src={category.imageUrl}
                                 alt={category.name}
-                                className='w-12 h-12 object-cover rounded flex-shrink-0'
+                                className='w-16 h-10 object-cover rounded flex-shrink-0'
                             />
                         ) : (
-                            <div className='w-12 h-12 bg-[#2D2D2D] rounded flex items-center justify-center flex-shrink-0'>
-                                <FolderTree className='h-6 w-6 text-gray-400' />
+                            <div className='w-16 h-10 bg-[#2D2D2D] rounded flex items-center justify-center flex-shrink-0'>
+                                <FolderTree className='h-5 w-5 text-gray-400' />
                             </div>
                         )}
                         <div className='min-w-0 flex-1'>

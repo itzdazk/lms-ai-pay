@@ -247,6 +247,47 @@ class InstructorDashboardController {
     })
 
     /**
+     * @route   GET /api/v1/dashboard/instructor/revenue/courses
+     * @desc    Get instructor revenue grouped by courses (optimized)
+     * @access  Private (Instructor, Admin)
+     */
+    getInstructorRevenueByCourses = asyncHandler(async (req, res) => {
+        const instructorId = req.user.id
+        // Parse year (required, default to current year)
+        const year = req.query.year && !isNaN(parseInt(req.query.year)) && parseInt(req.query.year) > 2000 && parseInt(req.query.year) < 2100
+            ? parseInt(req.query.year)
+            : new Date().getFullYear()
+        // Parse month (optional, 1-12 or null for all months)
+        const month = req.query.month && !isNaN(parseInt(req.query.month)) && parseInt(req.query.month) >= 1 && parseInt(req.query.month) <= 12
+            ? parseInt(req.query.month)
+            : null
+        // Parse courseId (optional)
+        const courseId = req.query.courseId && !isNaN(parseInt(req.query.courseId))
+            ? parseInt(req.query.courseId)
+            : null
+        // Parse pagination
+        const page = parseInt(req.query.page) || 1
+        const limit = parseInt(req.query.limit) || 20
+
+        // Admin can view any instructor's revenue by courses by passing instructorId in query
+        const targetInstructorId =
+            req.user.role === USER_ROLES.ADMIN && req.query.instructorId
+                ? parseInt(req.query.instructorId)
+                : instructorId
+
+        const result = await instructorDashboardService.getInstructorRevenueByCourses(
+            targetInstructorId,
+            { year, month, courseId, page, limit }
+        )
+
+        return ApiResponse.success(
+            res,
+            result,
+            'Instructor revenue by courses retrieved successfully'
+        )
+    })
+
+    /**
      * @route   GET /api/v1/dashboard/instructor/revenue/chart
      * @desc    Get instructor revenue chart data (grouped by month or day)
      * @access  Private (Instructor, Admin)
@@ -373,6 +414,29 @@ class InstructorDashboardController {
             res,
             result,
             'Truy xuất danh sách học viên giảng viên thành công'
+        )
+    })
+
+    /**
+     * @route   GET /api/v1/dashboard/instructor/revenue/years
+     * @desc    Get list of available years that have revenue data for the instructor
+     * @access  Private (Instructor, Admin)
+     */
+    getAvailableYears = asyncHandler(async (req, res) => {
+        const instructorId = req.user.id
+
+        // Admin can view any instructor's available years by passing instructorId in query
+        const targetInstructorId =
+            req.user.role === USER_ROLES.ADMIN && req.query.instructorId
+                ? parseInt(req.query.instructorId)
+                : instructorId
+
+        const years = await instructorDashboardService.getAvailableYears(targetInstructorId)
+
+        return ApiResponse.success(
+            res,
+            years,
+            'Available years retrieved successfully'
         )
     })
 }
