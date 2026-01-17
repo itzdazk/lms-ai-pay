@@ -7,6 +7,7 @@ import {
     HLS_STATUS,
 } from '../config/constants.js'
 import config from '../config/app.config.js'
+import logger from '../config/logger.config.js'
 import path from 'path'
 import fs from 'fs'
 import transcriptionService from './transcription.service.js'
@@ -32,21 +33,45 @@ class LessonsService {
             data: { durationHours: totalMinutes },
         })
     }
-    _deleteTranscriptFiles(filename) {
-        if (!filename) return
+    _deleteTranscriptFiles(filename, courseId, transcriptJsonUrl = null) {
+        if (!filename || !courseId) return
 
         try {
-            const transcriptPath = path.join(transcriptsDir, filename)
+            // Get course transcript directory
+            const transcriptDir = pathUtil.getTranscriptDir(courseId)
+            const absoluteTranscriptDir = path.isAbsolute(transcriptDir)
+                ? transcriptDir
+                : path.join(process.cwd(), transcriptDir)
+
+            // Delete SRT file
+            const transcriptPath = path.join(absoluteTranscriptDir, filename)
             if (fs.existsSync(transcriptPath)) {
                 fs.unlinkSync(transcriptPath)
+                logger.info(`Deleted transcript file: ${transcriptPath}`)
             }
 
-            const baseName = filename.replace(path.extname(filename), '')
-            const jsonPath = path.join(transcriptsDir, `${baseName}.json`)
-            if (fs.existsSync(jsonPath)) {
-                fs.unlinkSync(jsonPath)
+            // Delete JSON file (if exists)
+            if (transcriptJsonUrl) {
+                const jsonFilename = path.basename(transcriptJsonUrl)
+                const jsonPath = path.join(absoluteTranscriptDir, jsonFilename)
+                if (fs.existsSync(jsonPath)) {
+                    fs.unlinkSync(jsonPath)
+                    logger.info(`Deleted transcript JSON file: ${jsonPath}`)
+                }
+            } else {
+                // Try to delete JSON file based on SRT filename (for auto-generated transcripts)
+                const baseName = filename.replace(path.extname(filename), '')
+                const jsonPath = path.join(absoluteTranscriptDir, `${baseName}.json`)
+                if (fs.existsSync(jsonPath)) {
+                    fs.unlinkSync(jsonPath)
+                    logger.info(`Deleted transcript JSON file: ${jsonPath}`)
+                }
             }
-        } catch (error) {}
+        } catch (error) {
+            logger.error(
+                `Failed to delete transcript files for ${filename}: ${error.message}`
+            )
+        }
     }
 
     async _deleteHlsArtifacts(lessonId, courseId) {
@@ -606,6 +631,7 @@ class LessonsService {
                 title: true,
                 videoUrl: true,
                 transcriptUrl: true,
+                transcriptJsonUrl: true,
                 transcriptStatus: true,
             },
         })
@@ -651,7 +677,11 @@ class LessonsService {
         // Delete transcript files (both SRT and JSON)
         if (lesson.transcriptUrl) {
             const filename = path.basename(lesson.transcriptUrl)
-            this._deleteTranscriptFiles(filename)
+            this._deleteTranscriptFiles(
+                filename,
+                lesson.courseId,
+                lesson.transcriptJsonUrl
+            )
         }
 
         // Get lesson order before deletion
@@ -716,6 +746,7 @@ class LessonsService {
                 title: true,
                 videoUrl: true,
                 transcriptUrl: true,
+                transcriptJsonUrl: true,
             },
         })
 
@@ -752,7 +783,11 @@ class LessonsService {
         // Delete old transcript because video changed
         if (lesson.transcriptUrl) {
             const transcriptFilename = path.basename(lesson.transcriptUrl)
-            this._deleteTranscriptFiles(transcriptFilename)
+            this._deleteTranscriptFiles(
+                transcriptFilename,
+                courseId,
+                lesson.transcriptJsonUrl
+            )
         }
 
         // Save new video URL (course-based path)
@@ -856,6 +891,7 @@ class LessonsService {
                 courseId: true,
                 title: true,
                 transcriptUrl: true,
+                transcriptJsonUrl: true,
             },
         })
 
@@ -870,7 +906,11 @@ class LessonsService {
         // Delete old transcript if exists
         if (lesson.transcriptUrl) {
             const filename = path.basename(lesson.transcriptUrl)
-            this._deleteTranscriptFiles(filename)
+            this._deleteTranscriptFiles(
+                filename,
+                courseId,
+                lesson.transcriptJsonUrl
+            )
         }
 
         // Save new transcript URL (course-based path)

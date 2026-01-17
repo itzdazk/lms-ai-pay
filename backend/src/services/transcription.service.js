@@ -9,6 +9,7 @@ import logger from '../config/logger.config.js'
 import { prisma } from '../config/database.config.js'
 import { TRANSCRIPT_STATUS } from '../config/constants.js'
 import { enqueueTranscriptionJob } from '../queues/transcription.queue.js'
+import pathUtil from '../utils/path.util.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -321,6 +322,33 @@ class TranscriptionService {
                         return resolve(null)
                     }
 
+                    // Get course transcript directory and ensure it exists
+                    const courseTranscriptDir = pathUtil.getTranscriptDir(
+                        lesson.courseId
+                    )
+                    const absoluteTranscriptDir = path.isAbsolute(
+                        courseTranscriptDir
+                    )
+                        ? courseTranscriptDir
+                        : path.join(process.cwd(), courseTranscriptDir)
+
+                    if (!fs.existsSync(absoluteTranscriptDir)) {
+                        fs.mkdirSync(absoluteTranscriptDir, { recursive: true })
+                        logger.info(
+                            `Created transcript directory: ${absoluteTranscriptDir}`
+                        )
+                    }
+
+                    // Move transcript file from outputDir to course transcript directory
+                    const finalTranscriptPath = path.join(
+                        absoluteTranscriptDir,
+                        transcriptFilename
+                    )
+                    fs.renameSync(transcriptPath, finalTranscriptPath)
+                    logger.info(
+                        `Moved transcript from ${transcriptPath} to ${finalTranscriptPath}`
+                    )
+
                     const transcriptUrl = `/uploads/courses/${lesson.courseId}/transcripts/${transcriptFilename}`
                     let transcriptJsonUrl = null
 
@@ -336,9 +364,15 @@ class TranscriptionService {
                     try {
                         const jsonFilename = `${baseName}.json`
                         const jsonPath = path.join(this.outputDir, jsonFilename)
-                        const segments = this._convertSrtToJson(transcriptPath)
+                        const segments = this._convertSrtToJson(
+                            finalTranscriptPath
+                        )
+                        const finalJsonPath = path.join(
+                            absoluteTranscriptDir,
+                            jsonFilename
+                        )
                         fs.writeFileSync(
-                            jsonPath,
+                            finalJsonPath,
                             JSON.stringify(segments, null, 2),
                             'utf-8'
                         )
@@ -367,7 +401,7 @@ class TranscriptionService {
                         lessonId,
                         transcriptUrl,
                         transcriptJsonUrl,
-                        transcriptPath,
+                        transcriptPath: finalTranscriptPath,
                         source,
                     })
                 } catch (error) {

@@ -250,6 +250,8 @@ export function LessonForm({
         }
         setVideoPreview(null)
         setVideoRemoved(true)
+        // Reset auto-create transcript when video is removed
+        setAutoCreateTranscript(false)
         if (videoInputRef.current) {
             videoInputRef.current.value = ''
         }
@@ -732,50 +734,63 @@ export function LessonForm({
                     )}
 
                             {/* Auto-create Transcript Checkbox - moved below video */}
-                            <div className={`group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg transition-colors ${
-                                lesson?.transcriptUrl ? 'opacity-60' : 'hover:border-purple-500/50'
-                            }`}>
-                                <div className="flex items-start gap-3">
-                                    <Checkbox
-                                        id="autoCreateTranscript"
-                                        checked={autoCreateTranscript}
-                                        onCheckedChange={(checked) =>
-                                            setAutoCreateTranscript(checked as boolean)
-                                        }
-                                        disabled={!!lesson?.transcriptUrl}
-                                        className="border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 h-5 w-5 mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    />
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Label 
-                                                htmlFor="autoCreateTranscript" 
-                                                className={`font-medium flex items-center gap-2 ${
-                                                    lesson?.transcriptUrl 
-                                                        ? 'text-gray-500 cursor-not-allowed' 
-                                                        : 'text-white cursor-pointer'
-                                                }`}
-                                            >
-                                                Tự động tạo transcript
-                                            </Label>
-                                            <div className="group/help relative">
-                                                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                                                <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                    {lesson?.transcriptUrl 
-                                                        ? 'Bài học đã có transcript, không thể tự động tạo lại.'
-                                                        : 'Nếu bật, hệ thống sẽ tự động tạo transcript (phụ đề) từ video bằng AI Whisper sau khi bài học được lưu. Transcript sẽ được tạo trong vài phút.'}
+                            {(() => {
+                                // Enable checkbox if: no transcript OR new video uploaded
+                                const hasNewVideo = !!videoFile
+                                const hasTranscript = !!lesson?.transcriptUrl
+                                const isDisabled = hasTranscript && !hasNewVideo
+                                
+                                return (
+                                    <div className={`group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg transition-colors ${
+                                        isDisabled ? 'opacity-60' : 'hover:border-purple-500/50'
+                                    }`}>
+                                        <div className="flex items-start gap-3">
+                                            <Checkbox
+                                                id="autoCreateTranscript"
+                                                checked={autoCreateTranscript}
+                                                onCheckedChange={(checked) =>
+                                                    setAutoCreateTranscript(checked as boolean)
+                                                }
+                                                disabled={isDisabled}
+                                                className="border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 h-5 w-5 mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Label 
+                                                        htmlFor="autoCreateTranscript" 
+                                                        className={`font-medium flex items-center gap-2 ${
+                                                            isDisabled 
+                                                                ? 'text-gray-500 cursor-not-allowed' 
+                                                                : 'text-white cursor-pointer'
+                                                        }`}
+                                                    >
+                                                        Tự động tạo transcript
+                                                    </Label>
+                                                    <div className="group/help relative">
+                                                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                                                        <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                                                            {isDisabled
+                                                                ? 'Bài học đã có transcript. Upload video mới để có thể tự động tạo transcript mới.'
+                                                                : hasNewVideo && hasTranscript
+                                                                ? 'Upload video mới cho phép bạn tự động tạo transcript mới từ video mới. Transcript cũ sẽ bị thay thế.'
+                                                                : 'Nếu bật, hệ thống sẽ tự động tạo transcript (phụ đề) từ video bằng AI Whisper sau khi bài học được lưu. Transcript sẽ được tạo trong vài phút.'}
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                <p className={`text-xs ${
+                                                    isDisabled ? 'text-gray-500' : 'text-gray-400'
+                                                }`}>
+                                                    {isDisabled
+                                                        ? 'Upload video mới để có thể tự động tạo transcript mới'
+                                                        : hasNewVideo && hasTranscript
+                                                        ? 'Tự động tạo transcript mới từ video mới (transcript cũ sẽ bị thay thế)'
+                                                        : 'Tự động tạo phụ đề từ video sau khi lưu bài học'}
+                                                </p>
                                             </div>
                                         </div>
-                                        <p className={`text-xs ${
-                                            lesson?.transcriptUrl ? 'text-gray-500' : 'text-gray-400'
-                                        }`}>
-                                            {lesson?.transcriptUrl 
-                                                ? 'Bài học đã có transcript, không thể tự động tạo lại'
-                                                : 'Tự động tạo phụ đề từ video sau khi lưu bài học'}
-                                        </p>
                                     </div>
-                                </div>
-                            </div>
+                                )
+                            })()}
                 </div>
 
                             {/* Transcript Info */}
