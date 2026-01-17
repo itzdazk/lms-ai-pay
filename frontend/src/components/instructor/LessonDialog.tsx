@@ -30,9 +30,9 @@ export function LessonDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-5xl w-[98vw]"
+                className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-[95vw] w-[98vw]"
             >
-                <DialogHeader className="px-8 pt-4 pb-4 flex-shrink-0">
+                <DialogHeader className="px-8 pt-2 pb-2 flex-shrink-0">
                     <DialogTitle className="text-white">
                         {editingLesson ? 'Chỉnh sửa Bài học' : 'Tạo Bài học mới'}
                     </DialogTitle>
@@ -42,7 +42,7 @@ export function LessonDialog({
                             : 'Nhập thông tin để tạo bài học mới'}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto px-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-8 custom-scrollbar">
                     {chapterId && (
                         <LessonForm
                             lesson={editingLesson}

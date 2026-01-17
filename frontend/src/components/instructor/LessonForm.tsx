@@ -445,13 +445,13 @@ export function LessonForm({
                 e.preventDefault()
                 // Prevent default form submission
             }} 
-            className="flex flex-col h-full"
+            className="flex flex-col h-full overflow-x-hidden"
         >
-            <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
-                {/* Two-column layout for Basic Info and Media */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                {/* Three-column layout for Basic Info, Media, and Settings */}
+                <div className="grid grid-cols-1 lg:grid-cols-[3fr_3fr_2fr] gap-6 mb-8 min-w-0">
                     {/* Left Column: Basic Info */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-w-0">
                         {/* Basic Information Section */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-3 pb-2 border-b border-[#2D2D2D]">
@@ -475,7 +475,7 @@ export function LessonForm({
                                             setFormData({ ...formData, title: e.target.value })
                                         }
                                         placeholder="Nhập tiêu đề bài học"
-                                        className={`bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 py-3 ${
+                                        className={`bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 py-3 w-full max-w-full ${
                                             lesson && isFieldChanged('title') ? 'border-green-500 ring-1 ring-green-500/50' : ''
                                         }`}
                                         spellCheck={false}
@@ -499,7 +499,7 @@ export function LessonForm({
                                             setFormData({ ...formData, description: e.target.value })
                                         }
                                         placeholder="Nhập mô tả bài học (tùy chọn)"
-                                        className={`bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 min-h-[140px] ${
+                                        className={`bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 min-h-[140px] w-full max-w-full break-words ${
                                             lesson && isFieldChanged('description') ? 'border-green-500 ring-1 ring-green-500/50' : ''
                                         }`}
                                         rows={6}
@@ -523,7 +523,7 @@ export function LessonForm({
                                             setFormData({ ...formData, content: e.target.value })
                                         }
                                         placeholder="Nhập nội dung bài học chi tiết (tùy chọn)"
-                                        className={`bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 min-h-[280px] ${
+                                        className={`bg-[#1A1A1A] border-[#2D2D2D] text-white placeholder:text-gray-500 min-h-[250px] max-h-[250px] w-full max-w-full break-words ${
                                             lesson && isFieldChanged('content') ? 'border-green-500 ring-1 ring-green-500/50' : ''
                                         }`}
                                         rows={8}
@@ -543,36 +543,6 @@ export function LessonForm({
                             <div className="flex items-center gap-3 pb-2 border-b border-[#2D2D2D]">
                                 <Upload className="h-5 w-5 text-purple-500" />
                                 <h3 className="text-lg font-semibold text-white">Media & Tài liệu</h3>
-                            </div>
-
-                            {/* Auto-create Transcript Checkbox */}
-                            <div className="group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg hover:border-purple-500/50 transition-colors">
-                                <div className="flex items-start gap-3">
-                                    <Checkbox
-                                        id="autoCreateTranscript"
-                                        checked={autoCreateTranscript}
-                                        onCheckedChange={(checked) =>
-                                            setAutoCreateTranscript(checked as boolean)
-                                        }
-                                        className="border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 h-5 w-5 mt-0.5"
-                                    />
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Label htmlFor="autoCreateTranscript" className="text-white font-medium cursor-pointer flex items-center gap-2">
-                                                Tự động tạo transcript
-                                            </Label>
-                                            <div className="group/help relative">
-                                                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                                                <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                    Nếu bật, hệ thống sẽ tự động tạo transcript (phụ đề) từ video bằng AI Whisper sau khi bài học được lưu. Transcript sẽ được tạo trong vài phút.
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-gray-400">
-                                            Tự động tạo phụ đề từ video sau khi lưu bài học
-                                        </p>
-                                    </div>
-                                </div>
                             </div>
 
                             {/* Video Upload */}
@@ -603,7 +573,7 @@ export function LessonForm({
                     {videoPreview ? (
                         <div className="space-y-3">
                             {/* Preview Video */}
-                            <div className={`relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border-2 transition-all group ${
+                            <div className={`relative w-full aspect-video rounded-lg overflow-hidden border-2 transition-all group ${
                                 videoFile !== null
                                     ? 'border-green-500 ring-2 ring-green-500/30 shadow-lg shadow-green-500/20'
                                     : lesson && videoRemoved
@@ -728,7 +698,7 @@ export function LessonForm({
                             onDragOver={handleVideoDragOver}
                             onDragLeave={handleVideoDragLeave}
                             onClick={handleVideoChangeClick}
-                            className={`relative w-full max-w-2xl mx-auto aspect-video rounded-lg border-2 border-dashed transition-all cursor-pointer group ${
+                            className={`relative w-full aspect-video rounded-lg border-2 border-dashed transition-all cursor-pointer group ${
                                 isDraggingVideo
                                     ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
                                     : 'border-[#2D2D2D] bg-[#1F1F1F] hover:border-gray-600 hover:bg-[#2A2A2A]'
@@ -760,6 +730,52 @@ export function LessonForm({
                             </div>
                         </div>
                     )}
+
+                            {/* Auto-create Transcript Checkbox - moved below video */}
+                            <div className={`group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg transition-colors ${
+                                lesson?.transcriptUrl ? 'opacity-60' : 'hover:border-purple-500/50'
+                            }`}>
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="autoCreateTranscript"
+                                        checked={autoCreateTranscript}
+                                        onCheckedChange={(checked) =>
+                                            setAutoCreateTranscript(checked as boolean)
+                                        }
+                                        disabled={!!lesson?.transcriptUrl}
+                                        className="border-[#2D2D2D] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 h-5 w-5 mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Label 
+                                                htmlFor="autoCreateTranscript" 
+                                                className={`font-medium flex items-center gap-2 ${
+                                                    lesson?.transcriptUrl 
+                                                        ? 'text-gray-500 cursor-not-allowed' 
+                                                        : 'text-white cursor-pointer'
+                                                }`}
+                                            >
+                                                Tự động tạo transcript
+                                            </Label>
+                                            <div className="group/help relative">
+                                                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                                                <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                                                    {lesson?.transcriptUrl 
+                                                        ? 'Bài học đã có transcript, không thể tự động tạo lại.'
+                                                        : 'Nếu bật, hệ thống sẽ tự động tạo transcript (phụ đề) từ video bằng AI Whisper sau khi bài học được lưu. Transcript sẽ được tạo trong vài phút.'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className={`text-xs ${
+                                            lesson?.transcriptUrl ? 'text-gray-500' : 'text-gray-400'
+                                        }`}>
+                                            {lesson?.transcriptUrl 
+                                                ? 'Bài học đã có transcript, không thể tự động tạo lại'
+                                                : 'Tự động tạo phụ đề từ video sau khi lưu bài học'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                 </div>
 
                             {/* Transcript Info */}
@@ -948,135 +964,104 @@ export function LessonForm({
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Full-width Settings Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 pb-2 border-b border-[#2D2D2D]">
-                        <Video className="h-5 w-5 text-green-500" />
-                        <h3 className="text-lg font-semibold text-white">Cài đặt bài học</h3>
-                    </div>
+                    {/* Third Column: Settings */}
+                    <div className="space-y-6">
+                        {/* Settings Section */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 pb-2 border-b border-[#2D2D2D]">
+                                <Video className="h-5 w-5 text-green-500" />
+                                <h3 className="text-lg font-semibold text-white">Cài đặt bài học</h3>
+                            </div>
 
-                    <div className="space-y-4">
-                        {/* Completion Threshold Dropdown */}
-                        <div>
-                            <Label htmlFor="completionThreshold" className="text-white flex items-center gap-2 mb-2">
-                                Ngưỡng hoàn thành video <span className="text-red-500">*</span>
-                                {lesson && isFieldChanged('completionThreshold') && (
-                                    <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-                                )}
-                                <div className="group/help relative">
-                                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                                    <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                        Phần trăm video học viên cần xem để được tính là hoàn thành bài học. Ví dụ: 70% nghĩa là học viên phải xem ít nhất 70% tổng thời lượng video.
-                                    </div>
-                                </div>
-                            </Label>
-                            <Select
-                                value={isNaN(formData.completionThreshold) ? "0.7" : formData.completionThreshold.toFixed(1)}
-                                onValueChange={(value) => {
-                                    const parsed = parseFloat(value)
-                                    if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
-                                        setFormData({ ...formData, completionThreshold: parsed })
-                                    }
-                                }}
-                            >
-                                <DarkOutlineSelectTrigger className={`bg-[#1A1A1A] border-[#2D2D2D] text-white ${
-                                    lesson && isFieldChanged('completionThreshold') ? 'border-green-500 ring-1 ring-green-500/50' : ''
-                                }`}>
-                                    <SelectValue placeholder="Chọn ngưỡng hoàn thành" />
-                                </DarkOutlineSelectTrigger>
-                                <DarkOutlineSelectContent>
-                                    <DarkOutlineSelectItem value="0.1">10%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.2">20%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.3">30%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.4">40%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.5">50%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.6">60%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.7">70%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.8">80%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="0.9">90%</DarkOutlineSelectItem>
-                                    <DarkOutlineSelectItem value="1.0">100%</DarkOutlineSelectItem>
-                                </DarkOutlineSelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-400 mt-1.5">
-                                Học viên cần xem {isNaN(formData.completionThreshold) ? 70 : Math.round(formData.completionThreshold * 100)}% video để hoàn thành bài học
-                            </p>
-                        </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Preview Checkbox */}
-                        <div className="group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg hover:border-blue-500/50 transition-colors">
-                            <div className="flex items-start gap-3">
-                                <Checkbox
-                                    id="isPreview"
-                                    checked={formData.isPreview}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, isPreview: checked as boolean })
-                                    }
-                                    className="border-[#2D2D2D] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 h-5 w-5 mt-0.5"
-                                />
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Label htmlFor="isPreview" className="text-white font-medium cursor-pointer flex items-center gap-2">
-                                            Bài học preview
-                                            {lesson && isFieldChanged('isPreview') && (
-                                                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-                                            )}
-                                        </Label>
+                            <div className="space-y-4">
+                                {/* Completion Threshold Dropdown */}
+                                <div>
+                                    <Label htmlFor="completionThreshold" className="text-white flex items-center gap-2 mb-2">
+                                        Ngưỡng hoàn thành video <span className="text-red-500">*</span>
+                                        {lesson && isFieldChanged('completionThreshold') && (
+                                            <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                                        )}
                                         <div className="group/help relative">
                                             <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
                                             <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                Bài học preview sẽ được hiển thị miễn phí cho học viên trước khi đăng ký khóa học. Học viên có thể xem bài học này mà không cần thanh toán.
+                                                Phần trăm video học viên cần xem để được tính là hoàn thành bài học. Ví dụ: 70% nghĩa là học viên phải xem ít nhất 70% tổng thời lượng video.
                                             </div>
                                         </div>
+                                    </Label>
+                                    <Select
+                                        value={isNaN(formData.completionThreshold) ? "0.7" : formData.completionThreshold.toFixed(1)}
+                                        onValueChange={(value) => {
+                                            const parsed = parseFloat(value)
+                                            if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+                                                setFormData({ ...formData, completionThreshold: parsed })
+                                            }
+                                        }}
+                                    >
+                                        <DarkOutlineSelectTrigger className={`bg-[#1A1A1A] border-[#2D2D2D] text-white ${
+                                            lesson && isFieldChanged('completionThreshold') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+                                        }`}>
+                                            <SelectValue placeholder="Chọn ngưỡng hoàn thành" />
+                                        </DarkOutlineSelectTrigger>
+                                        <DarkOutlineSelectContent>
+                                            <DarkOutlineSelectItem value="0.1">10%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.2">20%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.3">30%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.4">40%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.5">50%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.6">60%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.7">70%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.8">80%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="0.9">90%</DarkOutlineSelectItem>
+                                            <DarkOutlineSelectItem value="1.0">100%</DarkOutlineSelectItem>
+                                        </DarkOutlineSelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-400 mt-1.5">
+                                        Học viên cần xem {isNaN(formData.completionThreshold) ? 70 : Math.round(formData.completionThreshold * 100)}% video để hoàn thành bài học
+                                    </p>
+                                </div>
+
+                                {/* Publish Checkbox */}
+                                <div className="group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg hover:border-green-500/50 transition-colors">
+                                    <div className="flex items-start gap-3">
+                                        <Checkbox
+                                            id="isPublished"
+                                            checked={formData.isPublished}
+                                            onCheckedChange={(checked) =>
+                                                setFormData({ ...formData, isPublished: checked as boolean })
+                                            }
+                                            className="border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 h-5 w-5 mt-0.5"
+                                        />
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Label htmlFor="isPublished" className="text-white font-medium cursor-pointer flex items-center gap-2">
+                                                    Xuất bản ngay
+                                                    {lesson && isFieldChanged('isPublished') && (
+                                                        <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                                                    )}
+                                                </Label>
+                                                <div className="group/help relative">
+                                                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                                                    <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                                                        Nếu bật, bài học sẽ được xuất bản ngay sau khi tạo và học viên có thể xem. Nếu tắt, bài học sẽ ở trạng thái draft và chỉ bạn mới thấy được.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-400">
+                                                Bài học sẽ hiển thị cho học viên ngay sau khi tạo
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-gray-400">
-                                        Cho phép học viên xem miễn phí trước khi đăng ký
+                                </div>
+
+                                {/* Note */}
+                                <div className="bg-[#1F1F1F] p-4 rounded-lg border border-[#2D2D2D]">
+                                    <p className="text-sm text-gray-400">
+                                        <strong>Lưu ý:</strong> Thứ tự bài học sẽ được tự động sắp xếp. Bạn có thể kéo thả để thay đổi thứ tự sau khi tạo.
                                     </p>
                                 </div>
                             </div>
                         </div>
-
-                        {/* Publish Checkbox */}
-                        <div className="group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg hover:border-green-500/50 transition-colors">
-                            <div className="flex items-start gap-3">
-                                <Checkbox
-                                    id="isPublished"
-                                    checked={formData.isPublished}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, isPublished: checked as boolean })
-                                    }
-                                    className="border-[#2D2D2D] data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 h-5 w-5 mt-0.5"
-                                />
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Label htmlFor="isPublished" className="text-white font-medium cursor-pointer flex items-center gap-2">
-                                            Xuất bản ngay
-                                            {lesson && isFieldChanged('isPublished') && (
-                                                <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-                                            )}
-                                        </Label>
-                                        <div className="group/help relative">
-                                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                                            <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                Nếu bật, bài học sẽ được xuất bản ngay sau khi tạo và học viên có thể xem. Nếu tắt, bài học sẽ ở trạng thái draft và chỉ bạn mới thấy được.
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-gray-400">
-                                        Bài học sẽ hiển thị cho học viên ngay sau khi tạo
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-[#1F1F1F] p-4 rounded-lg border border-[#2D2D2D]">
-                        <p className="text-sm text-gray-400">
-                            <strong>Lưu ý:</strong> Thứ tự bài học sẽ được tự động sắp xếp. Bạn có thể kéo thả để thay đổi thứ tự sau khi tạo.
-                        </p>
-                    </div>
                     </div>
                 </div>
             </div>
@@ -1164,9 +1149,6 @@ export function LessonForm({
                                             )}
                                             {formData.completionThreshold !== (lesson?.completionThreshold ?? 0.7) && (
                                                 <li>Ngưỡng hoàn thành sẽ thay đổi từ {Math.round((lesson?.completionThreshold ?? 0.7) * 100)}% sang {Math.round(formData.completionThreshold * 100)}%</li>
-                                            )}
-                                            {formData.isPreview !== (lesson?.isPreview || false) && (
-                                                <li>Trạng thái "Bài học preview" sẽ được thay đổi</li>
                                             )}
                                             {formData.isPublished !== (lesson?.isPublished || false) && (
                                                 <li>Trạng thái "Xuất bản" sẽ được thay đổi</li>
