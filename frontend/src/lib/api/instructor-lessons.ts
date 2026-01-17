@@ -58,6 +58,29 @@ export const instructorLessonsApi = {
     },
 
     /**
+     * Get progress info for multiple lessons (for reorder warning) (Instructor only)
+     */
+    async getLessonsProgressInfo(
+        courseId: number,
+        lessonIds: number[]
+    ): Promise<{
+        totalProgressRecords: number
+        lessonsWithProgress: number[]
+        uniqueUsersCount: number
+    }> {
+        const response = await apiClient.post<
+            ApiResponse<{
+                totalProgressRecords: number
+                lessonsWithProgress: number[]
+                uniqueUsersCount: number
+            }>
+        >(`/instructor/courses/${courseId}/lessons/progress-info`, {
+            lessonIds,
+        })
+        return response.data.data
+    },
+
+    /**
      * Delete a lesson (Instructor only)
      */
     async deleteLesson(courseId: number, lessonId: number): Promise<void> {

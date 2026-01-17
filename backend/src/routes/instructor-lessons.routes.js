@@ -65,6 +65,19 @@ router.get(
 )
 
 /**
+ * @route   POST /api/v1/instructor/courses/:courseId/lessons/progress-info
+ * @desc    Get progress info for multiple lessons (for reorder warning)
+ * @access  Private (Instructor/Admin)
+ */
+router.post(
+    '/courses/:courseId/lessons/progress-info',
+    authenticate,
+    isInstructor,
+    isCourseInstructorOrAdmin,
+    lessonsController.getLessonsProgressInfo
+)
+
+/**
  * @route   DELETE /api/v1/instructor/courses/:courseId/lessons/:id
  * @desc    Delete lesson
  * @access  Private (Instructor/Admin)

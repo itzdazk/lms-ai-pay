@@ -665,6 +665,68 @@ class LessonsService {
     }
 
     /**
+     * Get progress info for multiple lessons (for reorder warning)
+     * Returns: { totalProgressRecords, lessonsWithProgress, uniqueUsersCount }
+     */
+    async getLessonsProgressInfo(courseId, lessonIds) {
+        if (!Array.isArray(lessonIds) || lessonIds.length === 0) {
+            return {
+                totalProgressRecords: 0,
+                lessonsWithProgress: [],
+                uniqueUsersCount: 0,
+            }
+        }
+
+        // Verify all lessons belong to course
+        const lessons = await prisma.lesson.findMany({
+            where: {
+                id: { in: lessonIds },
+                courseId,
+            },
+            select: { id: true },
+        })
+
+        if (lessons.length !== lessonIds.length) {
+            const error = new Error('Một số bài học không thuộc về khóa học này')
+            error.statusCode = HTTP_STATUS.BAD_REQUEST
+            throw error
+        }
+
+        // Count progress records for each lesson
+        const progressCounts = await prisma.progress.groupBy({
+            by: ['lessonId'],
+            where: {
+                lessonId: { in: lessonIds },
+            },
+            _count: {
+                lessonId: true,
+            },
+        })
+
+        // Get unique users who have progress on any of these lessons
+        const uniqueUsers = await prisma.progress.findMany({
+            where: {
+                lessonId: { in: lessonIds },
+            },
+            select: { userId: true },
+            distinct: ['userId'],
+        })
+
+        const totalProgressRecords = progressCounts.reduce(
+            (sum, p) => sum + p._count.lessonId,
+            0
+        )
+        const lessonsWithProgress = progressCounts.map((p) => p.lessonId)
+        const uniqueUsersCount = uniqueUsers.length
+
+        return {
+            totalProgressRecords,
+            lessonsWithProgress,
+            uniqueUsersCount,
+        }
+    }
+
+    /**
      * Delete lesson
      */
     async deleteLesson(courseId, lessonId) {

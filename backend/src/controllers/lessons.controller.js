@@ -136,6 +136,31 @@ class LessonsController {
     })
 
     /**
+     * @route   POST /api/v1/instructor/courses/:courseId/lessons/progress-info
+     * @desc    Get progress info for multiple lessons (for reorder warning)
+     * @access  Private (Instructor/Admin)
+     */
+    getLessonsProgressInfo = asyncHandler(async (req, res) => {
+        const { courseId } = req.params
+        const { lessonIds } = req.body
+
+        if (!Array.isArray(lessonIds) || lessonIds.length === 0) {
+            return ApiResponse.badRequest(res, 'Danh sách lessonIds là bắt buộc')
+        }
+
+        const progressInfo = await lessonsService.getLessonsProgressInfo(
+            parseInt(courseId),
+            lessonIds.map((id) => parseInt(id))
+        )
+
+        return ApiResponse.success(
+            res,
+            progressInfo,
+            'Lấy thông tin progress thành công'
+        )
+    })
+
+    /**
      * @route   DELETE /api/v1/instructor/courses/:courseId/lessons/:id
      * @desc    Delete lesson
      * @access  Private (Instructor/Admin)

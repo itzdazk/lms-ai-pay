@@ -11,6 +11,7 @@ import { ChapterDialog } from '../../components/instructor/ChapterDialog'
 import { LessonDialog } from '../../components/instructor/LessonDialog'
 import { DeleteChapterDialog } from '../../components/instructor/DeleteChapterDialog'
 import { DeleteLessonDialog } from '../../components/instructor/DeleteLessonDialog'
+import { ReorderLessonsWarningDialog } from '../../components/instructor/ReorderLessonsWarningDialog'
 import { CourseStatistics } from '../../components/instructor/CourseStatistics'
 import { ChapterItem } from '../../components/instructor/ChapterItem'
 import { SaveChangesBar } from '../../components/instructor/SaveChangesBar'
@@ -88,6 +89,16 @@ export function CourseChaptersPage() {
         uniqueUsersCount: number
     } | null>(null)
     const [loadingProgressInfo, setLoadingProgressInfo] = useState(false)
+    
+    // Reorder warning dialog
+    const [showReorderWarningDialog, setShowReorderWarningDialog] = useState(false)
+    const [reorderProgressInfo, setReorderProgressInfo] = useState<{
+        totalProgressRecords: number
+        lessonsWithProgress: number[]
+        uniqueUsersCount: number
+    } | null>(null)
+    const [loadingReorderProgressInfo, setLoadingReorderProgressInfo] = useState(false)
+    const [pendingReorderAction, setPendingReorderAction] = useState<(() => Promise<void>) | null>(null)
     const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
 
@@ -896,6 +907,66 @@ export function CourseChaptersPage() {
     const handleSaveChanges = async () => {
         if (!courseId || !hasUnsavedChanges) return
 
+        // Collect all lesson IDs that will be reordered
+        const reorderedLessonIds: number[] = []
+        
+        // For each chapter, check if lessons have changed order
+        for (const chapter of localChapters) {
+            const originalChapter = chapters.find(ch => ch.id === chapter.id)
+            if (!originalChapter || !chapter.lessons) continue
+
+            // Check if lessons in this chapter have changed order
+            const lessonsChanged = chapter.lessons.some(localLesson => {
+                const originalLesson = originalChapter.lessons?.find(l => l.id === localLesson.id)
+                return originalLesson && originalLesson.lessonOrder !== localLesson.lessonOrder
+            })
+
+            if (lessonsChanged && chapter.lessons.length > 0) {
+                // Get lesson IDs in new order
+                const lessonIds = chapter.lessons
+                    .sort((a, b) => a.lessonOrder - b.lessonOrder)
+                    .map(lesson => lesson.id)
+                
+                reorderedLessonIds.push(...lessonIds)
+            }
+        }
+
+        // If there are lessons to reorder, check for progress first
+        if (reorderedLessonIds.length > 0) {
+            try {
+                setLoadingReorderProgressInfo(true)
+                const progressInfo = await instructorLessonsApi.getLessonsProgressInfo(
+                    courseId,
+                    reorderedLessonIds
+                )
+                
+                // If there's progress, show warning dialog
+                if (progressInfo.totalProgressRecords > 0) {
+                    setReorderProgressInfo(progressInfo)
+                    setPendingReorderAction(() => async () => {
+                        // Actual save function
+                        await executeSaveChanges()
+                    })
+                    setShowReorderWarningDialog(true)
+                    setLoadingReorderProgressInfo(false)
+                    return
+                }
+            } catch (error: any) {
+                console.error('Error fetching reorder progress info:', error)
+                // Continue with save even if progress check fails
+            } finally {
+                setLoadingReorderProgressInfo(false)
+            }
+        }
+
+        // No progress or no lessons to reorder, proceed with save
+        await executeSaveChanges()
+    }
+
+    // Actual save function (separated for reuse)
+    const executeSaveChanges = async () => {
+        if (!courseId) return
+
         try {
             setSubmitting(true)
 
@@ -942,6 +1013,23 @@ export function CourseChaptersPage() {
         } finally {
             setSubmitting(false)
         }
+    }
+
+    // Handle reorder warning dialog confirm
+    const handleReorderConfirm = async () => {
+        if (pendingReorderAction) {
+            setShowReorderWarningDialog(false)
+            await pendingReorderAction()
+            setPendingReorderAction(null)
+            setReorderProgressInfo(null)
+        }
+    }
+
+    // Handle reorder warning dialog cancel
+    const handleReorderCancel = () => {
+        setShowReorderWarningDialog(false)
+        setPendingReorderAction(null)
+        setReorderProgressInfo(null)
     }
 
     // Reset drag and drop changes
@@ -1240,6 +1328,17 @@ export function CourseChaptersPage() {
                     setDeletingLesson(null)
                     setLessonProgressInfo(null)
                 }}
+                submitting={submitting}
+            />
+
+            {/* Reorder Lessons Warning Dialog */}
+            <ReorderLessonsWarningDialog
+                open={showReorderWarningDialog}
+                onOpenChange={setShowReorderWarningDialog}
+                progressInfo={reorderProgressInfo}
+                loadingProgressInfo={loadingReorderProgressInfo}
+                onSubmit={handleReorderConfirm}
+                onCancel={handleReorderCancel}
                 submitting={submitting}
             />
         </>
