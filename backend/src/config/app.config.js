@@ -121,13 +121,6 @@ const config = {
     WHISPER_MAX_CONCURRENT:
         parseInt(process.env.WHISPER_MAX_CONCURRENT, 10) || 2, // Default: 2 concurrent jobs
 
-    // Progress/Completion thresholds
-    VIDEO_COMPLETE_THRESHOLD: Number.isFinite(
-        parseFloat(process.env.VIDEO_COMPLETE_THRESHOLD)
-    )
-        ? parseFloat(process.env.VIDEO_COMPLETE_THRESHOLD)
-        : 0.1, // default 70%
-
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
     LOG_MAX_FILES: process.env.LOG_MAX_FILES || '14d',

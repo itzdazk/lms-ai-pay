@@ -216,6 +216,7 @@ model Lesson {
   transcriptStatus  String   @default("idle") @map("transcript_status") @db.VarChar(20)
   transcriptJsonUrl String?  @map("transcript_json_url") @db.VarChar(255)
   lessonOrder       Int      @map("lesson_order")
+  completionThreshold Decimal @default(0.7) @map("completion_threshold") @db.Decimal(3, 2)
   isPreview         Boolean  @default(false) @map("is_preview")
   isPublished       Boolean  @default(true) @map("is_published")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz

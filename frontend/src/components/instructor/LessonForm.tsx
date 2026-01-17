@@ -5,6 +5,8 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
 import { Checkbox } from '../ui/checkbox'
+import { Select, SelectValue } from '../ui/select'
+import { DarkOutlineSelectTrigger, DarkOutlineSelectContent, DarkOutlineSelectItem } from '../ui/dark-outline-select-trigger'
 import { Loader2, X, Video, FileText, Upload, CheckCircle2, AlertCircle, HelpCircle, Sparkles, Circle } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Lesson, CreateLessonRequest, UpdateLessonRequest } from '../../lib/api/types'
@@ -24,6 +26,7 @@ interface LessonFormData {
     description: string
     content: string
     lessonOrder: number
+    completionThreshold: number
     isPreview: boolean
     isPublished: boolean
 }
@@ -54,6 +57,7 @@ export function LessonForm({
         description: '',
         content: '',
         lessonOrder: 0,
+        completionThreshold: 0.7, // Default 70%
         isPreview: false,
         isPublished: false,
     })
@@ -89,11 +93,36 @@ export function LessonForm({
         setPendingSubmit(null)
 
         if (lesson) {
+            // Parse completionThreshold - handle Decimal from Prisma and edge cases
+            let completionThreshold = 0.7 // default
+            if (lesson.completionThreshold !== undefined && lesson.completionThreshold !== null) {
+                try {
+                    // Handle both number and Decimal types from Prisma
+                    const rawValue = typeof lesson.completionThreshold === 'number' 
+                        ? lesson.completionThreshold 
+                        : parseFloat(String(lesson.completionThreshold))
+                    
+                    if (!isNaN(rawValue) && isFinite(rawValue) && rawValue >= 0 && rawValue <= 1) {
+                        completionThreshold = rawValue
+                    }
+                } catch (error) {
+                    console.warn('Error parsing completionThreshold:', error, lesson.completionThreshold)
+                }
+            }
+            
+            console.log('Lesson data loaded:', {
+                lessonId: lesson.id,
+                completionThreshold: lesson.completionThreshold,
+                type: typeof lesson.completionThreshold,
+                parsedThreshold: completionThreshold,
+            })
+            
             const lessonData: LessonFormData = {
                 title: lesson.title || '',
                 description: lesson.description || '',
                 content: lesson.content || '',
                 lessonOrder: lesson.lessonOrder || 0,
+                completionThreshold: completionThreshold,
                 isPreview: lesson.isPreview || false,
                 isPublished: lesson.isPublished || false,
             }
@@ -115,6 +144,7 @@ export function LessonForm({
                 description: '',
                 content: '',
                 lessonOrder: 0,
+                completionThreshold: 0.7, // Default 70%
                 isPreview: false,
                 isPublished: false,
             }
@@ -158,6 +188,7 @@ export function LessonForm({
         const titleChanged = formData.title.trim() !== (lesson.title || '')
         const descriptionChanged = formData.description.trim() !== (lesson.description || '')
         const contentChanged = formData.content.trim() !== (lesson.content || '')
+        const completionThresholdChanged = formData.completionThreshold !== (lesson.completionThreshold ?? 0.7)
         const isPreviewChanged = formData.isPreview !== (lesson.isPreview ?? false)
         const isPublishedChanged = formData.isPublished !== (lesson.isPublished ?? false)
 
@@ -165,7 +196,7 @@ export function LessonForm({
         const hasNewVideo = !!videoFile
         const videoWasRemoved = !!(videoRemoved && !videoFile && !videoPreview && lesson.videoUrl)
 
-        return titleChanged || descriptionChanged || contentChanged || isPreviewChanged || isPublishedChanged || hasNewVideo || videoWasRemoved
+        return titleChanged || descriptionChanged || contentChanged || completionThresholdChanged || isPreviewChanged || isPublishedChanged || hasNewVideo || videoWasRemoved
     }
 
     const formatFileSize = (bytes: number): string => {
@@ -321,6 +352,7 @@ export function LessonForm({
                 title: formData.title.trim(),
                 description: formData.description.trim() || undefined,
                 content: formData.content.trim() || undefined,
+                completionThreshold: formData.completionThreshold,
                 isPreview: formData.isPreview,
                 isPublished: formData.isPublished,
             }
@@ -925,6 +957,53 @@ export function LessonForm({
                         <h3 className="text-lg font-semibold text-white">Cài đặt bài học</h3>
                     </div>
 
+                    <div className="space-y-4">
+                        {/* Completion Threshold Dropdown */}
+                        <div>
+                            <Label htmlFor="completionThreshold" className="text-white flex items-center gap-2 mb-2">
+                                Ngưỡng hoàn thành video <span className="text-red-500">*</span>
+                                {lesson && isFieldChanged('completionThreshold') && (
+                                    <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                                )}
+                                <div className="group/help relative">
+                                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                                    <div className="absolute left-0 top-6 w-64 p-2 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg text-xs text-gray-300 opacity-0 group-hover/help:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                                        Phần trăm video học viên cần xem để được tính là hoàn thành bài học. Ví dụ: 70% nghĩa là học viên phải xem ít nhất 70% tổng thời lượng video.
+                                    </div>
+                                </div>
+                            </Label>
+                            <Select
+                                value={isNaN(formData.completionThreshold) ? "0.7" : formData.completionThreshold.toFixed(1)}
+                                onValueChange={(value) => {
+                                    const parsed = parseFloat(value)
+                                    if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+                                        setFormData({ ...formData, completionThreshold: parsed })
+                                    }
+                                }}
+                            >
+                                <DarkOutlineSelectTrigger className={`bg-[#1A1A1A] border-[#2D2D2D] text-white ${
+                                    lesson && isFieldChanged('completionThreshold') ? 'border-green-500 ring-1 ring-green-500/50' : ''
+                                }`}>
+                                    <SelectValue placeholder="Chọn ngưỡng hoàn thành" />
+                                </DarkOutlineSelectTrigger>
+                                <DarkOutlineSelectContent>
+                                    <DarkOutlineSelectItem value="0.1">10%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.2">20%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.3">30%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.4">40%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.5">50%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.6">60%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.7">70%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.8">80%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="0.9">90%</DarkOutlineSelectItem>
+                                    <DarkOutlineSelectItem value="1.0">100%</DarkOutlineSelectItem>
+                                </DarkOutlineSelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-400 mt-1.5">
+                                Học viên cần xem {isNaN(formData.completionThreshold) ? 70 : Math.round(formData.completionThreshold * 100)}% video để hoàn thành bài học
+                            </p>
+                        </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Preview Checkbox */}
                         <div className="group relative p-4 bg-[#1F1F1F] border border-[#2D2D2D] rounded-lg hover:border-blue-500/50 transition-colors">
@@ -997,6 +1076,7 @@ export function LessonForm({
                         <p className="text-sm text-gray-400">
                             <strong>Lưu ý:</strong> Thứ tự bài học sẽ được tự động sắp xếp. Bạn có thể kéo thả để thay đổi thứ tự sau khi tạo.
                         </p>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -1081,6 +1161,9 @@ export function LessonForm({
                                             )}
                                             {formData.content.trim() !== (lesson?.content || '') && (
                                                 <li>Nội dung bài học sẽ được cập nhật</li>
+                                            )}
+                                            {formData.completionThreshold !== (lesson?.completionThreshold ?? 0.7) && (
+                                                <li>Ngưỡng hoàn thành sẽ thay đổi từ {Math.round((lesson?.completionThreshold ?? 0.7) * 100)}% sang {Math.round(formData.completionThreshold * 100)}%</li>
                                             )}
                                             {formData.isPreview !== (lesson?.isPreview || false) && (
                                                 <li>Trạng thái "Bài học preview" sẽ được thay đổi</li>

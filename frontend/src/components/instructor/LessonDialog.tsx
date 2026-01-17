@@ -32,7 +32,7 @@ export function LessonDialog({
             <DialogContent
                 className="bg-[#1A1A1A] border-[#2D2D2D] max-h-[95vh] flex flex-col p-0 sm:max-w-5xl w-[98vw]"
             >
-                <DialogHeader className="px-8 pt-6 pb-4 flex-shrink-0">
+                <DialogHeader className="px-8 pt-4 pb-4 flex-shrink-0">
                     <DialogTitle className="text-white">
                         {editingLesson ? 'Chỉnh sửa Bài học' : 'Tạo Bài học mới'}
                     </DialogTitle>

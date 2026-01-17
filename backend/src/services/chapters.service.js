@@ -46,6 +46,7 @@ class ChaptersService {
                                   videoUrl: true,
                                   videoDuration: true,
                                   lessonOrder: true,
+                                  completionThreshold: true,
                                   isPreview: true,
                                   isPublished: true,
                                   transcriptUrl: true,

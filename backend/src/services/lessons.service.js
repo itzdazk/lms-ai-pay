@@ -269,6 +269,7 @@ class LessonsService {
             description,
             content,
             lessonOrder,
+            completionThreshold,
             isPreview,
             isPublished,
             chapterId,
@@ -390,6 +391,7 @@ class LessonsService {
                 description,
                 content,
                 lessonOrder: finalLessonOrder,
+                completionThreshold: completionThreshold !== undefined ? parseFloat(completionThreshold) : 0.7,
                 isPreview: isPreview || false,
                 isPublished: isPublished !== undefined ? isPublished : true,
             },
@@ -431,6 +433,7 @@ class LessonsService {
             description,
             content,
             lessonOrder,
+            completionThreshold,
             isPreview,
             isPublished,
             // videoDuration is intentionally excluded - it's set automatically when video is uploaded
@@ -516,6 +519,13 @@ class LessonsService {
 
         if (description !== undefined) updateData.description = description
         if (content !== undefined) updateData.content = content
+        if (completionThreshold !== undefined) {
+            const threshold = parseFloat(completionThreshold)
+            if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+                throw new Error('Ngưỡng hoàn thành phải là số từ 0 đến 1')
+            }
+            updateData.completionThreshold = threshold
+        }
         if (isPreview !== undefined) updateData.isPreview = isPreview
         if (isPublished !== undefined) updateData.isPublished = isPublished
 

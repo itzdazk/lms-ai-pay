@@ -300,6 +300,7 @@ export interface Lesson {
         | 'cancelled'
     transcriptJsonUrl?: string
     lessonOrder: number
+    completionThreshold: number
     isPreview: boolean
     isPublished: boolean
     createdAt: string
@@ -316,6 +317,7 @@ export interface CreateLessonRequest {
     videoUrl?: string
     // videoDuration is automatically calculated by backend when video is uploaded
     lessonOrder: number
+    completionThreshold: number // Required: percentage (0-1) of video to watch to complete lesson
     isPreview?: boolean
     isPublished?: boolean
 }

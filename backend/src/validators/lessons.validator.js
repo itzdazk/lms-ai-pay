@@ -60,6 +60,12 @@ const createLessonValidator = [
         .isInt({ min: 1 })
         .withMessage('Thứ tự bài học phải là số nguyên dương'),
 
+    body('completionThreshold')
+        .notEmpty()
+        .withMessage('Ngưỡng hoàn thành là bắt buộc')
+        .isFloat({ min: 0, max: 1 })
+        .withMessage('Ngưỡng hoàn thành phải là số từ 0 đến 1 (ví dụ: 0.7 = 70%)'),
+
     body('isPreview')
         .optional()
         .isBoolean()
@@ -117,6 +123,11 @@ const updateLessonValidator = [
         .optional()
         .isInt({ min: 1 })
         .withMessage('Thứ tự bài học phải là số nguyên dương'),
+
+    body('completionThreshold')
+        .optional()
+        .isFloat({ min: 0, max: 1 })
+        .withMessage('Ngưỡng hoàn thành phải là số từ 0 đến 1 (ví dụ: 0.7 = 70%)'),
 
     body('isPreview')
         .optional()

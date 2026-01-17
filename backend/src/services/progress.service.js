@@ -396,7 +396,8 @@ class ProgressService {
             ) {
                 updateData.watchDuration = position
             }
-            const threshold = config.VIDEO_COMPLETE_THRESHOLD || 0.7
+            // Sử dụng completionThreshold từ lesson (do giảng viên quy định)
+            const threshold = lesson.completionThreshold || 0.7
             // Tự động đánh dấu completed nếu đã xem >= threshold video
             if (
                 lesson.videoDuration &&
