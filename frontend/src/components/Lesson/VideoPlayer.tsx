@@ -1261,8 +1261,8 @@ export function VideoPlayer({
               className="h-full bg-blue-600 transition-all group-hover/progress:bg-blue-500"
               style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
             />
-            {/* WatchedDuration marker */}
-            {watchedDuration > 0 && duration > 0 && watchedDuration < duration && (
+            {/* WatchedDuration marker - Chỉ hiển thị khi chưa completed */}
+            {!isCompleted && watchedDuration > 0 && duration > 0 && watchedDuration < duration && (
               <div
                 className="absolute top-0 bottom-0 w-1.5"
                 style={{
