@@ -11,6 +11,7 @@ import logger from '../config/logger.config.js'
 import path from 'path'
 import fs from 'fs'
 import transcriptionService from './transcription.service.js'
+import progressService from './progress.service.js'
 import slugify from '../utils/slugify.util.js'
 import { getVideoDuration } from '../utils/video.util.js'
 import { enqueueHlsJob } from '../queues/hls.queue.js'
@@ -619,6 +620,51 @@ class LessonsService {
     }
 
     /**
+     * Get lesson progress info (for instructor delete warning)
+     * Returns: { totalProgressRecords, completedProgressRecords, uniqueUsersCount }
+     */
+    async getLessonProgressInfo(lessonId) {
+        // Check if lesson exists
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: { id: true, courseId: true },
+        })
+
+        if (!lesson) {
+            const error = new Error('Không tìm thấy bài học')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Count total progress records
+        const totalProgressRecords = await prisma.progress.count({
+            where: { lessonId },
+        })
+
+        // Count completed progress records
+        const completedProgressRecords = await prisma.progress.count({
+            where: {
+                lessonId,
+                isCompleted: true,
+            },
+        })
+
+        // Count unique users (students who have progress)
+        const uniqueUsers = await prisma.progress.findMany({
+            where: { lessonId },
+            select: { userId: true },
+            distinct: ['userId'],
+        })
+        const uniqueUsersCount = uniqueUsers.length
+
+        return {
+            totalProgressRecords,
+            completedProgressRecords,
+            uniqueUsersCount,
+        }
+    }
+
+    /**
      * Delete lesson
      */
     async deleteLesson(courseId, lessonId) {
@@ -689,6 +735,44 @@ class LessonsService {
             where: { id: lessonId },
             select: { lessonOrder: true },
         })
+
+        // Count progress records for this lesson (for logging)
+        const progressCount = await prisma.progress.count({
+            where: { lessonId },
+        })
+
+        // Delete all progress records related to this lesson
+        if (progressCount > 0) {
+            await prisma.progress.deleteMany({
+                where: { lessonId },
+            })
+            logger.info(
+                `Deleted ${progressCount} progress record(s) for lesson ${lessonId}`
+            )
+
+            // Get all enrollments for this course to update their progress
+            // Note: Enrollment has unique constraint on [userId, courseId],
+            // so each user only has one enrollment per course
+            const enrollments = await prisma.enrollment.findMany({
+                where: {
+                    courseId,
+                    status: {
+                        in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
+                    },
+                },
+                select: { userId: true },
+            })
+
+            // Update course progress for all affected users
+            const updatePromises = enrollments.map((enrollment) =>
+                progressService.updateCourseProgress(enrollment.userId, courseId)
+            )
+            await Promise.all(updatePromises)
+
+            logger.info(
+                `Updated course progress for ${enrollments.length} enrollment(s) after deleting lesson ${lessonId}`
+            )
+        }
 
         // Delete lesson
         await prisma.lesson.delete({

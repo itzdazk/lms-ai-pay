@@ -51,6 +51,20 @@ router.put(
 )
 
 /**
+ * @route   GET /api/v1/instructor/courses/:courseId/lessons/:id/progress-info
+ * @desc    Get lesson progress info (for delete warning)
+ * @access  Private (Instructor/Admin)
+ */
+router.get(
+    '/courses/:courseId/lessons/:id/progress-info',
+    authenticate,
+    isInstructor,
+    isCourseInstructorOrAdmin,
+    checkLessonExists,
+    lessonsController.getLessonProgressInfo
+)
+
+/**
  * @route   DELETE /api/v1/instructor/courses/:courseId/lessons/:id
  * @desc    Delete lesson
  * @access  Private (Instructor/Admin)

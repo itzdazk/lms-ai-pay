@@ -117,6 +117,25 @@ class LessonsController {
     })
 
     /**
+     * @route   GET /api/v1/instructor/courses/:courseId/lessons/:id/progress-info
+     * @desc    Get lesson progress info (for delete warning)
+     * @access  Private (Instructor/Admin)
+     */
+    getLessonProgressInfo = asyncHandler(async (req, res) => {
+        const { id } = req.params
+
+        const progressInfo = await lessonsService.getLessonProgressInfo(
+            parseInt(id)
+        )
+
+        return ApiResponse.success(
+            res,
+            progressInfo,
+            'Lấy thông tin progress thành công'
+        )
+    })
+
+    /**
      * @route   DELETE /api/v1/instructor/courses/:courseId/lessons/:id
      * @desc    Delete lesson
      * @access  Private (Instructor/Admin)

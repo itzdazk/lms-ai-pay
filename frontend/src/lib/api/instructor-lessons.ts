@@ -37,6 +37,27 @@ export const instructorLessonsApi = {
     },
 
     /**
+     * Get lesson progress info (for delete warning) (Instructor only)
+     */
+    async getLessonProgressInfo(
+        courseId: number,
+        lessonId: number
+    ): Promise<{
+        totalProgressRecords: number
+        completedProgressRecords: number
+        uniqueUsersCount: number
+    }> {
+        const response = await apiClient.get<
+            ApiResponse<{
+                totalProgressRecords: number
+                completedProgressRecords: number
+                uniqueUsersCount: number
+            }>
+        >(`/instructor/courses/${courseId}/lessons/${lessonId}/progress-info`)
+        return response.data.data
+    },
+
+    /**
      * Delete a lesson (Instructor only)
      */
     async deleteLesson(courseId: number, lessonId: number): Promise<void> {

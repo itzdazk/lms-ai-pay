@@ -82,6 +82,12 @@ export function CourseChaptersPage() {
     const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
     const [deletingChapter, setDeletingChapter] = useState<Chapter | null>(null)
     const [deletingLesson, setDeletingLesson] = useState<{ lesson: Lesson; chapterId: number } | null>(null)
+    const [lessonProgressInfo, setLessonProgressInfo] = useState<{
+        totalProgressRecords: number
+        completedProgressRecords: number
+        uniqueUsersCount: number
+    } | null>(null)
+    const [loadingProgressInfo, setLoadingProgressInfo] = useState(false)
     const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
 
@@ -457,9 +463,28 @@ export function CourseChaptersPage() {
         setShowLessonDialog(true)
     }
 
-    const handleDeleteLesson = (lesson: Lesson, chapterId: number) => {
+    const handleDeleteLesson = async (lesson: Lesson, chapterId: number) => {
+        if (!courseId) return
+
         setDeletingLesson({ lesson, chapterId })
+        setLoadingProgressInfo(true)
+        setLessonProgressInfo(null)
         setShowDeleteLessonDialog(true)
+
+        try {
+            // Fetch progress info for warning
+            const progressInfo = await instructorLessonsApi.getLessonProgressInfo(
+                courseId,
+                lesson.id
+            )
+            setLessonProgressInfo(progressInfo)
+        } catch (error: any) {
+            console.error('Error fetching lesson progress info:', error)
+            // If error, just show dialog without progress info
+            setLessonProgressInfo(null)
+        } finally {
+            setLoadingProgressInfo(false)
+        }
     }
 
     // Toggle quiz management for a lesson
@@ -612,6 +637,7 @@ export function CourseChaptersPage() {
             toast.success('Xóa bài học thành công!')
             setShowDeleteLessonDialog(false)
             setDeletingLesson(null)
+            setLessonProgressInfo(null)
         } catch (error: any) {
             console.error('Error deleting lesson:', error)
             // Error toast is already shown by API client interceptor
@@ -1207,9 +1233,12 @@ export function CourseChaptersPage() {
                 onOpenChange={setShowDeleteLessonDialog}
                 deletingLesson={deletingLesson?.lesson || null}
                 onSubmit={handleLessonDelete}
+                progressInfo={lessonProgressInfo}
+                loadingProgressInfo={loadingProgressInfo}
                 onCancel={() => {
                     setShowDeleteLessonDialog(false)
                     setDeletingLesson(null)
+                    setLessonProgressInfo(null)
                 }}
                 submitting={submitting}
             />
