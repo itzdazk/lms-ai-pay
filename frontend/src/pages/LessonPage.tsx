@@ -88,6 +88,18 @@ export function LessonPage() {
     const handleSeek = (time: number) => {
         debouncedUpdateProgressOnSeek(time)
     }
+    
+    // Handle backward với update progress
+    const handleBackwardWithUpdate = (currentTime: number, watchedDuration: number) => {
+        // Luôn gửi update với vị trí hiện tại trước khi backward
+        // để cập nhật lastPosition (và watchDuration nếu currentTime > watchedDuration)
+        console.log('[Progress] handleBackwardWithUpdate called:', {
+            currentTime,
+            watchedDuration,
+            isCurrentLessonCompleted
+        })
+        debouncedUpdateProgressOnSeek(currentTime, true) // allowWhenCompleted = true
+    }
     const params = useParams<{ slug: string; lessonSlug?: string }>()
     const courseSlug = params.slug
     const lessonSlug = params.lessonSlug
@@ -759,6 +771,12 @@ export function LessonPage() {
 
     // Debounced update progress khi pause
     const debouncedUpdateProgress = debounceAsync(async () => {
+        console.log('[Progress] debouncedUpdateProgress called:', {
+            hasSelectedLesson: !!selectedLesson,
+            hasEnrollment: !!enrollment,
+            isCurrentLessonCompleted,
+            willUpdate: !!(selectedLesson && enrollment && !isCurrentLessonCompleted)
+        })
         if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             // Check rate limit on client side (10 seconds matching backend)
             const now = Date.now()
@@ -809,6 +827,11 @@ export function LessonPage() {
     }, 1500)
 
     const handlePause = async () => {
+        console.log('[Progress] handlePause called:', {
+            isCurrentLessonCompleted,
+            hasSelectedLesson: !!selectedLesson,
+            hasEnrollment: !!enrollment
+        })
         isPlayingRef.current = false
         if (progressSaveIntervalRef.current) {
             clearInterval(progressSaveIntervalRef.current)
@@ -906,8 +929,11 @@ export function LessonPage() {
 
     // Debounced update progress khi seek
     const debouncedUpdateProgressOnSeek = debounceAsync(
-        async (seekTime: number) => {
-            if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
+        async (seekTime: number, allowWhenCompleted = false) => {
+            // Cho phép update khi backward từ vị trí vượt mốc (allowWhenCompleted = true)
+            // hoặc khi chưa completed (!isCurrentLessonCompleted)
+            if (selectedLesson && enrollment && 
+                (allowWhenCompleted || !isCurrentLessonCompleted)) {
                 try {
                     const payload: any = {
                         position: seekTime,
@@ -1661,6 +1687,7 @@ export function LessonPage() {
                                         onPause={handlePause}
                                         watchedDuration={watchedDuration}
                                         onSeek={handleSeek}
+                                        onBackward={handleBackwardWithUpdate}
                                         isCompleted={isCurrentLessonCompleted}
                                     />
                                 </Card>

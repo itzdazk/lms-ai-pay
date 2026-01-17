@@ -30,6 +30,7 @@ import { PlaybackRateDialog } from './PlaybackRateDialog';
 
 interface VideoPlayerProps {
       onSeek?: (time: number) => void;
+    onBackward?: (currentTime: number, watchedDuration: number) => void;
     watchedDuration?: number;
   videoUrl?: string;
   subtitleUrl?: string; // WebVTT subtitle URL
@@ -62,6 +63,7 @@ export function VideoPlayer({
   getCurrentTime,
   watchedDuration = 0,
   onSeek,
+  onBackward,
   isCompleted = false,
 }: VideoPlayerProps) {
   // Anti-spam forward: lưu lịch sử bấm forward
@@ -267,13 +269,14 @@ export function VideoPlayer({
 
   // Prevent duplicated toast: only show once every 2 seconds
   const lastSeekToastRef = useRef<number>(0);
-  // Handle seek (anti-skip): chỉ cho phép kéo trong vùng đã xem
+  // Handle seek (anti-skip): chỉ cho phép kéo trong vùng đã xem (trừ khi đã hoàn thành)
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (videoRef.current && duration > 0 && progressBarRef.current) {
       const rect = progressBarRef.current.getBoundingClientRect();
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       let newTime = pos * duration;
-      if (watchedDuration !== undefined && newTime > watchedDuration) {
+      // Nếu bài học đã hoàn thành, cho phép seek tự do
+      if (!isCompleted && watchedDuration !== undefined && newTime > watchedDuration) {
         // Không cho phép seek vượt quá watchedDuration, không làm gì cả
         const now = Date.now();
         if (now - lastSeekToastRef.current > 2000) {
@@ -288,13 +291,14 @@ export function VideoPlayer({
     }
   };
 
-  // Handle drag start: chỉ cho phép kéo nếu vị trí nằm trong watchedDuration
+  // Handle drag start: chỉ cho phép kéo nếu vị trí nằm trong watchedDuration (trừ khi đã hoàn thành)
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
     if (videoRef.current && duration > 0 && progressBarRef.current) {
       const rect = progressBarRef.current.getBoundingClientRect();
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       let newTime = pos * duration;
-      if (watchedDuration !== undefined && newTime > watchedDuration) {
+      // Nếu bài học đã hoàn thành, cho phép drag tự do
+      if (!isCompleted && watchedDuration !== undefined && newTime > watchedDuration) {
         const now = Date.now();
         if (now - lastSeekToastRef.current > 2000) {
           toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
@@ -325,14 +329,34 @@ export function VideoPlayer({
 
       const seekBy = (delta: number) => {
         if (!videoRef.current) return;
-        let newTime = videoRef.current.currentTime + delta;
-        if (watchedDuration !== undefined && delta > 0 && newTime > watchedDuration) {
-          const now = Date.now();
-          if (now - lastSeekToastRef.current > 2000) {
-            toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
-            lastSeekToastRef.current = now;
+        const currentTimeBeforeSeek = videoRef.current.currentTime;
+        let newTime = currentTimeBeforeSeek + delta;
+        
+        // Nếu backward (delta < 0) và đang ở vị trí > watchedDuration, gửi update trước
+        if (!isCompleted && 
+            watchedDuration !== undefined && 
+            delta < 0 && 
+            currentTimeBeforeSeek > watchedDuration && 
+            onBackward) {
+          // Gửi update để lưu lại vị trí hiện tại trước khi backward
+          onBackward(currentTimeBeforeSeek, watchedDuration);
+        }
+        
+        // Nếu bài học đã hoàn thành, cho phép seek tự do
+        if (!isCompleted && watchedDuration !== undefined && delta > 0 && newTime > watchedDuration) {
+          // Nếu khoảng cách < 5s, cho phép forward đến watchedDuration
+          const distance = watchedDuration - currentTimeBeforeSeek;
+          if (distance > 0 && distance < 5) {
+            newTime = watchedDuration;
+            // Không return, tiếp tục seek đến watchedDuration
+          } else {
+            const now = Date.now();
+            if (now - lastSeekToastRef.current > 2000) {
+              toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+              lastSeekToastRef.current = now;
+            }
+            return;
           }
-          return;
         }
         newTime = Math.min(Math.max(0, newTime), duration);
         videoRef.current.currentTime = newTime;
@@ -1288,6 +1312,13 @@ export function VideoPlayer({
                 className="text-white hover:bg-white/20 h-7 px-2"
                 onClick={() => {
                   if (videoRef.current) {
+                    // Nếu chưa hoàn thành, gửi update với vị trí hiện tại trước khi backward
+                    // để cập nhật lastPosition (và watchDuration nếu currentTime > watchedDuration)
+                    if (!isCompleted && watchedDuration !== undefined && onBackward) {
+                      // Gửi update để lưu lại vị trí hiện tại
+                      onBackward(currentTime, watchedDuration);
+                    }
+                    // Sau đó mới backward (luôn cho phép backward)
                     videoRef.current.currentTime = Math.max(0, currentTime - 5);
                   }
                 }}
@@ -1299,34 +1330,52 @@ export function VideoPlayer({
                 variant="ghost"
                 className="text-white hover:bg-white/20 h-7 px-2"
                 onClick={() => {
-                  if (forwardLocked) {
-                    toast.warning('Bạn đang tua quá nhanh, vui lòng chờ một chút!');
-                    return;
-                  }
-                  const now = Date.now();
-                  // Lưu lại thời điểm bấm forward
-                  setForwardClicks(prev => {
-                    const updated = [...prev.filter(t => now - t < 10000), now];
-                    // Nếu quá 3 lần trong 10 giây thì khóa forward 5 giây
-                    if (updated.length > 3) {
-                      setForwardLocked(true);
-                      toast.warning('Bạn đang tua quá nhanh, vui lòng chờ 5 giây!');
-                      setTimeout(() => setForwardLocked(false), 5000);
-                      return [];
-                    }
-                    return updated;
-                  });
-                  if (videoRef.current && watchedDuration !== undefined) {
-                    const nextTime = Math.min(duration, currentTime + 5);
-                    if (nextTime > watchedDuration) {
-                      toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+                  // Nếu bài học đã hoàn thành, bỏ qua anti-spam check
+                  if (!isCompleted) {
+                    if (forwardLocked) {
+                      toast.warning('Bạn đang tua quá nhanh, vui lòng chờ một chút!');
                       return;
                     }
-                    videoRef.current.currentTime = nextTime;
+                    const now = Date.now();
+                    // Lưu lại thời điểm bấm forward
+                    setForwardClicks(prev => {
+                      const updated = [...prev.filter(t => now - t < 10000), now];
+                      // Nếu quá 3 lần trong 10 giây thì khóa forward 5 giây
+                      if (updated.length > 3) {
+                        setForwardLocked(true);
+                        toast.warning('Bạn đang tua quá nhanh, vui lòng chờ 5 giây!');
+                        setTimeout(() => setForwardLocked(false), 5000);
+                        return [];
+                      }
+                      return updated;
+                    });
+                  }
+                  if (videoRef.current) {
+                    const nextTime = Math.min(duration, currentTime + 5);
+                    // Nếu bài học đã hoàn thành, cho phép tua tự do
+                    if (isCompleted) {
+                      videoRef.current.currentTime = nextTime;
+                    } else if (watchedDuration !== undefined) {
+                      // Nếu chưa hoàn thành, chỉ cho phép tua đến phần đã xem
+                      if (nextTime > watchedDuration) {
+                        // Nếu khoảng cách < 5s, cho phép forward đến watchedDuration
+                        const distance = watchedDuration - currentTime;
+                        if (distance > 0 && distance < 5) {
+                          videoRef.current.currentTime = watchedDuration;
+                          setCurrentTime(watchedDuration);
+                          return;
+                        }
+                        toast.warning('Bạn chỉ có thể tua đến phần đã xem!');
+                        return;
+                      }
+                      videoRef.current.currentTime = nextTime;
+                    } else {
+                      videoRef.current.currentTime = nextTime;
+                    }
                   }
                 }}
                 title="Tiến 5 giây"
-                disabled={forwardLocked || (watchedDuration !== undefined && currentTime >= watchedDuration)}
+                disabled={!isCompleted && (forwardLocked || (watchedDuration !== undefined && currentTime >= watchedDuration))}
               >
                 <SkipForward className="h-3 w-3" />
               </Button>
