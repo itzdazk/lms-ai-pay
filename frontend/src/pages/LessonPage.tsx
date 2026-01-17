@@ -402,9 +402,10 @@ export function LessonPage() {
                     setSelectedLesson(initialLesson)
                 }
             } catch (error: any) {
-                if (!lessonNotFound && !abortController.signal.aborted) {
-                    toast.error('Không thể tải thông tin khóa học')
-                }
+                // Bỏ toast error
+                // if (!lessonNotFound && !abortController.signal.aborted) {
+                //     toast.error('Không thể tải thông tin khóa học')
+                // }
             } finally {
                 if (isMounted) {
                     setLoading(false)
@@ -488,9 +489,10 @@ export function LessonPage() {
                 
                 if (videoError) {
                     setVideoUrl('')
-                    toast.error(
-                        'Bạn cần hoàn thành bài học trước đó để tiếp tục này.'
-                    )
+                    // Bỏ toast error
+                    // toast.error(
+                    //     'Bạn cần hoàn thành bài học trước đó để tiếp tục này.'
+                    // )
                     navigate(-1) // Quay lại trang trước nếu bài học bị khóa
                 } else {
                     const hlsCompleted = (videoData.hlsStatus || '').toLowerCase() === 'completed'
@@ -622,7 +624,8 @@ export function LessonPage() {
                     setLessonNotes('')
                 }
             } catch (error: any) {
-                toast.error('Không thể tải video bài học')
+                // Bỏ toast error
+                // toast.error('Không thể tải video bài học')
             } finally {
                 // setVideoLoading(false); // removed unused
             }
@@ -1541,9 +1544,10 @@ export function LessonPage() {
                                                     )
                                                     navigate('/')
                                                 } catch (error) {
-                                                    toast.error(
-                                                        'Có lỗi xảy ra khi đăng xuất'
-                                                    )
+                                                    // Bỏ toast error
+                                                    // toast.error(
+                                                    //     'Có lỗi xảy ra khi đăng xuất'
+                                                    // )
                                                 }
                                             }}
                                         >
