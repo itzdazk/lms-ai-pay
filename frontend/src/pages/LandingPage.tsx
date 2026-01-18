@@ -132,18 +132,18 @@ export function LandingPage() {
                 ></div>
                 <div className='absolute inset-0 bg-background/50 backdrop-blur-sm'></div>
 
-                <div className='container mx-auto px-4 py-20 md:py-32 relative z-10'>
+                <div className='container mx-auto px-4 py-12 sm:py-16 md:py-24 lg:py-32 relative z-10'>
                     <div className='max-w-3xl'>
-                        <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-foreground drop-shadow-lg'>
+                        <h1 className='text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 text-foreground drop-shadow-lg leading-tight'>
                             Học tập thông minh với AI
                         </h1>
-                        <p className='text-lg md:text-xl text-muted-foreground mb-8 drop-shadow-md'>
+                        <p className='text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 drop-shadow-md'>
                             Nền tảng học tập trực tuyến tích hợp AI, giúp bạn
                             phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa
                             học chất lượng cao.
                         </p>
                         <div className='flex flex-col gap-4'>
-                            <div className='flex flex-col sm:flex-row gap-4 items-center'>
+                            <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center'>
                                 <Button
                                     size='lg'
                                     className='bg-black text-white hover:bg-gray-900'
@@ -160,7 +160,7 @@ export function LandingPage() {
                                     <Link to='/register'>Đăng ký miễn phí</Link>
                                 </Button>
                             </div>
-                            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                            <div className='flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground'>
                                 <Mail className='h-4 w-4' />
                                 <span>Cần hỗ trợ? Liên hệ:</span>
                                 <a
@@ -184,25 +184,23 @@ export function LandingPage() {
             <FeaturedCoursesSection />
 
             {/* Categories Section */}
-            <section className='py-12 bg-background'>
+            <section className='py-8 sm:py-12 bg-background'>
                 <div className='container mx-auto px-4'>
-                    <div className='flex items-center justify-between mb-12'>
-                        <div className='text-center flex-1'>
-                            <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
-                                Khám phá theo danh mục
-                            </h2>
-                            <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
-                                Tìm khóa học phù hợp với sở thích và mục tiêu
-                                của bạn
-                            </p>
-                            <Button
-                                variant='outline'
-                                asChild
-                                className='border-border text-foreground hover:bg-accent mt-2'
-                            >
-                                <Link to='/categories'>Xem tất cả</Link>
-                            </Button>
-                        </div>
+                    <div className='flex flex-col items-center justify-center mb-8 sm:mb-12 text-center'>
+                        <h2 className='text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4 text-foreground'>
+                            Khám phá theo danh mục
+                        </h2>
+                        <p className='text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 sm:mb-6'>
+                            Tìm khóa học phù hợp với sở thích và mục tiêu
+                            của bạn
+                        </p>
+                        <Button
+                            variant='outline'
+                            asChild
+                            className='border-border text-foreground hover:bg-accent'
+                        >
+                            <Link to='/categories'>Xem tất cả</Link>
+                        </Button>
                     </div>
                     {isLoadingCategories ? (
                         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4'>
@@ -221,7 +219,7 @@ export function LandingPage() {
                             ))}
                         </div>
                     ) : categories.length > 0 ? (
-                        <div className='relative px-2 md:px-4'>
+                        <div className='relative px-1 sm:px-2 md:px-4'>
                             <Slider
                                 dots={false}
                                 infinite={false}
@@ -232,14 +230,28 @@ export function LandingPage() {
                                 prevArrow={<PrevArrow />}
                                 responsive={[
                                     {
-                                        breakpoint: 1024, // Tablet
+                                        breakpoint: 1280, // xl
                                         settings: {
-                                            slidesToShow: 3,
+                                            slidesToShow: 5,
                                             slidesToScroll: 1,
                                         },
                                     },
                                     {
-                                        breakpoint: 768, // Mobile
+                                        breakpoint: 1024, // lg
+                                        settings: {
+                                            slidesToShow: 4,
+                                            slidesToScroll: 1,
+                                        },
+                                    },
+                                    {
+                                        breakpoint: 768, // md
+                                        settings: {
+                                            slidesToShow: 2,
+                                            slidesToScroll: 1,
+                                        },
+                                    },
+                                    {
+                                        breakpoint: 640, // sm
                                         settings: {
                                             slidesToShow: 1,
                                             slidesToScroll: 1,
@@ -250,7 +262,7 @@ export function LandingPage() {
                                 {categories.map((category) => (
                                     <div
                                         key={category.id}
-                                        className='px-3 min-w-0'
+                                        className='px-2 sm:px-3 min-w-0'
                                     >
                                         <Link
                                             to={`/categories/${category.id}`}
@@ -273,14 +285,14 @@ export function LandingPage() {
                                                     </div>
 
                                                     {/* Content */}
-                                                    <div className='p-6 text-center flex-1 flex flex-col justify-center min-h-[100px] overflow-hidden min-w-0'>
+                                                    <div className='p-4 sm:p-6 text-center flex-1 flex flex-col justify-center min-h-[100px] overflow-hidden min-w-0'>
                                                         {/* Category Name */}
-                                                        <h3 className='text-white group-hover:text-primary transition-colors duration-300 mb-2 line-clamp-1'>
+                                                        <h3 className='text-sm sm:text-base text-white group-hover:text-primary transition-colors duration-300 mb-2 line-clamp-1'>
                                                             {category.name}
                                                         </h3>
 
                                                         {/* Description */}
-                                                        <p className='text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem]'>
+                                                        <p className='text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem]'>
                                                             {
                                                                 category.description
                                                             }

@@ -99,21 +99,21 @@ export function FeaturedCoursesSection() {
 
     if (isLoading) {
         return (
-            <section className='py-12 bg-background'>
+            <section className='py-8 sm:py-12 bg-background'>
                 <div className='container mx-auto px-4'>
-                    <div className='flex items-center justify-between mb-12'>
-                        <div>
-                            <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
+                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-8 sm:mb-12'>
+                        <div className='flex-1'>
+                            <h2 className='text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-4 text-foreground'>
                                 Khóa học nổi bật
                             </h2>
-                            <p className='text-lg text-muted-foreground'>
+                            <p className='text-sm sm:text-base md:text-lg text-muted-foreground'>
                                 Những khóa học được yêu thích nhất
                             </p>
                         </div>
                         <Button
                             variant='outline'
                             asChild
-                            className='border-border text-foreground hover:bg-accent'
+                            className='border-border text-foreground hover:bg-accent w-full sm:w-auto'
                         >
                             <Link to='/courses'>Xem tất cả</Link>
                         </Button>
@@ -136,21 +136,21 @@ export function FeaturedCoursesSection() {
     }
 
     return (
-        <section className='py-12 bg-background'>
+        <section className='py-8 sm:py-12 bg-background'>
             <div className='container mx-auto px-4'>
-                <div className='flex items-center justify-between mb-12'>
-                    <div>
-                        <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
+                <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-8 sm:mb-12'>
+                    <div className='flex-1'>
+                        <h2 className='text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-4 text-foreground'>
                             Khóa học nổi bật
                         </h2>
-                        <p className='text-lg text-muted-foreground'>
+                        <p className='text-sm sm:text-base md:text-lg text-muted-foreground'>
                             Những khóa học được yêu thích nhất
                         </p>
                     </div>
                     <Button
                         variant='outline'
                         asChild
-                        className='border-border text-foreground hover:bg-accent'
+                        className='border-border text-foreground hover:bg-accent w-full sm:w-auto'
                     >
                         <Link to='/courses'>Xem tất cả</Link>
                     </Button>
@@ -158,7 +158,7 @@ export function FeaturedCoursesSection() {
 
                 {shouldUseCarousel ? (
                     // Carousel: Mỗi slide hiển thị 4 khóa học
-                    <div className='relative px-2 md:px-4'>
+                    <div className='relative px-1 sm:px-2 md:px-4'>
                         <Slider
                             dots={false}
                             infinite={courses.length > 4}
@@ -199,7 +199,7 @@ export function FeaturedCoursesSection() {
                             ]}
                         >
                             {courses.map((course) => (
-                                <div key={course.id} className='px-3 min-w-0'>
+                                <div key={course.id} className='px-2 sm:px-3 min-w-0'>
                                     <CourseCard course={course} />
                                 </div>
                             ))}
