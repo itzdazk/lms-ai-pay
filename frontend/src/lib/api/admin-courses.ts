@@ -21,6 +21,7 @@ export interface AdminCourse {
     viewsCount: number
     completionRate: number | null
     isFeatured: boolean | null
+    featuredAt: string | null
     publishedAt: string | null
     createdAt: string
     updatedAt: string

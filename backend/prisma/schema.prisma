@@ -127,6 +127,7 @@ model Course {
   targetAudience       String?   @map("target_audience") @db.Text
   status               String    @default("draft") @db.VarChar(20)
   isFeatured           Boolean   @default(false) @map("is_featured")
+  featuredAt           DateTime? @map("featured_at") @db.Timestamptz
   ratingAvg            Decimal   @default(0) @map("rating_avg") @db.Decimal(2, 1)
   ratingCount          Int       @default(0) @map("rating_count")
   enrolledCount        Int       @default(0) @map("enrolled_count")

@@ -52,7 +52,7 @@ export function HotlineFloatingButton() {
         className="relative h-14 w-14 md:h-16 md:w-16 rounded-full md:shadow-2xl md:shadow-blue-500/50 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-300 hover:scale-110 md:hover:shadow-blue-400/70 border-3 border-white/40 shadow-inner"
         aria-label="Liên hệ hỗ trợ"
       >
-        <Phone className="h-10 w-10 md:h-10 md:w-10 text-white" />
+        <Phone className="h-6 w-6 md:h-7 md:w-7 text-white" />
       </Button>
 
       {/* Dropdown Menu */}

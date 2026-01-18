@@ -358,6 +358,7 @@ class CourseService {
 
     /**
      * Get featured courses
+     * Sắp xếp: khóa học được đánh dấu nổi bật gần nhất lên đầu tiên
      */
     async getFeaturedCourses(limit = 10) {
         const courses = await prisma.course.findMany({
@@ -366,7 +367,7 @@ class CourseService {
                 isFeatured: true,
             },
             take: limit,
-            orderBy: [{ enrolledCount: 'desc' }, { ratingAvg: 'desc' }],
+            orderBy: [{ featuredAt: 'desc' }, { enrolledCount: 'desc' }, { ratingAvg: 'desc' }],
             select: {
                 id: true,
                 title: true,
