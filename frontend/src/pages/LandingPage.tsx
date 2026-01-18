@@ -20,11 +20,11 @@ import {
     ChevronRight,
 } from 'lucide-react'
 import Slider from 'react-slick'
-import { mockCourses, formatPrice, formatDuration } from '../lib/mockData'
 import { categoriesApi } from '../lib/api/categories'
 import type { Category } from '../lib/api/types'
 import { useTheme } from '../contexts/ThemeContext'
 import { AdvisorCard } from '../components/AI/AdvisorCard'
+import { FeaturedCoursesSection } from '../components/Courses'
 import { CONTACT_INFO } from '../lib/constants'
 import { Mail } from 'lucide-react'
 
@@ -181,155 +181,7 @@ export function LandingPage() {
             </section>
 
             {/* Featured Courses Section */}
-            <section className='py-12 bg-background'>
-                <div className='container mx-auto px-4'>
-                    <div className='flex items-center justify-between mb-12'>
-                        <div>
-                            <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
-                                Khóa học nổi bật
-                            </h2>
-                            <p className='text-lg text-muted-foreground'>
-                                Những khóa học được yêu thích nhất
-                            </p>
-                        </div>
-                        <Button
-                            variant='outline'
-                            asChild
-                            className='border-border text-foreground hover:bg-accent'
-                        >
-                            <Link to='/courses'>Xem tất cả</Link>
-                        </Button>
-                    </div>
-                    <div className='grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-                        {mockCourses
-                            .filter((course) => course.featured)
-                            .slice(0, 4)
-                            .map((course) => (
-                                <Card
-                                    key={course.id}
-                                    className='overflow-hidden hover:shadow-lg transition-shadow flex flex-col bg-[#1A1A1A] border-[#2D2D2D]'
-                                >
-                                    <Link to={`/courses/${course.id}`}>
-                                        <div className='relative aspect-video overflow-hidden rounded-t-lg'>
-                                            <img
-                                                src={course.thumbnail}
-                                                alt={course.title}
-                                                className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
-                                            />
-                                            <Badge className='absolute top-3 left-3 bg-blue-600'>
-                                                {course.level === 'beginner' &&
-                                                    'Cơ bản'}
-                                                {course.level ===
-                                                    'intermediate' &&
-                                                    'Trung cấp'}
-                                                {course.level === 'advanced' &&
-                                                    'Nâng cao'}
-                                            </Badge>
-                                            {course.featured && (
-                                                <Badge className='absolute top-3 right-3 bg-yellow-500'>
-                                                    ⭐ Nổi bật
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </Link>
-
-                                    <CardHeader className='flex-1'>
-                                        <div className='flex items-center gap-2 mb-2'>
-                                            <Avatar className='h-8 w-8'>
-                                                <AvatarImage
-                                                    src={
-                                                        course.instructor_avatar
-                                                    }
-                                                />
-                                                <AvatarFallback>
-                                                    {course.instructor_name[0]}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className='text-sm text-gray-400'>
-                                                {course.instructor_name}
-                                            </span>
-                                        </div>
-                                        <CardTitle className='line-clamp-2 hover:text-primary transition-colors text-white'>
-                                            <Link to={`/courses/${course.id}`}>
-                                                {course.title}
-                                            </Link>
-                                        </CardTitle>
-                                        <CardDescription className='line-clamp-2 text-gray-400'>
-                                            {course.description}
-                                        </CardDescription>
-                                    </CardHeader>
-
-                                    <CardContent>
-                                        <div className='flex items-center gap-4 text-sm text-gray-400 mb-3'>
-                                            <div className='flex items-center gap-1'>
-                                                <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
-                                                <span>{course.rating_avg}</span>
-                                                <span className='text-gray-400'>
-                                                    ({course.rating_count})
-                                                </span>
-                                            </div>
-                                            <div className='flex items-center gap-1'>
-                                                <Users className='h-4 w-4 text-gray-400' />
-                                                <span>
-                                                    {course.enrolled_count.toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className='flex items-center justify-between text-sm text-gray-400'>
-                                            <div className='flex items-center gap-1'>
-                                                <BookOpen className='h-4 w-4 text-gray-400' />
-                                                <span>
-                                                    {course.lessons_count} bài
-                                                </span>
-                                            </div>
-                                            <div className='flex items-center gap-1'>
-                                                <Clock className='h-4 w-4 text-gray-400' />
-                                                <span>
-                                                    {formatDuration(
-                                                        course.duration_minutes
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-
-                                    <CardFooter className='border-t border-[#2D2D2D] pt-4'>
-                                        <div className='flex items-center justify-between w-full'>
-                                            {course.is_free ? (
-                                                <span className='text-2xl text-green-500'>
-                                                    Miễn phí
-                                                </span>
-                                            ) : (
-                                                <div>
-                                                    {course.discount_price ? (
-                                                        <div className='flex items-center gap-2'>
-                                                            <span className='text-2xl text-blue-500'>
-                                                                {formatPrice(
-                                                                    course.discount_price
-                                                                )}
-                                                            </span>
-                                                            <span className='text-sm text-gray-500 line-through'>
-                                                                {formatPrice(
-                                                                    course.original_price
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className='text-2xl text-blue-500'>
-                                                            {formatPrice(
-                                                                course.original_price
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardFooter>
-                                </Card>
-                            ))}
-                    </div>
-                </div>
-            </section>
+            <FeaturedCoursesSection />
 
             {/* Categories Section */}
             <section className='py-12 bg-background'>

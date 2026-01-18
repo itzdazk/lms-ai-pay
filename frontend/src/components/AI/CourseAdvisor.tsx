@@ -1,12 +1,10 @@
 // src/components/AI/CourseAdvisor.tsx
 import { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Star, Users, Clock, BookOpen } from 'lucide-react';
+import { Send, Star, Users, Clock, BookOpen } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
-import { Avatar, AvatarFallback } from '../ui/avatar';
 import apiClient from '../../lib/api/client';
-import { useAuth } from '../../contexts/AuthContext';
 import { formatDuration } from '../../lib/courseUtils';
 
 interface Message {
@@ -229,7 +227,7 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
         <div className="flex-1 flex items-center justify-center bg-[#1A1A1A]">
           <div className="text-center space-y-6 px-6">
             <div className="relative inline-block">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600 mx-auto">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 mx-auto">
                 <span className="text-4xl">🤖</span>
               </div>
               <div className="absolute bottom-1 right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-[#1A1A1A]" />
@@ -245,7 +243,7 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
             <Button
               onClick={handleStartConversation}
               disabled={isLoading}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-2.5 rounded-full font-medium"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-2.5 rounded-full font-medium"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -271,7 +269,7 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
                         {message.role === 'assistant' && (
                           <div className="flex items-center gap-2 mb-1">
                             <div className="relative h-6 w-6">
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600">
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
                                 <span className="text-xs">🤖</span>
                               </div>
                               <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border-2 border-black" />
@@ -311,7 +309,7 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="relative h-6 w-6">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-600">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
                             <span className="text-xs">🤖</span>
                           </div>
                           <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border-2 border-black" />
