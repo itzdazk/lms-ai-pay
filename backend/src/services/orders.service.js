@@ -10,6 +10,7 @@ import {
 } from '../config/constants.js'
 import notificationsService from './notifications.service.js'
 import emailService from './email.service.js'
+import couponService from './coupon.service.js'
 
 class OrdersService {
     /**
@@ -55,14 +56,21 @@ class OrdersService {
      * @param {number} courseId - Course ID
      * @param {string} paymentGateway - Payment gateway (VNPay, MoMo)
      * @param {Object} billingAddress - Billing address (optional)
+     * @param {string} couponCode - Coupon code (optional)
      * @returns {Promise<Object>} Created order
      */
-    async createOrder(userId, courseId, paymentGateway, billingAddress = null) {
+    async createOrder(
+        userId,
+        courseId,
+        paymentGateway,
+        billingAddress = null,
+        couponCode = null,
+    ) {
         // Validate payment gateway
         const validGateways = Object.values(PAYMENT_GATEWAY)
         if (!validGateways.includes(paymentGateway)) {
             const error = new Error(
-                `Cổng thanh toán không hợp lệ. Phải là một trong các cổng: ${validGateways.join(', ')}`
+                `Cổng thanh toán không hợp lệ. Phải là một trong các cổng: ${validGateways.join(', ')}`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -94,12 +102,43 @@ class OrdersService {
 
         // Calculate prices
         const prices = this.calculatePrices(course)
-        const { originalPrice, discountAmount, finalPrice } = prices
+        let { originalPrice, discountAmount, finalPrice } = prices
+
+        // Apply coupon if provided
+        let couponDiscount = 0
+        let appliedCouponId = null
+
+        if (couponCode) {
+            try {
+                // Validate coupon (returns coupon object directly)
+                const coupon = await couponService.validateCoupon(
+                    couponCode,
+                    userId,
+                    finalPrice,
+                    [courseId],
+                )
+
+                // Calculate discount
+                couponDiscount = couponService.calculateDiscount(
+                    coupon,
+                    finalPrice,
+                )
+
+                // Update final price with coupon discount
+                finalPrice = Math.max(0, finalPrice - couponDiscount)
+                discountAmount = discountAmount + couponDiscount
+                appliedCouponId = coupon.id
+            } catch (error) {
+                // If coupon validation fails, log error but continue order creation without coupon
+                console.error('Coupon validation error:', error.message)
+                // Don't throw error, just proceed without coupon
+            }
+        }
 
         // Check if course is paid (finalPrice > 0)
         if (finalPrice <= 0) {
             const error = new Error(
-                'Không thể tạo đơn hàng cho khóa học miễn phí. Vui lòng sử dụng đăng ký miễn phí thay vì đơn hàng.'
+                'Không thể tạo đơn hàng cho khóa học miễn phí. Vui lòng sử dụng đăng ký miễn phí thay vì đơn hàng.',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -155,44 +194,64 @@ class OrdersService {
         // Generate order code
         const orderCode = this.generateOrderCode()
 
-        // Create order
-        const order = await prisma.order.create({
-            data: {
-                userId,
-                courseId,
-                orderCode,
-                originalPrice,
-                discountAmount,
-                finalPrice,
-                paymentGateway,
-                paymentStatus: PAYMENT_STATUS.PENDING,
-                billingAddress: billingAddress || null,
-            },
-            include: {
-                course: {
-                    select: {
-                        id: true,
-                        title: true,
-                        slug: true,
-                        thumbnailUrl: true,
-                        price: true,
-                        discountPrice: true,
-                        instructor: {
-                            select: {
-                                id: true,
-                                fullName: true,
+        // Create order with coupon tracking
+        const order = await prisma.$transaction(async (tx) => {
+            // Create order
+            const newOrder = await tx.order.create({
+                data: {
+                    userId,
+                    courseId,
+                    orderCode,
+                    originalPrice,
+                    discountAmount,
+                    finalPrice,
+                    paymentGateway,
+                    paymentStatus: PAYMENT_STATUS.PENDING,
+                    billingAddress: billingAddress || null,
+                },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            price: true,
+                            discountPrice: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
                             },
                         },
                     },
-                },
-                user: {
-                    select: {
-                        id: true,
-                        fullName: true,
-                        email: true,
+                    user: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
                     },
                 },
-            },
+            })
+
+            // If coupon was applied, create usage record and update coupon
+            if (appliedCouponId && couponDiscount > 0) {
+                try {
+                    await couponService.applyCoupon(
+                        couponCode,
+                        userId,
+                        newOrder.id,
+                        couponDiscount,
+                    )
+                } catch (error) {
+                    console.error('Error applying coupon:', error.message)
+                    // Don't fail order creation if coupon application fails
+                }
+            }
+
+            return newOrder
         })
 
         return order
@@ -516,7 +575,7 @@ class OrdersService {
         // Check if order is pending
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Không thể cập nhật trạng thái đơn hàng thành PAID. Trạng thái hiện tại: ${order.paymentStatus}`
+                `Không thể cập nhật trạng thái đơn hàng thành PAID. Trạng thái hiện tại: ${order.paymentStatus}`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -586,7 +645,7 @@ class OrdersService {
             result.id,
             result.courseId,
             result.course.title,
-            result.finalPrice
+            result.finalPrice,
         )
 
         // Notify instructor about payment received
@@ -598,7 +657,7 @@ class OrdersService {
                     result.courseId,
                     result.course.title,
                     result.finalPrice,
-                    result.user.fullName
+                    result.user.fullName,
                 )
             }
         } catch (error) {
@@ -610,7 +669,7 @@ class OrdersService {
             await emailService.sendPaymentSuccessEmail(
                 result.user.email,
                 result.user.fullName,
-                result
+                result,
             )
         } catch (error) {
             // Log error but don't fail the payment process
@@ -663,7 +722,7 @@ class OrdersService {
         // 2. Validate order status
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Không thể hủy đơn hàng với trạng thái: ${order.paymentStatus}. Chỉ có đơn hàng PENDING mới có thể bị hủy.`
+                `Không thể hủy đơn hàng với trạng thái: ${order.paymentStatus}. Chỉ có đơn hàng PENDING mới có thể bị hủy.`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -680,7 +739,7 @@ class OrdersService {
 
         if (hasSuccessfulTransaction) {
             const error = new Error(
-                'Không thể hủy đơn hàng - thanh toán đã được xử lý thành công'
+                'Không thể hủy đơn hàng - thanh toán đã được xử lý thành công',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -745,7 +804,7 @@ class OrdersService {
                     userId,
                     order.id,
                     order.courseId,
-                    order.course?.title || 'Unknown Course'
+                    order.course?.title || 'Unknown Course',
                 )
                 .catch((err) => {})
         })

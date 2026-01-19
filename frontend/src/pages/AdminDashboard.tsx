@@ -40,6 +40,7 @@ import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
 import { CategoriesPage } from './admin/CategoriesPage'
 import { TagsPage } from './admin/TagsPage'
 import { OrdersPage } from './admin/OrdersPage'
+import { CouponsPage } from './admin/CouponsPage'
 import { AIMonitoringPage } from './admin/AIMonitoringPage'
 import { RevenueStatsPage } from './admin/RevenueStatsPage'
 import { InstructorsRevenuePage } from './admin/InstructorsRevenuePage'
@@ -83,6 +84,7 @@ type AdminSection =
     | 'analytics'
     | 'orders'
     | 'refunds'
+    | 'coupons'
     | 'categories'
     | 'settings'
     | 'tags'
@@ -166,6 +168,12 @@ const menuGroups: MenuGroup[] = [
                 icon: RotateCcw,
                 color: 'text-yellow-400',
             },
+            {
+                id: 'coupons',
+                label: 'Mã giảm giá',
+                icon: Tag,
+                color: 'text-pink-400',
+            },
         ],
     },
     {
@@ -223,7 +231,7 @@ export function AdminDashboard() {
         useState<AdminSection>('dashboard')
     const [sectionLoading, setSectionLoading] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(true)
-    
+
     // Load expanded groups from localStorage on mount
     const loadExpandedGroups = (): Set<string> => {
         try {
@@ -233,22 +241,32 @@ export function AdminDashboard() {
                 return new Set(parsed)
             }
         } catch (error) {
-            console.error('Error loading expanded groups from localStorage:', error)
+            console.error(
+                'Error loading expanded groups from localStorage:',
+                error,
+            )
         }
         // Default: all groups expanded
         return new Set(menuGroups.map((_, index) => index.toString()))
     }
-    
+
     // Track expanded menu groups
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(loadExpandedGroups)
-    
+    const [expandedGroups, setExpandedGroups] =
+        useState<Set<string>>(loadExpandedGroups)
+
     // Save expanded groups to localStorage whenever they change
     useEffect(() => {
         try {
             const groupsArray = Array.from(expandedGroups)
-            localStorage.setItem('admin-sidebar-expanded-groups', JSON.stringify(groupsArray))
+            localStorage.setItem(
+                'admin-sidebar-expanded-groups',
+                JSON.stringify(groupsArray),
+            )
         } catch (error) {
-            console.error('Error saving expanded groups to localStorage:', error)
+            console.error(
+                'Error saving expanded groups to localStorage:',
+                error,
+            )
         }
     }, [expandedGroups])
 
@@ -271,7 +289,7 @@ export function AdminDashboard() {
         // Find the group and item for current section
         let currentGroup: MenuGroup | undefined
         let currentItem: MenuItem | undefined
-        
+
         for (const group of menuGroups) {
             const item = group.items.find((item) => item.id === activeSection)
             if (item) {
@@ -280,7 +298,7 @@ export function AdminDashboard() {
                 break
             }
         }
-        
+
         if (currentItem && currentGroup) {
             const CurrentIcon = currentItem.icon
             return (
@@ -294,7 +312,7 @@ export function AdminDashboard() {
                 </div>
             )
         }
-        
+
         return (
             <div className='flex items-center gap-2'>
                 <LayoutDashboard className='h-5 w-5 text-blue-500' />
@@ -331,6 +349,12 @@ export function AdminDashboard() {
                 return (
                     <div className='h-full'>
                         <RefundsPage />
+                    </div>
+                )
+            case 'coupons':
+                return (
+                    <div className='h-full'>
+                        <CouponsPage />
                     </div>
                 )
             case 'categories':
@@ -416,7 +440,7 @@ export function AdminDashboard() {
                     {menuGroups.map((group, groupIndex) => {
                         const groupKey = groupIndex.toString()
                         const isExpanded = expandedGroups.has(groupKey)
-                        
+
                         const toggleGroup = () => {
                             setExpandedGroups((prev) => {
                                 const newSet = new Set(prev)
@@ -447,44 +471,52 @@ export function AdminDashboard() {
                                 </button>
 
                                 {/* Group Items - Conditionally rendered */}
-                                {isExpanded && group.items.map((item) => {
-                                const Icon = item.icon
-                                const isActive = activeSection === item.id
-                                const itemColor = item.color || 'text-gray-400'
+                                {isExpanded &&
+                                    group.items.map((item) => {
+                                        const Icon = item.icon
+                                        const isActive =
+                                            activeSection === item.id
+                                        const itemColor =
+                                            item.color || 'text-gray-400'
 
-                                return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            if (item.id !== activeSection) {
-                                                setSectionLoading(true)
-                                                setActiveSection(item.id)
-                                                // Reset loading after a short delay to allow component to mount
-                                                setTimeout(() => {
-                                                    setSectionLoading(false)
-                                                }, 200)
-                                            }
-                                        }}
-                                        disabled={sectionLoading}
-                                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ${
-                                            isActive
-                                                ? 'bg-gradient-to-r from-[#2D2D2D] to-[#252525] text-white shadow-lg'
-                                                : 'text-gray-400 hover:bg-gradient-to-r hover:from-[#1F1F1F] hover:to-[#1A1A1A] hover:text-white hover:shadow-md'
-                                        } ${
-                                            sectionLoading
-                                                ? 'opacity-50 cursor-wait'
-                                                : ''
-                                        }`}
-                                    >
-                                        <Icon
-                                            className='h-5 w-5 transition-colors text-gray-400'
-                                        />
-                                        <span className='font-medium text-sm'>
-                                            {item.label}
-                                        </span>
-                                    </button>
-                                )
-                            })}
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => {
+                                                    if (
+                                                        item.id !==
+                                                        activeSection
+                                                    ) {
+                                                        setSectionLoading(true)
+                                                        setActiveSection(
+                                                            item.id,
+                                                        )
+                                                        // Reset loading after a short delay to allow component to mount
+                                                        setTimeout(() => {
+                                                            setSectionLoading(
+                                                                false,
+                                                            )
+                                                        }, 200)
+                                                    }
+                                                }}
+                                                disabled={sectionLoading}
+                                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ${
+                                                    isActive
+                                                        ? 'bg-gradient-to-r from-[#2D2D2D] to-[#252525] text-white shadow-lg'
+                                                        : 'text-gray-400 hover:bg-gradient-to-r hover:from-[#1F1F1F] hover:to-[#1A1A1A] hover:text-white hover:shadow-md'
+                                                } ${
+                                                    sectionLoading
+                                                        ? 'opacity-50 cursor-wait'
+                                                        : ''
+                                                }`}
+                                            >
+                                                <Icon className='h-5 w-5 transition-colors text-gray-400' />
+                                                <span className='font-medium text-sm'>
+                                                    {item.label}
+                                                </span>
+                                            </button>
+                                        )
+                                    })}
                             </div>
                         )
                     })}
