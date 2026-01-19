@@ -10,9 +10,9 @@ class SystemConfigService {
     getDefaultSettings() {
         return {
             system: {
-                name: 'LMS AI Pay',
+                name: 'EduLearn',
                 logo: 'https://cdn.vectorstock.com/i/500p/40/30/grunge-white-letter-e-logo-vector-27974030.jpg',
-                email: 'admin@lmsaipay.com',
+                email: 'support@edulearn.vn',
             },
             registration: {
                 enabled: true,
@@ -33,7 +33,7 @@ class SystemConfigService {
             landing: {
                 heroTitle: 'Học tập thông minh với AI',
                 heroDescription:
-                    'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa học chất lượng cao.',
+                    'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp với hơn 10+ khóa học chất lượng cao.',
                 heroBackgroundImage:
                     'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80',
                 categoriesTitle: 'Khám phá theo danh mục',
@@ -47,10 +47,10 @@ class SystemConfigService {
                 heroBackgroundImage:
                     'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1920&q=80',
                 stats: {
-                    courses: '1,000+',
-                    students: '50,000+',
-                    instructors: '200+',
-                    certificates: '25,000+',
+                    courses: '10+',
+                    students: '100+',
+                    instructors: '5+',
+                    certificates: '10+',
                 },
                 story: {
                     title: 'Câu chuyện của chúng tôi',
@@ -151,7 +151,6 @@ class SystemConfigService {
                 ],
             },
             footer: {
-                brandName: 'EduLearn',
                 description:
                     'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp.',
                 socialMedia: {
@@ -169,12 +168,13 @@ class SystemConfigService {
             },
             seo: {
                 siteName: 'EduLearn',
+                pageTitle: 'EduLearn - Nền tảng học tập trực tuyến',
                 defaultTitle: 'EduLearn - Nền tảng học tập trực tuyến',
                 defaultDescription:
                     'Học tập thông minh với AI. Hơn 1000+ khóa học chất lượng cao từ các chuyên gia hàng đầu.',
                 defaultKeywords:
                     'học trực tuyến, elearning, AI, giáo dục, khóa học online',
-                ogImage: null,
+                ogImage: 'https://cdn.vectorstock.com/i/500p/40/30/grunge-white-letter-e-logo-vector-27974030.jpg',
                 favicon: 'https://cdn.vectorstock.com/i/500p/40/30/grunge-white-letter-e-logo-vector-27974030.jpg',
             },
         }
@@ -253,8 +253,6 @@ class SystemConfigService {
                     quickLinks:
                         settings.footer?.quickLinks ||
                         defaults.footer.quickLinks,
-                    brandName:
-                        settings.footer?.brandName || defaults.footer.brandName,
                     description:
                         settings.footer?.description ||
                         defaults.footer.description,

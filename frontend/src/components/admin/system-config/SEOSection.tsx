@@ -7,6 +7,7 @@ import {
     CardTitle,
 } from '../../../components/ui/card'
 import { DarkOutlineInput } from '../../../components/ui/dark-outline-input'
+import { ImageUploadInput } from './ImageUploadInput'
 import type { SystemSettings } from '../../../lib/api/system-config'
 
 interface SEOSectionProps {
@@ -88,26 +89,28 @@ export function SEOSection({ formData, onUpdate }: SEOSectionProps) {
                     />
                 </div>
                 <div>
-                    <label className='block text-sm font-medium text-gray-300 mb-2'>
-                        OG Image (URL)
-                    </label>
-                    <DarkOutlineInput
-                        type='url'
-                        value={formData.seo?.ogImage || ''}
-                        onChange={(e) => onUpdate(['seo', 'ogImage'], e.target.value)}
+                    <ImageUploadInput
+                        label='OG Image (URL)'
+                        value={formData.seo?.ogImage || null}
+                        onChange={(url) => onUpdate(['seo', 'ogImage'], url)}
                         placeholder='https://example.com/og-image.jpg'
+                        uploadType='system'
                     />
+                    <p className='text-xs text-gray-500 mt-1'>
+                        Ảnh hiển thị khi chia sẻ link lên mạng xã hội (Facebook, LinkedIn, Twitter)
+                    </p>
                 </div>
                 <div>
-                    <label className='block text-sm font-medium text-gray-300 mb-2'>
-                        Favicon (URL)
-                    </label>
-                    <DarkOutlineInput
-                        type='text'
-                        value={formData.seo?.favicon || ''}
-                        onChange={(e) => onUpdate(['seo', 'favicon'], e.target.value)}
+                    <ImageUploadInput
+                        label='Favicon (URL)'
+                        value={formData.seo?.favicon || null}
+                        onChange={(url) => onUpdate(['seo', 'favicon'], url)}
                         placeholder='/favicon.ico'
+                        uploadType='system'
                     />
+                    <p className='text-xs text-gray-500 mt-1'>
+                        Icon hiển thị trên tab trình duyệt (khuyến nghị: 32x32px hoặc 16x16px)
+                    </p>
                 </div>
             </CardContent>
         </Card>
