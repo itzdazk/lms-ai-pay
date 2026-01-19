@@ -44,6 +44,7 @@ import { AIMonitoringPage } from './admin/AIMonitoringPage'
 import { RevenueStatsPage } from './admin/RevenueStatsPage'
 import { InstructorsRevenuePage } from './admin/InstructorsRevenuePage'
 import { CoursesRevenuePage } from './admin/CoursesRevenuePage'
+import { SystemConfigPage } from './admin/SystemConfigPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -338,7 +339,11 @@ export function AdminDashboard() {
             case 'tags':
                 return <TagsManagement />
             case 'settings':
-                return <SettingsView />
+                return (
+                    <div className='h-full'>
+                        <SystemConfigPage />
+                    </div>
+                )
             case 'ai-monitoring':
                 return <AIMonitoringPage />
             case 'revenue-stats':

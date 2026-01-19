@@ -4,18 +4,8 @@ import { Button } from '../components/ui/button'
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
 } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import {
-    Star,
-    Users,
-    BookOpen,
-    Clock,
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react'
@@ -26,6 +16,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { AdvisorCard } from '../components/AI/AdvisorCard'
 import { FeaturedCoursesSection } from '../components/Courses'
 import { CONTACT_INFO } from '../lib/constants'
+import { getPublicSystemConfig } from '../lib/api/system-config'
 import { Mail } from 'lucide-react'
 
 // Custom Arrow Components
@@ -94,9 +85,36 @@ function PrevArrow(props: any) {
 export function LandingPage() {
     const [categories, setCategories] = useState<Category[]>([])
     const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+    const [landingConfig, setLandingConfig] = useState<{
+        heroTitle: string
+        heroDescription: string
+        heroBackgroundImage: string
+        categoriesTitle: string
+        categoriesDescription: string
+    } | null>(null)
+    const [contactInfo, setContactInfo] = useState(CONTACT_INFO)
 
     useEffect(() => {
-        const fetchCategories = async () => {
+        const fetchData = async () => {
+            try {
+                // Load landing config and contact info
+                const publicConfig = await getPublicSystemConfig()
+                console.log('📥 Public config received:', publicConfig)
+                console.log('📥 Landing config:', publicConfig.landing)
+                if (publicConfig.landing) {
+                    console.log('✅ Setting landing config:', publicConfig.landing)
+                    setLandingConfig(publicConfig.landing)
+                } else {
+                    console.warn('⚠️ No landing config in response')
+                }
+                if (publicConfig.contact) {
+                    setContactInfo(publicConfig.contact as any)
+                }
+            } catch (error) {
+                console.error('❌ Failed to load system config:', error)
+                // Use defaults from constants
+            }
+
             try {
                 setIsLoadingCategories(true)
                 const response = await categoriesApi.getCategories({
@@ -116,7 +134,7 @@ export function LandingPage() {
             }
         }
 
-        fetchCategories()
+        fetchData()
     }, [])
     return (
         <div className='flex flex-col bg-background text-foreground'>
@@ -126,8 +144,9 @@ export function LandingPage() {
                 <div
                     className='absolute inset-0 bg-cover bg-center bg-no-repeat'
                     style={{
-                        backgroundImage:
-                            "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80')",
+                        backgroundImage: landingConfig?.heroBackgroundImage
+                            ? `url('${landingConfig.heroBackgroundImage}')`
+                            : "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80')",
                     }}
                 ></div>
                 <div className='absolute inset-0 bg-background/50 backdrop-blur-sm'></div>
@@ -135,12 +154,10 @@ export function LandingPage() {
                 <div className='container mx-auto px-4 py-12 sm:py-16 md:py-24 lg:py-32 relative z-10'>
                     <div className='max-w-3xl'>
                         <h1 className='text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 text-foreground drop-shadow-lg leading-tight'>
-                            Học tập thông minh với AI
+                            {landingConfig?.heroTitle || 'Học tập thông minh với AI'}
                         </h1>
                         <p className='text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 drop-shadow-md'>
-                            Nền tảng học tập trực tuyến tích hợp AI, giúp bạn
-                            phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa
-                            học chất lượng cao.
+                            {landingConfig?.heroDescription || 'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa học chất lượng cao.'}
                         </p>
                         <div className='flex flex-col gap-4'>
                             <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center'>
@@ -164,15 +181,15 @@ export function LandingPage() {
                                 <Mail className='h-4 w-4' />
                                 <span>Cần hỗ trợ? Liên hệ:</span>
                                 <a
-                                    href={`mailto:${CONTACT_INFO.email}`}
+                                    href={`mailto:${contactInfo.email}`}
                                     onClick={(e) => {
                                         e.preventDefault()
                                         e.stopPropagation()
-                                        window.location.href = `mailto:${CONTACT_INFO.email}`
+                                        window.location.href = `mailto:${contactInfo.email}`
                                     }}
                                     className='text-blue-500 hover:text-blue-400 underline font-medium'
                                 >
-                                    {CONTACT_INFO.email}
+                                    {contactInfo.email}
                                 </a>
                             </div>
                         </div>
@@ -188,11 +205,10 @@ export function LandingPage() {
                 <div className='container mx-auto px-4'>
                     <div className='flex flex-col items-center justify-center mb-8 sm:mb-12 text-center'>
                         <h2 className='text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4 text-foreground'>
-                            Khám phá theo danh mục
+                            {landingConfig?.categoriesTitle || 'Khám phá theo danh mục'}
                         </h2>
                         <p className='text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 sm:mb-6'>
-                            Tìm khóa học phù hợp với sở thích và mục tiêu
-                            của bạn
+                            {landingConfig?.categoriesDescription || 'Tìm khóa học phù hợp với sở thích và mục tiêu của bạn'}
                         </p>
                         <Button
                             variant='outline'

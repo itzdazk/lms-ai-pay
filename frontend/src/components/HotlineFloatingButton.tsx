@@ -3,10 +3,28 @@ import { useState, useRef, useEffect } from 'react';
 import { Phone, MessageCircle, Facebook, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { CONTACT_INFO } from '../lib/constants';
+import { getPublicSystemConfig, type PublicSystemSettings } from '../lib/api/system-config';
 
 export function HotlineFloatingButton() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [contactInfo, setContactInfo] = useState<PublicSystemSettings['contact'] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Load contact info from API
+  useEffect(() => {
+    const loadContactInfo = async () => {
+      try {
+        const publicConfig = await getPublicSystemConfig();
+        if (publicConfig?.contact) {
+          setContactInfo(publicConfig.contact);
+        }
+      } catch (error) {
+        console.error('Failed to load contact info from API, using defaults:', error);
+        // Fallback to constants if API fails
+      }
+    };
+    loadContactInfo();
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -25,16 +43,23 @@ export function HotlineFloatingButton() {
     };
   }, [isMenuOpen]);
 
+  // Use API data if available, fallback to constants
+  const hotline = contactInfo?.hotline || CONTACT_INFO.hotline;
+  const hotlineDisplay = contactInfo?.hotlineDisplay || CONTACT_INFO.hotlineDisplay;
+  const zalo = contactInfo?.zalo || CONTACT_INFO.zalo;
+  const facebook = contactInfo?.facebook || CONTACT_INFO.facebook;
+  const workingHours = contactInfo?.workingHours || CONTACT_INFO.workingHours;
+
   const handlePhoneClick = () => {
-    window.location.href = `tel:${CONTACT_INFO.hotline}`;
+    window.location.href = `tel:${hotline}`;
   };
 
   const handleZaloClick = () => {
-    window.open(CONTACT_INFO.zalo, '_blank');
+    window.open(zalo, '_blank');
   };
 
   const handleFacebookClick = () => {
-    window.open(CONTACT_INFO.facebook, '_blank');
+    window.open(facebook, '_blank');
   };
 
   return (
@@ -86,7 +111,7 @@ export function HotlineFloatingButton() {
               </div>
               <div className="flex-1">
                 <div className="text-sm font-medium">Điện thoại</div>
-                <div className="text-xs text-gray-400">{CONTACT_INFO.hotlineDisplay}</div>
+                <div className="text-xs text-gray-400">{hotlineDisplay}</div>
               </div>
             </button>
 
@@ -122,7 +147,7 @@ export function HotlineFloatingButton() {
           {/* Working Hours Info */}
           <div className="px-4 py-2 border-t border-[#2D2D2D] bg-[#1F1F1F]">
             <p className="text-xs text-gray-400">
-              Giờ làm việc: {CONTACT_INFO.workingHours}
+              Giờ làm việc: {workingHours}
             </p>
           </div>
         </div>

@@ -601,3 +601,15 @@ model RefundRequest {
   @@index([createdAt])
   @@map("refund_requests")
 }
+
+// =====================================================
+// 18. SYSTEM SETTINGS
+// =====================================================
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  settings  Json     // JSONB trong PostgreSQL, lưu tất cả cài đặt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("system_settings")
+}

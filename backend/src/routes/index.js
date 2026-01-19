@@ -34,6 +34,8 @@ import refundRequestRoutes from './refund-request.routes.js'
 import adminRefundRequestRoutes from './admin-refund-request.routes.js'
 import adminAIRoutes from './admin-ai.routes.js'
 import adminRevenueStatsRoutes from './admin-revenue-stats.routes.js'
+import systemConfigRoutes from './system-config.routes.js'
+import adminSystemConfigRoutes from './admin-system-config.routes.js'
 
 const router = express.Router()
 
@@ -75,6 +77,8 @@ router.get('/', (req, res) => {
             notes: '/api/v1/notes',
             refundRequests: '/api/v1/refund-requests',
             adminRefundRequests: '/api/v1/admin/refund-requests',
+            systemConfig: '/api/v1/system-config',
+            adminSystemConfig: '/api/v1/admin/system-config',
             // More endpoints will be available when routes are enabled
         },
     })
@@ -123,6 +127,8 @@ router.use('/refund-requests', refundRequestRoutes)
 router.use('/admin/refund-requests', adminRefundRequestRoutes)
 router.use('/admin/ai', adminAIRoutes)
 router.use('/admin/revenue', adminRevenueStatsRoutes)
+router.use('/system-config', systemConfigRoutes)
+router.use('/admin/system-config', adminSystemConfigRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

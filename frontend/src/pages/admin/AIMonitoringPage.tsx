@@ -229,7 +229,7 @@ export function AIMonitoringPage() {
     return (
         <div className='min-h-screen flex flex-col bg-background'>
             {/* Header */}
-            <div className='px-6 pt-2 pb-2.5 border-b border-[#2D2D2D] flex-shrink-0'>
+            <div className='pb-2.5 border-b border-[#2D2D2D] flex-shrink-0'>
                 <div className='flex items-center justify-between mb-2'>
                     <div>
                         <h1 className='text-xl font-bold text-white flex items-center gap-2'>
