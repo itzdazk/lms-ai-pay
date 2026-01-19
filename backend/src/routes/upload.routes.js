@@ -9,6 +9,7 @@ import {
     uploadTranscript,
     uploadThumbnail,
     uploadVideoPreview,
+    uploadSystemImage,
 } from '../config/multer.config.js'
 import { uploadFileValidator } from '../validators/upload.validator.js'
 import { isInstructor } from '../middlewares/role.middleware.js'
@@ -17,9 +18,9 @@ const router = express.Router()
 
 /**
  * @route   POST /api/v1/uploads/image
- * @desc    Upload image file (avatar, thumbnail, etc.)
+ * @desc    Upload image file (avatar, thumbnail, system, etc.)
  * @access  Private
- * @query   type - Optional: 'avatar' | 'thumbnail' | 'general' (default: 'general')
+ * @query   type - Optional: 'avatar' | 'thumbnail' | 'system' | 'general' (default: 'general')
  */
 router.post(
     '/image',
@@ -32,6 +33,8 @@ router.post(
             return uploadAvatar.single('image')(req, res, next)
         } else if (type === UPLOAD_TYPES.IMAGE.THUMBNAIL) {
             return uploadThumbnail(req, res, next)
+        } else if (type === UPLOAD_TYPES.IMAGE.SYSTEM) {
+            return uploadSystemImage.single('image')(req, res, next)
         } else {
             // General image - dùng thumbnail middleware
             return uploadThumbnail(req, res, next)

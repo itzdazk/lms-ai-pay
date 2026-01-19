@@ -16,34 +16,39 @@ import { getPublicSystemConfig } from '../lib/api/system-config';
 
 export function AboutPage() {
   const [aboutConfig, setAboutConfig] = useState<any>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
 
   useEffect(() => {
     const loadConfig = async () => {
       try {
+        setIsLoadingConfig(true);
         const publicConfig = await getPublicSystemConfig();
         if (publicConfig.about) {
           setAboutConfig(publicConfig.about);
         }
       } catch (error) {
         console.error('Failed to load about config:', error);
+      } finally {
+        setIsLoadingConfig(false);
       }
     };
     loadConfig();
   }, []);
 
-  const stats = aboutConfig?.stats ? [
-    { label: 'Khóa học', value: aboutConfig.stats.courses || '1,000+', icon: BookOpen, color: 'text-blue-600' },
-    { label: 'Học viên', value: aboutConfig.stats.students || '50,000+', icon: Users, color: 'text-green-600' },
-    { label: 'Giảng viên', value: aboutConfig.stats.instructors || '200+', icon: Award, color: 'text-purple-600' },
-    { label: 'Chứng chỉ', value: aboutConfig.stats.certificates || '25,000+', icon: Award, color: 'text-yellow-600' },
+  // Only use fallback when API failed (aboutConfig is null after loading), not during loading
+  const stats = !isLoadingConfig ? (aboutConfig?.stats ? [
+    { label: 'Khóa học', value: aboutConfig.stats.courses, icon: BookOpen, color: 'text-blue-600' },
+    { label: 'Học viên', value: aboutConfig.stats.students, icon: Users, color: 'text-green-600' },
+    { label: 'Giảng viên', value: aboutConfig.stats.instructors, icon: Award, color: 'text-purple-600' },
+    { label: 'Chứng chỉ', value: aboutConfig.stats.certificates, icon: Award, color: 'text-yellow-600' },
   ] : [
     { label: 'Khóa học', value: '1,000+', icon: BookOpen, color: 'text-blue-600' },
     { label: 'Học viên', value: '50,000+', icon: Users, color: 'text-green-600' },
     { label: 'Giảng viên', value: '200+', icon: Award, color: 'text-purple-600' },
     { label: 'Chứng chỉ', value: '25,000+', icon: Award, color: 'text-yellow-600' },
-  ];
+  ]) : [];
 
-  const values = aboutConfig?.values || [
+  const values = !isLoadingConfig ? (aboutConfig?.values ?? [
     {
       icon: Target,
       title: 'Sứ mệnh',
@@ -64,9 +69,9 @@ export function AboutPage() {
       title: 'Chất lượng',
       description: 'Cam kết cung cấp nội dung chất lượng cao được xây dựng bởi các chuyên gia hàng đầu trong ngành.'
     }
-  ];
+  ]) : [];
 
-  const team = aboutConfig?.team || [
+  const team = !isLoadingConfig ? (aboutConfig?.team ?? [
     {
       name: 'Nguyễn Văn A',
       role: 'CEO & Founder',
@@ -91,7 +96,7 @@ export function AboutPage() {
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=product',
       bio: 'Designer với tư duy sáng tạo và user-centric'
     }
-  ];
+  ]) : [];
 
   return (
     <div className="bg-background">
@@ -107,12 +112,16 @@ export function AboutPage() {
         />
         <div className="absolute inset-0 bg-background/85" />
         <div className="container mx-auto px-4 py-12 md:py-28 text-center relative z-10">
-          <h1 className="text-4xl md:text-5xl mb-6 text-black dark:text-white drop-shadow-lg">
-            {aboutConfig?.heroTitle || 'Nền tảng học tập thế hệ mới'}
-          </h1>
-          <p className="text-xl text-black dark:text-gray-200 max-w-3xl mx-auto drop-shadow">
-            {aboutConfig?.heroDescription || 'EduLearn là nền tảng học tập trực tuyến tích hợp AI, giúp hàng triệu người học viên phát triển kỹ năng và đạt được mục tiêu nghề nghiệp.'}
-          </p>
+          {!isLoadingConfig && (
+            <>
+              <h1 className="text-4xl md:text-5xl mb-6 text-black dark:text-white drop-shadow-lg">
+                {aboutConfig?.heroTitle ?? 'Nền tảng học tập thế hệ mới'}
+              </h1>
+              <p className="text-xl text-black dark:text-gray-200 max-w-3xl mx-auto drop-shadow">
+                {aboutConfig?.heroDescription ?? 'EduLearn là nền tảng học tập trực tuyến tích hợp AI, giúp hàng triệu người học viên phát triển kỹ năng và đạt được mục tiêu nghề nghiệp.'}
+              </p>
+            </>
+          )}
         </div>
       </section>
 
@@ -144,15 +153,19 @@ export function AboutPage() {
       <section className="py-12 bg-background text-foreground border-t border-gray-200">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl mb-6 text-foreground">
-              {aboutConfig?.story?.title || 'Câu chuyện của chúng tôi'}
-            </h2>
-            <p className="text-lg text-muted-foreground mb-4">
-              {aboutConfig?.story?.paragraph1 || 'EduLearn được thành lập vào năm 2020 với mục tiêu làm cho giáo dục chất lượng cao trở nên dễ tiếp cận hơn cho mọi người. Chúng tôi tin rằng mọi người đều có quyền học hỏi và phát triển, bất kể họ ở đâu hay hoàn cảnh ra sao.'}
-            </p>
-            <p className="text-lg text-muted-foreground">
-              {aboutConfig?.story?.paragraph2 || 'Với sự kết hợp giữa công nghệ AI tiên tiến và nội dung chất lượng cao từ các chuyên gia hàng đầu, chúng tôi đã giúp hàng chục nghìn học viên đạt được mục tiêu nghề nghiệp của họ.'}
-            </p>
+            {!isLoadingConfig && (
+              <>
+                <h2 className="text-3xl md:text-4xl mb-6 text-foreground">
+                  {aboutConfig?.story?.title ?? 'Câu chuyện của chúng tôi'}
+                </h2>
+                <p className="text-lg text-muted-foreground mb-4">
+                  {aboutConfig?.story?.paragraph1 ?? 'EduLearn được thành lập vào năm 2020 với mục tiêu làm cho giáo dục chất lượng cao trở nên dễ tiếp cận hơn cho mọi người. Chúng tôi tin rằng mọi người đều có quyền học hỏi và phát triển, bất kể họ ở đâu hay hoàn cảnh ra sao.'}
+                </p>
+                <p className="text-lg text-muted-foreground">
+                  {aboutConfig?.story?.paragraph2 ?? 'Với sự kết hợp giữa công nghệ AI tiên tiến và nội dung chất lượng cao từ các chuyên gia hàng đầu, chúng tôi đã giúp hàng chục nghìn học viên đạt được mục tiêu nghề nghiệp của họ.'}
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -230,7 +243,7 @@ export function AboutPage() {
 
           <div className="max-w-3xl mx-auto">
             <div className="space-y-8">
-              {(aboutConfig?.timeline || [
+              {!isLoadingConfig && (aboutConfig?.timeline ?? [
                 { year: '2020', title: 'Thành lập', description: 'EduLearn được thành lập với 10 khóa học đầu tiên' },
                 { year: '2021', title: 'Mở rộng', description: 'Đạt 10,000 học viên và 100 khóa học' },
                 { year: '2022', title: 'Tích hợp AI', description: 'Ra mắt Gia sư AI - trợ lý học tập thông minh' },
@@ -253,6 +266,7 @@ export function AboutPage() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         </div>
       </section>

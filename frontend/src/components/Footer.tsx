@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { CONTACT_INFO } from '../lib/constants'
 import { getPublicSystemConfig } from '../lib/api/system-config'
+import { getAbsoluteUrl } from '../lib/api/client'
 import { categoriesApi } from '../lib/api/categories'
 import type { Category } from '../lib/api/types'
 import { LegalDialogs } from './LegalDialogs'
@@ -27,10 +28,12 @@ export function Footer() {
     const [categories, setCategories] = useState<Category[]>([])
     const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
     const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true)
 
     useEffect(() => {
         const loadConfig = async () => {
             try {
+                setIsLoadingConfig(true)
                 const publicConfig = await getPublicSystemConfig()
                 if (publicConfig.footer) {
                     setFooterConfig(publicConfig.footer)
@@ -40,12 +43,14 @@ export function Footer() {
                 }
                 if (publicConfig.system) {
                     setSystemConfig({
-                        name: publicConfig.system.name || 'EduLearn',
+                        name: publicConfig.system.name,
                         logo: publicConfig.system.logo,
                     })
                 }
             } catch (error) {
                 console.error('Failed to load footer config:', error)
+            } finally {
+                setIsLoadingConfig(false)
             }
         }
         loadConfig()
@@ -71,13 +76,14 @@ export function Footer() {
         loadCategories()
     }, [])
 
-    const description = footerConfig?.description || 'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp.'
-    const socialMedia = footerConfig?.socialMedia || {}
-    const copyright = footerConfig?.copyright || '© 2025 EduLearn. All rights reserved.'
-    const quickLinks = footerConfig?.quickLinks || [
+    // Only use fallback when API failed (footerConfig is null after loading), not during loading
+    const description = !isLoadingConfig ? (footerConfig?.description ?? 'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp.') : ''
+    const socialMedia = !isLoadingConfig ? (footerConfig?.socialMedia ?? {}) : {}
+    const copyright = !isLoadingConfig ? (footerConfig?.copyright ?? '© 2025 EduLearn. All rights reserved.') : ''
+    const quickLinks = !isLoadingConfig ? (footerConfig?.quickLinks ?? [
         { label: 'Khóa học', url: '/courses' },
         { label: 'Về chúng tôi', url: '/about' },
-    ]
+    ]) : []
 
     return (
         <footer className='border-t border-[#2D2D2D] bg-black'>
@@ -88,18 +94,28 @@ export function Footer() {
                         <Link to='/' className='flex items-center gap-2 mb-3'>
                             {systemConfig?.logo ? (
                                 <img
-                                    src={systemConfig.logo}
+                                    src={getAbsoluteUrl(systemConfig.logo)}
                                     alt={systemConfig.name || 'Logo'}
                                     className='h-8 w-8 object-contain rounded-lg'
+                                    onError={(e) => {
+                                        console.error('Failed to load logo image:', systemConfig.logo)
+                                        const target = e.target as HTMLImageElement
+                                        target.style.display = 'none'
+                                    }}
+                                    onLoad={() => {
+                                        console.log('Logo image loaded successfully:', systemConfig.logo)
+                                    }}
                                 />
                             ) : (
                                 <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-black border border-white/30'>
                                     <BookOpen className='h-5 w-5 text-white' />
                                 </div>
                             )}
-                            <span className='text-lg font-semibold text-white'>
-                                {systemConfig?.name || 'EduLearn'}
-                            </span>
+                            {!isLoadingConfig && (
+                                <span className='text-lg font-semibold text-white'>
+                                    {systemConfig?.name ?? 'EduLearn'}
+                                </span>
+                            )}
                         </Link>
                         <p className='text-sm text-gray-400 mb-3'>
                             {description}

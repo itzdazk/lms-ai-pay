@@ -8,12 +8,14 @@ import { getPublicSystemConfig, type PublicSystemSettings } from '../lib/api/sys
 export function HotlineFloatingButton() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [contactInfo, setContactInfo] = useState<PublicSystemSettings['contact'] | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Load contact info from API
   useEffect(() => {
     const loadContactInfo = async () => {
       try {
+        setIsLoadingConfig(true);
         const publicConfig = await getPublicSystemConfig();
         if (publicConfig?.contact) {
           setContactInfo(publicConfig.contact);
@@ -21,6 +23,8 @@ export function HotlineFloatingButton() {
       } catch (error) {
         console.error('Failed to load contact info from API, using defaults:', error);
         // Fallback to constants if API fails
+      } finally {
+        setIsLoadingConfig(false);
       }
     };
     loadContactInfo();
@@ -43,13 +47,13 @@ export function HotlineFloatingButton() {
     };
   }, [isMenuOpen]);
 
-  // Use API data if available, fallback to constants
-  const hotline = contactInfo?.hotline || CONTACT_INFO.hotline;
-  const hotlineDisplay = contactInfo?.hotlineDisplay || CONTACT_INFO.hotlineDisplay;
-  const email = contactInfo?.email || CONTACT_INFO.email;
-  const zalo = contactInfo?.zalo || CONTACT_INFO.zalo;
-  const facebook = contactInfo?.facebook || CONTACT_INFO.facebook;
-  const workingHours = contactInfo?.workingHours || CONTACT_INFO.workingHours;
+  // Only use fallback when API failed (contactInfo is null after loading), not during loading
+  const hotline = !isLoadingConfig ? (contactInfo?.hotline ?? CONTACT_INFO.hotline) : '';
+  const hotlineDisplay = !isLoadingConfig ? (contactInfo?.hotlineDisplay ?? CONTACT_INFO.hotlineDisplay) : '';
+  const email = !isLoadingConfig ? (contactInfo?.email ?? CONTACT_INFO.email) : '';
+  const zalo = !isLoadingConfig ? (contactInfo?.zalo ?? CONTACT_INFO.zalo) : '';
+  const facebook = !isLoadingConfig ? (contactInfo?.facebook ?? CONTACT_INFO.facebook) : '';
+  const workingHours = !isLoadingConfig ? (contactInfo?.workingHours ?? CONTACT_INFO.workingHours) : '';
 
   const handlePhoneClick = () => {
     window.location.href = `tel:${hotline}`;

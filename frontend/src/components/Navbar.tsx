@@ -41,6 +41,7 @@ import { toast } from 'sonner'
 import { NotificationBell } from './Notifications/NotificationBell'
 import { SearchBar } from './Search/SearchBar'
 import { getPublicSystemConfig } from '../lib/api/system-config'
+import { getAbsoluteUrl } from '../lib/api/client'
 
 export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -49,6 +50,7 @@ export function Navbar() {
         name: string
         logo: string | null
     } | null>(null)
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true)
 
     const { theme, toggleTheme } = useTheme()
     const { user, logout, isAuthenticated } = useAuth()
@@ -57,20 +59,25 @@ export function Navbar() {
     useEffect(() => {
         const loadSystemConfig = async () => {
             try {
+                setIsLoadingConfig(true)
                 const config = await getPublicSystemConfig()
                 if (config.system) {
+                    console.log('System config loaded:', config.system)
+                    console.log('Logo URL:', config.system.logo)
                     setSystemConfig({
-                        name: config.system.name || 'EduLearn',
+                        name: config.system.name,
                         logo: config.system.logo,
                     })
                 }
             } catch (error) {
                 console.error('Failed to load system config:', error)
-                // Fallback to default
+                // Fallback to default only on API error
                 setSystemConfig({
                     name: 'EduLearn',
                     logo: null,
                 })
+            } finally {
+                setIsLoadingConfig(false)
             }
         }
         loadSystemConfig()
@@ -340,18 +347,28 @@ export function Navbar() {
                 <Link to='/' className='flex items-center gap-2'>
                     {systemConfig?.logo ? (
                         <img
-                            src={systemConfig.logo}
+                            src={getAbsoluteUrl(systemConfig.logo)}
                             alt={systemConfig.name || 'Logo'}
                             className='h-10 w-10 object-contain rounded-lg'
+                            onError={(e) => {
+                                console.error('Failed to load logo image:', systemConfig.logo)
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                            }}
+                            onLoad={() => {
+                                console.log('Logo image loaded successfully:', systemConfig.logo)
+                            }}
                         />
                     ) : (
                         <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
                             <BookOpen className='h-6 w-6 text-white' />
                         </div>
                     )}
-                    <span className='text-xl font-semibold text-white'>
-                        {systemConfig?.name || 'EduLearn'}
-                    </span>
+                    {!isLoadingConfig && (
+                        <span className='text-xl font-semibold text-white'>
+                            {systemConfig?.name ?? 'EduLearn'}
+                        </span>
+                    )}
                 </Link>
 
                 {/* Navigation Links - Desktop */}

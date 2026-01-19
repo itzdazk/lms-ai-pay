@@ -7,6 +7,7 @@ import {
     CardTitle,
 } from '../../../components/ui/card'
 import { DarkOutlineInput } from '../../../components/ui/dark-outline-input'
+import { ImageUploadInput } from './ImageUploadInput'
 import type { SystemSettings } from '../../../lib/api/system-config'
 
 interface LandingPageSectionProps {
@@ -51,19 +52,13 @@ export function LandingPageSection({
                         placeholder='Mô tả ngắn gọn về nền tảng...'
                     />
                 </div>
-                <div>
-                    <label className='block text-sm font-medium text-gray-300 mb-2'>
-                        Background Image (URL)
-                    </label>
-                    <DarkOutlineInput
-                        type='url'
-                        value={formData.landing?.heroBackgroundImage || ''}
-                        onChange={(e) =>
-                            onUpdate(['landing', 'heroBackgroundImage'], e.target.value)
-                        }
-                        placeholder='https://images.unsplash.com/...'
-                    />
-                </div>
+                <ImageUploadInput
+                    label='Background Image'
+                    value={formData.landing?.heroBackgroundImage || null}
+                    onChange={(url) => onUpdate(['landing', 'heroBackgroundImage'], url)}
+                    placeholder='Nhập URL hoặc tải ảnh lên'
+                    uploadType='system'
+                />
                 <div>
                     <label className='block text-sm font-medium text-gray-300 mb-2'>
                         Tiêu đề Section Danh mục

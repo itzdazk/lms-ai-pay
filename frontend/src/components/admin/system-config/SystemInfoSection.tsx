@@ -7,6 +7,7 @@ import {
     CardTitle,
 } from '../../../components/ui/card'
 import { DarkOutlineInput } from '../../../components/ui/dark-outline-input'
+import { ImageUploadInput } from './ImageUploadInput'
 import type { SystemSettings } from '../../../lib/api/system-config'
 
 interface SystemInfoSectionProps {
@@ -39,17 +40,13 @@ export function SystemInfoSection({
                             placeholder='Nhập tên hệ thống'
                         />
                     </div>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Logo (URL)
-                        </label>
-                        <DarkOutlineInput
-                            type='text'
-                            value={formData.system?.logo || ''}
-                            onChange={(e) => onUpdate(['system', 'logo'], e.target.value)}
-                            placeholder='Nhập URL logo hoặc đường dẫn file'
-                        />
-                    </div>
+                    <ImageUploadInput
+                        label='Logo'
+                        value={formData.system?.logo || null}
+                        onChange={(url) => onUpdate(['system', 'logo'], url)}
+                        placeholder='Nhập URL logo hoặc tải ảnh lên'
+                        uploadType='system'
+                    />
                     <div>
                         <label className='block text-sm font-medium text-gray-300 mb-2'>
                             Email hệ thống

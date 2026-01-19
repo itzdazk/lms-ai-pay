@@ -11,14 +11,14 @@ export function usePageTitle() {
         const setTitle = async () => {
             try {
                 const config = await getPublicSystemConfig()
-                // Use pageTitle if available, otherwise use defaultTitle, otherwise use default
-                const title = config.seo?.pageTitle || config.seo?.defaultTitle || 'LMS AI Pay - Hệ thống quản lý học tập trực tuyến'
+                // Backend ensures defaultTitle always exists, pageTitle may be null
+                const title = config.seo?.pageTitle ?? config.seo?.defaultTitle
                 if (title) {
                     document.title = title
                 }
             } catch (error) {
                 console.error('Failed to load page title from config:', error)
-                // Fallback to default title
+                // Fallback to default title only on API error
                 document.title = 'LMS AI Pay - Hệ thống quản lý học tập trực tuyến'
             }
         }

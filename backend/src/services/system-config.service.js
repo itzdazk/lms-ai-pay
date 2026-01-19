@@ -11,7 +11,7 @@ class SystemConfigService {
         return {
             system: {
                 name: 'LMS AI Pay',
-                logo: null,
+                logo: 'https://cdn.vectorstock.com/i/500p/40/30/grunge-white-letter-e-logo-vector-27974030.jpg',
                 email: 'admin@lmsaipay.com',
             },
             registration: {
@@ -159,9 +159,9 @@ class SystemConfigService {
                     twitter: 'https://twitter.com/edulearn',
                     instagram: 'https://instagram.com/edulearn',
                     youtube: 'https://youtube.com/@edulearn',
-                    linkedin: null,
+                    linkedin: 'https://linkedin.com/company/edulearn',
                 },
-                copyright: '© 2025 EduLearn. All rights reserved.',
+                copyright: '© 2026 EduLearn. All rights reserved.',
                 quickLinks: [
                     { label: 'Khóa học', url: '/courses' },
                     { label: 'Về chúng tôi', url: '/about' },
@@ -175,7 +175,7 @@ class SystemConfigService {
                 defaultKeywords:
                     'học trực tuyến, elearning, AI, giáo dục, khóa học online',
                 ogImage: null,
-                favicon: '/favicon.ico',
+                favicon: 'https://cdn.vectorstock.com/i/500p/40/30/grunge-white-letter-e-logo-vector-27974030.jpg',
             },
         }
     }

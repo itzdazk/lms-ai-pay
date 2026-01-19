@@ -9,6 +9,7 @@ import {
 } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { DarkOutlineInput } from '../../../components/ui/dark-outline-input'
+import { ImageUploadInput } from './ImageUploadInput'
 import type { SystemSettings } from '../../../lib/api/system-config'
 
 interface AboutPageSectionProps {
@@ -61,19 +62,13 @@ export function AboutPageSection({
                             placeholder='Mô tả về nền tảng...'
                         />
                     </div>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Background Image (URL)
-                        </label>
-                        <DarkOutlineInput
-                            type='url'
-                            value={formData.about?.heroBackgroundImage || ''}
-                            onChange={(e) =>
-                                onUpdate(['about', 'heroBackgroundImage'], e.target.value)
-                            }
-                            placeholder='https://images.unsplash.com/...'
-                        />
-                    </div>
+                    <ImageUploadInput
+                        label='Background Image'
+                        value={formData.about?.heroBackgroundImage || null}
+                        onChange={(url) => onUpdate(['about', 'heroBackgroundImage'], url)}
+                        placeholder='Nhập URL hoặc tải ảnh lên'
+                        uploadType='system'
+                    />
                 </CardContent>
             </Card>
 
@@ -355,21 +350,18 @@ export function AboutPageSection({
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className='block text-sm font-medium text-gray-300 mb-2'>
-                                    Avatar (URL)
-                                </label>
-                                <DarkOutlineInput
-                                    type='url'
-                                    value={member.avatar || ''}
-                                    onChange={(e) =>
-                                        onUpdateArray(['about', 'team'], index, {
-                                            avatar: e.target.value,
-                                        })
-                                    }
-                                    placeholder='https://api.dicebear.com/...'
-                                />
-                            </div>
+                            <ImageUploadInput
+                                label='Avatar'
+                                value={member.avatar || null}
+                                onChange={(url) =>
+                                    onUpdateArray(['about', 'team'], index, {
+                                        ...member,
+                                        avatar: url,
+                                    })
+                                }
+                                placeholder='Nhập URL hoặc tải ảnh lên'
+                                uploadType='avatar'
+                            />
                             <div>
                                 <label className='block text-sm font-medium text-gray-300 mb-2'>
                                     Tiểu sử

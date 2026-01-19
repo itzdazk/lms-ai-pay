@@ -13,22 +13,41 @@ export const getServerBaseUrl = () => {
     return API_BASE_URL.replace(/\/api\/v1\/?$/, '')
 }
 
-// Convert relative URL to absolute URL
+// Convert URL to use relative path in development (via Vite proxy) or absolute in production
 export const getAbsoluteUrl = (
     relativeUrl: string | null | undefined
 ): string => {
     if (!relativeUrl) return ''
+    // If already absolute URL
     if (
         relativeUrl.startsWith('http://') ||
         relativeUrl.startsWith('https://')
     ) {
+        // In development, only convert backend URLs to relative path for Vite proxy
+        // External URLs (like Unsplash) should remain absolute
+        if (import.meta.env.DEV) {
+            try {
+                const url = new URL(relativeUrl)
+                const serverBaseUrl = getServerBaseUrl()
+                const serverUrl = new URL(serverBaseUrl)
+                
+                // Check if URL is from our backend server
+                if (url.origin === serverUrl.origin) {
+                    // Convert backend URL to relative path for Vite proxy
+                    return url.pathname + url.search + url.hash
+                }
+                // External URL - return as is
+                return relativeUrl
+            } catch (e) {
+                // If URL parsing fails, return as is
+                return relativeUrl
+            }
+        }
+        // In production, return absolute URL as is
         return relativeUrl
     }
-    const baseUrl = getServerBaseUrl()
-    const cleanUrl = relativeUrl.startsWith('/')
-        ? relativeUrl
-        : `/${relativeUrl}`
-    return `${baseUrl}${cleanUrl}`
+    // If relative URL, use as is (Vite proxy will handle it in dev)
+    return relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
 }
 
 // Create axios instance

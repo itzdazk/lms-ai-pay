@@ -80,6 +80,9 @@ export function useSystemConfig() {
             setSettings(updated)
             setFormData(updated)
             toast.success('Cập nhật cài đặt hệ thống thành công')
+            
+            // Dispatch event to notify other components (e.g., favicon, page title)
+            window.dispatchEvent(new CustomEvent('system-config-updated'))
         } catch (error: any) {
             console.error('❌ Error saving settings:', error)
             const errorMessage =
