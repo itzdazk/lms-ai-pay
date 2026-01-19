@@ -175,6 +175,7 @@ const defaultSettings = {
     },
     seo: {
         siteName: 'EduLearn',
+        pageTitle: 'LMS AI Pay - Hệ thống quản lý học tập trực tuyến',
         defaultTitle: 'EduLearn - Nền tảng học tập trực tuyến',
         defaultDescription:
             'Học tập thông minh với AI. Hơn 1000+ khóa học chất lượng cao từ các chuyên gia hàng đầu.',

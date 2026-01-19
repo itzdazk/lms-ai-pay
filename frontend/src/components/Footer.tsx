@@ -14,11 +14,14 @@ import { CONTACT_INFO } from '../lib/constants'
 import { getPublicSystemConfig } from '../lib/api/system-config'
 import { categoriesApi } from '../lib/api/categories'
 import type { Category } from '../lib/api/types'
+import { LegalDialogs } from './LegalDialogs'
 
 export function Footer() {
     const [footerConfig, setFooterConfig] = useState<any>(null)
     const [contactInfo, setContactInfo] = useState(CONTACT_INFO)
     const [categories, setCategories] = useState<Category[]>([])
+    const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
+    const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
 
     useEffect(() => {
         const loadConfig = async () => {
@@ -214,21 +217,31 @@ export function Footer() {
                 <div className='border-t border-[#2D2D2D] mt-6 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400'>
                     <p>{copyright}</p>
                     <div className='flex gap-6'>
-                        <Link
-                            to='/terms'
-                            className='hover:text-blue-600 transition-colors'
+                        <button
+                            type='button'
+                            onClick={() => setIsTermsDialogOpen(true)}
+                            className='hover:text-blue-600 transition-colors cursor-pointer'
                         >
                             Điều khoản sử dụng
-                        </Link>
-                        <Link
-                            to='/privacy'
-                            className='hover:text-blue-600 transition-colors'
+                        </button>
+                        <button
+                            type='button'
+                            onClick={() => setIsPrivacyDialogOpen(true)}
+                            className='hover:text-blue-600 transition-colors cursor-pointer'
                         >
                             Chính sách bảo mật
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Legal Dialogs */}
+            <LegalDialogs
+                isTermsOpen={isTermsDialogOpen}
+                isPrivacyOpen={isPrivacyDialogOpen}
+                onTermsOpenChange={setIsTermsDialogOpen}
+                onPrivacyOpenChange={setIsPrivacyDialogOpen}
+            />
         </footer>
     )
 }

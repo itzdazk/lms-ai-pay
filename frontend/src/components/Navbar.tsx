@@ -109,7 +109,7 @@ export function Navbar() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -167,7 +167,7 @@ export function Navbar() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
@@ -191,7 +191,7 @@ export function Navbar() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -225,14 +225,14 @@ export function Navbar() {
                             Giảng viên
                         </Link>
 
-                        {/* Đơn hàng của tôi */}
+                        {/* Đơn hàng */}
                         <Link
                             to='/orders'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <ReceiptText className='h-5 w-5 text-gray-300' />
-                            Đơn hàng của tôi
+                            Đơn hàng
                         </Link>
                     </>
                 )
@@ -270,14 +270,14 @@ export function Navbar() {
                             Học viên
                         </Link>
 
-                        {/* Đơn hàng của tôi */}
+                        {/* Đơn hàng */}
                         <Link
                             to='/orders'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <ReceiptText className='h-5 w-5 text-gray-300' />
-                            Đơn hàng của tôi
+                            Đơn hàng
                         </Link>
                     </>
                 )
@@ -298,7 +298,7 @@ export function Navbar() {
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <ReceiptText className='h-5 w-5 text-gray-300' />
-                            Đơn hàng của tôi
+                            Đơn hàng
                         </Link>
                     </>
                 )
@@ -504,7 +504,7 @@ export function Navbar() {
                                         className='flex items-center'
                                     >
                                         <UserRoundCog className='mr-2 h-4 w-4 text-gray-300' />
-                                        Thông tin của tôi
+                                        Hồ sơ
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -660,7 +660,7 @@ export function Navbar() {
                                                     setIsMobileMenuOpen(false)
                                                 }
                                             >
-                                                Thông tin của tôi
+                                                Hồ sơ
                                             </Link>
                                             <Link
                                                 to='/settings'

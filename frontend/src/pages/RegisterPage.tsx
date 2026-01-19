@@ -10,18 +10,12 @@ import {
     CardTitle,
 } from '../components/ui/card'
 import { Checkbox } from '../components/ui/checkbox'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '../components/ui/dialog'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { toast } from 'sonner'
 import { BookOpen, Loader2, Lock, Eye, EyeOff, Moon, Sun, AlertCircle } from 'lucide-react'
+import { LegalDialogs } from '../components/LegalDialogs'
 
 export function RegisterPage() {
     const navigate = useNavigate()
@@ -629,169 +623,13 @@ export function RegisterPage() {
                 </Card>
             </div>
 
-            {/* Terms Dialog */}
-            <Dialog open={isTermsDialogOpen} onOpenChange={setIsTermsDialogOpen}>
-                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-3xl max-h-[85vh] overflow-y-auto scrollbar-custom'>
-                    <DialogHeader className='pb-4 border-b border-[#2D2D2D]'>
-                        <DialogTitle className='text-2xl font-bold text-white mb-2'>
-                            Điều khoản sử dụng
-                        </DialogTitle>
-                        <DialogDescription className='text-sm text-gray-400'>
-                            Vui lòng đọc kỹ các điều khoản trước khi sử dụng dịch vụ
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className='mt-6 space-y-6'>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    1
-                                </span>
-                                Chấp nhận điều khoản
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Bằng việc truy cập và sử dụng nền tảng học tập trực tuyến
-                                này, bạn đồng ý tuân thủ và bị ràng buộc bởi các điều khoản
-                                và điều kiện sử dụng được nêu trong tài liệu này.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    2
-                                </span>
-                                Tài khoản người dùng
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Bạn chịu trách nhiệm duy trì tính bảo mật của tài khoản và
-                                mật khẩu. Bạn đồng ý thông báo ngay lập tức cho chúng tôi về
-                                bất kỳ vi phạm bảo mật nào.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    3
-                                </span>
-                                Sử dụng dịch vụ
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Bạn đồng ý sử dụng dịch vụ một cách hợp pháp và không được
-                                sử dụng dịch vụ cho bất kỳ mục đích bất hợp pháp hoặc trái
-                                phép nào.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    4
-                                </span>
-                                Quyền sở hữu trí tuệ
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Tất cả nội dung trên nền tảng, bao gồm nhưng không giới hạn
-                                ở văn bản, đồ họa, logo, hình ảnh, và phần mềm, là tài sản
-                                của chúng tôi hoặc các bên cấp phép của chúng tôi.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    5
-                                </span>
-                                Giới hạn trách nhiệm
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Chúng tôi không chịu trách nhiệm về bất kỳ thiệt hại trực
-                                tiếp, gián tiếp, ngẫu nhiên, đặc biệt hoặc hậu quả nào phát
-                                sinh từ việc sử dụng hoặc không thể sử dụng dịch vụ.
-                            </p>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Privacy Dialog */}
-            <Dialog open={isPrivacyDialogOpen} onOpenChange={setIsPrivacyDialogOpen}>
-                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white max-w-3xl max-h-[85vh] overflow-y-auto scrollbar-custom'>
-                    <DialogHeader className='pb-4 border-b border-[#2D2D2D]'>
-                        <DialogTitle className='text-2xl font-bold text-white mb-2'>
-                            Chính sách bảo mật
-                        </DialogTitle>
-                        <DialogDescription className='text-sm text-gray-400'>
-                            Chúng tôi cam kết bảo vệ quyền riêng tư của bạn
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className='mt-6 space-y-6'>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    1
-                                </span>
-                                Thu thập thông tin
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Chúng tôi thu thập thông tin cá nhân của bạn khi bạn đăng ký
-                                tài khoản, sử dụng dịch vụ, hoặc liên hệ với chúng tôi. Thông
-                                tin này bao gồm tên, email, và các thông tin khác mà bạn
-                                cung cấp.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    2
-                                </span>
-                                Sử dụng thông tin
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Chúng tôi sử dụng thông tin của bạn để cung cấp, duy trì và
-                                cải thiện dịch vụ, xử lý giao dịch, gửi thông báo, và cung
-                                cấp hỗ trợ khách hàng.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    3
-                                </span>
-                                Bảo mật thông tin
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Chúng tôi áp dụng các biện pháp bảo mật kỹ thuật và tổ chức
-                                phù hợp để bảo vệ thông tin cá nhân của bạn khỏi truy cập,
-                                thay đổi, tiết lộ hoặc phá hủy trái phép.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    4
-                                </span>
-                                Chia sẻ thông tin
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Chúng tôi không bán, trao đổi hoặc cho thuê thông tin cá nhân
-                                của bạn cho bên thứ ba. Chúng tôi chỉ chia sẻ thông tin khi
-                                có yêu cầu pháp lý hoặc để bảo vệ quyền và tài sản của chúng
-                                tôi.
-                            </p>
-                        </div>
-                        <div className='pb-6 border-b border-[#2D2D2D] last:border-b-0'>
-                            <h3 className='text-base font-semibold text-white mb-3 flex items-center gap-2'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold'>
-                                    5
-                                </span>
-                                Quyền của bạn
-                            </h3>
-                            <p className='text-sm leading-7 text-gray-300 pl-8'>
-                                Bạn có quyền truy cập, chỉnh sửa, xóa hoặc yêu cầu ngừng xử
-                                lý thông tin cá nhân của mình bất cứ lúc nào bằng cách liên
-                                hệ với chúng tôi.
-                            </p>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Legal Dialogs */}
+            <LegalDialogs
+                isTermsOpen={isTermsDialogOpen}
+                isPrivacyOpen={isPrivacyDialogOpen}
+                onTermsOpenChange={setIsTermsDialogOpen}
+                onPrivacyOpenChange={setIsPrivacyDialogOpen}
+            />
         </div>
     )
 }

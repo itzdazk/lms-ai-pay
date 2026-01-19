@@ -83,6 +83,7 @@ export interface SystemSettings {
     }
     seo: {
         siteName: string
+        pageTitle: string | null
         defaultTitle: string
         defaultDescription: string
         defaultKeywords: string
@@ -168,11 +169,17 @@ export interface PublicSystemSettings {
     }
     seo: {
         siteName: string
+        pageTitle: string | null
         defaultTitle: string
         defaultDescription: string
         defaultKeywords: string
         ogImage: string | null
         favicon: string
+    }
+    legal: {
+        termsOfService: string | null
+        privacyPolicy: string | null
+        refundPolicy: string | null
     }
 }
 

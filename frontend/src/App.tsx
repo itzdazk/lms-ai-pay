@@ -12,6 +12,7 @@ import { PublicLayout } from './components/layouts/PublicLayout'
 import { AdminLayout } from './components/layouts/AdminLayout'
 import { Toaster } from './components/ui/sonner'
 import { Loader2 } from 'lucide-react'
+import { usePageTitle } from './hooks/usePageTitle'
 
 // Loading fallback component
 const PageLoading = () => (
@@ -261,6 +262,9 @@ const ForbiddenPage = lazy(() =>
 )
 
 export default function App() {
+    // Set page title from system config
+    usePageTitle()
+    
     return (
         <Router>
             <ScrollToTop />

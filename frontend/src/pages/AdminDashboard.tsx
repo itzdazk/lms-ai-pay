@@ -646,7 +646,7 @@ export function AdminDashboard() {
                                     <div className='flex items-center'>
                                         <LayoutDashboard className='mr-2 h-4 w-4' />
                                         <span className='font-medium'>
-                                            Dashboard
+                                            Bảng điều khiển
                                         </span>
                                     </div>
                                 </DropdownMenuLabel>
@@ -695,7 +695,7 @@ export function AdminDashboard() {
                                         className='flex items-center'
                                     >
                                         <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                        Đơn hàng của tôi
+                                        Đơn hàng
                                     </Link>
                                 </DropdownMenuItem>
 

@@ -444,6 +444,7 @@ class SystemConfigService {
             },
             footer: fullSettings.footer || {},
             seo: fullSettings.seo || {},
+            legal: fullSettings.legal || {},
         }
 
         logger.info('📤 getPublicSettings - returning landing:', {

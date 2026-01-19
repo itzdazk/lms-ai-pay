@@ -37,7 +37,21 @@ export function SEOSection({ formData, onUpdate }: SEOSectionProps) {
                 </div>
                 <div>
                     <label className='block text-sm font-medium text-gray-300 mb-2'>
-                        Title mặc định
+                        Tiêu đề trang web (Page Title)
+                    </label>
+                    <DarkOutlineInput
+                        type='text'
+                        value={formData.seo?.pageTitle || ''}
+                        onChange={(e) => onUpdate(['seo', 'pageTitle'], e.target.value)}
+                        placeholder='LMS AI Pay - Hệ thống quản lý học tập trực tuyến'
+                    />
+                    <p className='text-xs text-gray-500 mt-1'>
+                        Tiêu đề hiển thị trên tab trình duyệt (thẻ &lt;title&gt;)
+                    </p>
+                </div>
+                <div>
+                    <label className='block text-sm font-medium text-gray-300 mb-2'>
+                        Title mặc định (SEO)
                     </label>
                     <DarkOutlineInput
                         type='text'
@@ -45,6 +59,9 @@ export function SEOSection({ formData, onUpdate }: SEOSectionProps) {
                         onChange={(e) => onUpdate(['seo', 'defaultTitle'], e.target.value)}
                         placeholder='EduLearn - Nền tảng học tập trực tuyến'
                     />
+                    <p className='text-xs text-gray-500 mt-1'>
+                        Title mặc định cho các trang (dùng cho SEO meta tags)
+                    </p>
                 </div>
                 <div>
                     <label className='block text-sm font-medium text-gray-300 mb-2'>
