@@ -38,17 +38,6 @@ export function FooterSection({
                 <CardContent className='space-y-4'>
                     <div>
                         <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Tên thương hiệu
-                        </label>
-                        <DarkOutlineInput
-                            type='text'
-                            value={formData.footer?.brandName || ''}
-                            onChange={(e) => onUpdate(['footer', 'brandName'], e.target.value)}
-                            placeholder='EduLearn'
-                        />
-                    </div>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
                             Mô tả
                         </label>
                         <textarea
@@ -224,71 +213,6 @@ export function FooterSection({
                             </div>
                         </div>
                     ))}
-                </CardContent>
-            </Card>
-
-            <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                <CardHeader>
-                    <CardTitle className='text-white'>Thông tin liên hệ</CardTitle>
-                    <CardDescription className='text-gray-400'>
-                        Thông tin liên hệ hiển thị trong footer (dùng chung với thông tin liên hệ hệ thống)
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className='space-y-4'>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Hotline
-                        </label>
-                        <DarkOutlineInput
-                            type='text'
-                            value={formData.contact?.hotline || ''}
-                            onChange={(e) => onUpdate(['contact', 'hotline'], e.target.value)}
-                            placeholder='1900123456'
-                        />
-                    </div>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Hotline (Hiển thị)
-                        </label>
-                        <DarkOutlineInput
-                            type='text'
-                            value={formData.contact?.hotlineDisplay || ''}
-                            onChange={(e) =>
-                                onUpdate(['contact', 'hotlineDisplay'], e.target.value)
-                            }
-                            placeholder='1900 123 456'
-                        />
-                    </div>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Email liên hệ
-                        </label>
-                        <DarkOutlineInput
-                            type='email'
-                            value={formData.contact?.email || ''}
-                            onChange={(e) => onUpdate(['contact', 'email'], e.target.value)}
-                            placeholder='support@example.com'
-                        />
-                    </div>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-300 mb-2'>
-                            Giờ làm việc
-                        </label>
-                        <DarkOutlineInput
-                            type='text'
-                            value={formData.contact?.workingHours || ''}
-                            onChange={(e) =>
-                                onUpdate(['contact', 'workingHours'], e.target.value)
-                            }
-                            placeholder='8:00 - 22:00 (T2-CN)'
-                        />
-                    </div>
-                    <div className='p-3 bg-blue-900/20 border border-blue-500/30 rounded-md'>
-                        <p className='text-xs text-blue-300'>
-                            💡 Lưu ý: Thông tin liên hệ này sẽ được hiển thị trong footer và các trang khác. 
-                            Bạn cũng có thể chỉnh sửa trong tab "Hệ thống".
-                        </p>
-                    </div>
                 </CardContent>
             </Card>
         </div>

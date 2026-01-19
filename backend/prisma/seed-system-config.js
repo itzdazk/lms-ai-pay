@@ -162,16 +162,6 @@ const defaultSettings = {
             { label: 'Khóa học', url: '/courses' },
             { label: 'Về chúng tôi', url: '/about' },
         ],
-        footerCategories: [
-            {
-                label: 'Web Development',
-                url: '/courses?category=web-development',
-            },
-            {
-                label: 'Mobile Development',
-                url: '/courses?category=mobile-development',
-            },
-        ],
     },
     seo: {
         siteName: 'EduLearn',

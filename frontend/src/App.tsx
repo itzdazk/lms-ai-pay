@@ -74,16 +74,6 @@ const AboutPage = lazy(() =>
         default: module.AboutPage,
     }))
 )
-const CategoriesPage = lazy(() =>
-    import('./pages/CategoriesPage').then((module) => ({
-        default: module.CategoriesPage,
-    }))
-)
-const CategoriesDetailPage = lazy(() =>
-    import('./pages/CategoriesDetailPage').then((module) => ({
-        default: module.CategoriesDetailPage,
-    }))
-)
 
 // Student Pages - Lazy loaded
 const StudentDashboard = lazy(() =>
@@ -415,26 +405,6 @@ export default function App() {
                                                 fallback={<PageLoading />}
                                             >
                                                 <CourseDetailPage />
-                                            </Suspense>
-                                        }
-                                    />
-                                    <Route
-                                        path='/categories'
-                                        element={
-                                            <Suspense
-                                                fallback={<PageLoading />}
-                                            >
-                                                <CategoriesPage />
-                                            </Suspense>
-                                        }
-                                    />
-                                    <Route
-                                        path='/categories/:id'
-                                        element={
-                                            <Suspense
-                                                fallback={<PageLoading />}
-                                            >
-                                                <CategoriesDetailPage />
                                             </Suspense>
                                         }
                                     />

@@ -1,6 +1,6 @@
 // src/components/HotlineFloatingButton.tsx
 import { useState, useRef, useEffect } from 'react';
-import { Phone, MessageCircle, Facebook, X } from 'lucide-react';
+import { Phone, MessageCircle, Facebook, Mail, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { CONTACT_INFO } from '../lib/constants';
 import { getPublicSystemConfig, type PublicSystemSettings } from '../lib/api/system-config';
@@ -46,12 +46,17 @@ export function HotlineFloatingButton() {
   // Use API data if available, fallback to constants
   const hotline = contactInfo?.hotline || CONTACT_INFO.hotline;
   const hotlineDisplay = contactInfo?.hotlineDisplay || CONTACT_INFO.hotlineDisplay;
+  const email = contactInfo?.email || CONTACT_INFO.email;
   const zalo = contactInfo?.zalo || CONTACT_INFO.zalo;
   const facebook = contactInfo?.facebook || CONTACT_INFO.facebook;
   const workingHours = contactInfo?.workingHours || CONTACT_INFO.workingHours;
 
   const handlePhoneClick = () => {
     window.location.href = `tel:${hotline}`;
+  };
+
+  const handleEmailClick = () => {
+    window.location.href = `mailto:${email}`;
   };
 
   const handleZaloClick = () => {
@@ -114,6 +119,22 @@ export function HotlineFloatingButton() {
                 <div className="text-xs text-gray-400">{hotlineDisplay}</div>
               </div>
             </button>
+
+            {/* Email Option */}
+            {email && (
+              <button
+                onClick={handleEmailClick}
+                className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-[#2D2D2D] transition-colors text-white"
+              >
+                <div className="p-2 bg-blue-500/20 rounded-full">
+                  <Mail className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium">Email</div>
+                  <div className="text-xs text-gray-400">{email}</div>
+                </div>
+              </button>
+            )}
 
             {/* Zalo Option */}
             <button

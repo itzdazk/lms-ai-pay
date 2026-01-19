@@ -215,7 +215,7 @@ export function LandingPage() {
                             asChild
                             className='border-border text-foreground hover:bg-accent'
                         >
-                            <Link to='/categories'>Xem tất cả</Link>
+                            <Link to='/courses'>Xem tất cả</Link>
                         </Button>
                     </div>
                     {isLoadingCategories ? (
@@ -281,7 +281,7 @@ export function LandingPage() {
                                         className='px-2 sm:px-3 min-w-0'
                                     >
                                         <Link
-                                            to={`/categories/${category.id}`}
+                                            to={`/courses?categoryId=${category.id}`}
                                             className='group block h-full'
                                         >
                                             <Card className='bg-[#1A1A1A] border-[#2D2D2D] hover:border-primary transition-all duration-300 cursor-pointer h-full overflow-hidden hover:shadow-lg hover:shadow-primary/20 flex flex-col'>

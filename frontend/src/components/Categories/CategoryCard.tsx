@@ -21,7 +21,7 @@ export function CategoryCard({
     const hasImage = !!category.imageUrl
     const children = category.children ?? []
     const hasChildren = children.length > 0
-    const linkTo = href || `/categories/${category.id}`
+    const linkTo = href || `/courses?categoryId=${category.id}`
 
     const Wrapper: any = onClick ? 'button' : Link
 

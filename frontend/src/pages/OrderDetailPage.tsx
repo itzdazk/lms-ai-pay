@@ -695,93 +695,9 @@ export function OrderDetailPage() {
                 </div>
 
                 {/* Sidebar */}
-                <div className='space-y-6'>
+                <div className='space-y-6 lg:sticky lg:top-6 lg:self-start'>
                     {/* Order Summary */}
                     <OrderSummary course={course || null} loading={false} />
-
-                    {/* Actions */}
-                    {course && (
-                        <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
-                            <CardHeader>
-                                <CardTitle className='text-white'>
-                                    Thao tác
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className='space-y-3'>
-                                {finalOrder.paymentStatus === 'PAID' &&
-                                    course && (
-                                        <DarkOutlineButton
-                                            asChild
-                                            className='w-full'
-                                        >
-                                            <Link
-                                                to={`/courses/${
-                                                    course.slug || course.id
-                                                }`}
-                                            >
-                                                Vào học ngay
-                                            </Link>
-                                        </DarkOutlineButton>
-                                    )}
-                                {finalOrder.paymentStatus === 'FAILED' &&
-                                    course && (
-                                        <DarkOutlineButton
-                                            asChild
-                                            className='w-full'
-                                        >
-                                            <Link
-                                                to={`/checkout/${course.slug}`}
-                                            >
-                                                Thử lại thanh toán
-                                            </Link>
-                                        </DarkOutlineButton>
-                                    )}
-                                {finalOrder.paymentStatus === 'PENDING' &&
-                                    course && (
-                                        <DarkOutlineButton
-                                            asChild
-                                            className='w-full'
-                                        >
-                                            <Link
-                                                to={`/checkout/${course.slug}`}
-                                            >
-                                                Thử lại thanh toán
-                                            </Link>
-                                        </DarkOutlineButton>
-                                    )}
-                                <DarkOutlineButton
-                                    asChild
-                                    variant='outline'
-                                    className='w-full'
-                                >
-                                    <Link
-                                        to={
-                                            isAdmin
-                                                ? '/admin/dashboard'
-                                                : '/orders'
-                                        }
-                                    >
-                                        {isAdmin
-                                            ? 'Quản lý đơn hàng'
-                                            : 'Xem tất cả đơn hàng'}
-                                    </Link>
-                                </DarkOutlineButton>
-                                <DarkOutlineButton
-                                    asChild
-                                    variant='outline'
-                                    className='w-full'
-                                >
-                                    <Link
-                                        to='/transactions'
-                                        className='flex items-center justify-center gap-2'
-                                    >
-                                        <History className='h-4 w-4' />
-                                        Xem toàn bộ lịch sử giao dịch
-                                    </Link>
-                                </DarkOutlineButton>
-                            </CardContent>
-                        </Card>
-                    )}
                 </div>
             </div>
 

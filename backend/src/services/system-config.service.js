@@ -166,16 +166,6 @@ class SystemConfigService {
                     { label: 'Khóa học', url: '/courses' },
                     { label: 'Về chúng tôi', url: '/about' },
                 ],
-                footerCategories: [
-                    {
-                        label: 'Web Development',
-                        url: '/courses?category=web-development',
-                    },
-                    {
-                        label: 'Mobile Development',
-                        url: '/courses?category=mobile-development',
-                    },
-                ],
             },
             seo: {
                 siteName: 'EduLearn',
@@ -263,9 +253,6 @@ class SystemConfigService {
                     quickLinks:
                         settings.footer?.quickLinks ||
                         defaults.footer.quickLinks,
-                    footerCategories:
-                        settings.footer?.footerCategories ||
-                        defaults.footer.footerCategories,
                     brandName:
                         settings.footer?.brandName || defaults.footer.brandName,
                     description:
@@ -375,12 +362,6 @@ class SystemConfigService {
                 merged.footer.quickLinks = current.footer?.quickLinks || []
             }
 
-            if (updates.footer?.footerCategories !== undefined) {
-                merged.footer.footerCategories = updates.footer.footerCategories
-            } else if (!merged.footer.footerCategories) {
-                merged.footer.footerCategories =
-                    current.footer?.footerCategories || []
-            }
 
             // Add metadata
             if (userId) {

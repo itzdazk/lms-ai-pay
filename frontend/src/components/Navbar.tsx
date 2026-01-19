@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/button'
 import { DarkOutlineButton } from './ui/buttons'
@@ -40,13 +40,41 @@ import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'sonner'
 import { NotificationBell } from './Notifications/NotificationBell'
 import { SearchBar } from './Search/SearchBar'
+import { getPublicSystemConfig } from '../lib/api/system-config'
 
 export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isLoggingOut, setIsLoggingOut] = useState(false)
+    const [systemConfig, setSystemConfig] = useState<{
+        name: string
+        logo: string | null
+    } | null>(null)
 
     const { theme, toggleTheme } = useTheme()
     const { user, logout, isAuthenticated } = useAuth()
+
+    // Load system config
+    useEffect(() => {
+        const loadSystemConfig = async () => {
+            try {
+                const config = await getPublicSystemConfig()
+                if (config.system) {
+                    setSystemConfig({
+                        name: config.system.name || 'EduLearn',
+                        logo: config.system.logo,
+                    })
+                }
+            } catch (error) {
+                console.error('Failed to load system config:', error)
+                // Fallback to default
+                setSystemConfig({
+                    name: 'EduLearn',
+                    logo: null,
+                })
+            }
+        }
+        loadSystemConfig()
+    }, [])
 
     const handleLogout = async () => {
         if (isLoggingOut) return
@@ -310,11 +338,19 @@ export function Navbar() {
             <div className='container mx-auto flex h-16 items-center justify-between px-4'>
                 {/* Logo */}
                 <Link to='/' className='flex items-center gap-2'>
-                    <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
-                        <BookOpen className='h-6 w-6 text-white' />
-                    </div>
+                    {systemConfig?.logo ? (
+                        <img
+                            src={systemConfig.logo}
+                            alt={systemConfig.name || 'Logo'}
+                            className='h-10 w-10 object-contain rounded-lg'
+                        />
+                    ) : (
+                        <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
+                            <BookOpen className='h-6 w-6 text-white' />
+                        </div>
+                    )}
                     <span className='text-xl font-semibold text-white'>
-                        EduLearn
+                        {systemConfig?.name || 'EduLearn'}
                     </span>
                 </Link>
 

@@ -144,7 +144,7 @@ export function CourseSearch({
                     window.location.href = `/courses/${item.slug}`
                     break
                 case 'category':
-                    window.location.href = `/categories/${item.id}`
+                    window.location.href = `/courses?categoryId=${item.id}`
                     break
                 case 'tag':
                     window.location.href = `/courses?tagIds=${item.id}`

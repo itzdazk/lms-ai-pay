@@ -62,7 +62,6 @@ export interface SystemSettings {
         }>
     }
     footer: {
-        brandName: string
         description: string
         socialMedia: {
             facebook: string | null
@@ -73,10 +72,6 @@ export interface SystemSettings {
         }
         copyright: string
         quickLinks: Array<{
-            label: string
-            url: string
-        }>
-        footerCategories: Array<{
             label: string
             url: string
         }>
@@ -148,7 +143,6 @@ export interface PublicSystemSettings {
         }>
     }
     footer: {
-        brandName: string
         description: string
         socialMedia: {
             facebook: string | null
@@ -159,10 +153,6 @@ export interface PublicSystemSettings {
         }
         copyright: string
         quickLinks: Array<{
-            label: string
-            url: string
-        }>
-        footerCategories: Array<{
             label: string
             url: string
         }>

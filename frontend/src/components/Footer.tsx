@@ -9,6 +9,7 @@ import {
     Mail,
     Phone,
     Linkedin,
+    MessageCircle,
 } from 'lucide-react'
 import { CONTACT_INFO } from '../lib/constants'
 import { getPublicSystemConfig } from '../lib/api/system-config'
@@ -18,6 +19,10 @@ import { LegalDialogs } from './LegalDialogs'
 
 export function Footer() {
     const [footerConfig, setFooterConfig] = useState<any>(null)
+    const [systemConfig, setSystemConfig] = useState<{
+        name: string
+        logo: string | null
+    } | null>(null)
     const [contactInfo, setContactInfo] = useState(CONTACT_INFO)
     const [categories, setCategories] = useState<Category[]>([])
     const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
@@ -32,6 +37,12 @@ export function Footer() {
                 }
                 if (publicConfig.contact) {
                     setContactInfo(publicConfig.contact as any)
+                }
+                if (publicConfig.system) {
+                    setSystemConfig({
+                        name: publicConfig.system.name || 'EduLearn',
+                        logo: publicConfig.system.logo,
+                    })
                 }
             } catch (error) {
                 console.error('Failed to load footer config:', error)
@@ -60,7 +71,6 @@ export function Footer() {
         loadCategories()
     }, [])
 
-    const brandName = footerConfig?.brandName || 'EduLearn'
     const description = footerConfig?.description || 'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp.'
     const socialMedia = footerConfig?.socialMedia || {}
     const copyright = footerConfig?.copyright || '© 2025 EduLearn. All rights reserved.'
@@ -76,11 +86,19 @@ export function Footer() {
                     {/* Brand */}
                     <div>
                         <Link to='/' className='flex items-center gap-2 mb-3'>
-                            <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-black border border-white/30'>
-                                <BookOpen className='h-5 w-5 text-white' />
-                            </div>
+                            {systemConfig?.logo ? (
+                                <img
+                                    src={systemConfig.logo}
+                                    alt={systemConfig.name || 'Logo'}
+                                    className='h-8 w-8 object-contain rounded-lg'
+                                />
+                            ) : (
+                                <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-black border border-white/30'>
+                                    <BookOpen className='h-5 w-5 text-white' />
+                                </div>
+                            )}
                             <span className='text-lg font-semibold text-white'>
-                                {brandName}
+                                {systemConfig?.name || 'EduLearn'}
                             </span>
                         </Link>
                         <p className='text-sm text-gray-400 mb-3'>
@@ -171,7 +189,7 @@ export function Footer() {
                                 {categories.map((category) => (
                                     <li key={category.id}>
                                         <Link
-                                            to={`/categories/${category.id}`}
+                                            to={`/courses?categoryId=${category.id}`}
                                             className='text-gray-400 hover:text-blue-600 transition-colors'
                                         >
                                             {category.name}
@@ -188,27 +206,59 @@ export function Footer() {
                             Liên hệ
                         </h3>
                         <ul className='space-y-2 text-sm text-gray-400'>
-                            <li className='flex items-start gap-2'>
-                                <Phone className='h-4 w-4 mt-0.5 flex-shrink-0' />
-                                <a
-                                    href={`tel:${contactInfo.hotline}`}
-                                    className='hover:text-blue-500 transition-colors'
-                                >
-                                    {contactInfo.hotlineDisplay}
-                                </a>
-                            </li>
-                            <li className='flex items-start gap-2'>
-                                <Mail className='h-4 w-4 mt-0.5 flex-shrink-0' />
-                                <a
-                                    href={`mailto:${contactInfo.email}`}
-                                    className='hover:text-blue-500 transition-colors'
-                                >
-                                    {contactInfo.email}
-                                </a>
-                            </li>
-                            <li className='text-xs text-gray-500 mt-2'>
-                                Giờ làm việc: {contactInfo.workingHours}
-                            </li>
+                            {contactInfo.hotlineDisplay && (
+                                <li className='flex items-start gap-2'>
+                                    <Phone className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={`tel:${contactInfo.hotline || contactInfo.hotlineDisplay}`}
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        {contactInfo.hotlineDisplay}
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.email && (
+                                <li className='flex items-start gap-2'>
+                                    <Mail className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={`mailto:${contactInfo.email}`}
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        {contactInfo.email}
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.zalo && (
+                                <li className='flex items-start gap-2'>
+                                    <MessageCircle className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={contactInfo.zalo}
+                                        target='_blank'
+                                        rel='noopener noreferrer'
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        Zalo
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.facebook && (
+                                <li className='flex items-start gap-2'>
+                                    <Facebook className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={contactInfo.facebook}
+                                        target='_blank'
+                                        rel='noopener noreferrer'
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        Facebook
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.workingHours && (
+                                <li className='text-xs text-gray-500 mt-2 pt-2 border-t border-[#2D2D2D]'>
+                                    Giờ làm việc: {contactInfo.workingHours}
+                                </li>
+                            )}
                         </ul>
                     </div>
                 </div>

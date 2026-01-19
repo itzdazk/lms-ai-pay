@@ -219,7 +219,7 @@ export function SearchBar({
                 navigate(`/courses/${item.slug}`)
                 break
             case 'category':
-                navigate(`/categories/${item.id}`)
+                navigate(`/courses?categoryId=${item.id}`)
                 break
             case 'tag':
                 // Navigate to courses page with tag filter
