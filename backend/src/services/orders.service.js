@@ -107,7 +107,7 @@ class OrdersService {
 
         // Apply coupon if provided
         let couponDiscount = 0
-        let appliedCouponId = null
+        let appliedCouponCode = null
 
         if (couponCode) {
             logger.info(`[Coupon] Attempting to apply coupon: ${couponCode}`)
@@ -115,15 +115,12 @@ class OrdersService {
 
             try {
                 // Validate coupon (returns coupon object directly)
+                // Note: This does not increment matches, usesCount or create usage record yet
                 const coupon = await couponService.validateCoupon(
                     couponCode,
                     userId,
                     finalPrice,
                     [courseId],
-                )
-
-                logger.info(
-                    `[Coupon] Validation successful. Coupon ID: ${coupon.id}, Type: ${coupon.type}, Value: ${coupon.value}`,
                 )
 
                 // Calculate discount
@@ -137,12 +134,7 @@ class OrdersService {
                 // Update final price with coupon discount
                 finalPrice = Math.max(0, finalPrice - couponDiscount)
                 discountAmount = discountAmount + couponDiscount
-                appliedCouponId = coupon.id
-
-                logger.info(
-                    `[Coupon] Final price after discount: ${finalPrice}`,
-                )
-                logger.info(`[Coupon] Applied coupon ID: ${appliedCouponId}`)
+                appliedCouponCode = coupon.code
             } catch (error) {
                 // If coupon validation fails, log error but continue order creation without coupon
                 logger.error('[Coupon] Validation error:', error.message)
@@ -210,7 +202,7 @@ class OrdersService {
         // Generate order code
         const orderCode = this.generateOrderCode()
 
-        // Create order with coupon tracking
+        // Create order with coupon tracking (Lazy Increment: no usage record created yet)
         const order = await prisma.$transaction(async (tx) => {
             // Create order
             const newOrder = await tx.order.create({
@@ -224,6 +216,9 @@ class OrdersService {
                     paymentGateway,
                     paymentStatus: PAYMENT_STATUS.PENDING,
                     billingAddress: billingAddress || null,
+                    // ✅ NEW: Save coupon info for lazy increment
+                    appliedCouponCode: appliedCouponCode || null,
+                    couponDiscount: couponDiscount > 0 ? couponDiscount : 0,
                 },
                 include: {
                     course: {
@@ -251,42 +246,6 @@ class OrdersService {
                     },
                 },
             })
-
-            // If coupon was applied, create usage record and update coupon
-            if (appliedCouponId && couponDiscount > 0) {
-                logger.info(
-                    `[Coupon] Creating usage record for coupon ID: ${appliedCouponId}`,
-                )
-                logger.info(
-                    `[Coupon] Order ID: ${newOrder.id}, Discount: ${couponDiscount}`,
-                )
-
-                try {
-                    // CRITICAL: Pass tx context to avoid nested transaction
-                    const usageRecord = await couponService.applyCoupon(
-                        couponCode,
-                        userId,
-                        newOrder.id,
-                        couponDiscount,
-                        tx, // <- Pass transaction context
-                    )
-                    logger.info(
-                        `[Coupon] Usage record created successfully. ID: ${usageRecord.id}`,
-                    )
-                } catch (error) {
-                    logger.error(
-                        '[Coupon] Error applying coupon:',
-                        error.message,
-                    )
-                    logger.error('[Coupon] Stack:', error.stack)
-                    // Don't fail order creation if coupon application fails
-                }
-            } else {
-                logger.info(
-                    `[Coupon] Skipping usage record creation. appliedCouponId: ${appliedCouponId}, couponDiscount: ${couponDiscount}`,
-                )
-            }
-
             return newOrder
         })
 
@@ -295,9 +254,17 @@ class OrdersService {
 
     /**
      * Get user's orders with filters and pagination
-     * @param {number} userId - User ID
-     * @param {Object} filters - Filters object
-     * @returns {Promise<Object>} Orders and total count
+     * @param {string} userId - User ID
+     * @param {object} filters - Filters
+     * @param {number} filters.page - Page number
+     * @param {number} filters.limit - Limit per page
+     * @param {string} filters.paymentStatus - Payment status
+     * @param {string} filters.paymentGateway - Payment gateway
+     * @param {string} filters.startDate - Start date
+     * @param {string} filters.endDate - End date
+     * @param {string} filters.sort - Sort order
+     * @param {string} filters.search - Search query
+     * @returns {Promise<object>} - User's orders
      */
     async getUserOrders(userId, filters = {}) {
         const {
@@ -436,9 +403,9 @@ class OrdersService {
 
     /**
      * Get order by ID
-     * @param {number} orderId - Order ID
-     * @param {number} userId - User ID (for authorization)
-     * @returns {Promise<Object>} Order
+     * @param {string} orderId - Order ID
+     * @param {string} userId - User ID
+     * @returns {Promise<object>} - Order
      */
     async getOrderById(orderId, userId) {
         const order = await prisma.order.findUnique({
@@ -485,8 +452,6 @@ class OrdersService {
             throw error
         }
 
-        // Check if order belongs to user (unless user is admin)
-        // Note: Add admin check if needed
         if (order.userId !== userId) {
             const error = new Error('Không có quyền truy cập vào đơn hàng này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
@@ -499,8 +464,8 @@ class OrdersService {
     /**
      * Get order by order code
      * @param {string} orderCode - Order code
-     * @param {number} userId - User ID (for authorization)
-     * @returns {Promise<Object>} Order
+     * @param {string} userId - User ID
+     * @returns {Promise<object>} - Order
      */
     async getOrderByCode(orderCode, userId) {
         const order = await prisma.order.findUnique({
@@ -547,8 +512,6 @@ class OrdersService {
             throw error
         }
 
-        // Check if order belongs to user (unless user is admin)
-        // Note: Add admin check if needed
         if (order.userId !== userId) {
             const error = new Error('Không có quyền truy cập vào đơn hàng này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
@@ -560,11 +523,10 @@ class OrdersService {
 
     /**
      * Update order payment status to PAID
-     * This method will automatically enroll user in the course when payment is successful
-     * @param {number} orderId - Order ID
-     * @param {string} transactionId - Transaction ID from payment gateway
-     * @param {Object} paymentData - Additional payment data (optional)
-     * @returns {Promise<Object>} Updated order and enrollment
+     * @param {string} orderId - Order ID
+     * @param {string} transactionId - Transaction ID
+     * @param {object} paymentData - Payment data
+     * @returns {Promise<object>} - Updated order
      */
     async updateOrderToPaid(orderId, transactionId = null, paymentData = {}) {
         // Get current order
@@ -576,6 +538,8 @@ class OrdersService {
                 courseId: true,
                 paymentStatus: true,
                 transactionId: true,
+                appliedCouponCode: true,
+                couponDiscount: true,
             },
         })
 
@@ -657,6 +621,28 @@ class OrdersService {
                 },
             })
 
+            // ✅ NEW: Apply coupon only when payment is successful
+            if (
+                updatedOrder.appliedCouponCode &&
+                Number(updatedOrder.couponDiscount) > 0
+            ) {
+                try {
+                    await couponService.applyCouponOnSuccess(
+                        updatedOrder.appliedCouponCode,
+                        updatedOrder.userId,
+                        updatedOrder.id,
+                        Number(updatedOrder.couponDiscount),
+                        tx,
+                    )
+                    logger.info(
+                        `✅ Coupon ${updatedOrder.appliedCouponCode} consumed for order ${updatedOrder.id}`,
+                    )
+                } catch (error) {
+                    logger.error(`Failed to apply coupon on success:`, error)
+                    // Log error but don't fail the payment success flow
+                }
+            }
+
             return updatedOrder
         })
 
@@ -719,10 +705,9 @@ class OrdersService {
 
     /**
      * Cancel order
-     * Only pending orders can be cancelled
-     * @param {number} orderId - Order ID
-     * @param {number} userId - User ID (for ownership verification)
-     * @returns {Promise<object>} Cancelled order
+     * @param {string} orderId - Order ID
+     * @param {string} userId - User ID
+     * @returns {Promise<object>} - Updated order
      */
     async cancelOrder(orderId, userId) {
         // 1. Fetch order với transactions
@@ -781,7 +766,7 @@ class OrdersService {
             throw error
         }
 
-        // 4. Cancel cả Order VÀ tất cả Transactions + Rollback Coupon
+        // 4. Cancel cả Order VÀ tất cả Transactions (NO ROLLBACK NEEDED)
         const result = await prisma.$transaction(async (tx) => {
             // 4.1. Update all PENDING transactions → FAILED
             const updatedTransactionsCount =
@@ -801,40 +786,12 @@ class OrdersService {
                     },
                 })
 
-            // 4.2. Rollback coupon usage (if any)
-            const couponUsages = await tx.couponUsage.findMany({
-                where: { orderId: order.id },
-                include: { coupon: true },
-            })
-
-            if (couponUsages.length > 0) {
-                for (const usage of couponUsages) {
-                    // Decrement coupon usesCount
-                    await tx.coupon.update({
-                        where: { id: usage.couponId },
-                        data: {
-                            usesCount: {
-                                decrement: 1,
-                            },
-                        },
-                    })
-
-                    // Delete usage record
-                    await tx.couponUsage.delete({
-                        where: { id: usage.id },
-                    })
-                }
-            }
-
             // 4.3. Update Order → FAILED
             const cancelledOrder = await tx.order.update({
                 where: { id: orderId },
                 data: {
                     paymentStatus: PAYMENT_STATUS.FAILED,
-                    notes:
-                        couponUsages.length > 0
-                            ? `Cancelled by user. Coupon usage rolled back.`
-                            : 'Cancelled by user',
+                    notes: 'Cancelled by user',
                 },
                 include: {
                     course: {
@@ -843,22 +800,12 @@ class OrdersService {
                             title: true,
                         },
                     },
-                    paymentTransactions: {
-                        where: {
-                            status: TRANSACTION_STATUS.FAILED,
-                        },
-                        orderBy: {
-                            updatedAt: 'desc',
-                        },
-                        take: 5, // Lấy 5 transaction gần nhất
-                    },
                 },
             })
 
             return {
                 order: cancelledOrder,
                 cancelledTransactionsCount: updatedTransactionsCount.count,
-                rolledBackCoupons: couponUsages.length,
             }
         })
 

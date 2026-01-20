@@ -7,6 +7,13 @@ import { applyCouponValidator } from '../validators/coupon.validator.js'
 const router = express.Router()
 
 /**
+ * @route   GET /api/v1/coupons/:code/check
+ * @desc    Quick check if coupon exists and is active
+ * @access  Public
+ */
+router.get('/:code/check', couponController.checkCoupon)
+
+/**
  * @route   POST /api/v1/coupons/apply
  * @desc    Apply coupon code to check validity and calculate discount
  * @access  Private (Authenticated users)

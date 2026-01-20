@@ -1,6 +1,10 @@
 // backend/src/services/coupon.service.js
 import { prisma } from '../config/database.config.js'
-import { COUPON_TYPES, HTTP_STATUS } from '../config/constants.js'
+import {
+    COUPON_TYPES,
+    HTTP_STATUS,
+    PAYMENT_STATUS,
+} from '../config/constants.js'
 
 class CouponService {
     /**
@@ -42,11 +46,34 @@ class CouponService {
             throw error
         }
 
-        // Check global usage limit
-        if (coupon.maxUses && coupon.usesCount >= coupon.maxUses) {
-            const error = new Error('Mã giảm giá đã hết lượt sử dụng')
-            error.statusCode = HTTP_STATUS.BAD_REQUEST
-            throw error
+        if (coupon.maxUses) {
+            // Check completed usages
+            const consumedCount = await prisma.couponUsage.count({
+                where: { couponId: coupon.id },
+            })
+
+            if (consumedCount >= coupon.maxUses) {
+                const error = new Error('Mã giảm giá đã hết lượt sử dụng')
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
+
+            // check pending orders to prevent overselling
+            const pendingCount = await prisma.order.count({
+                where: {
+                    appliedCouponCode: code,
+                    paymentStatus: PAYMENT_STATUS.PENDING,
+                },
+            })
+
+            // Reserve capacity: consumed + pending must be < maxUses
+            if (consumedCount + pendingCount >= coupon.maxUses) {
+                const error = new Error(
+                    'Mã giảm giá tạm thời không khả dụng do có đơn hàng đang chờ xử lý',
+                )
+                error.statusCode = HTTP_STATUS.BAD_REQUEST
+                throw error
+            }
         }
 
         // Check user-specific conditions
@@ -182,7 +209,13 @@ class CouponService {
      * @param {Object} tx - Optional Prisma transaction context
      * @returns {Promise<Object>} Coupon usage record
      */
-    async applyCoupon(code, userId, orderId, discountAmount, tx = null) {
+    async applyCouponOnSuccess(
+        code,
+        userId,
+        orderId,
+        discountAmount,
+        tx = null,
+    ) {
         const executeInTransaction = async (txContext) => {
             // Re-fetch coupon with lock to prevent race conditions
             const coupon = await txContext.coupon.findUnique({

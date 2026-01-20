@@ -283,6 +283,9 @@ model Order {
   transactionId  String?   @unique @map("transaction_id") @db.VarChar(255)
   refundAmount   Decimal   @default(0) @map("refund_amount") @db.Decimal(10, 2)
   refundedAt     DateTime? @map("refunded_at") @db.Timestamptz
+  appliedCouponCode String?  @map("applied_coupon_code") @db.VarChar(50)
+  couponDiscount    Decimal? @map("coupon_discount") @db.Decimal(10, 2)
+
   paidAt         DateTime? @map("paid_at") @db.Timestamptz
   billingAddress Json?     @map("billing_address")
   notes          String?   @db.Text
