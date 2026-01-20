@@ -179,12 +179,13 @@ class CouponService {
      * @param {number} userId - User ID
      * @param {number} orderId - Order ID
      * @param {number} discountAmount - Calculated discount amount
+     * @param {Object} tx - Optional Prisma transaction context
      * @returns {Promise<Object>} Coupon usage record
      */
-    async applyCoupon(code, userId, orderId, discountAmount) {
-        return prisma.$transaction(async (tx) => {
+    async applyCoupon(code, userId, orderId, discountAmount, tx = null) {
+        const executeInTransaction = async (txContext) => {
             // Re-fetch coupon with lock to prevent race conditions
-            const coupon = await tx.coupon.findUnique({
+            const coupon = await txContext.coupon.findUnique({
                 where: { code },
             })
 
@@ -203,7 +204,7 @@ class CouponService {
 
             // Re-check user limit
             if (coupon.maxUsesPerUser) {
-                const userUsageCount = await tx.couponUsage.count({
+                const userUsageCount = await txContext.couponUsage.count({
                     where: {
                         couponId: coupon.id,
                         userId: userId,
@@ -219,7 +220,7 @@ class CouponService {
             }
 
             // Increment usage count
-            await tx.coupon.update({
+            await txContext.coupon.update({
                 where: { id: coupon.id },
                 data: {
                     usesCount: { increment: 1 },
@@ -227,7 +228,7 @@ class CouponService {
             })
 
             // Create usage record
-            const usage = await tx.couponUsage.create({
+            const usage = await txContext.couponUsage.create({
                 data: {
                     couponId: coupon.id,
                     userId: userId,
@@ -237,7 +238,14 @@ class CouponService {
             })
 
             return usage
-        })
+        }
+
+        // If transaction context provided, use it; otherwise create new transaction
+        if (tx) {
+            return executeInTransaction(tx)
+        } else {
+            return prisma.$transaction(executeInTransaction)
+        }
     }
 
     /**

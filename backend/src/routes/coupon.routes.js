@@ -6,14 +6,16 @@ import { applyCouponValidator } from '../validators/coupon.validator.js'
 
 const router = express.Router()
 
-// All routes require authentication
-router.use(authenticate)
-
 /**
  * @route   POST /api/v1/coupons/apply
  * @desc    Apply coupon code to check validity and calculate discount
  * @access  Private (Authenticated users)
  */
-router.post('/apply', applyCouponValidator, couponController.applyCoupon)
+router.post(
+    '/apply',
+    authenticate,
+    applyCouponValidator,
+    couponController.applyCoupon,
+)
 
 export default router

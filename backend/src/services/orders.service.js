@@ -11,6 +11,7 @@ import {
 import notificationsService from './notifications.service.js'
 import emailService from './email.service.js'
 import couponService from './coupon.service.js'
+import logger from '../config/logger.config.js'
 
 class OrdersService {
     /**
@@ -109,6 +110,9 @@ class OrdersService {
         let appliedCouponId = null
 
         if (couponCode) {
+            logger.info(`[Coupon] Attempting to apply coupon: ${couponCode}`)
+            logger.info(`[Coupon] Order total before coupon: ${finalPrice}`)
+
             try {
                 // Validate coupon (returns coupon object directly)
                 const coupon = await couponService.validateCoupon(
@@ -118,19 +122,31 @@ class OrdersService {
                     [courseId],
                 )
 
+                logger.info(
+                    `[Coupon] Validation successful. Coupon ID: ${coupon.id}, Type: ${coupon.type}, Value: ${coupon.value}`,
+                )
+
                 // Calculate discount
                 couponDiscount = couponService.calculateDiscount(
                     coupon,
                     finalPrice,
                 )
 
+                logger.info(`[Coupon] Calculated discount: ${couponDiscount}`)
+
                 // Update final price with coupon discount
                 finalPrice = Math.max(0, finalPrice - couponDiscount)
                 discountAmount = discountAmount + couponDiscount
                 appliedCouponId = coupon.id
+
+                logger.info(
+                    `[Coupon] Final price after discount: ${finalPrice}`,
+                )
+                logger.info(`[Coupon] Applied coupon ID: ${appliedCouponId}`)
             } catch (error) {
                 // If coupon validation fails, log error but continue order creation without coupon
-                console.error('Coupon validation error:', error.message)
+                logger.error('[Coupon] Validation error:', error.message)
+                logger.error('[Coupon] Stack:', error.stack)
                 // Don't throw error, just proceed without coupon
             }
         }
@@ -238,17 +254,37 @@ class OrdersService {
 
             // If coupon was applied, create usage record and update coupon
             if (appliedCouponId && couponDiscount > 0) {
+                logger.info(
+                    `[Coupon] Creating usage record for coupon ID: ${appliedCouponId}`,
+                )
+                logger.info(
+                    `[Coupon] Order ID: ${newOrder.id}, Discount: ${couponDiscount}`,
+                )
+
                 try {
-                    await couponService.applyCoupon(
+                    // CRITICAL: Pass tx context to avoid nested transaction
+                    const usageRecord = await couponService.applyCoupon(
                         couponCode,
                         userId,
                         newOrder.id,
                         couponDiscount,
+                        tx, // <- Pass transaction context
+                    )
+                    logger.info(
+                        `[Coupon] Usage record created successfully. ID: ${usageRecord.id}`,
                     )
                 } catch (error) {
-                    console.error('Error applying coupon:', error.message)
+                    logger.error(
+                        '[Coupon] Error applying coupon:',
+                        error.message,
+                    )
+                    logger.error('[Coupon] Stack:', error.stack)
                     // Don't fail order creation if coupon application fails
                 }
+            } else {
+                logger.info(
+                    `[Coupon] Skipping usage record creation. appliedCouponId: ${appliedCouponId}, couponDiscount: ${couponDiscount}`,
+                )
             }
 
             return newOrder
@@ -745,7 +781,7 @@ class OrdersService {
             throw error
         }
 
-        // 4. Cancel cả Order VÀ tất cả Transactions
+        // 4. Cancel cả Order VÀ tất cả Transactions + Rollback Coupon
         const result = await prisma.$transaction(async (tx) => {
             // 4.1. Update all PENDING transactions → FAILED
             const updatedTransactionsCount =
@@ -765,12 +801,40 @@ class OrdersService {
                     },
                 })
 
-            // 4.2. Update Order → FAILED
+            // 4.2. Rollback coupon usage (if any)
+            const couponUsages = await tx.couponUsage.findMany({
+                where: { orderId: order.id },
+                include: { coupon: true },
+            })
+
+            if (couponUsages.length > 0) {
+                for (const usage of couponUsages) {
+                    // Decrement coupon usesCount
+                    await tx.coupon.update({
+                        where: { id: usage.couponId },
+                        data: {
+                            usesCount: {
+                                decrement: 1,
+                            },
+                        },
+                    })
+
+                    // Delete usage record
+                    await tx.couponUsage.delete({
+                        where: { id: usage.id },
+                    })
+                }
+            }
+
+            // 4.3. Update Order → FAILED
             const cancelledOrder = await tx.order.update({
                 where: { id: orderId },
                 data: {
                     paymentStatus: PAYMENT_STATUS.FAILED,
-                    notes: 'Cancelled by user',
+                    notes:
+                        couponUsages.length > 0
+                            ? `Cancelled by user. Coupon usage rolled back.`
+                            : 'Cancelled by user',
                 },
                 include: {
                     course: {
@@ -794,6 +858,7 @@ class OrdersService {
             return {
                 order: cancelledOrder,
                 cancelledTransactionsCount: updatedTransactionsCount.count,
+                rolledBackCoupons: couponUsages.length,
             }
         })
 
