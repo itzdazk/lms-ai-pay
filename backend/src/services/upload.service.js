@@ -204,11 +204,14 @@ class UploadService {
         try {
             // Tìm file trong các thư mục upload
             const uploadDirs = [
-                path.join(__dirname, '../../uploads/avatars'),
-                path.join(__dirname, '../../uploads/videos'),
-                path.join(__dirname, '../../uploads/transcripts'),
-                path.join(__dirname, '../../uploads/thumbnails'),
-                path.join(__dirname, '../../uploads/video-previews'),
+                path.join(__dirname, '../../uploads/shared/avatars'),
+                path.join(__dirname, '../../uploads/shared/thumbnails'),
+                path.join(__dirname, '../../uploads/shared/system'),
+                path.join(__dirname, '../../uploads/shared/categories'),
+                path.join(__dirname, '../../uploads/videos'), // Legacy
+                path.join(__dirname, '../../uploads/transcripts'), // Legacy
+                path.join(__dirname, '../../uploads/thumbnails'), // Legacy
+                path.join(__dirname, '../../uploads/video-previews'), // Legacy
             ]
 
             let filePath = null
@@ -411,9 +414,10 @@ class UploadService {
      */
     _getUploadFolder(type, category) {
         if (category === 'image') {
-            if (type === UPLOAD_TYPES.IMAGE.AVATAR) return 'avatars'
-            if (type === UPLOAD_TYPES.IMAGE.THUMBNAIL) return 'thumbnails'
-            return 'thumbnails' // general images go to thumbnails
+            if (type === UPLOAD_TYPES.IMAGE.AVATAR) return 'shared/avatars'
+            if (type === UPLOAD_TYPES.IMAGE.THUMBNAIL) return 'shared/thumbnails'
+            if (type === UPLOAD_TYPES.IMAGE.SYSTEM) return 'shared/system'
+            return 'shared/thumbnails' // general images go to thumbnails
         }
 
         if (category === 'video') {

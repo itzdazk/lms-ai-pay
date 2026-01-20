@@ -46,6 +46,7 @@ app.use(
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
+        exposedHeaders: ['Content-Type', 'Content-Length'],
     })
 )
 
@@ -181,7 +182,16 @@ app.get('/favicon.ico', (req, res) => {
 // Serve static files (uploads)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+app.use(
+    '/uploads',
+    express.static(path.join(__dirname, '../uploads'), {
+        setHeaders: (res, filePath) => {
+            res.set('Access-Control-Allow-Origin', '*')
+            res.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            res.set('Access-Control-Allow-Headers', 'Content-Type')
+        },
+    })
+)
 
 // API routes
 app.use(`/api/${config.API_VERSION}`, routes)

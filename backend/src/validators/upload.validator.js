@@ -16,6 +16,7 @@ const uploadFileValidator = [
         .isIn([
             UPLOAD_TYPES.IMAGE.AVATAR,
             UPLOAD_TYPES.IMAGE.THUMBNAIL,
+            UPLOAD_TYPES.IMAGE.SYSTEM,
             UPLOAD_TYPES.IMAGE.GENERAL,
             UPLOAD_TYPES.VIDEO.LESSON,
             UPLOAD_TYPES.VIDEO.PREVIEW,

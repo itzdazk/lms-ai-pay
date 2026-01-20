@@ -46,6 +46,7 @@ import { AIMonitoringPage } from './admin/AIMonitoringPage'
 import { RevenueStatsPage } from './admin/RevenueStatsPage'
 import { InstructorsRevenuePage } from './admin/InstructorsRevenuePage'
 import { CoursesRevenuePage } from './admin/CoursesRevenuePage'
+import { SystemConfigPage } from './admin/SystemConfigPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
@@ -68,6 +69,8 @@ import {
 import { Badge } from '../components/ui/badge'
 import { NotificationBell } from '../components/Notifications/NotificationBell'
 import { RefundsPage } from './admin/RefundsPage'
+import { getPublicSystemConfig } from '../lib/api/system-config'
+import { getAbsoluteUrl } from '../lib/api/client'
 
 function formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -232,6 +235,11 @@ export function AdminDashboard() {
         useState<AdminSection>('dashboard')
     const [sectionLoading, setSectionLoading] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(true)
+    const [systemConfig, setSystemConfig] = useState<{
+        name: string
+        logo: string | null
+    } | null>(null)
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true)
 
     // Load expanded groups from localStorage on mount
     const loadExpandedGroups = (): Set<string> => {
@@ -270,6 +278,32 @@ export function AdminDashboard() {
             )
         }
     }, [expandedGroups])
+
+    // Load system config
+    useEffect(() => {
+        const loadSystemConfig = async () => {
+            try {
+                setIsLoadingConfig(true)
+                const config = await getPublicSystemConfig()
+                if (config.system) {
+                    setSystemConfig({
+                        name: config.system.name,
+                        logo: config.system.logo,
+                    })
+                }
+            } catch (error) {
+                console.error('Failed to load system config:', error)
+                // Fallback to default only on API error
+                setSystemConfig({
+                    name: 'EduLearn',
+                    logo: null,
+                })
+            } finally {
+                setIsLoadingConfig(false)
+            }
+        }
+        loadSystemConfig()
+    }, [])
 
     // Check if user is admin
     useEffect(() => {
@@ -363,7 +397,11 @@ export function AdminDashboard() {
             case 'tags':
                 return <TagsManagement />
             case 'settings':
-                return <SettingsView />
+                return (
+                    <div className='h-full'>
+                        <SystemConfigPage />
+                    </div>
+                )
             case 'ai-monitoring':
                 return <AIMonitoringPage />
             case 'revenue-stats':
@@ -414,17 +452,35 @@ export function AdminDashboard() {
                 {/* Sidebar Header */}
                 <div className='p-4 border-b border-[#2D2D2D] flex items-center justify-between'>
                     <div className='flex items-center gap-2'>
-                        <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
-                            <BookOpen className='h-6 w-6 text-white' />
-                        </div>
-                        <div className='flex flex-col'>
-                            <span className='text-xl font-semibold text-white'>
-                                EduLearn
-                            </span>
-                            <span className='text-xs text-gray-400'>
-                                Admin Panel
-                            </span>
-                        </div>
+                        {!isLoadingConfig && systemConfig?.logo ? (
+                            <img
+                                src={getAbsoluteUrl(systemConfig.logo)}
+                                alt={systemConfig.name || 'Logo'}
+                                className='h-10 w-10 object-contain rounded-lg'
+                                onError={(e) => {
+                                    console.error(
+                                        'Failed to load logo image:',
+                                        systemConfig.logo,
+                                    )
+                                    const target = e.target as HTMLImageElement
+                                    target.style.display = 'none'
+                                }}
+                            />
+                        ) : (
+                            <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
+                                <BookOpen className='h-6 w-6 text-white' />
+                            </div>
+                        )}
+                        {!isLoadingConfig && (
+                            <div className='flex flex-col'>
+                                <span className='text-xl font-semibold text-white'>
+                                    {systemConfig?.name ?? 'EduLearn'}
+                                </span>
+                                <span className='text-xs text-gray-400'>
+                                    Admin Panel
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <Button
                         variant='ghost'
@@ -674,7 +730,7 @@ export function AdminDashboard() {
                                     <div className='flex items-center'>
                                         <LayoutDashboard className='mr-2 h-4 w-4' />
                                         <span className='font-medium'>
-                                            Dashboard
+                                            Bảng điều khiển
                                         </span>
                                     </div>
                                 </DropdownMenuLabel>
@@ -723,7 +779,7 @@ export function AdminDashboard() {
                                         className='flex items-center'
                                     >
                                         <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                        Đơn hàng của tôi
+                                        Đơn hàng
                                     </Link>
                                 </DropdownMenuItem>
 

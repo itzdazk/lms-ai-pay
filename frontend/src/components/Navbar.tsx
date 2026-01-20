@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/button'
 import { DarkOutlineButton } from './ui/buttons'
@@ -40,13 +40,48 @@ import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'sonner'
 import { NotificationBell } from './Notifications/NotificationBell'
 import { SearchBar } from './Search/SearchBar'
+import { getPublicSystemConfig } from '../lib/api/system-config'
+import { getAbsoluteUrl } from '../lib/api/client'
 
 export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isLoggingOut, setIsLoggingOut] = useState(false)
+    const [systemConfig, setSystemConfig] = useState<{
+        name: string
+        logo: string | null
+    } | null>(null)
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true)
 
     const { theme, toggleTheme } = useTheme()
     const { user, logout, isAuthenticated } = useAuth()
+
+    // Load system config
+    useEffect(() => {
+        const loadSystemConfig = async () => {
+            try {
+                setIsLoadingConfig(true)
+                const config = await getPublicSystemConfig()
+                if (config.system) {
+                    console.log('System config loaded:', config.system)
+                    console.log('Logo URL:', config.system.logo)
+                    setSystemConfig({
+                        name: config.system.name,
+                        logo: config.system.logo,
+                    })
+                }
+            } catch (error) {
+                console.error('Failed to load system config:', error)
+                // Fallback to default only on API error
+                setSystemConfig({
+                    name: 'EduLearn',
+                    logo: null,
+                })
+            } finally {
+                setIsLoadingConfig(false)
+            }
+        }
+        loadSystemConfig()
+    }, [])
 
     const handleLogout = async () => {
         if (isLoggingOut) return
@@ -109,7 +144,7 @@ export function Navbar() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -167,7 +202,7 @@ export function Navbar() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
@@ -191,7 +226,7 @@ export function Navbar() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -225,14 +260,14 @@ export function Navbar() {
                             Giảng viên
                         </Link>
 
-                        {/* Đơn hàng của tôi */}
+                        {/* Đơn hàng */}
                         <Link
                             to='/orders'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <ReceiptText className='h-5 w-5 text-gray-300' />
-                            Đơn hàng của tôi
+                            Đơn hàng
                         </Link>
                     </>
                 )
@@ -270,14 +305,14 @@ export function Navbar() {
                             Học viên
                         </Link>
 
-                        {/* Đơn hàng của tôi */}
+                        {/* Đơn hàng */}
                         <Link
                             to='/orders'
                             className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#1F1F1F] hover:text-white transition-colors'
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <ReceiptText className='h-5 w-5 text-gray-300' />
-                            Đơn hàng của tôi
+                            Đơn hàng
                         </Link>
                     </>
                 )
@@ -298,7 +333,7 @@ export function Navbar() {
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             <ReceiptText className='h-5 w-5 text-gray-300' />
-                            Đơn hàng của tôi
+                            Đơn hàng
                         </Link>
                     </>
                 )
@@ -310,12 +345,30 @@ export function Navbar() {
             <div className='container mx-auto flex h-16 items-center justify-between px-4'>
                 {/* Logo */}
                 <Link to='/' className='flex items-center gap-2'>
-                    <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
-                        <BookOpen className='h-6 w-6 text-white' />
-                    </div>
-                    <span className='text-xl font-semibold text-white'>
-                        EduLearn
-                    </span>
+                    {systemConfig?.logo ? (
+                        <img
+                            src={getAbsoluteUrl(systemConfig.logo)}
+                            alt={systemConfig.name || 'Logo'}
+                            className='h-10 w-10 object-contain rounded-lg'
+                            onError={(e) => {
+                                console.error('Failed to load logo image:', systemConfig.logo)
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                            }}
+                            onLoad={() => {
+                                console.log('Logo image loaded successfully:', systemConfig.logo)
+                            }}
+                        />
+                    ) : (
+                        <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/30'>
+                            <BookOpen className='h-6 w-6 text-white' />
+                        </div>
+                    )}
+                    {!isLoadingConfig && (
+                        <span className='text-xl font-semibold text-white'>
+                            {systemConfig?.name ?? 'EduLearn'}
+                        </span>
+                    )}
                 </Link>
 
                 {/* Navigation Links - Desktop */}
@@ -504,7 +557,7 @@ export function Navbar() {
                                         className='flex items-center'
                                     >
                                         <UserRoundCog className='mr-2 h-4 w-4 text-gray-300' />
-                                        Thông tin của tôi
+                                        Hồ sơ
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -660,7 +713,7 @@ export function Navbar() {
                                                     setIsMobileMenuOpen(false)
                                                 }
                                             >
-                                                Thông tin của tôi
+                                                Hồ sơ
                                             </Link>
                                             <Link
                                                 to='/settings'

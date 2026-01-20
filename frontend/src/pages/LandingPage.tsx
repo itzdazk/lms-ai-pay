@@ -4,28 +4,20 @@ import { Button } from '../components/ui/button'
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
 } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import {
-    Star,
-    Users,
-    BookOpen,
-    Clock,
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react'
 import Slider from 'react-slick'
-import { mockCourses, formatPrice, formatDuration } from '../lib/mockData'
 import { categoriesApi } from '../lib/api/categories'
 import type { Category } from '../lib/api/types'
 import { useTheme } from '../contexts/ThemeContext'
 import { AdvisorCard } from '../components/AI/AdvisorCard'
+import { FeaturedCoursesSection } from '../components/Courses'
 import { CONTACT_INFO } from '../lib/constants'
+import { getPublicSystemConfig } from '../lib/api/system-config'
+import { getAbsoluteUrl } from '../lib/api/client'
 import { Mail } from 'lucide-react'
 
 // Custom Arrow Components
@@ -94,9 +86,40 @@ function PrevArrow(props: any) {
 export function LandingPage() {
     const [categories, setCategories] = useState<Category[]>([])
     const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+    const [landingConfig, setLandingConfig] = useState<{
+        heroTitle: string
+        heroDescription: string
+        heroBackgroundImage: string
+        categoriesTitle: string
+        categoriesDescription: string
+    } | null>(null)
+    const [contactInfo, setContactInfo] = useState(CONTACT_INFO)
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true)
 
     useEffect(() => {
-        const fetchCategories = async () => {
+        const fetchData = async () => {
+            try {
+                setIsLoadingConfig(true)
+                // Load landing config and contact info
+                const publicConfig = await getPublicSystemConfig()
+                console.log('📥 Public config received:', publicConfig)
+                console.log('📥 Landing config:', publicConfig.landing)
+                if (publicConfig.landing) {
+                    console.log('✅ Setting landing config:', publicConfig.landing)
+                    setLandingConfig(publicConfig.landing)
+                } else {
+                    console.warn('⚠️ No landing config in response')
+                }
+                if (publicConfig.contact) {
+                    setContactInfo(publicConfig.contact as any)
+                }
+            } catch (error) {
+                console.error('❌ Failed to load system config:', error)
+                // Use defaults from constants
+            } finally {
+                setIsLoadingConfig(false)
+            }
+
             try {
                 setIsLoadingCategories(true)
                 const response = await categoriesApi.getCategories({
@@ -116,7 +139,7 @@ export function LandingPage() {
             }
         }
 
-        fetchCategories()
+        fetchData()
     }, [])
     return (
         <div className='flex flex-col bg-background text-foreground'>
@@ -126,24 +149,27 @@ export function LandingPage() {
                 <div
                     className='absolute inset-0 bg-cover bg-center bg-no-repeat'
                     style={{
-                        backgroundImage:
-                            "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80')",
+                        backgroundImage: landingConfig?.heroBackgroundImage
+                            ? `url('${getAbsoluteUrl(landingConfig.heroBackgroundImage)}')`
+                            : "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80')",
                     }}
                 ></div>
                 <div className='absolute inset-0 bg-background/50 backdrop-blur-sm'></div>
 
-                <div className='container mx-auto px-4 py-20 md:py-32 relative z-10'>
+                <div className='container mx-auto px-4 py-12 sm:py-16 md:py-24 lg:py-32 relative z-10'>
                     <div className='max-w-3xl'>
-                        <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-foreground drop-shadow-lg'>
-                            Học tập thông minh với AI
-                        </h1>
-                        <p className='text-lg md:text-xl text-muted-foreground mb-8 drop-shadow-md'>
-                            Nền tảng học tập trực tuyến tích hợp AI, giúp bạn
-                            phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa
-                            học chất lượng cao.
-                        </p>
+                        {!isLoadingConfig && (
+                            <>
+                                <h1 className='text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 text-foreground drop-shadow-lg leading-tight'>
+                                    {landingConfig?.heroTitle ?? 'Học tập thông minh với AI'}
+                                </h1>
+                                <p className='text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 drop-shadow-md'>
+                                    {landingConfig?.heroDescription ?? 'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp với hơn 1000+ khóa học chất lượng cao.'}
+                                </p>
+                            </>
+                        )}
                         <div className='flex flex-col gap-4'>
-                            <div className='flex flex-col sm:flex-row gap-4 items-center'>
+                            <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center'>
                                 <Button
                                     size='lg'
                                     className='bg-black text-white hover:bg-gray-900'
@@ -160,19 +186,19 @@ export function LandingPage() {
                                     <Link to='/register'>Đăng ký miễn phí</Link>
                                 </Button>
                             </div>
-                            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                            <div className='flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground'>
                                 <Mail className='h-4 w-4' />
                                 <span>Cần hỗ trợ? Liên hệ:</span>
                                 <a
-                                    href={`mailto:${CONTACT_INFO.email}`}
+                                    href={`mailto:${contactInfo.email}`}
                                     onClick={(e) => {
                                         e.preventDefault()
                                         e.stopPropagation()
-                                        window.location.href = `mailto:${CONTACT_INFO.email}`
+                                        window.location.href = `mailto:${contactInfo.email}`
                                     }}
                                     className='text-blue-500 hover:text-blue-400 underline font-medium'
                                 >
-                                    {CONTACT_INFO.email}
+                                    {contactInfo.email}
                                 </a>
                             </div>
                         </div>
@@ -181,17 +207,22 @@ export function LandingPage() {
             </section>
 
             {/* Featured Courses Section */}
-            <section className='py-12 bg-background'>
+            <FeaturedCoursesSection />
+
+            {/* Categories Section */}
+            <section className='py-8 sm:py-12 bg-background'>
                 <div className='container mx-auto px-4'>
-                    <div className='flex items-center justify-between mb-12'>
-                        <div>
-                            <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
-                                Khóa học nổi bật
-                            </h2>
-                            <p className='text-lg text-muted-foreground'>
-                                Những khóa học được yêu thích nhất
-                            </p>
-                        </div>
+                    <div className='flex flex-col items-center justify-center mb-8 sm:mb-12 text-center'>
+                        {!isLoadingConfig && (
+                            <>
+                                <h2 className='text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4 text-foreground'>
+                                    {landingConfig?.categoriesTitle ?? 'Khám phá theo danh mục'}
+                                </h2>
+                                <p className='text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 sm:mb-6'>
+                                    {landingConfig?.categoriesDescription ?? 'Tìm khóa học phù hợp với sở thích và mục tiêu của bạn'}
+                                </p>
+                            </>
+                        )}
                         <Button
                             variant='outline'
                             asChild
@@ -199,158 +230,6 @@ export function LandingPage() {
                         >
                             <Link to='/courses'>Xem tất cả</Link>
                         </Button>
-                    </div>
-                    <div className='grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-                        {mockCourses
-                            .filter((course) => course.featured)
-                            .slice(0, 4)
-                            .map((course) => (
-                                <Card
-                                    key={course.id}
-                                    className='overflow-hidden hover:shadow-lg transition-shadow flex flex-col bg-[#1A1A1A] border-[#2D2D2D]'
-                                >
-                                    <Link to={`/courses/${course.id}`}>
-                                        <div className='relative aspect-video overflow-hidden rounded-t-lg'>
-                                            <img
-                                                src={course.thumbnail}
-                                                alt={course.title}
-                                                className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
-                                            />
-                                            <Badge className='absolute top-3 left-3 bg-blue-600'>
-                                                {course.level === 'beginner' &&
-                                                    'Cơ bản'}
-                                                {course.level ===
-                                                    'intermediate' &&
-                                                    'Trung cấp'}
-                                                {course.level === 'advanced' &&
-                                                    'Nâng cao'}
-                                            </Badge>
-                                            {course.featured && (
-                                                <Badge className='absolute top-3 right-3 bg-yellow-500'>
-                                                    ⭐ Nổi bật
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </Link>
-
-                                    <CardHeader className='flex-1'>
-                                        <div className='flex items-center gap-2 mb-2'>
-                                            <Avatar className='h-8 w-8'>
-                                                <AvatarImage
-                                                    src={
-                                                        course.instructor_avatar
-                                                    }
-                                                />
-                                                <AvatarFallback>
-                                                    {course.instructor_name[0]}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className='text-sm text-gray-400'>
-                                                {course.instructor_name}
-                                            </span>
-                                        </div>
-                                        <CardTitle className='line-clamp-2 hover:text-primary transition-colors text-white'>
-                                            <Link to={`/courses/${course.id}`}>
-                                                {course.title}
-                                            </Link>
-                                        </CardTitle>
-                                        <CardDescription className='line-clamp-2 text-gray-400'>
-                                            {course.description}
-                                        </CardDescription>
-                                    </CardHeader>
-
-                                    <CardContent>
-                                        <div className='flex items-center gap-4 text-sm text-gray-400 mb-3'>
-                                            <div className='flex items-center gap-1'>
-                                                <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
-                                                <span>{course.rating_avg}</span>
-                                                <span className='text-gray-400'>
-                                                    ({course.rating_count})
-                                                </span>
-                                            </div>
-                                            <div className='flex items-center gap-1'>
-                                                <Users className='h-4 w-4 text-gray-400' />
-                                                <span>
-                                                    {course.enrolled_count.toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className='flex items-center justify-between text-sm text-gray-400'>
-                                            <div className='flex items-center gap-1'>
-                                                <BookOpen className='h-4 w-4 text-gray-400' />
-                                                <span>
-                                                    {course.lessons_count} bài
-                                                </span>
-                                            </div>
-                                            <div className='flex items-center gap-1'>
-                                                <Clock className='h-4 w-4 text-gray-400' />
-                                                <span>
-                                                    {formatDuration(
-                                                        course.duration_minutes
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-
-                                    <CardFooter className='border-t border-[#2D2D2D] pt-4'>
-                                        <div className='flex items-center justify-between w-full'>
-                                            {course.is_free ? (
-                                                <span className='text-2xl text-green-500'>
-                                                    Miễn phí
-                                                </span>
-                                            ) : (
-                                                <div>
-                                                    {course.discount_price ? (
-                                                        <div className='flex items-center gap-2'>
-                                                            <span className='text-2xl text-blue-500'>
-                                                                {formatPrice(
-                                                                    course.discount_price
-                                                                )}
-                                                            </span>
-                                                            <span className='text-sm text-gray-500 line-through'>
-                                                                {formatPrice(
-                                                                    course.original_price
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className='text-2xl text-blue-500'>
-                                                            {formatPrice(
-                                                                course.original_price
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardFooter>
-                                </Card>
-                            ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Categories Section */}
-            <section className='py-12 bg-background'>
-                <div className='container mx-auto px-4'>
-                    <div className='flex items-center justify-between mb-12'>
-                        <div className='text-center flex-1'>
-                            <h2 className='text-3xl md:text-4xl mb-4 text-foreground'>
-                                Khám phá theo danh mục
-                            </h2>
-                            <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
-                                Tìm khóa học phù hợp với sở thích và mục tiêu
-                                của bạn
-                            </p>
-                            <Button
-                                variant='outline'
-                                asChild
-                                className='border-border text-foreground hover:bg-accent mt-2'
-                            >
-                                <Link to='/categories'>Xem tất cả</Link>
-                            </Button>
-                        </div>
                     </div>
                     {isLoadingCategories ? (
                         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4'>
@@ -369,7 +248,7 @@ export function LandingPage() {
                             ))}
                         </div>
                     ) : categories.length > 0 ? (
-                        <div className='relative px-2 md:px-4'>
+                        <div className='relative px-1 sm:px-2 md:px-4'>
                             <Slider
                                 dots={false}
                                 infinite={false}
@@ -380,14 +259,28 @@ export function LandingPage() {
                                 prevArrow={<PrevArrow />}
                                 responsive={[
                                     {
-                                        breakpoint: 1024, // Tablet
+                                        breakpoint: 1280, // xl
                                         settings: {
-                                            slidesToShow: 3,
+                                            slidesToShow: 5,
                                             slidesToScroll: 1,
                                         },
                                     },
                                     {
-                                        breakpoint: 768, // Mobile
+                                        breakpoint: 1024, // lg
+                                        settings: {
+                                            slidesToShow: 4,
+                                            slidesToScroll: 1,
+                                        },
+                                    },
+                                    {
+                                        breakpoint: 768, // md
+                                        settings: {
+                                            slidesToShow: 2,
+                                            slidesToScroll: 1,
+                                        },
+                                    },
+                                    {
+                                        breakpoint: 640, // sm
                                         settings: {
                                             slidesToShow: 1,
                                             slidesToScroll: 1,
@@ -398,10 +291,10 @@ export function LandingPage() {
                                 {categories.map((category) => (
                                     <div
                                         key={category.id}
-                                        className='px-3 min-w-0'
+                                        className='px-2 sm:px-3 min-w-0'
                                     >
                                         <Link
-                                            to={`/categories/${category.id}`}
+                                            to={`/courses?categoryId=${category.id}`}
                                             className='group block h-full'
                                         >
                                             <Card className='bg-[#1A1A1A] border-[#2D2D2D] hover:border-primary transition-all duration-300 cursor-pointer h-full overflow-hidden hover:shadow-lg hover:shadow-primary/20 flex flex-col'>
@@ -421,14 +314,14 @@ export function LandingPage() {
                                                     </div>
 
                                                     {/* Content */}
-                                                    <div className='p-6 text-center flex-1 flex flex-col justify-center min-h-[100px] overflow-hidden min-w-0'>
+                                                    <div className='p-4 sm:p-6 text-center flex-1 flex flex-col justify-center min-h-[100px] overflow-hidden min-w-0'>
                                                         {/* Category Name */}
-                                                        <h3 className='text-white group-hover:text-primary transition-colors duration-300 mb-2 line-clamp-1'>
+                                                        <h3 className='text-sm sm:text-base text-white group-hover:text-primary transition-colors duration-300 mb-2 line-clamp-1'>
                                                             {category.name}
                                                         </h3>
 
                                                         {/* Description */}
-                                                        <p className='text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem]'>
+                                                        <p className='text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem]'>
                                                             {
                                                                 category.description
                                                             }

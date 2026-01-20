@@ -1147,7 +1147,7 @@ export function LessonPage() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                     </>
@@ -1205,7 +1205,7 @@ export function LessonPage() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className='bg-[#2D2D2D] my-1' />
@@ -1229,7 +1229,7 @@ export function LessonPage() {
                         >
                             <Link to='/orders' className='flex items-center'>
                                 <ReceiptText className='mr-2 h-4 w-4 text-gray-300' />
-                                Đơn hàng của tôi
+                                Đơn hàng
                             </Link>
                         </DropdownMenuItem>
                     </>

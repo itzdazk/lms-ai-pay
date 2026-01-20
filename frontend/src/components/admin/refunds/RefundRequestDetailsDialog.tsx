@@ -22,7 +22,6 @@ import {
     XCircle,
     RefreshCw,
     Loader2,
-    AlertCircle,
     TrendingUp,
 } from 'lucide-react'
 
@@ -145,7 +144,7 @@ export function RefundRequestDetailsDialog({
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent
                     wide
-                    className='bg-[#1A1A1A] border-[#2D2D2D] text-white !max-w-[30vw] !w-[30vw] max-h-[90vh] overflow-y-auto overflow-x-hidden'
+                    className='bg-[#1A1A1A] border-[#2D2D2D] text-white !max-w-[90vw] !w-[90vw] max-h-[90vh] overflow-y-auto overflow-x-hidden scrollbar-custom'
                 >
                     <DialogHeader>
                         <DialogTitle className='text-xl font-semibold'>

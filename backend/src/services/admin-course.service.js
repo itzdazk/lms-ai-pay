@@ -257,16 +257,21 @@ class AdminCourseService {
             throw error
         }
 
-        // Update featured status
+        // Update featured status and featuredAt timestamp
+        const updateData = { 
+            isFeatured,
+            featuredAt: isFeatured ? new Date() : null
+        }
         const updatedCourse = await prisma.course.update({
             where: { id: courseId },
-            data: { isFeatured },
+            data: updateData,
             select: {
                 id: true,
                 title: true,
                 slug: true,
                 status: true,
                 isFeatured: true,
+                featuredAt: true,
                 updatedAt: true,
                 instructor: {
                     select: {

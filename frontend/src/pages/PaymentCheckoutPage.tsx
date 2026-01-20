@@ -23,6 +23,7 @@ import { getCoursePrice } from '../lib/courseUtils'
 import { OrderSummary } from '../components/Payment/OrderSummary'
 import { useCreateOrder } from '../hooks/useOrders'
 import { paymentsApi } from '../lib/api/payments'
+import { LegalDialogs } from '../components/LegalDialogs'
 
 export function PaymentCheckoutPage() {
     const { slug } = useParams<{ slug: string }>()
@@ -33,6 +34,8 @@ export function PaymentCheckoutPage() {
     )
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
+    const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
+    const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
     const [finalPrice, setFinalPrice] = useState<number | null>(null)
     const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
         null,
@@ -433,19 +436,25 @@ export function PaymentCheckoutPage() {
                                         className='text-sm leading-relaxed cursor-pointer text-gray-300'
                                     >
                                         Tôi đồng ý với{' '}
-                                        <Link
-                                            to='/terms'
-                                            className='text-blue-500 hover:underline'
+                                        <button
+                                            type='button'
+                                            onClick={() =>
+                                                setIsTermsDialogOpen(true)
+                                            }
+                                            className='text-blue-600 hover:underline cursor-pointer'
                                         >
                                             Điều khoản sử dụng
-                                        </Link>{' '}
+                                        </button>{' '}
                                         và{' '}
-                                        <Link
-                                            to='/privacy'
-                                            className='text-blue-500 hover:underline'
+                                        <button
+                                            type='button'
+                                            onClick={() =>
+                                                setIsPrivacyDialogOpen(true)
+                                            }
+                                            className='text-blue-600 hover:underline cursor-pointer'
                                         >
                                             Chính sách bảo mật
-                                        </Link>
+                                        </button>
                                     </label>
                                 </div>
 
@@ -505,6 +514,14 @@ export function PaymentCheckoutPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Legal Dialogs */}
+            <LegalDialogs
+                isTermsOpen={isTermsDialogOpen}
+                isPrivacyOpen={isPrivacyDialogOpen}
+                onTermsOpenChange={setIsTermsDialogOpen}
+                onPrivacyOpenChange={setIsPrivacyDialogOpen}
+            />
         </div>
     )
 }

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
     BookOpen,
@@ -7,10 +8,83 @@ import {
     Youtube,
     Mail,
     Phone,
+    Linkedin,
+    MessageCircle,
 } from 'lucide-react'
 import { CONTACT_INFO } from '../lib/constants'
+import { getPublicSystemConfig } from '../lib/api/system-config'
+import { getAbsoluteUrl } from '../lib/api/client'
+import { categoriesApi } from '../lib/api/categories'
+import type { Category } from '../lib/api/types'
+import { LegalDialogs } from './LegalDialogs'
 
 export function Footer() {
+    const [footerConfig, setFooterConfig] = useState<any>(null)
+    const [systemConfig, setSystemConfig] = useState<{
+        name: string
+        logo: string | null
+    } | null>(null)
+    const [contactInfo, setContactInfo] = useState(CONTACT_INFO)
+    const [categories, setCategories] = useState<Category[]>([])
+    const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
+    const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true)
+
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                setIsLoadingConfig(true)
+                const publicConfig = await getPublicSystemConfig()
+                if (publicConfig.footer) {
+                    setFooterConfig(publicConfig.footer)
+                }
+                if (publicConfig.contact) {
+                    setContactInfo(publicConfig.contact as any)
+                }
+                if (publicConfig.system) {
+                    setSystemConfig({
+                        name: publicConfig.system.name,
+                        logo: publicConfig.system.logo,
+                    })
+                }
+            } catch (error) {
+                console.error('Failed to load footer config:', error)
+            } finally {
+                setIsLoadingConfig(false)
+            }
+        }
+        loadConfig()
+    }, [])
+
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const response = await categoriesApi.getCategories({
+                    isActive: true,
+                    limit: 10,
+                })
+                // Chỉ lấy parent categories (không có parentId)
+                const parentCategories = response.data.filter(
+                    (cat) => !cat.parentId
+                )
+                setCategories(parentCategories)
+            } catch (error) {
+                console.error('Failed to load categories:', error)
+                setCategories([])
+            }
+        }
+        loadCategories()
+    }, [])
+
+    // Only use fallback when API failed (footerConfig is null after loading), not during loading
+    const description = !isLoadingConfig ? (footerConfig?.description ?? 'Nền tảng học tập trực tuyến tích hợp AI, giúp bạn phát triển kỹ năng và sự nghiệp.') : ''
+    const socialMedia = !isLoadingConfig ? (footerConfig?.socialMedia ?? {}) : {}
+    const copyright = !isLoadingConfig ? (footerConfig?.copyright ?? '© 2025 EduLearn. All rights reserved.') : ''
+    const quickLinks = !isLoadingConfig ? (footerConfig?.quickLinks ?? [
+        { label: 'Khóa học', url: '/courses' },
+        { label: 'Về chúng tôi', url: '/about' },
+    ]) : []
+
     return (
         <footer className='border-t border-[#2D2D2D] bg-black'>
             <div className='container mx-auto px-4 py-8'>
@@ -18,94 +92,129 @@ export function Footer() {
                     {/* Brand */}
                     <div>
                         <Link to='/' className='flex items-center gap-2 mb-3'>
-                            <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-black border border-white/30'>
-                                <BookOpen className='h-5 w-5 text-white' />
-                            </div>
-                            <span className='text-lg font-semibold text-white'>
-                                EduLearn
-                            </span>
+                            {systemConfig?.logo ? (
+                                <img
+                                    src={getAbsoluteUrl(systemConfig.logo)}
+                                    alt={systemConfig.name || 'Logo'}
+                                    className='h-8 w-8 object-contain rounded-lg'
+                                    onError={(e) => {
+                                        console.error('Failed to load logo image:', systemConfig.logo)
+                                        const target = e.target as HTMLImageElement
+                                        target.style.display = 'none'
+                                    }}
+                                    onLoad={() => {
+                                        console.log('Logo image loaded successfully:', systemConfig.logo)
+                                    }}
+                                />
+                            ) : (
+                                <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-black border border-white/30'>
+                                    <BookOpen className='h-5 w-5 text-white' />
+                                </div>
+                            )}
+                            {!isLoadingConfig && (
+                                <span className='text-lg font-semibold text-white'>
+                                    {systemConfig?.name ?? 'EduLearn'}
+                                </span>
+                            )}
                         </Link>
                         <p className='text-sm text-gray-400 mb-3'>
-                            Nền tảng học tập trực tuyến tích hợp AI, giúp bạn
-                            phát triển kỹ năng và sự nghiệp.
+                            {description}
                         </p>
                         <div className='flex gap-3'>
-                            <a
-                                href='#'
-                                className='text-gray-400 hover:text-blue-600 transition-colors'
-                            >
-                                <Facebook className='h-5 w-5' />
-                            </a>
-                            <a
-                                href='#'
-                                className='text-gray-400 hover:text-blue-600 transition-colors'
-                            >
-                                <Twitter className='h-5 w-5' />
-                            </a>
-                            <a
-                                href='#'
-                                className='text-gray-400 hover:text-blue-600 transition-colors'
-                            >
-                                <Instagram className='h-5 w-5' />
-                            </a>
-                            <a
-                                href='#'
-                                className='text-gray-400 hover:text-blue-600 transition-colors'
-                            >
-                                <Youtube className='h-5 w-5' />
-                            </a>
+                            {socialMedia.facebook && (
+                                <a
+                                    href={socialMedia.facebook}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-gray-400 hover:text-blue-600 transition-colors'
+                                >
+                                    <Facebook className='h-5 w-5' />
+                                </a>
+                            )}
+                            {socialMedia.twitter && (
+                                <a
+                                    href={socialMedia.twitter}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-gray-400 hover:text-blue-600 transition-colors'
+                                >
+                                    <Twitter className='h-5 w-5' />
+                                </a>
+                            )}
+                            {socialMedia.instagram && (
+                                <a
+                                    href={socialMedia.instagram}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-gray-400 hover:text-blue-600 transition-colors'
+                                >
+                                    <Instagram className='h-5 w-5' />
+                                </a>
+                            )}
+                            {socialMedia.youtube && (
+                                <a
+                                    href={socialMedia.youtube}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-gray-400 hover:text-blue-600 transition-colors'
+                                >
+                                    <Youtube className='h-5 w-5' />
+                                </a>
+                            )}
+                            {socialMedia.linkedin && (
+                                <a
+                                    href={socialMedia.linkedin}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-gray-400 hover:text-blue-600 transition-colors'
+                                >
+                                    <Linkedin className='h-5 w-5' />
+                                </a>
+                            )}
                         </div>
                     </div>
 
                     {/* Quick Links */}
-                    <div>
-                        <h3 className='font-semibold mb-3 text-white text-sm'>
-                            Liên kết nhanh
-                        </h3>
-                        <ul className='space-y-1.5 text-sm'>
-                            <li>
-                                <Link
-                                    to='/courses'
-                                    className='text-gray-400 hover:text-blue-600 transition-colors'
-                                >
-                                    Khóa học
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to='/about'
-                                    className='text-gray-400 hover:text-blue-600 transition-colors'
-                                >
-                                    Về chúng tôi
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                    {quickLinks.length > 0 && (
+                        <div>
+                            <h3 className='font-semibold mb-3 text-white text-sm'>
+                                Liên kết nhanh
+                            </h3>
+                            <ul className='space-y-1.5 text-sm'>
+                                {quickLinks.map((link: any, index: number) => (
+                                    <li key={index}>
+                                        <Link
+                                            to={link.url}
+                                            className='text-gray-400 hover:text-blue-600 transition-colors'
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
-                    {/* Categories */}
-                    <div>
-                        <h3 className='font-semibold mb-3 text-white text-sm'>
-                            Danh mục
-                        </h3>
-                        <ul className='space-y-1.5 text-sm'>
-                            <li>
-                                <Link
-                                    to='/courses?category=web-development'
-                                    className='text-gray-400 hover:text-blue-600 transition-colors'
-                                >
-                                    Web Development
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to='/courses?category=mobile-development'
-                                    className='text-gray-400 hover:text-blue-600 transition-colors'
-                                >
-                                    Mobile Development
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                    {/* Categories - Lấy từ API thực sự */}
+                    {categories.length > 0 && (
+                        <div>
+                            <h3 className='font-semibold mb-3 text-white text-sm'>
+                                Danh mục
+                            </h3>
+                            <ul className='space-y-1.5 text-sm'>
+                                {categories.map((category) => (
+                                    <li key={category.id}>
+                                        <Link
+                                            to={`/courses?categoryId=${category.id}`}
+                                            className='text-gray-400 hover:text-blue-600 transition-colors'
+                                        >
+                                            {category.name}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     {/* Contact */}
                     <div>
@@ -113,50 +222,92 @@ export function Footer() {
                             Liên hệ
                         </h3>
                         <ul className='space-y-2 text-sm text-gray-400'>
-                            <li className='flex items-start gap-2'>
-                                <Phone className='h-4 w-4 mt-0.5 flex-shrink-0' />
-                                <a
-                                    href={`tel:${CONTACT_INFO.hotline}`}
-                                    className='hover:text-blue-500 transition-colors'
-                                >
-                                    {CONTACT_INFO.hotlineDisplay}
-                                </a>
-                            </li>
-                            <li className='flex items-start gap-2'>
-                                <Mail className='h-4 w-4 mt-0.5 flex-shrink-0' />
-                                <a
-                                    href={`mailto:${CONTACT_INFO.email}`}
-                                    className='hover:text-blue-500 transition-colors'
-                                >
-                                    {CONTACT_INFO.email}
-                                </a>
-                            </li>
-                            <li className='text-xs text-gray-500 mt-2'>
-                                Giờ làm việc: {CONTACT_INFO.workingHours}
-                            </li>
+                            {contactInfo.hotlineDisplay && (
+                                <li className='flex items-start gap-2'>
+                                    <Phone className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={`tel:${contactInfo.hotline || contactInfo.hotlineDisplay}`}
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        {contactInfo.hotlineDisplay}
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.email && (
+                                <li className='flex items-start gap-2'>
+                                    <Mail className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={`mailto:${contactInfo.email}`}
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        {contactInfo.email}
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.zalo && (
+                                <li className='flex items-start gap-2'>
+                                    <MessageCircle className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={contactInfo.zalo}
+                                        target='_blank'
+                                        rel='noopener noreferrer'
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        Zalo
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.facebook && (
+                                <li className='flex items-start gap-2'>
+                                    <Facebook className='h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400' />
+                                    <a
+                                        href={contactInfo.facebook}
+                                        target='_blank'
+                                        rel='noopener noreferrer'
+                                        className='hover:text-blue-500 transition-colors'
+                                    >
+                                        Facebook
+                                    </a>
+                                </li>
+                            )}
+                            {contactInfo.workingHours && (
+                                <li className='text-xs text-gray-500 mt-2 pt-2 border-t border-[#2D2D2D]'>
+                                    Giờ làm việc: {contactInfo.workingHours}
+                                </li>
+                            )}
                         </ul>
                     </div>
                 </div>
 
                 {/* Bottom */}
                 <div className='border-t border-[#2D2D2D] mt-6 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400'>
-                    <p>&copy; 2025 EduLearn. All rights reserved.</p>
+                    <p>{copyright}</p>
                     <div className='flex gap-6'>
-                        <Link
-                            to='/terms'
-                            className='hover:text-blue-600 transition-colors'
+                        <button
+                            type='button'
+                            onClick={() => setIsTermsDialogOpen(true)}
+                            className='hover:text-blue-600 transition-colors cursor-pointer'
                         >
                             Điều khoản sử dụng
-                        </Link>
-                        <Link
-                            to='/privacy'
-                            className='hover:text-blue-600 transition-colors'
+                        </button>
+                        <button
+                            type='button'
+                            onClick={() => setIsPrivacyDialogOpen(true)}
+                            className='hover:text-blue-600 transition-colors cursor-pointer'
                         >
                             Chính sách bảo mật
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Legal Dialogs */}
+            <LegalDialogs
+                isTermsOpen={isTermsDialogOpen}
+                isPrivacyOpen={isPrivacyDialogOpen}
+                onTermsOpenChange={setIsTermsDialogOpen}
+                onPrivacyOpenChange={setIsPrivacyDialogOpen}
+            />
         </footer>
     )
 }

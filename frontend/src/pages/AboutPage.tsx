@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -11,16 +12,43 @@ import {
   Shield,
   TrendingUp
 } from 'lucide-react';
+import { getPublicSystemConfig } from '../lib/api/system-config';
 
 export function AboutPage() {
-  const stats = [
+  const [aboutConfig, setAboutConfig] = useState<any>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        setIsLoadingConfig(true);
+        const publicConfig = await getPublicSystemConfig();
+        if (publicConfig.about) {
+          setAboutConfig(publicConfig.about);
+        }
+      } catch (error) {
+        console.error('Failed to load about config:', error);
+      } finally {
+        setIsLoadingConfig(false);
+      }
+    };
+    loadConfig();
+  }, []);
+
+  // Only use fallback when API failed (aboutConfig is null after loading), not during loading
+  const stats = !isLoadingConfig ? (aboutConfig?.stats ? [
+    { label: 'Khóa học', value: aboutConfig.stats.courses, icon: BookOpen, color: 'text-blue-600' },
+    { label: 'Học viên', value: aboutConfig.stats.students, icon: Users, color: 'text-green-600' },
+    { label: 'Giảng viên', value: aboutConfig.stats.instructors, icon: Award, color: 'text-purple-600' },
+    { label: 'Chứng chỉ', value: aboutConfig.stats.certificates, icon: Award, color: 'text-yellow-600' },
+  ] : [
     { label: 'Khóa học', value: '1,000+', icon: BookOpen, color: 'text-blue-600' },
     { label: 'Học viên', value: '50,000+', icon: Users, color: 'text-green-600' },
     { label: 'Giảng viên', value: '200+', icon: Award, color: 'text-purple-600' },
     { label: 'Chứng chỉ', value: '25,000+', icon: Award, color: 'text-yellow-600' },
-  ];
+  ]) : [];
 
-  const values = [
+  const values = !isLoadingConfig ? (aboutConfig?.values ?? [
     {
       icon: Target,
       title: 'Sứ mệnh',
@@ -41,9 +69,9 @@ export function AboutPage() {
       title: 'Chất lượng',
       description: 'Cam kết cung cấp nội dung chất lượng cao được xây dựng bởi các chuyên gia hàng đầu trong ngành.'
     }
-  ];
+  ]) : [];
 
-  const team = [
+  const team = !isLoadingConfig ? (aboutConfig?.team ?? [
     {
       name: 'Nguyễn Văn A',
       role: 'CEO & Founder',
@@ -68,7 +96,7 @@ export function AboutPage() {
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=product',
       bio: 'Designer với tư duy sáng tạo và user-centric'
     }
-  ];
+  ]) : [];
 
   return (
     <div className="bg-background">
@@ -77,19 +105,23 @@ export function AboutPage() {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1920&q=80')",
+            backgroundImage: aboutConfig?.heroBackgroundImage
+              ? `url('${aboutConfig.heroBackgroundImage}')`
+              : "url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1920&q=80')",
           }}
         />
         <div className="absolute inset-0 bg-background/85" />
         <div className="container mx-auto px-4 py-12 md:py-28 text-center relative z-10">
-          <h1 className="text-4xl md:text-5xl mb-6 text-black dark:text-white drop-shadow-lg">
-            Nền tảng học tập thế hệ mới
-          </h1>
-          <p className="text-xl text-black dark:text-gray-200 max-w-3xl mx-auto drop-shadow">
-            EduLearn là nền tảng học tập trực tuyến tích hợp AI, giúp hàng triệu người 
-            học viên phát triển kỹ năng và đạt được mục tiêu nghề nghiệp.
-          </p>
+          {!isLoadingConfig && (
+            <>
+              <h1 className="text-4xl md:text-5xl mb-6 text-black dark:text-white drop-shadow-lg">
+                {aboutConfig?.heroTitle ?? 'Nền tảng học tập thế hệ mới'}
+              </h1>
+              <p className="text-xl text-black dark:text-gray-200 max-w-3xl mx-auto drop-shadow">
+                {aboutConfig?.heroDescription ?? 'EduLearn là nền tảng học tập trực tuyến tích hợp AI, giúp hàng triệu người học viên phát triển kỹ năng và đạt được mục tiêu nghề nghiệp.'}
+              </p>
+            </>
+          )}
         </div>
       </section>
 
@@ -121,17 +153,19 @@ export function AboutPage() {
       <section className="py-12 bg-background text-foreground border-t border-gray-200">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl mb-6 text-foreground">Câu chuyện của chúng tôi</h2>
-            <p className="text-lg text-muted-foreground mb-4">
-              EduLearn được thành lập vào năm 2020 với mục tiêu làm cho giáo dục chất lượng cao
-              trở nên dễ tiếp cận hơn cho mọi người. Chúng tôi tin rằng mọi người đều có quyền
-              học hỏi và phát triển, bất kể họ ở đâu hay hoàn cảnh ra sao.
-            </p>
-            <p className="text-lg text-muted-foreground">
-              Với sự kết hợp giữa công nghệ AI tiên tiến và nội dung chất lượng cao từ các
-              chuyên gia hàng đầu, chúng tôi đã giúp hàng chục nghìn học viên đạt được mục tiêu
-              nghề nghiệp của họ.
-            </p>
+            {!isLoadingConfig && (
+              <>
+                <h2 className="text-3xl md:text-4xl mb-6 text-foreground">
+                  {aboutConfig?.story?.title ?? 'Câu chuyện của chúng tôi'}
+                </h2>
+                <p className="text-lg text-muted-foreground mb-4">
+                  {aboutConfig?.story?.paragraph1 ?? 'EduLearn được thành lập vào năm 2020 với mục tiêu làm cho giáo dục chất lượng cao trở nên dễ tiếp cận hơn cho mọi người. Chúng tôi tin rằng mọi người đều có quyền học hỏi và phát triển, bất kể họ ở đâu hay hoàn cảnh ra sao.'}
+                </p>
+                <p className="text-lg text-muted-foreground">
+                  {aboutConfig?.story?.paragraph2 ?? 'Với sự kết hợp giữa công nghệ AI tiên tiến và nội dung chất lượng cao từ các chuyên gia hàng đầu, chúng tôi đã giúp hàng chục nghìn học viên đạt được mục tiêu nghề nghiệp của họ.'}
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -147,24 +181,27 @@ export function AboutPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((value, index) => (
-              <Card
-                key={index}
-                className="text-center bg-[#1A1A1A] border border-[#2D2D2D] hover:border-blue-500/40 transition-colors"
-              >
-                <CardHeader>
-                  <div className="flex justify-center mb-4">
-                    <div className="p-4 rounded-full bg-blue-600/10 text-white">
-                      <value.icon className="h-8 w-8" />
+            {values.map((value: any, index: number) => {
+              const IconComponent = value.icon || Target;
+              return (
+                <Card
+                  key={index}
+                  className="text-center bg-[#1A1A1A] border border-[#2D2D2D] hover:border-blue-500/40 transition-colors"
+                >
+                  <CardHeader>
+                    <div className="flex justify-center mb-4">
+                      <div className="p-4 rounded-full bg-blue-600/10 text-white">
+                        <IconComponent className="h-8 w-8" />
+                      </div>
                     </div>
-                  </div>
-                  <CardTitle className="text-white">{value.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-400">{value.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+                    <CardTitle className="text-white">{value.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400">{value.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -206,14 +243,14 @@ export function AboutPage() {
 
           <div className="max-w-3xl mx-auto">
             <div className="space-y-8">
-              {[
-                { year: '2020', title: 'Thành lập', desc: 'EduLearn được thành lập với 10 khóa học đầu tiên' },
-                { year: '2021', title: 'Mở rộng', desc: 'Đạt 10,000 học viên và 100 khóa học' },
-                { year: '2022', title: 'Tích hợp AI', desc: 'Ra mắt Gia sư AI - trợ lý học tập thông minh' },
-                { year: '2023', title: 'Tăng trưởng', desc: 'Vượt 50,000 học viên và 1,000 khóa học' },
-                { year: '2024', title: 'Đổi mới', desc: 'Ra mắt Voice Search và Smart Recommendations' },
-                { year: '2025', title: 'Mở rộng toàn cầu', desc: 'Hợp tác với 50+ đối tác quốc tế và ra mắt chương trình chứng chỉ toàn cầu' },
-              ].map((milestone, index, array) => (
+              {!isLoadingConfig && (aboutConfig?.timeline ?? [
+                { year: '2020', title: 'Thành lập', description: 'EduLearn được thành lập với 10 khóa học đầu tiên' },
+                { year: '2021', title: 'Mở rộng', description: 'Đạt 10,000 học viên và 100 khóa học' },
+                { year: '2022', title: 'Tích hợp AI', description: 'Ra mắt Gia sư AI - trợ lý học tập thông minh' },
+                { year: '2023', title: 'Tăng trưởng', description: 'Vượt 50,000 học viên và 1,000 khóa học' },
+                { year: '2024', title: 'Đổi mới', description: 'Ra mắt Voice Search và Smart Recommendations' },
+                { year: '2025', title: 'Mở rộng toàn cầu', description: 'Hợp tác với 50+ đối tác quốc tế và ra mắt chương trình chứng chỉ toàn cầu' },
+              ]).map((milestone: any, index: number, array: any[]) => (
                 <div key={index} className="flex gap-6">
                   <div className="flex flex-col items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1A1A1A] border border-[#2D2D2D] text-white flex-shrink-0">
@@ -224,11 +261,12 @@ export function AboutPage() {
                   <div className="pb-8">
                     <Badge className="mb-2 bg-[#1A1A1A] border border-[#2D2D2D] text-white">{milestone.year}</Badge>
                     <h3 className="text-xl mb-2 text-foreground">{milestone.title}</h3>
-                    <p className="text-muted-foreground">{milestone.desc}</p>
+                    <p className="text-muted-foreground">{milestone.description || milestone.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
+            )}
           </div>
         </div>
       </section>

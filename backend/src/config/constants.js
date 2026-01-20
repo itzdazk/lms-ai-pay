@@ -167,6 +167,7 @@ const UPLOAD_TYPES = {
     IMAGE: {
         AVATAR: 'avatar',
         THUMBNAIL: 'thumbnail',
+        SYSTEM: 'system',
         GENERAL: 'general',
     },
     VIDEO: {

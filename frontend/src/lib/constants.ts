@@ -7,4 +7,6 @@ export const CONTACT_INFO = {
     hotlineDisplay: '1900 123 456', // Format dễ đọc
     email: 'support@edulearn.vn',
     workingHours: '8:00 - 22:00 (T2-CN)',
+    zalo: 'https://zalo.me/0123456789',
+    facebook: 'https://facebook.com/edulearn',
 } as const

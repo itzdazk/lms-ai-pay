@@ -553,7 +553,7 @@ export function CoursesPage() {
                 return
             }
 
-            await adminCoursesApi.toggleCourseFeatured(
+            const updatedCourse = await adminCoursesApi.toggleCourseFeatured(
                 selectedCourse.id,
                 newFeaturedStatus
             )
@@ -564,11 +564,11 @@ export function CoursesPage() {
             )
             setIsFeaturedDialogOpen(false)
             setSelectedCourse(null)
-            // Update local state instead of reloading
+            // Update local state with response from API (includes featuredAt)
             setCourses((prev) =>
                 prev.map((course) =>
                     course.id === selectedCourse.id
-                        ? { ...course, isFeatured: newFeaturedStatus }
+                        ? { ...course, isFeatured: updatedCourse.isFeatured, featuredAt: updatedCourse.featuredAt }
                         : course
                 )
             )

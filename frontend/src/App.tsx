@@ -12,6 +12,8 @@ import { PublicLayout } from './components/layouts/PublicLayout'
 import { AdminLayout } from './components/layouts/AdminLayout'
 import { Toaster } from './components/ui/sonner'
 import { Loader2 } from 'lucide-react'
+import { usePageTitle } from './hooks/usePageTitle'
+import { useFavicon } from './hooks/useFavicon'
 
 // Loading fallback component
 const PageLoading = () => (
@@ -71,16 +73,6 @@ const CoursePreviewPage = lazy(() =>
 const AboutPage = lazy(() =>
     import('./pages/AboutPage').then((module) => ({
         default: module.AboutPage,
-    }))
-)
-const CategoriesPage = lazy(() =>
-    import('./pages/CategoriesPage').then((module) => ({
-        default: module.CategoriesPage,
-    }))
-)
-const CategoriesDetailPage = lazy(() =>
-    import('./pages/CategoriesDetailPage').then((module) => ({
-        default: module.CategoriesDetailPage,
     }))
 )
 
@@ -261,6 +253,10 @@ const ForbiddenPage = lazy(() =>
 )
 
 export default function App() {
+    // Set page title and favicon from system config
+    usePageTitle()
+    useFavicon()
+    
     return (
         <Router>
             <ScrollToTop />
@@ -411,26 +407,6 @@ export default function App() {
                                                 fallback={<PageLoading />}
                                             >
                                                 <CourseDetailPage />
-                                            </Suspense>
-                                        }
-                                    />
-                                    <Route
-                                        path='/categories'
-                                        element={
-                                            <Suspense
-                                                fallback={<PageLoading />}
-                                            >
-                                                <CategoriesPage />
-                                            </Suspense>
-                                        }
-                                    />
-                                    <Route
-                                        path='/categories/:id'
-                                        element={
-                                            <Suspense
-                                                fallback={<PageLoading />}
-                                            >
-                                                <CategoriesDetailPage />
                                             </Suspense>
                                         }
                                     />

@@ -41,6 +41,7 @@ const transcriptsDir = path.join(uploadsDir, 'transcripts') // Legacy - for comp
 const hlsDir = path.join(uploadsDir, 'hls') // Legacy - for compatibility
 const thumbnailsDir = path.join(sharedDir, 'thumbnails')
 const videoPreviewsDir = path.join(sharedDir, 'previews')
+const systemDir = path.join(sharedDir, 'system')
 
 // === TỰ ĐỘNG TẠO THƯ MỤC CHUNG ===
 ;[
@@ -51,6 +52,7 @@ const videoPreviewsDir = path.join(sharedDir, 'previews')
     tempDir,
     thumbnailsDir,
     videoPreviewsDir,
+    systemDir,
 ].forEach((dir) => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
@@ -297,6 +299,40 @@ const uploadCategoryImage = multer({
 }).single('image')
 
 // ========================
+// 7. SYSTEM SETTINGS IMAGE UPLOAD
+// ========================
+const systemImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, systemDir),
+    filename: (req, file, cb) => {
+        const userId = req.user?.id || 'system'
+        const timestamp = Date.now()
+        const ext = path.extname(file.originalname)
+        const name = sanitizeFilename(path.basename(file.originalname, ext))
+        const filename = `${timestamp}-${userId}-system-${name}${ext}`
+        cb(null, filename)
+    },
+})
+
+const systemImageFileFilter = (req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        cb(null, true)
+    } else {
+        cb(
+            new Error(
+                `Loại tệp không hợp lệ. Cho phép: ${ALLOWED_IMAGE_TYPES.join(', ')}`
+            ),
+            false
+        )
+    }
+}
+
+const uploadSystemImage = multer({
+    storage: systemImageStorage,
+    fileFilter: systemImageFileFilter,
+    limits: { fileSize: MAX_IMAGE_SIZE },
+})
+
+// ========================
 // EXPORT
 // ========================
 export {
@@ -306,6 +342,7 @@ export {
     uploadThumbnail,
     uploadVideoPreview,
     uploadCategoryImage,
+    uploadSystemImage,
     uploadsDir,
     avatarsDir,
     videosDir,
@@ -314,4 +351,5 @@ export {
     thumbnailsDir,
     videoPreviewsDir,
     categoriesDir,
+    systemDir,
 }

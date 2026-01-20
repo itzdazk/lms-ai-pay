@@ -128,6 +128,7 @@ model Course {
   targetAudience       String?   @map("target_audience") @db.Text
   status               String    @default("draft") @db.VarChar(20)
   isFeatured           Boolean   @default(false) @map("is_featured")
+  featuredAt           DateTime? @map("featured_at") @db.Timestamptz
   ratingAvg            Decimal   @default(0) @map("rating_avg") @db.Decimal(2, 1)
   ratingCount          Int       @default(0) @map("rating_count")
   enrolledCount        Int       @default(0) @map("enrolled_count")
@@ -604,6 +605,18 @@ model RefundRequest {
   @@index([refundType])
   @@index([createdAt])
   @@map("refund_requests")
+}
+
+// =====================================================
+// 18. SYSTEM SETTINGS
+// =====================================================
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  settings  Json     // JSONB trong PostgreSQL, lưu tất cả cài đặt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("system_settings")
 }
 
 // =====================================================
