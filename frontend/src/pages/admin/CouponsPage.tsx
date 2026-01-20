@@ -29,6 +29,7 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '../../components/ui/dialog'
@@ -42,6 +43,7 @@ import {
     TrendingUp,
     Calendar,
     Users,
+    Percent,
 } from 'lucide-react'
 import { adminCouponsApi } from '../../lib/api/admin-coupons'
 import type { Coupon, CouponFilters } from '../../lib/api/types'
@@ -69,6 +71,8 @@ export function CouponsPage() {
     const [selectedCouponId, setSelectedCouponId] = useState<number | null>(
         null,
     )
+    const [deleteId, setDeleteId] = useState<number | null>(null)
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
     useEffect(() => {
         fetchCoupons()
@@ -88,21 +92,24 @@ export function CouponsPage() {
         }
     }
 
-    const handleDelete = async (couponId: number) => {
-        if (
-            !confirm(
-                'Bạn có chắc chắn muốn xóa mã giảm giá này? Nếu mã đã được sử dụng, nó sẽ chỉ bị vô hiệu hóa.',
-            )
-        ) {
-            return
-        }
+    const handleDelete = (couponId: number) => {
+        setDeleteId(couponId)
+        setIsDeleteOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!deleteId) return
 
         try {
-            const result = await adminCouponsApi.deleteCoupon(couponId)
+            const result = await adminCouponsApi.deleteCoupon(deleteId)
             toast.success(result.message)
             fetchCoupons()
         } catch (error) {
             console.error('Error deleting coupon:', error)
+            toast.error('Không thể xóa mã giảm giá')
+        } finally {
+            setIsDeleteOpen(false)
+            setDeleteId(null)
         }
     }
 
@@ -154,6 +161,19 @@ export function CouponsPage() {
 
     return (
         <div className='space-y-6'>
+            <div className='mb-6'>
+                <div className='flex items-start justify-between gap-4 mb-2'>
+                    <div>
+                        <h1 className='text-2xl font-bold text-foreground flex items-center gap-2'>
+                            <Percent className='h-6 w-6' />
+                            Quản lý Mã giảm giá
+                        </h1>
+                        <p className='text-sm text-muted-foreground mt-1'>
+                            Xem và quản lý các mã giảm giá
+                        </p>
+                    </div>
+                </div>
+            </div>
             {/* Stats Cards */}
             <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                 <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
@@ -586,6 +606,35 @@ export function CouponsPage() {
                     </DialogContent>
                 </Dialog>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                <DialogContent className='bg-[#1A1A1A] border-[#2D2D2D] text-white'>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận xóa mã giảm giá</DialogTitle>
+                        <DialogDescription className='text-gray-400'>
+                            Bạn có chắc chắn muốn xóa mã giảm giá này? Nếu mã đã
+                            được sử dụng, nó sẽ chỉ bị vô hiệu hóa.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className='gap-2 sm:gap-2'>
+                        <Button
+                            variant='outline'
+                            onClick={() => setIsDeleteOpen(false)}
+                            className='border-[#2D2D2D] text-white bg-black hover:bg-[#1F1F1F] dark:hover:bg-[#1F1F1F]'
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            variant='destructive'
+                            onClick={confirmDelete}
+                            className='border-[#2D2D2D] bg-red-600 dark:bg-red-600 hover:bg-red-700 dark:hover:bg-red-700'
+                        >
+                            Xóa
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

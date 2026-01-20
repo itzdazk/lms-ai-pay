@@ -42,7 +42,9 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
         if (coupon) {
             setFormData({
                 code: coupon.code,
-                type: coupon.type,
+                type:
+                    ((coupon.type as string)?.toUpperCase() as any) ||
+                    'PERCENT',
                 value: coupon.value,
                 maxDiscount: coupon.maxDiscount,
                 minOrderValue: coupon.minOrderValue,
@@ -77,18 +79,22 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
             return
         }
 
-        if (new Date(formData.endDate) <= new Date(formData.startDate)) {
+        if (new Date(formData.endDate) < new Date(formData.startDate)) {
             toast.error('Ngày kết thúc phải sau ngày bắt đầu')
             return
         }
 
         setIsSubmitting(true)
         try {
+            const endDate = new Date(formData.endDate)
+            endDate.setHours(23, 59, 59, 999)
+
             const payload = {
                 ...formData,
                 code: formData.code.toUpperCase().trim(),
+                type: coupon ? formData.type || coupon.type : formData.type,
                 startDate: new Date(formData.startDate).toISOString(),
-                endDate: new Date(formData.endDate).toISOString(),
+                endDate: endDate.toISOString(),
             }
 
             if (coupon) {
@@ -142,6 +148,10 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
                             setFormData((prev) => ({
                                 ...prev,
                                 type: value as any,
+                                maxDiscount:
+                                    value !== 'PERCENT'
+                                        ? (null as any)
+                                        : prev.maxDiscount,
                             }))
                         }
                     >
@@ -201,7 +211,7 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
                                     ...prev,
                                     maxDiscount: e.target.value
                                         ? parseFloat(e.target.value)
-                                        : undefined,
+                                        : (null as any),
                                 }))
                             }
                             placeholder='Không giới hạn'
@@ -225,7 +235,7 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
                                 ...prev,
                                 minOrderValue: e.target.value
                                     ? parseFloat(e.target.value)
-                                    : undefined,
+                                    : (null as any),
                             }))
                         }
                         placeholder='Không giới hạn'
@@ -292,7 +302,7 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
                                 ...prev,
                                 maxUses: e.target.value
                                     ? parseInt(e.target.value)
-                                    : undefined,
+                                    : (null as any),
                             }))
                         }
                         placeholder='Không giới hạn'
@@ -315,7 +325,7 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
                                 ...prev,
                                 maxUsesPerUser: e.target.value
                                     ? parseInt(e.target.value)
-                                    : undefined,
+                                    : (null as any),
                             }))
                         }
                         placeholder='Không giới hạn'

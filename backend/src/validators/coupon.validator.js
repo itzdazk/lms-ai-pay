@@ -30,27 +30,27 @@ export const createCouponValidator = [
         .isFloat({ min: 0 })
         .withMessage('Giá trị giảm giá phải là số dương'),
     body('maxDiscount')
-        .optional()
+        .optional({ nullable: true })
         .isFloat({ min: 0 })
         .withMessage('Giảm giá tối đa phải là số dương'),
     body('minOrderValue')
-        .optional()
+        .optional({ nullable: true })
         .isFloat({ min: 0 })
         .withMessage('Giá trị đơn hàng tối thiểu phải là số dương'),
     body('applicableCourseIds')
-        .optional()
+        .optional({ nullable: true })
         .isArray()
         .withMessage('Danh sách khóa học áp dụng phải là mảng'),
     body('applicableCourseIds.*')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('ID khóa học phải là số nguyên dương'),
     body('applicableCategoryIds')
-        .optional()
+        .optional({ nullable: true })
         .isArray()
         .withMessage('Danh sách danh mục áp dụng phải là mảng'),
     body('applicableCategoryIds.*')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('ID danh mục phải là số nguyên dương'),
     body('startDate')
@@ -64,17 +64,17 @@ export const createCouponValidator = [
         .isISO8601()
         .withMessage('Ngày kết thúc phải là định dạng ISO 8601 hợp lệ')
         .custom((endDate, { req }) => {
-            if (new Date(endDate) <= new Date(req.body.startDate)) {
+            if (new Date(endDate) < new Date(req.body.startDate)) {
                 throw new Error('Ngày kết thúc phải sau ngày bắt đầu')
             }
             return true
         }),
     body('maxUses')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('Số lần sử dụng tối đa phải là số nguyên dương'),
     body('maxUsesPerUser')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('Số lần sử dụng tối đa mỗi người phải là số nguyên dương'),
     validate,
@@ -107,43 +107,43 @@ export const updateCouponValidator = [
         .isFloat({ min: 0 })
         .withMessage('Giá trị giảm giá phải là số dương'),
     body('maxDiscount')
-        .optional()
+        .optional({ nullable: true })
         .isFloat({ min: 0 })
         .withMessage('Giảm giá tối đa phải là số dương'),
     body('minOrderValue')
-        .optional()
+        .optional({ nullable: true })
         .isFloat({ min: 0 })
         .withMessage('Giá trị đơn hàng tối thiểu phải là số dương'),
     body('applicableCourseIds')
-        .optional()
+        .optional({ nullable: true })
         .isArray()
         .withMessage('Danh sách khóa học áp dụng phải là mảng'),
     body('applicableCourseIds.*')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('ID khóa học phải là số nguyên dương'),
     body('applicableCategoryIds')
-        .optional()
+        .optional({ nullable: true })
         .isArray()
         .withMessage('Danh sách danh mục áp dụng phải là mảng'),
     body('applicableCategoryIds.*')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('ID danh mục phải là số nguyên dương'),
     body('startDate')
-        .optional()
+        .optional({ nullable: true })
         .isISO8601()
         .withMessage('Ngày bắt đầu phải là định dạng ISO 8601 hợp lệ'),
     body('endDate')
-        .optional()
+        .optional({ nullable: true })
         .isISO8601()
         .withMessage('Ngày kết thúc phải là định dạng ISO 8601 hợp lệ'),
     body('maxUses')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('Số lần sử dụng tối đa phải là số nguyên dương'),
     body('maxUsesPerUser')
-        .optional()
+        .optional({ nullable: true })
         .isInt({ min: 1 })
         .withMessage('Số lần sử dụng tối đa mỗi người phải là số nguyên dương'),
     body('active').optional().isBoolean().withMessage('Active phải là boolean'),

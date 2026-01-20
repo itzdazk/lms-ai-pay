@@ -34,6 +34,7 @@ import {
     BookOpen,
     RotateCcw,
     Bot,
+    Percent,
 } from 'lucide-react'
 import { UsersPage } from './admin/UsersPage'
 import { CoursesPage as AdminCoursesPage } from './admin/CoursesPage'
@@ -171,7 +172,7 @@ const menuGroups: MenuGroup[] = [
             {
                 id: 'coupons',
                 label: 'Mã giảm giá',
-                icon: Tag,
+                icon: Percent,
                 color: 'text-pink-400',
             },
         ],
