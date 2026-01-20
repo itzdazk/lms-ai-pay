@@ -48,8 +48,8 @@ import {
 import { adminCouponsApi } from '../../lib/api/admin-coupons'
 import type { Coupon, CouponFilters } from '../../lib/api/types'
 import { toast } from 'sonner'
-import { CouponForm } from '../../components/admin/CouponForm'
-import { CouponUsageHistory } from '../../components/admin/CouponUsageHistory'
+import { CouponForm } from '../../components/admin/coupons/CouponForm'
+import { CouponUsageHistory } from '../../components/admin/coupons/CouponUsageHistory'
 import { formatPrice } from '../../lib/courseUtils'
 
 export function CouponsPage() {
