@@ -84,12 +84,6 @@ const REFUND_TYPES = {
     PARTIAL: 'PARTIAL',
 }
 
-const COUPON_TYPES = {
-    PERCENT: 'PERCENT',
-    FIXED: 'FIXED',
-    NEW_USER: 'NEW_USER',
-}
-
 const REFUND_POLICY = {
     FULL_REFUND_MAX_PROGRESS: 20, // %
     FULL_REFUND_MAX_DAYS: 7, // days from paidAt
@@ -282,5 +276,4 @@ export {
     PENDING_TIME,
     UPLOAD_TYPES,
     UPLOAD_STATUS,
-    COUPON_TYPES,
 }

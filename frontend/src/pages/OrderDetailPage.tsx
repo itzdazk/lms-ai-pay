@@ -143,7 +143,7 @@ export function OrderDetailPage() {
 
     // Active tab state for transactions card
     const [activeTransactionTab, setActiveTransactionTab] = useState(
-        searchParams.get('txTab') || 'order-transactions',
+        searchParams.get('txTab') || 'order-transactions'
     )
 
     // Transaction detail dialog
@@ -197,8 +197,9 @@ export function OrderDetailPage() {
               if (orderId) {
                   try {
                       setIsLoading(true)
-                      const orderData =
-                          await adminOrdersApi.getOrderById(orderId)
+                      const orderData = await adminOrdersApi.getOrderById(
+                          orderId
+                      )
                       setOrder(orderData)
                   } catch (error: any) {
                       console.error('Error refetching admin order:', error)
@@ -215,7 +216,7 @@ export function OrderDetailPage() {
     } = useTransactions(
         activeTransactionTab === 'all-transactions'
             ? transactionFilters
-            : undefined,
+            : undefined
     )
 
     // Update URL when tab or filters change
@@ -285,7 +286,7 @@ export function OrderDetailPage() {
                 page: 1, // Reset to first page when filter changes
             }))
         },
-        [],
+        []
     )
 
     // Handle transaction pagination
@@ -518,7 +519,7 @@ export function OrderDetailPage() {
                                     </p>
                                     <div>
                                         {getStatusBadge(
-                                            finalOrder.paymentStatus,
+                                            finalOrder.paymentStatus
                                         )}
                                     </div>
                                 </div>
@@ -531,7 +532,7 @@ export function OrderDetailPage() {
                                         className='border-[#2D2D2D] text-gray-300 flex items-center gap-1.5 w-fit'
                                     >
                                         {getGatewayIcon(
-                                            finalOrder.paymentGateway,
+                                            finalOrder.paymentGateway
                                         )}
                                         {finalOrder.paymentGateway}
                                     </Badge>
@@ -573,7 +574,7 @@ export function OrderDetailPage() {
                                         <span>
                                             -
                                             {formatPrice(
-                                                finalOrder.discountAmount,
+                                                finalOrder.discountAmount
                                             )}
                                         </span>
                                     </div>
@@ -596,7 +597,7 @@ export function OrderDetailPage() {
                                         <span>Đã hoàn tiền:</span>
                                         <span className='font-semibold'>
                                             {formatPrice(
-                                                finalOrder.refundAmount,
+                                                finalOrder.refundAmount
                                             )}
                                         </span>
                                     </div>
@@ -604,7 +605,7 @@ export function OrderDetailPage() {
                                         <p className='text-xs text-gray-500'>
                                             Ngày hoàn tiền:{' '}
                                             {formatDateTime(
-                                                finalOrder.refundedAt,
+                                                finalOrder.refundedAt
                                             )}
                                         </p>
                                     )}
@@ -696,11 +697,7 @@ export function OrderDetailPage() {
                 {/* Sidebar */}
                 <div className='space-y-6 lg:sticky lg:top-6 lg:self-start'>
                     {/* Order Summary */}
-                    <OrderSummary
-                        course={course || null}
-                        order={finalOrder}
-                        loading={false}
-                    />
+                    <OrderSummary course={course || null} loading={false} />
                 </div>
             </div>
 
@@ -786,22 +783,22 @@ export function OrderDetailPage() {
                                             'SUCCESS'
                                                 ? 'bg-green-600/20 text-green-300 border border-green-500/40'
                                                 : selectedTransaction.status ===
-                                                    'PENDING'
-                                                  ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'
-                                                  : selectedTransaction.status ===
-                                                      'FAILED'
-                                                    ? 'bg-red-600/20 text-red-300 border border-red-500/40'
-                                                    : selectedTransaction.status ===
-                                                        'REFUNDED'
-                                                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
-                                                      : selectedTransaction.status ===
-                                                          'PARTIALLY_REFUNDED'
-                                                        ? 'bg-orange-600/20 text-orange-300 border border-orange-500/40'
-                                                        : 'bg-gray-600/20 text-gray-300 border border-gray-500/40'
+                                                  'PENDING'
+                                                ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/40'
+                                                : selectedTransaction.status ===
+                                                  'FAILED'
+                                                ? 'bg-red-600/20 text-red-300 border border-red-500/40'
+                                                : selectedTransaction.status ===
+                                                  'REFUNDED'
+                                                ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
+                                                : selectedTransaction.status ===
+                                                  'PARTIALLY_REFUNDED'
+                                                ? 'bg-orange-600/20 text-orange-300 border border-orange-500/40'
+                                                : 'bg-gray-600/20 text-gray-300 border border-gray-500/40'
                                         }
                                     >
                                         {getTransactionStatusText(
-                                            selectedTransaction.status,
+                                            selectedTransaction.status
                                         )}
                                     </Badge>
                                 </div>
@@ -814,9 +811,9 @@ export function OrderDetailPage() {
                                             typeof selectedTransaction.amount ===
                                                 'string'
                                                 ? parseFloat(
-                                                      selectedTransaction.amount,
+                                                      selectedTransaction.amount
                                                   )
-                                                : selectedTransaction.amount,
+                                                : selectedTransaction.amount
                                         )}
                                     </p>
                                 </div>
@@ -844,7 +841,7 @@ export function OrderDetailPage() {
                                     </p>
                                     <p className='text-sm text-white'>
                                         {formatDateTime(
-                                            selectedTransaction.createdAt,
+                                            selectedTransaction.createdAt
                                         )}
                                     </p>
                                 </div>
@@ -854,7 +851,7 @@ export function OrderDetailPage() {
                                     </p>
                                     <p className='text-sm text-white'>
                                         {formatDateTime(
-                                            selectedTransaction.updatedAt,
+                                            selectedTransaction.updatedAt
                                         )}
                                     </p>
                                 </div>

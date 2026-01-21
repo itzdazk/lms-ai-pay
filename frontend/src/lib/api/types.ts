@@ -413,7 +413,6 @@ export interface CreateOrderRequest {
     courseId: number
     paymentGateway: 'VNPay' | 'MoMo'
     billingAddress?: Order['billingAddress']
-    couponCode?: string
 }
 
 export interface OrderFilters {
@@ -589,7 +588,8 @@ export interface Notification {
     id: number
     userId: number
     user?: User
-    type: // Student notifications
+    type:
+        // Student notifications
         | 'ENROLLMENT_SUCCESS'
         | 'PAYMENT_SUCCESS'
         | 'PAYMENT_FAILED'
@@ -954,130 +954,4 @@ export interface QuizAttempt {
     attemptsAllowed?: number
     canRetake: boolean
     latestResult?: QuizResult
-}
-
-// =====================================================
-// COUPON TYPES
-// =====================================================
-export interface Coupon {
-    id: number
-    code: string
-    type: 'PERCENT' | 'FIXED' | 'NEW_USER'
-    value: number
-    maxDiscount?: number
-    minOrderValue?: number
-    applicableCourseIds?: number[]
-    applicableCategoryIds?: number[]
-    startDate: string
-    endDate: string
-    maxUses?: number
-    maxUsesPerUser?: number
-    usesCount: number
-    active: boolean
-    createdBy: number
-    createdAt: string
-    updatedAt: string
-    // Computed fields (from backend)
-    totalDiscountGiven?: number
-    _count?: {
-        usages: number
-    }
-}
-
-export interface CouponUsage {
-    id: number
-    couponId: number
-    coupon?: Coupon
-    userId: number
-    user?: User
-    orderId?: number
-    order?: Order
-    amountReduced: number
-    usedAt: string
-}
-
-export interface CreateCouponRequest {
-    code: string
-    type: 'PERCENT' | 'FIXED' | 'NEW_USER'
-    value: number
-    maxDiscount?: number
-    minOrderValue?: number
-    applicableCourseIds?: number[]
-    applicableCategoryIds?: number[]
-    startDate: string
-    endDate: string
-    maxUses?: number
-    maxUsesPerUser?: number
-}
-
-export interface UpdateCouponRequest extends Partial<CreateCouponRequest> {
-    active?: boolean
-}
-
-export interface CouponFilters {
-    page?: number
-    limit?: number
-    search?: string
-    active?: boolean | string
-    type?: 'PERCENT' | 'FIXED' | 'NEW_USER'
-    sort?: 'newest' | 'oldest' | 'most_used' | 'least_used'
-}
-
-export interface ApplyCouponRequest {
-    code: string
-    orderTotal: number
-    courseIds?: number[]
-}
-
-export interface ApplyCouponResponse {
-    couponCode: string
-    discountAmount: number
-    finalPrice: number
-    couponDetails: {
-        type: string
-        value: number
-    }
-}
-
-export interface CouponUsageHistoryFilters {
-    page?: number
-    limit?: number
-}
-
-// =====================================================
-// AVAILABLE COUPON TYPES (Student-facing)
-// =====================================================
-export interface AvailableCoupon {
-    id: number
-    code: string
-    type: 'PERCENT' | 'FIXED' | 'NEW_USER'
-    value: number
-    maxDiscount?: number
-    minOrderValue?: number
-    applicableCourseIds?: number[]
-    applicableCategoryIds?: number[]
-    startDate: string
-    endDate: string
-    maxUses?: number
-    maxUsesPerUser?: number
-    usesCount: number
-    applicableCourses?: Array<{
-        id: number
-        title: string
-    }>
-    applicableCategories?: Array<{
-        id: number
-        name: string
-    }>
-}
-
-export interface GetAvailableCouponsParams {
-    page?: number
-    limit?: number
-    type?: 'PERCENT' | 'FIXED' | 'NEW_USER'
-}
-
-export interface GetAvailableCouponsResponse {
-    coupons: AvailableCoupon[]
-    total: number
 }

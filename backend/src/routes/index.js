@@ -36,8 +36,6 @@ import adminAIRoutes from './admin-ai.routes.js'
 import adminRevenueStatsRoutes from './admin-revenue-stats.routes.js'
 import systemConfigRoutes from './system-config.routes.js'
 import adminSystemConfigRoutes from './admin-system-config.routes.js'
-import adminCouponRoutes from './admin-coupon.routes.js'
-import couponRoutes from './coupon.routes.js'
 
 const router = express.Router()
 
@@ -131,8 +129,6 @@ router.use('/admin/ai', adminAIRoutes)
 router.use('/admin/revenue', adminRevenueStatsRoutes)
 router.use('/system-config', systemConfigRoutes)
 router.use('/admin/system-config', adminSystemConfigRoutes)
-router.use('/admin/coupons', adminCouponRoutes)
-router.use('/coupons', couponRoutes)
 
 // Additional routes can be added here
 // router.use('/enrollments', enrollmentRoutes)

@@ -30,16 +30,12 @@ export function PaymentCheckoutPage() {
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [isLoading, setIsLoading] = useState<boolean>(true)
     const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>(
-        'vnpay',
+        'vnpay'
     )
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
     const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
-    const [finalPrice, setFinalPrice] = useState<number | null>(null)
-    const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
-        null,
-    )
     const [billing, setBilling] = useState({
         firstName: '',
         lastName: '',
@@ -80,7 +76,7 @@ export function PaymentCheckoutPage() {
                       originalPrice: course.originalPrice ?? course.price,
                   })
                 : null,
-        [course],
+        [course]
     )
 
     if (!slug) {
@@ -160,7 +156,6 @@ export function PaymentCheckoutPage() {
                     email: billing.email || undefined,
                     phone: billing.phone || undefined,
                 },
-                couponCode: appliedCouponCode || undefined,
             })
 
             const paymentUrl =
@@ -208,7 +203,7 @@ export function PaymentCheckoutPage() {
                                     value={paymentMethod}
                                     onValueChange={(value) =>
                                         setPaymentMethod(
-                                            value as 'vnpay' | 'momo',
+                                            value as 'vnpay' | 'momo'
                                         )
                                     }
                                 >
@@ -408,17 +403,7 @@ export function PaymentCheckoutPage() {
                     </div>
 
                     <div className='lg:col-span-1 space-y-4'>
-                        <OrderSummary
-                            course={course}
-                            loading={isLoading}
-                            showCourseMeta={false}
-                            showCouponInput={false}
-                            onPriceChange={setFinalPrice}
-                            onCouponApplied={(couponCode) =>
-                                setAppliedCouponCode(couponCode)
-                            }
-                            onCouponRemoved={() => setAppliedCouponCode(null)}
-                        />
+                        <OrderSummary course={course} loading={isLoading} />
 
                         <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                             <CardContent className='space-y-4 pt-6'>
@@ -438,9 +423,7 @@ export function PaymentCheckoutPage() {
                                         Tôi đồng ý với{' '}
                                         <button
                                             type='button'
-                                            onClick={() =>
-                                                setIsTermsDialogOpen(true)
-                                            }
+                                            onClick={() => setIsTermsDialogOpen(true)}
                                             className='text-blue-600 hover:underline cursor-pointer'
                                         >
                                             Điều khoản sử dụng
@@ -448,9 +431,7 @@ export function PaymentCheckoutPage() {
                                         và{' '}
                                         <button
                                             type='button'
-                                            onClick={() =>
-                                                setIsPrivacyDialogOpen(true)
-                                            }
+                                            onClick={() => setIsPrivacyDialogOpen(true)}
                                             className='text-blue-600 hover:underline cursor-pointer'
                                         >
                                             Chính sách bảo mật
@@ -474,17 +455,9 @@ export function PaymentCheckoutPage() {
                                     ) : (
                                         <>
                                             <CreditCard className='mr-2 h-4 w-4' />
-                                            {finalPrice !== null
-                                                ? `Thanh toán ${new Intl.NumberFormat(
-                                                      'vi-VN',
-                                                      {
-                                                          style: 'currency',
-                                                          currency: 'VND',
-                                                      },
-                                                  ).format(finalPrice)}`
-                                                : priceInfo
-                                                  ? `Thanh toán ${priceInfo.displayPrice}`
-                                                  : 'Thanh toán'}
+                                            {priceInfo
+                                                ? `Thanh toán ${priceInfo.displayPrice}`
+                                                : 'Thanh toán'}
                                         </>
                                     )}
                                 </DarkOutlineButton>

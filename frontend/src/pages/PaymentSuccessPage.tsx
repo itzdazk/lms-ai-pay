@@ -61,7 +61,7 @@ const stripGatewaySuffix = (code?: string | null): string | undefined => {
  * Decode extraData from MoMo
  */
 const decodeExtraData = (
-    extraData: string | null,
+    extraData: string | null
 ): { orderCode?: string; orderId?: number } | null => {
     if (!extraData) return null
 
@@ -135,7 +135,7 @@ const parseGatewayResult = (params: URLSearchParams): GatewayResult => {
  * Extract order information from URL params
  */
 const getOrderInfoFromParams = (
-    params: URLSearchParams,
+    params: URLSearchParams
 ): { orderCode?: string; orderId?: string } => {
     const extraData = params.get('extraData')
     const decoded = decodeExtraData(extraData)
@@ -279,8 +279,8 @@ export function PaymentSuccessPage() {
                                               order?.orderCode || orderCode
                                           }`
                                         : hasError
-                                          ? 'Không tìm thấy thông tin đơn hàng'
-                                          : 'Cảm ơn bạn đã mua khóa học'}
+                                        ? 'Không tìm thấy thông tin đơn hàng'
+                                        : 'Cảm ơn bạn đã mua khóa học'}
                                 </CardDescription>
                             </div>
                             {!isLoading && order && (
@@ -290,13 +290,13 @@ export function PaymentSuccessPage() {
                                     </span>
                                     <span className='text-sm font-medium text-white'>
                                         {translatePaymentStatus(
-                                            order.paymentStatus,
+                                            order.paymentStatus
                                         )}
                                     </span>
                                     <span className='text-xs text-gray-400'>
                                         Tổng:{' '}
                                         {order.finalPrice.toLocaleString(
-                                            'vi-VN',
+                                            'vi-VN'
                                         )}{' '}
                                         ₫
                                     </span>
@@ -334,19 +334,18 @@ export function PaymentSuccessPage() {
                                 <div className='bg-[#1F1F1F] rounded-lg p-4 flex-1 min-h-0 overflow-y-auto'>
                                     <OrderSummary
                                         course={order.course || null}
-                                        order={order}
                                     />
                                     <div className='mt-3 pt-3 border-t border-[#2D2D2D] lg:hidden text-xs text-gray-300 space-y-1'>
                                         <p>
                                             Trạng thái:{' '}
                                             {translatePaymentStatus(
-                                                order.paymentStatus,
+                                                order.paymentStatus
                                             )}
                                         </p>
                                         <p>
                                             Tổng:{' '}
                                             {order.finalPrice.toLocaleString(
-                                                'vi-VN',
+                                                'vi-VN'
                                             )}{' '}
                                             ₫
                                         </p>
@@ -364,8 +363,8 @@ export function PaymentSuccessPage() {
                                             {isPaid
                                                 ? 'Bạn có thể bắt đầu học ngay hoặc xem lại đơn hàng.'
                                                 : isFailed || gatewayFailed
-                                                  ? 'Thanh toán không thành công. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.'
-                                                  : 'Thanh toán đang được xử lý. Vui lòng đợi trong giây lát.'}
+                                                ? 'Thanh toán không thành công. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.'
+                                                : 'Thanh toán đang được xử lý. Vui lòng đợi trong giây lát.'}
                                         </p>
                                         <div className='flex flex-col gap-2'>
                                             {isPaid && course && (
