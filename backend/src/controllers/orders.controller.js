@@ -11,7 +11,8 @@ class OrdersController {
      */
     createOrder = asyncHandler(async (req, res) => {
         const userId = req.user.id
-        const { courseId, paymentGateway, billingAddress } = req.body
+        const { courseId, paymentGateway, billingAddress, couponCode } =
+            req.body
 
         if (!courseId) {
             return ApiResponse.badRequest(res, 'Yêu cầu ID khóa học')
@@ -25,7 +26,8 @@ class OrdersController {
             userId,
             parseInt(courseId),
             paymentGateway,
-            billingAddress
+            billingAddress,
+            couponCode,
         )
 
         return ApiResponse.created(res, order, 'Tạo hóa đơn thành công')
@@ -70,7 +72,7 @@ class OrdersController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Truy xuất hóa đơn thành công'
+            'Truy xuất hóa đơn thành công',
         )
     })
 
@@ -93,7 +95,7 @@ class OrdersController {
         return ApiResponse.success(
             res,
             order,
-            'Truy xuất chi tiết hóa đơn thành công'
+            'Truy xuất chi tiết hóa đơn thành công',
         )
     })
 
@@ -115,7 +117,7 @@ class OrdersController {
         return ApiResponse.success(
             res,
             order,
-            'Truy xuất chi tiết hóa đơn thành công'
+            'Truy xuất chi tiết hóa đơn thành công',
         )
     })
 
@@ -151,7 +153,7 @@ class OrdersController {
         return ApiResponse.success(
             res,
             stats,
-            'Truy xuất thống kê hóa đơn thành công'
+            'Truy xuất thống kê hóa đơn thành công',
         )
     })
 }
