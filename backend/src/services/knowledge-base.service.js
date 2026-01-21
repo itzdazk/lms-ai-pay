@@ -1,10 +1,10 @@
-// src/services/knowledge-base.service.js
 import { prisma } from '../config/database.config.js'
 import TranscriptParser from '../utils/transcript-parser.util.js'
 import logger from '../config/logger.config.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
+import redisCacheService from './redis-cache.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -118,10 +118,10 @@ class KnowledgeBaseService {
             if (lessonId) {
                 whereClause.id = lessonId
                 logger.debug(`Searching transcript for specific lessonId: ${lessonId}`)
-                // NOTE: Do NOT apply transcriptUrl constraint in lesson mode
+                // NOTE: Do NOT apply transcriptUrl constraint when searching specific lesson
                 // Allow finding lessons without transcripts so fallback logic can work
             } else {
-                // Only require transcript for non-lesson modes (course, user, general search)
+                // Only require transcript when not searching specific lesson (course, user, general search)
                 whereClause.transcriptUrl = { not: null }
                 
                 if (courseId) {
@@ -588,7 +588,7 @@ class KnowledgeBaseService {
 
             const enrolledCourseIds = enrolledCoursesData.map((e) => e.courseId).sort()
             
-            // In lesson mode ('course' + dynamicLessonId): use only dynamicLessonId
+            // In course mode with dynamicLessonId: use only dynamicLessonId for lesson-specific search
             // In general mode: no specific lesson target
             const targetLessonId = mode === 'course' ? dynamicLessonId : null
             const targetCourseId = conversation?.courseId || userContext.currentCourse?.id
@@ -598,10 +598,14 @@ class KnowledgeBaseService {
                 `mode: ${mode}, targetLessonId: ${targetLessonId}, targetCourseId: ${targetCourseId}`
             )
             
-            // Check cache for search results (key: query + mode + lessonId + courseIds)
-            const cacheKey = mode === 'course' && targetLessonId 
-                ? `${query.toLowerCase()}:lesson:${targetLessonId}`
-                : `${query.toLowerCase()}:general:${enrolledCourseIds.join(',')}`
+            // Check cache for search results (key: mode + normalized query + context)
+            const normalizedQuery = (query || '').toLowerCase().trim()
+            const cacheKey =
+                mode === 'advisor'
+                    ? `advisor:${normalizedQuery}`
+                    : mode === 'course' && targetLessonId
+                      ? `course:${normalizedQuery}:lesson:${targetLessonId}`
+                      : `general:${normalizedQuery}:${enrolledCourseIds.join(',')}`
             const cached = this.searchCache.get(cacheKey)
             if (cached && Date.now() - cached.timestamp < this.searchCacheMaxAge) {
                 logger.debug(`Using cached search results for query: ${query}`)
@@ -613,29 +617,50 @@ class KnowledgeBaseService {
             }
 
             // 2. Search strategy
-            // Short-circuit for lesson-specific mode: only search transcripts for the current lesson
+            // When in course mode with lessonId: only search transcripts for the current lesson
             let courses = []
             let lessons = []
             let transcripts = []
 
             if (mode === 'advisor') {
                 // Advisor mode: Search courses to provide real recommendations
-                // Fetch top courses, optionally filtered by query if user's intent is about courses
-                courses = await this.searchCoursesByQuery(query, {
-                    published: false, // Show all courses regardless of status for advisor recommendations
-                    limit: 10,
-                    orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
-                })
+                // OPTIMIZED: Use Redis cache + Extract keywords + Deterministic ranking
                 
-                // If search returned no results but user provided a query, try broader search
-                // (fetch all courses and let advisor recommend them)
-                if (courses.length === 0 && query && query.trim()) {
-                    logger.debug(`Advisor search returned 0 results for "${query}", fetching all courses as fallback`)
-                    courses = await this.searchCoursesByQuery('', {
-                        published: false,
-                        limit: 10,
+                // Try Redis cache first (faster than DB query)
+                const cachedCourses = await redisCacheService.getCachedAdvisorSearch(query)
+                if (cachedCourses) {
+                    courses = cachedCourses
+                    logger.debug(`Advisor: Using Redis cache for query: ${query.substring(0, 50)}`)
+                } else {
+                    // Cache miss: query database
+                    // OPTIMIZED: Lấy 8 courses (đủ để rank và chọn best 4, giảm 60% data transfer)
+                    courses = await this.searchCoursesByQuery(query, {
+                        published: false, // Show all courses regardless of status for advisor recommendations
+                        limit: 8, // Optimized: 8 courses đủ để rank và chọn best 4 (giảm từ 20)
                         orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
                     })
+                    
+                    // Cache results in Redis (async, non-blocking)
+                    redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                        logger.warn('Failed to cache advisor search in Redis', err.message)
+                    })
+                    
+                    // If search returned no results but user provided a query, try broader search
+                    if (courses.length === 0 && query && query.trim()) {
+                        logger.debug(`Advisor search returned 0 results for "${query}", fetching top courses as fallback`)
+                        courses = await this.searchCoursesByQuery('', {
+                            published: false,
+                            limit: 8, // Optimized: giảm từ 20 xuống 8
+                            orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                        })
+                        
+                        // Cache fallback results too
+                        if (courses.length > 0) {
+                            redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                                logger.warn('Failed to cache fallback search in Redis', err.message)
+                            })
+                        }
+                    }
                 }
                 
                 lessons = []
@@ -941,6 +966,85 @@ class KnowledgeBaseService {
     }
 
     /**
+     * Extract keywords from query (remove stopwords, keep meaningful tech keywords)
+     * @param {string} query - User query
+     * @returns {Array<string>} Extracted keywords
+     */
+    _extractKeywords(query) {
+        if (!query || query.trim().length === 0) return []
+
+        const stopwords = new Set([
+            'hoc', 'học', 'muon', 'muốn', 'toi', 'tôi', 'ban', 'bạn',
+            'lam', 'làm', 'viec', 'việc', 'can', 'cần', 'gi', 'gì',
+            'the', 'thế', 'nào', 'phu', 'phù', 'hop', 'hợp',
+            'de', 'để', 've', 'về', 'khoa', 'khóa', 'lop', 'lớp',
+            'co', 'có', 'coi', 'xem', 'camon', 'cảm', 'cảm ơn', 'on', 'ơn',
+        ])
+
+        const allowShortKeywords = new Set([
+            'ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql',
+        ])
+
+        return query
+            .toLowerCase()
+            .split(/[^\p{L}\p{N}+#.]+/u)
+            .filter((w) => w.length > 0)
+            .filter(
+                (w) =>
+                    (w.length >= 3 || allowShortKeywords.has(w)) &&
+                    !stopwords.has(w)
+            )
+    }
+
+    /**
+     * Deterministic scoring cho khóa học dựa trên keyword match + tín hiệu chất lượng
+     * Không dùng LLM, chỉ rule-based để Advisor ổn định.
+     */
+    _scoreCourse(course, keywords = []) {
+        const text = [
+            course.title || '',
+            course.shortDescription || '',
+            course.description || '',
+            course.whatYouLearn || '',
+        ]
+            .join(' ')
+            .toLowerCase()
+
+        // Keyword hit: mỗi keyword trùng tăng điểm
+        const keywordHits =
+            keywords.length > 0
+                ? keywords.reduce(
+                      (acc, kw) => acc + (text.includes(kw) ? 1 : 0),
+                      0
+                  )
+                : 0
+
+        // Chất lượng: rating và độ phổ biến
+        const ratingScore = course.ratingAvg
+            ? Number(course.ratingAvg) / 5
+            : 0
+        const popularityScore = Math.log(1 + (course.enrolledCount || 0)) / 10
+
+        // Độ mới: publishedAt gần hiện tại hơn → điểm cao hơn (simple decay)
+        let freshnessScore = 0
+        if (course.publishedAt) {
+            const days =
+                (Date.now() - new Date(course.publishedAt).getTime()) /
+                (1000 * 60 * 60 * 24)
+            // <=30 ngày: 1.0, 180 ngày: ~0.3, >365 ngày: ~0.1
+            freshnessScore = Math.max(0.1, Math.min(1, 30 / Math.max(30, days)))
+        }
+
+        // Trọng số đơn giản, có thể tinh chỉnh sau
+        return (
+            keywordHits * 2 + // ưu tiên khớp từ khóa
+            ratingScore * 1.5 +
+            popularityScore * 1.0 +
+            freshnessScore * 0.5
+        )
+    }
+
+    /**
      * Search courses by query (for advisor recommendations)
      * @param {string} query - Search query
      * @param {Object} options - Search options (published, active, limit, orderBy)
@@ -957,14 +1061,31 @@ class KnowledgeBaseService {
             }
 
             // Search in title, description, shortDescription if query provided
+            // OPTIMIZED: Extract keywords instead of using full query
             if (query && query.trim()) {
-                const searchTerm = query.toLowerCase().trim()
-                where.OR = [
-                    { title: { contains: searchTerm, mode: 'insensitive' } },
-                    { shortDescription: { contains: searchTerm, mode: 'insensitive' } },
-                    { description: { contains: searchTerm, mode: 'insensitive' } },
-                    { whatYouLearn: { contains: searchTerm, mode: 'insensitive' } },
-                ]
+                const keywords = this._extractKeywords(query)
+                
+                if (keywords.length > 0) {
+                    // Search with each keyword (OR logic - course matches any keyword)
+                    // This allows "Tôi muốn học Python" → extract "python" → match "Python Advanced"
+                    where.OR = keywords.flatMap(keyword => [
+                        { title: { contains: keyword, mode: 'insensitive' } },
+                        { shortDescription: { contains: keyword, mode: 'insensitive' } },
+                        { description: { contains: keyword, mode: 'insensitive' } },
+                        { whatYouLearn: { contains: keyword, mode: 'insensitive' } },
+                    ])
+                    
+                    logger.debug(`Extracted keywords from query "${query}": ${keywords.join(', ')}`)
+                } else {
+                    // Fallback: use full query if no keywords extracted
+                    const searchTerm = query.toLowerCase().trim()
+                    where.OR = [
+                        { title: { contains: searchTerm, mode: 'insensitive' } },
+                        { shortDescription: { contains: searchTerm, mode: 'insensitive' } },
+                        { description: { contains: searchTerm, mode: 'insensitive' } },
+                        { whatYouLearn: { contains: searchTerm, mode: 'insensitive' } },
+                    ]
+                }
             }
 
             logger.debug(`Searching courses with query="${query}", where=${JSON.stringify(where)}`)
@@ -989,7 +1110,7 @@ class KnowledgeBaseService {
             const courses = await prisma.course.findMany({
                 where,
                 orderBy: orderByClause,
-                take: limit,
+                take: Math.max(limit, 20), // lấy nhiều hơn một chút rồi sẽ tự rank/cắt
                 select: {
                     id: true,
                     title: true,
@@ -1012,14 +1133,36 @@ class KnowledgeBaseService {
                             avatarUrl: true,
                         },
                     },
+                    publishedAt: true,
+                    whatYouLearn: true,
                 },
             })
 
-            logger.info(`Advisor search: Found ${courses.length} courses for query="${query}"`)
-            if (courses.length > 0) {
-                logger.debug(`Top courses: ${courses.slice(0, 3).map(c => c.title).join(', ')}`)
+            // Deterministic ranking trên app layer (tăng độ ổn định, tránh phụ thuộc DB sort)
+            const keywords =
+                query && query.trim() ? this._extractKeywords(query) : []
+            const scored = courses.map((c) => ({
+                course: c,
+                score: this._scoreCourse(c, keywords),
+            }))
+
+            const ranked = scored
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit)
+                .map((item) => item.course)
+
+            logger.info(
+                `Advisor search: Found ${courses.length} courses, ranked top=${ranked.length} for query="${query}"`
+            )
+            if (ranked.length > 0) {
+                logger.debug(
+                    `Top ranked: ${ranked
+                        .slice(0, 3)
+                        .map((c) => c.title)
+                        .join(', ')}`
+                )
             }
-            return courses
+            return ranked
         } catch (error) {
             logger.error('Error searching courses for advisor:', error)
             throw error

@@ -1,11 +1,9 @@
-// src/services/ai-chat.service.js
 import { prisma } from '../config/database.config.js'
 import knowledgeBaseService from './knowledge-base.service.js'
 import ollamaService from './ollama.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import { HTTP_STATUS, AI_INTERACTION_TYPES } from '../config/constants.js'
-
 class AIChatService {
     /**
      * Helper: Verify conversation access
@@ -695,7 +693,7 @@ class AIChatService {
                 })
             }
 
-            // Prefix clarity for lesson mode: always state which lesson/course
+            // Prefix clarity for course mode: always state which lesson/course
             let prefix = ''
             if (mode === 'course') {
                 const lessonTitle =
@@ -819,19 +817,34 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             const availableCourses =
                 courses && courses.length > 0 ? courses : []
 
-            // Filter courses that are relevant to the user's intent
-            const relevantCourses = availableCourses.filter((course) =>
-                this._isCourseRelevant(query, course)
-            )
+            // OPTIMIZED: If courses were already filtered by searchCoursesByQuery (with keywords),
+            // we don't need to filter again. Only filter if query is empty or very generic.
+            // The searchCoursesByQuery now extracts keywords and searches properly, so courses
+            // returned are already relevant.
+            let relevantCourses = availableCourses
+            
+            // Only apply additional filtering if:
+            // 1. Query is empty/generic (no keywords extracted)
+            // 2. We want to further refine results
+            // For most cases, courses from searchCoursesByQuery are already relevant
+            if (query && query.trim() && availableCourses.length > 0) {
+                // Optional: Can still filter if we want stricter matching
+                // But usually not needed since searchCoursesByQuery already filters by keywords
+                // relevantCourses = availableCourses.filter((course) =>
+                //     this._isCourseRelevant(query, course)
+                // )
+                // For now, use all courses returned from search (already filtered by keywords)
+                relevantCourses = availableCourses
+            }
 
             // Build a prompt that prevents hallucination and only uses relevant courses
             const coursesForPrompt =
                 relevantCourses.length > 0 ? relevantCourses : []
             const coursesList = coursesForPrompt
-                .map(
-                    (c, i) =>
-                        `${i + 1}. ${c.title} (${c.durationHours}h, ${c.totalLessons} bài học)`
-                )
+                .map((c, i) => {
+                    const durationLabel = this._formatDuration(c.durationHours)
+                    return `${i + 1}. ${c.title} (${durationLabel}, ${c.totalLessons} bài học)`
+                })
                 .join('\n')
 
             const prompt = `Bạn là trợ lý tư vấn khóa học lập trình. Người dùng nói: "${query}"
@@ -852,8 +865,9 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
             let advisorMessage = contextResponse
 
             // Include relevant courses only when we found matches
-            if (relevantCourses.length > 0) {
-                advisorMessage += `\n\nTìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
+            const displayedCount = Math.min(relevantCourses.length, 4)
+            if (displayedCount > 0) {
+                advisorMessage += `\n\nTìm thấy ${displayedCount} khóa học phù hợp. Xem danh sách bên dưới 👇`
             }
 
             // Build sources from courses
@@ -869,6 +883,7 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
                 ratingCount: course.ratingCount,
                 enrolledCount: course.enrolledCount,
                 duration: course.durationHours,
+                durationLabel: this._formatDuration(course.durationHours),
                 lessons: course.totalLessons,
                 description: course.shortDescription,
                 thumbnail: course.thumbnailUrl,
@@ -1073,6 +1088,25 @@ Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa họ
         if (keywords.length === 0) return false
 
         return keywords.some((kw) => haystack.includes(kw))
+    }
+
+    /**
+     * Định dạng thời lượng (durationHours lưu phút) thành chuỗi thân thiện
+     * - < 60 phút: "Xm"
+     * - >= 60 phút: "Xh Ym" (ẩn phút nếu 0)
+     */
+    _formatDuration(durationMinutes) {
+        if (!durationMinutes || Number.isNaN(Number(durationMinutes))) {
+            return 'N/A'
+        }
+        const totalMinutes = Math.max(0, Number(durationMinutes))
+        const hours = Math.floor(totalMinutes / 60)
+        const minutes = totalMinutes % 60
+
+        // Hiển thị tiếng Việt: giờ/phút
+        if (hours === 0) return `${minutes} phút`
+        if (minutes === 0) return `${hours} giờ`
+        return `${hours} giờ ${minutes} phút`
     }
     generateTranscriptResponse(transcripts, query) {
         const topResult = transcripts[0]
