@@ -341,7 +341,7 @@ export function CouponForm({ coupon, onSuccess, onCancel }: CouponFormProps) {
                     variant='outline'
                     onClick={onCancel}
                     disabled={isSubmitting}
-                    className='border-[#2D2D2D] text-white hover:bg-[#1F1F1F]'
+                    className='border-[#2D2D2D] text-white bg-black hover:bg-[#1F1F1F] dark:hover:bg-[#1F1F1F]'
                 >
                     Hủy
                 </Button>

@@ -1,24 +1,49 @@
 import apiClient from './client'
 import type {
     ApiResponse,
-    PaginatedApiResponse,
     Coupon,
-    CreateCouponRequest,
-    UpdateCouponRequest,
     CouponFilters,
-    CouponUsageHistoryFilters,
     CouponUsage,
+    CouponUsageHistoryFilters,
+    CreateCouponRequest,
+    PaginatedApiResponse,
+    UpdateCouponRequest,
 } from './types'
 
 /**
- * Admin Coupons API client
+ * Admin Coupon API client
  */
 export const adminCouponsApi = {
     /**
-     * Get all coupons with admin filters
+     * Create a new coupon
+     */
+    async createCoupon(payload: CreateCouponRequest): Promise<Coupon> {
+        const response = await apiClient.post<ApiResponse<Coupon>>(
+            '/admin/coupons',
+            payload,
+        )
+        return response.data.data
+    },
+
+    /**
+     * Update a coupon
+     */
+    async updateCoupon(
+        couponId: number,
+        payload: UpdateCouponRequest,
+    ): Promise<Coupon> {
+        const response = await apiClient.put<ApiResponse<Coupon>>(
+            `/admin/coupons/${couponId}`,
+            payload,
+        )
+        return response.data.data
+    },
+
+    /**
+     * Get all coupons with filters and pagination
      */
     async getCoupons(filters?: CouponFilters): Promise<{
-        data: Coupon[]
+        coupons: Coupon[]
         pagination: {
             page: number
             limit: number
@@ -30,7 +55,7 @@ export const adminCouponsApi = {
         if (filters?.page) params.append('page', filters.page.toString())
         if (filters?.limit) params.append('limit', filters.limit.toString())
         if (filters?.search) params.append('search', filters.search)
-        if (filters?.active !== undefined && filters?.active !== '')
+        if (filters?.active !== undefined)
             params.append('active', filters.active.toString())
         if (filters?.type) params.append('type', filters.type)
         if (filters?.sort) params.append('sort', filters.sort)
@@ -39,7 +64,7 @@ export const adminCouponsApi = {
             `/admin/coupons?${params.toString()}`,
         )
         return {
-            data: response.data.data,
+            coupons: response.data.data,
             pagination: response.data.pagination,
         }
     },
@@ -47,82 +72,56 @@ export const adminCouponsApi = {
     /**
      * Get coupon details by ID
      */
-    async getCouponById(id: number | string): Promise<Coupon> {
+    async getCouponById(couponId: number): Promise<Coupon> {
         const response = await apiClient.get<ApiResponse<Coupon>>(
-            `/admin/coupons/${id}`,
+            `/admin/coupons/${couponId}`,
         )
         return response.data.data
     },
 
     /**
-     * Create a new coupon
+     * Delete/Deactivate a coupon
      */
-    async createCoupon(data: CreateCouponRequest): Promise<Coupon> {
-        const response = await apiClient.post<ApiResponse<Coupon>>(
-            '/admin/coupons',
-            data,
-        )
-        return response.data.data
-    },
-
-    /**
-     * Update an existing coupon
-     */
-    async updateCoupon(
-        id: number | string,
-        data: UpdateCouponRequest,
-    ): Promise<Coupon> {
-        const response = await apiClient.put<ApiResponse<Coupon>>(
-            `/admin/coupons/${id}`,
-            data,
-        )
-        return response.data.data
-    },
-
-    /**
-     * Delete (or deactivate) a coupon
-     */
-    async deleteCoupon(
-        id: number | string,
-    ): Promise<{ deleted: boolean; deactivated: boolean; message: string }> {
+    async deleteCoupon(couponId: number): Promise<{
+        deleted: boolean
+        deactivated: boolean
+        message: string
+    }> {
         const response = await apiClient.delete<
             ApiResponse<{
                 deleted: boolean
                 deactivated: boolean
                 message: string
             }>
-        >(`/admin/coupons/${id}`)
+        >(`/admin/coupons/${couponId}`)
         return response.data.data
     },
 
     /**
-     * Get usage history for a specific coupon
+     * Get coupon usage history
      */
     async getCouponUsageHistory(
-        id: number | string,
+        couponId: number,
         filters?: CouponUsageHistoryFilters,
     ): Promise<{
         usages: CouponUsage[]
-        total: number
+        pagination: {
+            page: number
+            limit: number
+            total: number
+            totalPages: number
+        }
     }> {
         const params = new URLSearchParams()
         if (filters?.page) params.append('page', filters.page.toString())
         if (filters?.limit) params.append('limit', filters.limit.toString())
 
-        const response = await apiClient.get<
-            PaginatedApiResponse<CouponUsage> & {
-                pagination: { total: number }
-            }
-        >(`/admin/coupons/${id}/usages?${params.toString()}`)
-
-        // Note: The backend returns { usages: [], total: ... } inside data, or paginated structure?
-        // Checking backend controller: it returns ApiResponse.paginated(res, result.usages, ...)
-        // So response.data.data is the usages array.
-        // We will adapt to return what the component expects.
-
+        const response = await apiClient.get<PaginatedApiResponse<CouponUsage>>(
+            `/admin/coupons/${couponId}/usages?${params.toString()}`,
+        )
         return {
             usages: response.data.data,
-            total: response.data.pagination.total,
+            pagination: response.data.pagination,
         }
     },
 

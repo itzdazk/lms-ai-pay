@@ -208,7 +208,7 @@ const PromotionsPage: React.FC = () => {
             <div className='container mx-auto px-4 py-8'>
                 {/* Header */}
                 <div className='text-center mb-12'>
-                    <h1 className='text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4'>
+                    <h1 className='text-4xl md:text-5xl font-bold text-black mb-4'>
                         Mã giảm giá HOT nhất
                     </h1>
                     <p className='text-gray-600 text-lg'>
