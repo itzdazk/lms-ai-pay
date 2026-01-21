@@ -5,6 +5,7 @@ import type {
     Course,
     PublicCourse,
     ApplyCouponResponse,
+    Order,
 } from '../../lib/api/types'
 import {
     formatDuration,
@@ -18,6 +19,7 @@ import { CouponInput } from './CouponInput'
 
 type OrderSummaryProps = {
     course?: PublicCourse | Course | null
+    order?: Order | null
     loading?: boolean
     className?: string
     showCourseMeta?: boolean
@@ -29,6 +31,7 @@ type OrderSummaryProps = {
 
 export function OrderSummary({
     course,
+    order,
     loading,
     className,
     showCourseMeta = true,
@@ -41,6 +44,7 @@ export function OrderSummary({
         useState<ApplyCouponResponse | null>(null)
 
     // Calculate price info and final price (must be before early returns)
+    // If order is provided, use order data; otherwise calculate from course
     const priceInfo = course
         ? getCoursePrice({
               price: course.price ?? course.originalPrice,
@@ -49,10 +53,12 @@ export function OrderSummary({
           })
         : null
 
-    const finalPrice =
-        priceInfo && appliedCoupon
-            ? appliedCoupon.finalPrice
-            : priceInfo?.currentPrice || 0
+    // Use order's finalPrice if available, otherwise use calculated price
+    const finalPrice = order
+        ? order.finalPrice
+        : priceInfo && appliedCoupon
+          ? appliedCoupon.finalPrice
+          : priceInfo?.currentPrice || 0
 
     // Notify parent component when final price changes
     useEffect(() => {
@@ -125,10 +131,13 @@ export function OrderSummary({
     }
 
     // Calculate discount amounts
-    const courseDiscountAmount = priceInfo.hasDiscount
-        ? priceInfo.originalPrice - priceInfo.currentPrice
-        : 0
-    const couponDiscountAmount = appliedCoupon?.discountAmount || 0
+    // If order is provided, use order's discount data
+    const courseDiscountAmount = order
+        ? order.discountAmount
+        : priceInfo.hasDiscount
+          ? priceInfo.originalPrice - priceInfo.currentPrice
+          : 0
+    const couponDiscountAmount = order ? 0 : appliedCoupon?.discountAmount || 0
 
     const lessonsCount =
         (course as PublicCourse).totalLessons ?? (course as Course).lessonsCount
@@ -190,22 +199,34 @@ export function OrderSummary({
                         <span>Giá gốc:</span>
                         <span
                             className={
-                                priceInfo.hasDiscount ? 'line-through' : ''
+                                order
+                                    ? order.discountAmount > 0
+                                        ? 'line-through'
+                                        : ''
+                                    : priceInfo.hasDiscount
+                                      ? 'line-through'
+                                      : ''
                             }
                         >
-                            {formatPrice(priceInfo.originalPrice)}
+                            {order
+                                ? formatPrice(order.originalPrice)
+                                : formatPrice(priceInfo.originalPrice)}
                         </span>
                     </div>
 
-                    {priceInfo.hasDiscount && (
+                    {(order
+                        ? order.discountAmount > 0
+                        : priceInfo.hasDiscount) && (
                         <div className='flex justify-between text-green-400'>
-                            <span>Giảm giá khóa học:</span>
+                            <span>
+                                {order ? 'Giảm giá:' : 'Giảm giá khóa học:'}
+                            </span>
                             <span>-{formatPrice(courseDiscountAmount)}</span>
                         </div>
                     )}
 
-                    {/* Coupon input */}
-                    {!showCouponInput && (
+                    {/* Coupon input - only show if no order (i.e., on checkout page) */}
+                    {!showCouponInput && !order && (
                         <div className='space-y-2'>
                             <CouponInput
                                 orderTotal={priceInfo.currentPrice}
@@ -245,11 +266,15 @@ export function OrderSummary({
                     </div>
                 </div>
 
-                {(priceInfo.hasDiscount || appliedCoupon) && (
+                {(order
+                    ? order.discountAmount > 0
+                    : priceInfo.hasDiscount || appliedCoupon) && (
                     <div className='text-xs text-gray-400'>
-                        {appliedCoupon
-                            ? `Tiết kiệm ${formatPrice(courseDiscountAmount + couponDiscountAmount)} so với giá gốc.`
-                            : `Tiết kiệm ${priceInfo.discountPercentage}% so với giá gốc.`}
+                        {order
+                            ? `Tiết kiệm ${formatPrice(order.discountAmount)} so với giá gốc.`
+                            : appliedCoupon
+                              ? `Tiết kiệm ${formatPrice(courseDiscountAmount + couponDiscountAmount)} so với giá gốc.`
+                              : `Tiết kiệm ${priceInfo.discountPercentage}% so với giá gốc.`}
                     </div>
                 )}
             </CardContent>

@@ -120,7 +120,7 @@ export function CouponInput({
                     variant='outline'
                     onClick={handleApplyCoupon}
                     disabled={isApplying || !couponCode.trim()}
-                    className='border-[#2D2D2D] text-white hover:bg-[#1F1F1F] min-w-[100px]'
+                    className='border-[#2D2D2D] bg-white  dark:text-black dark:text-white dark:hover:bg-black] min-w-[100px]'
                 >
                     {isApplying ? (
                         <>
