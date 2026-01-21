@@ -147,6 +147,28 @@ class AdminCouponController {
             'Truy xuất lịch sử sử dụng mã giảm giá thành công',
         )
     })
+
+    /**
+     * @route   PATCH /api/v1/admin/coupons/:id/toggle-active
+     * @desc    Toggle coupon active status
+     * @access  Private (Admin/Instructor)
+     */
+    toggleCouponActive = asyncHandler(async (req, res) => {
+        const { id } = req.params
+        const couponId = parseInt(id)
+
+        if (isNaN(couponId)) {
+            return ApiResponse.badRequest(res, 'ID mã giảm giá không hợp lệ')
+        }
+
+        const coupon = await couponService.toggleCouponActive(couponId)
+
+        return ApiResponse.success(
+            res,
+            coupon,
+            `Đã ${coupon.active ? 'kích hoạt' : 'vô hiệu hóa'} mã giảm giá thành công`,
+        )
+    })
 }
 
 export default new AdminCouponController()

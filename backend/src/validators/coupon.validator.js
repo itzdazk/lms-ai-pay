@@ -249,3 +249,15 @@ export const applyCouponValidator = [
         .withMessage('ID khóa học phải là số nguyên dương'),
     validate,
 ]
+
+/**
+ * Validator for toggling coupon active status (Admin)
+ */
+export const toggleCouponActiveValidator = [
+    param('id')
+        .notEmpty()
+        .withMessage('ID mã giảm giá là bắt buộc')
+        .isInt({ min: 1 })
+        .withMessage('ID mã giảm giá phải là số nguyên dương'),
+    validate,
+]

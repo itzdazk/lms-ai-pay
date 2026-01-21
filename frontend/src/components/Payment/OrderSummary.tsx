@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, Clock, Sparkles } from 'lucide-react'
+import { BookOpen, Clock, Sparkles, Tag } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type {
     Course,
     PublicCourse,
@@ -212,6 +213,16 @@ export function OrderSummary({
                                 onCouponApplied={handleCouponApplied}
                                 onCouponRemoved={handleCouponRemoved}
                             />
+                            <div className='flex mt-1'>
+                                <Link
+                                    to='/promotions'
+                                    target='_blank'
+                                    className='text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 hover:underline'
+                                >
+                                    <Tag className='w-3 h-3' />
+                                    Danh sách mã giảm giá
+                                </Link>
+                            </div>
                         </div>
                     )}
 

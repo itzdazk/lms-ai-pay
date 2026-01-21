@@ -1043,3 +1043,41 @@ export interface CouponUsageHistoryFilters {
     page?: number
     limit?: number
 }
+
+// =====================================================
+// AVAILABLE COUPON TYPES (Student-facing)
+// =====================================================
+export interface AvailableCoupon {
+    id: number
+    code: string
+    type: 'PERCENT' | 'FIXED' | 'NEW_USER'
+    value: number
+    maxDiscount?: number
+    minOrderValue?: number
+    applicableCourseIds?: number[]
+    applicableCategoryIds?: number[]
+    startDate: string
+    endDate: string
+    maxUses?: number
+    maxUsesPerUser?: number
+    usesCount: number
+    applicableCourses?: Array<{
+        id: number
+        title: string
+    }>
+    applicableCategories?: Array<{
+        id: number
+        name: string
+    }>
+}
+
+export interface GetAvailableCouponsParams {
+    page?: number
+    limit?: number
+    type?: 'PERCENT' | 'FIXED' | 'NEW_USER'
+}
+
+export interface GetAvailableCouponsResponse {
+    coupons: AvailableCoupon[]
+    total: number
+}

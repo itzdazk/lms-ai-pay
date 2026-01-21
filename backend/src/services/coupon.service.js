@@ -550,11 +550,156 @@ class CouponService {
     }
 
     /**
+     * Get available coupons for student (Public/Student)
+     * @param {number} userId - User ID
+     * @param {Object} filters - Filter options
+     * @returns {Promise<Object>} Available coupons and total count
+     */
+    async getAvailableCouponsForStudent(userId, filters = {}) {
+        const { page = 1, limit = 20, type } = filters
+        const skip = (page - 1) * limit
+
+        const now = new Date()
+
+        // Build where clause
+        const where = {
+            active: true,
+            startDate: { lte: now },
+            endDate: { gte: now },
+        }
+
+        if (type) {
+            where.type = type
+        }
+
+        // Execute query
+        const [coupons, total] = await Promise.all([
+            prisma.coupon.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    code: true,
+                    type: true,
+                    value: true,
+                    maxDiscount: true,
+                    minOrderValue: true,
+                    applicableCourseIds: true,
+                    applicableCategoryIds: true,
+                    startDate: true,
+                    endDate: true,
+                    maxUses: true,
+                    maxUsesPerUser: true,
+                    usesCount: true,
+                },
+            }),
+            prisma.coupon.count({ where }),
+        ])
+
+        // Filter out coupons that user is not eligible for
+        const eligibleCoupons = await Promise.all(
+            coupons.map(async (coupon) => {
+                try {
+                    // Check if user has exceeded per-user limit
+                    if (coupon.maxUsesPerUser && userId) {
+                        const userUsageCount = await prisma.couponUsage.count({
+                            where: {
+                                couponId: coupon.id,
+                                userId: userId,
+                            },
+                        })
+                        if (userUsageCount >= coupon.maxUsesPerUser) {
+                            return null // User has exhausted this coupon
+                        }
+                    }
+
+                    // Check if NEW_USER coupon and user has paid orders
+                    if (coupon.type === COUPON_TYPES.NEW_USER && userId) {
+                        const orderCount = await prisma.order.count({
+                            where: {
+                                userId,
+                                paymentStatus: PAYMENT_STATUS.PAID,
+                            },
+                        })
+                        if (orderCount > 0) {
+                            return null // User is not a new user
+                        }
+                    }
+
+                    // Check if coupon has reached max uses
+                    if (coupon.maxUses && coupon.usesCount >= coupon.maxUses) {
+                        return null // Coupon is fully used
+                    }
+
+                    // Get applicable course/category names for display
+                    let applicableCourses = []
+                    let applicableCategories = []
+
+                    if (
+                        coupon.applicableCourseIds &&
+                        coupon.applicableCourseIds.length > 0
+                    ) {
+                        applicableCourses = await prisma.course.findMany({
+                            where: {
+                                id: { in: coupon.applicableCourseIds },
+                            },
+                            select: {
+                                id: true,
+                                title: true,
+                            },
+                        })
+                    }
+
+                    if (
+                        coupon.applicableCategoryIds &&
+                        coupon.applicableCategoryIds.length > 0
+                    ) {
+                        applicableCategories = await prisma.category.findMany({
+                            where: {
+                                id: { in: coupon.applicableCategoryIds },
+                            },
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        })
+                    }
+
+                    return {
+                        ...coupon,
+                        applicableCourses,
+                        applicableCategories,
+                    }
+                } catch (error) {
+                    console.error(
+                        `Error checking eligibility for coupon ${coupon.id}:`,
+                        error,
+                    )
+                    return null
+                }
+            }),
+        )
+
+        // Filter out null values (ineligible coupons)
+        const filteredCoupons = eligibleCoupons.filter(
+            (coupon) => coupon !== null,
+        )
+
+        return {
+            coupons: filteredCoupons,
+            total: filteredCoupons.length, // Return actual eligible count
+        }
+    }
+
+    /**
      * Get coupon usage history (Admin)
      * @param {number} couponId - Coupon ID
      * @param {Object} filters - Filter options
      * @returns {Promise<Object>} Usage history and total count
      */
+
     async getCouponUsageHistory(couponId, filters = {}) {
         const { page = 1, limit = 20 } = filters
         const skip = (page - 1) * limit
@@ -606,6 +751,34 @@ class CouponService {
             usages,
             total,
         }
+    }
+
+    /**
+     * Toggle coupon active status
+     * @param {number} couponId - Coupon ID
+     * @returns {Promise<Object>} Updated coupon
+     */
+    async toggleCouponActive(couponId) {
+        // Check if coupon exists
+        const coupon = await prisma.coupon.findUnique({
+            where: { id: couponId },
+        })
+
+        if (!coupon) {
+            const error = new Error('Không tìm thấy mã giảm giá')
+            error.statusCode = HTTP_STATUS.NOT_FOUND
+            throw error
+        }
+
+        // Toggle active status
+        const updatedCoupon = await prisma.coupon.update({
+            where: { id: couponId },
+            data: {
+                active: !coupon.active,
+            },
+        })
+
+        return updatedCoupon
     }
 }
 

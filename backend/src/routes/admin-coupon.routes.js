@@ -10,6 +10,7 @@ import {
     getCouponByIdValidator,
     deleteCouponValidator,
     getCouponUsageHistoryValidator,
+    toggleCouponActiveValidator,
 } from '../validators/coupon.validator.js'
 
 const router = express.Router()
@@ -28,6 +29,18 @@ router.get(
     '/:id/usages',
     getCouponUsageHistoryValidator,
     adminCouponController.getCouponUsageHistory,
+)
+
+/**
+ * @route   PATCH /api/v1/admin/coupons/:id/toggle-active
+ * @desc    Toggle coupon active status
+ * @access  Private (Admin)
+ * @note    Must be defined before /:id route to avoid conflict
+ */
+router.patch(
+    '/:id/toggle-active',
+    toggleCouponActiveValidator,
+    adminCouponController.toggleCouponActive,
 )
 
 /**
