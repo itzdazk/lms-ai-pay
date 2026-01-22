@@ -15,6 +15,7 @@ import fs from 'fs'
 import sharp from 'sharp'
 import { thumbnailsDir, videoPreviewsDir } from '../config/multer.config.js'
 import { getVideoDuration } from '../utils/video.util.js'
+import config from '../config/app.config.js'
 
 class InstructorCourseService {
     /**
@@ -367,11 +368,100 @@ class InstructorCourseService {
             },
         })
 
+        // Auto-generate embedding for RAG (async, non-blocking)
+        // Only generate if RAG is enabled and course has content
+        if (config.RAG_ENABLED !== false) {
+            this._generateCourseEmbeddingAsync(course.id, course).catch((err) => {
+                logger.warn(
+                    `Failed to generate embedding for course ${course.id}:`,
+                    err.message
+                )
+            })
+        }
+
         // Format response
         return {
             ...course,
             tags: course.courseTags.map((ct) => ct.tag),
             courseTags: undefined,
+        }
+    }
+
+    /**
+     * Helper: Generate embedding for course asynchronously (non-blocking)
+     * Supports two modes:
+     * 1. Fire-and-forget (default): Simple async call
+     * 2. Queue mode: Use BullMQ queue for better reliability and monitoring
+     * @private
+     */
+    async _generateCourseEmbeddingAsync(courseId, courseData, useQueue = false) {
+        try {
+            // Option 1: Use BullMQ Queue (recommended for production)
+            if (useQueue && config.RAG_USE_QUEUE !== false) {
+                try {
+                    const { enqueueEmbeddingJob } = await import('../queues/embedding.queue.js')
+                    const job = await enqueueEmbeddingJob({
+                        courseId,
+                        courseData,
+                        priority: 'normal',
+                    })
+                    logger.info(
+                        `[Embedding] Queued embedding job ${job.id} for course ${courseId}`
+                    )
+                    return
+                } catch (queueError) {
+                    logger.warn(
+                        `Failed to queue embedding job, falling back to direct generation:`,
+                        queueError.message
+                    )
+                    // Fall through to direct generation
+                }
+            }
+
+            // Option 2: Fire-and-forget (simple, direct)
+            // Dynamic import to avoid circular dependency
+            const embeddingService = (await import('./embedding.service.js')).default
+
+            // Check if course has enough content to embed
+            const hasContent =
+                courseData.title ||
+                courseData.shortDescription ||
+                courseData.description ||
+                courseData.whatYouLearn
+
+            if (!hasContent) {
+                logger.debug(`Course ${courseId} has no content, skipping embedding`)
+                return
+            }
+
+            // Generate embedding (fire-and-forget, non-blocking)
+            // Don't await - let it run in background
+            embeddingService
+                .generateCourseEmbedding(courseData)
+                .then(async (embedding) => {
+                    const embeddingString = `[${embedding.join(',')}]`
+                    const model = embeddingService.getModel()
+
+                    // Update database (using raw SQL to cast to vector type)
+                    // PostgreSQL will automatically convert JSON string to vector(768)
+                    await prisma.$executeRaw`
+                        UPDATE courses
+                        SET 
+                            embedding = ${embeddingString}::vector,
+                            embedding_model = ${model},
+                            embedding_updated_at = NOW()
+                        WHERE id = ${courseId}
+                    `
+
+                    logger.info(`✅ Generated embedding for course ${courseId}: ${courseData.title}`)
+                })
+                .catch((error) => {
+                    // Don't throw - this is async and shouldn't block course creation
+                    logger.error(`Error generating embedding for course ${courseId}:`, error.message)
+                })
+        } catch (error) {
+            // Don't throw - this is async and shouldn't block course creation
+            logger.error(`Error in embedding generation setup for course ${courseId}:`, error.message)
         }
     }
 
@@ -611,6 +701,41 @@ class InstructorCourseService {
             })
 
             course.courseTags = updatedCourseTags
+        }
+
+        // Auto-regenerate embedding if RAG enabled and content changed
+        // Check if any embedding-relevant fields were updated
+        const embeddingFieldsChanged =
+            title !== undefined ||
+            description !== undefined ||
+            shortDescription !== undefined ||
+            whatYouLearn !== undefined ||
+            courseObjectives !== undefined ||
+            targetAudience !== undefined
+
+        if (config.RAG_ENABLED !== false && embeddingFieldsChanged) {
+            // Get full course data for embedding
+            const fullCourseData = await prisma.course.findUnique({
+                where: { id: courseId },
+                select: {
+                    id: true,
+                    title: true,
+                    shortDescription: true,
+                    description: true,
+                    whatYouLearn: true,
+                    courseObjectives: true,
+                    targetAudience: true,
+                },
+            })
+
+            if (fullCourseData) {
+                this._generateCourseEmbeddingAsync(courseId, fullCourseData).catch((err) => {
+                    logger.warn(
+                        `Failed to regenerate embedding for course ${courseId}:`,
+                        err.message
+                    )
+                })
+            }
         }
 
         // Format response

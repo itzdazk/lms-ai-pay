@@ -107,6 +107,17 @@ const config = {
     OLLAMA_TEMPERATURE: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
     OLLAMA_MAX_TOKENS: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 1000, // Reduced to 1000 for faster response
 
+    // AI - Ollama Embeddings (for RAG)
+    OLLAMA_EMBEDDING_MODEL: process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
+    
+    // RAG Configuration
+    RAG_ENABLED: process.env.RAG_ENABLED !== 'false',
+    RAG_HYBRID_SEARCH: process.env.RAG_HYBRID_SEARCH !== 'false', // Combine vector + keyword search
+    RAG_VECTOR_WEIGHT: parseFloat(process.env.RAG_VECTOR_WEIGHT) || 0.7,
+    RAG_KEYWORD_WEIGHT: parseFloat(process.env.RAG_KEYWORD_WEIGHT) || 0.3,
+    RAG_SIMILARITY_THRESHOLD: parseFloat(process.env.RAG_SIMILARITY_THRESHOLD) || 0.7,
+    RAG_USE_QUEUE: process.env.RAG_USE_QUEUE === 'true', // Use BullMQ queue for embedding generation (default: false, use fire-and-forget)
+
     // AI - Whisper (Local)
     WHISPER_ENABLED: process.env.WHISPER_ENABLED !== 'false',
     WHISPER_AUTO_TRANSCRIBE: process.env.WHISPER_AUTO_TRANSCRIBE !== 'false',

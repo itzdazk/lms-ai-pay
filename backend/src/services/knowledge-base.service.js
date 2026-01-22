@@ -5,6 +5,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
 import redisCacheService from './redis-cache.service.js'
+import config from '../config/app.config.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -624,48 +625,110 @@ class KnowledgeBaseService {
 
             if (mode === 'advisor') {
                 // Advisor mode: Search courses to provide real recommendations
-                // OPTIMIZED: Use Redis cache + Extract keywords + Deterministic ranking
+                // RAG ENABLED: Use vector search (semantic) + keyword search (hybrid)
+                // FALLBACK: Use keyword search only if RAG disabled or unavailable
                 
-                // Try Redis cache first (faster than DB query)
-                const cachedCourses = await redisCacheService.getCachedAdvisorSearch(query)
-                if (cachedCourses) {
-                    courses = cachedCourses
-                    logger.debug(`Advisor: Using Redis cache for query: ${query.substring(0, 50)}`)
-                } else {
-                    // Cache miss: query database
-                    // OPTIMIZED: Lấy 8 courses (đủ để rank và chọn best 4, giảm 60% data transfer)
-                    courses = await this.searchCoursesByQuery(query, {
-                        published: false, // Show all courses regardless of status for advisor recommendations
-                        limit: 8, // Optimized: 8 courses đủ để rank và chọn best 4 (giảm từ 20)
-                        orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
-                    })
-                    
-                    // Cache results in Redis (async, non-blocking)
-                    redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
-                        logger.warn('Failed to cache advisor search in Redis', err.message)
-                    })
-                    
-                    // If search returned no results but user provided a query, try broader search
-                    if (courses.length === 0 && query && query.trim()) {
-                        logger.debug(`Advisor search returned 0 results for "${query}", fetching top courses as fallback`)
-                        courses = await this.searchCoursesByQuery('', {
-                            published: false,
-                            limit: 8, // Optimized: giảm từ 20 xuống 8
+                // Check if RAG is enabled
+                const useRAG = config.RAG_ENABLED !== false
+                let vectorSearchAvailable = false
+                
+                if (useRAG) {
+                    try {
+                        // Dynamic import to avoid circular dependency
+                        const vectorSearchService = (await import('./vector-search.service.js')).default
+                        vectorSearchAvailable = await vectorSearchService.isAvailable()
+                        
+                        if (vectorSearchAvailable) {
+                            // Try Redis cache first (faster than DB query)
+                            const cachedCourses = await redisCacheService.getCachedAdvisorSearch(query)
+                            if (cachedCourses) {
+                                courses = cachedCourses
+                                logger.debug(`Advisor (RAG): Using Redis cache for query: ${query.substring(0, 50)}`)
+                            } else {
+                                // Use hybrid search (vector + keyword) if enabled
+                                if (config.RAG_HYBRID_SEARCH !== false) {
+                                    logger.debug(`Advisor (RAG Hybrid): Searching with vector + keyword`)
+                                    courses = await vectorSearchService.hybridSearch(query, {
+                                        limit: 8,
+                                        published: false,
+                                    })
+                                } else {
+                                    // Pure vector search
+                                    logger.debug(`Advisor (RAG Vector): Searching with vector only`)
+                                    courses = await vectorSearchService.searchCoursesByVector(query, {
+                                        limit: 8,
+                                        status: 'PUBLISHED', // Use uppercase to match database
+                                    })
+                                }
+                                
+                                // Cache results in Redis (async, non-blocking)
+                                if (courses.length > 0) {
+                                    redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                                        logger.warn('Failed to cache advisor search in Redis', err.message)
+                                    })
+                                }
+                                
+                                // If no results, try fallback to keyword search
+                                if (courses.length === 0 && query && query.trim()) {
+                                    logger.debug(`Advisor (RAG): No vector results, falling back to keyword search`)
+                                    courses = await this.searchCoursesByQuery(query, {
+                                        published: false,
+                                        limit: 8,
+                                        orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                                    })
+                                }
+                            }
+                        } else {
+                            logger.warn('RAG enabled but vector search not available (pgvector not installed or no embeddings)')
+                        }
+                    } catch (error) {
+                        logger.error('Error in RAG search, falling back to keyword search:', error)
+                        vectorSearchAvailable = false
+                    }
+                }
+                
+                // Fallback to keyword search if RAG disabled or unavailable
+                if (!useRAG || !vectorSearchAvailable || courses.length === 0) {
+                    // Try Redis cache first (faster than DB query)
+                    const cachedCourses = await redisCacheService.getCachedAdvisorSearch(query)
+                    if (cachedCourses) {
+                        courses = cachedCourses
+                        logger.debug(`Advisor (Keyword): Using Redis cache for query: ${query.substring(0, 50)}`)
+                    } else {
+                        // Cache miss: query database with keyword search
+                        courses = await this.searchCoursesByQuery(query, {
+                            published: false, // Show all courses regardless of status for advisor recommendations
+                            limit: 8, // Optimized: 8 courses đủ để rank và chọn best 4 (giảm từ 20)
                             orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
                         })
                         
-                        // Cache fallback results too
-                        if (courses.length > 0) {
-                            redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
-                                logger.warn('Failed to cache fallback search in Redis', err.message)
+                        // Cache results in Redis (async, non-blocking)
+                        redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                            logger.warn('Failed to cache advisor search in Redis', err.message)
+                        })
+                        
+                        // If search returned no results but user provided a query, try broader search
+                        if (courses.length === 0 && query && query.trim()) {
+                            logger.debug(`Advisor search returned 0 results for "${query}", fetching top courses as fallback`)
+                            courses = await this.searchCoursesByQuery('', {
+                                published: false,
+                                limit: 8, // Optimized: giảm từ 20 xuống 8
+                                orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
                             })
+                            
+                            // Cache fallback results too
+                            if (courses.length > 0) {
+                                redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                                    logger.warn('Failed to cache fallback search in Redis', err.message)
+                                })
+                            }
                         }
                     }
                 }
                 
                 lessons = []
                 transcripts = []
-                logger.debug(`Advisor mode: Found ${courses.length} courses for recommendations`)
+                logger.debug(`Advisor mode: Found ${courses.length} courses for recommendations (RAG: ${vectorSearchAvailable ? 'enabled' : 'disabled'})`)
             } else if (mode === 'course' && targetLessonId) {
                 // Restrict to the exact lesson's transcript; searchInTranscripts already
                 // falls back to lesson content/description/title if transcript is missing
@@ -1057,7 +1120,7 @@ class KnowledgeBaseService {
             // Build where clause
             const where = {}
             if (published) {
-                where.status = 'published'
+                where.status = 'PUBLISHED' // Use uppercase to match database
             }
 
             // Search in title, description, shortDescription if query provided

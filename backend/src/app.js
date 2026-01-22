@@ -229,6 +229,16 @@ if (config.WHISPER_ENABLED !== false && config.WORKER_MODE !== 'hls-only') {
     }
 }
 
+// Start embedding worker (if RAG queue enabled)
+if (config.RAG_ENABLED !== false && config.RAG_USE_QUEUE === true) {
+    try {
+        await import('./workers/embedding.worker.js')
+        logger.info('Embedding worker started')
+    } catch (err) {
+        logger.warn(`Failed to start embedding worker: ${err.message}`)
+    }
+}
+
 // 404 handler
 app.use(notFound)
 
