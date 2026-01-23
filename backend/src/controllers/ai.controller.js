@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.config.js'
 import aiChatService from '../services/ai-chat.service.js'
 import knowledgeBaseService from '../services/knowledge-base.service.js'
+import aiAdvisorService from '../services/ai-advisor.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
 import logger from '../config/logger.config.js'
@@ -89,6 +90,24 @@ class AIController {
             title,
             mode,
         })
+
+        // For advisor mode, include greeting message in response (without creating a message in DB)
+        if (mode === 'advisor') {
+            const greetingResponse = await aiAdvisorService.generateAdvisorResponse(
+                [], // No courses yet
+                '', // Empty query triggers greeting
+                [] // No conversation history
+            )
+            
+            return ApiResponse.created(
+                res,
+                {
+                    ...conversation,
+                    greetingMessage: greetingResponse,
+                },
+                'Tạo cuộc hội thoại thành công'
+            )
+        }
 
         return ApiResponse.created(
             res,
