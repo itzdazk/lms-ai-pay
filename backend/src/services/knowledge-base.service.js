@@ -1033,6 +1033,85 @@ class KnowledgeBaseService {
      * @param {string} query - User query
      * @returns {Array<string>} Extracted keywords
      */
+    /**
+     * Expand category keywords with synonyms
+     * @param {string} query - User query
+     * @returns {Array<string>} Expanded keywords including synonyms
+     */
+    _expandCategoryKeywords(keywords) {
+        if (!keywords || keywords.length === 0) return keywords
+
+        const categorySynonyms = {
+            'web': ['web', 'lập trình web', 'web development', 'website', 'frontend', 'backend', 'full stack', 'fullstack'],
+            'mobile': ['mobile', 'di động', 'app', 'application', 'ios', 'android', 'flutter', 'react native'],
+            'data': ['data', 'dữ liệu', 'data science', 'big data', 'analytics', 'machine learning', 'ai'],
+            'ai': ['ai', 'artificial intelligence', 'trí tuệ nhân tạo', 'machine learning', 'deep learning', 'neural network'],
+            'game': ['game', 'trò chơi', 'gaming', 'unity', 'game development', 'game design'],
+            'cybersecurity': ['security', 'bảo mật', 'hacking', 'ethical hacking', 'penetration testing', 'cybersecurity'],
+        }
+
+        const expanded = [...keywords]
+        
+        for (const keyword of keywords) {
+            const keywordLower = keyword.toLowerCase()
+            for (const [category, synonyms] of Object.entries(categorySynonyms)) {
+                if (synonyms.some(syn => keywordLower.includes(syn) || syn.includes(keywordLower))) {
+                    // Add all synonyms for this category
+                    synonyms.forEach(syn => {
+                        if (!expanded.includes(syn) && syn.length >= 3) {
+                            expanded.push(syn)
+                        }
+                    })
+                    break
+                }
+            }
+        }
+
+        return expanded.length > keywords.length ? expanded : keywords
+    }
+
+    /**
+     * Detect course level from natural language query
+     * @param {string} query - User query
+     * @returns {string|null} Detected level (BEGINNER, INTERMEDIATE, ADVANCED) or null
+     */
+    _detectLevelFromQuery(query) {
+        if (!query || query.trim().length === 0) return null
+
+        const queryLower = query.toLowerCase()
+        
+        // Level keywords mapping
+        const levelKeywords = {
+            'BEGINNER': [
+                'mới bắt đầu', 'mới học', 'chưa biết', 'chưa học', 'chưa có kinh nghiệm',
+                'cơ bản', 'basic', 'beginner', 'starter', 'người mới',
+                'từ đầu', 'từ zero', 'zero to hero', 'nhập môn', 'khởi đầu'
+            ],
+            'INTERMEDIATE': [
+                'trung cấp', 'có kinh nghiệm', 'đã biết', 'đã học',
+                'intermediate', 'nâng cao cơ bản', 'cải thiện', 'improve',
+                'nâng cao kỹ năng', 'học thêm', 'mở rộng'
+            ],
+            'ADVANCED': [
+                'nâng cao', 'chuyên sâu', 'expert', 'advanced', 'pro',
+                'cao cấp', 'master', 'professional', 'deep dive',
+                'chuyên nghiệp', 'thành thạo'
+            ]
+        }
+
+        // Check for level keywords in query
+        for (const [level, keywords] of Object.entries(levelKeywords)) {
+            for (const keyword of keywords) {
+                if (queryLower.includes(keyword)) {
+                    logger.debug(`Detected level "${level}" from query: "${query}" (keyword: "${keyword}")`)
+                    return level
+                }
+            }
+        }
+
+        return null
+    }
+
     _extractKeywords(query) {
         if (!query || query.trim().length === 0) return []
 
@@ -1062,13 +1141,23 @@ class KnowledgeBaseService {
     /**
      * Deterministic scoring cho khóa học dựa trên keyword match + tín hiệu chất lượng
      * Không dùng LLM, chỉ rule-based để Advisor ổn định.
+     * @param {Object} course - Course object
+     * @param {Array} keywords - Extracted keywords from query
+     * @param {string|null} detectedLevel - Detected level from query (optional)
      */
-    _scoreCourse(course, keywords = []) {
+    _scoreCourse(course, keywords = [], detectedLevel = null) {
+        // Include category, tags, level in scoring text
+        const tagsText = course.courseTags?.map(ct => ct.tag?.name || ct.tag).filter(Boolean).join(' ') || ''
+        const categoryName = course.category?.name || ''
+        
         const text = [
             course.title || '',
             course.shortDescription || '',
             course.description || '',
             course.whatYouLearn || '',
+            categoryName,        // ✅ THÊM: Category
+            tagsText,           // ✅ THÊM: Tags
+            course.level || '', // ✅ THÊM: Level
         ]
             .join(' ')
             .toLowerCase()
@@ -1081,6 +1170,16 @@ class KnowledgeBaseService {
                       0
                   )
                 : 0
+
+        // ✅ THÊM: Level matching boost
+        let levelBoost = 0
+        if (detectedLevel && course.level === detectedLevel) {
+            levelBoost = 3.0 // Strong boost for level match
+            logger.debug(`Level match boost: course "${course.title}" (${course.level}) matches query level (${detectedLevel})`)
+        } else if (detectedLevel) {
+            // Small penalty for level mismatch (but not too harsh)
+            levelBoost = -0.5
+        }
 
         // Chất lượng: rating và độ phổ biến
         const ratingScore = course.ratingAvg
@@ -1101,6 +1200,7 @@ class KnowledgeBaseService {
         // Trọng số đơn giản, có thể tinh chỉnh sau
         return (
             keywordHits * 2 + // ưu tiên khớp từ khóa
+            levelBoost +      // ✅ THÊM: Level matching boost/penalty
             ratingScore * 1.5 +
             popularityScore * 1.0 +
             freshnessScore * 0.5
@@ -1123,10 +1223,16 @@ class KnowledgeBaseService {
                 where.status = 'PUBLISHED' // Use uppercase to match database
             }
 
+            // ✅ THÊM: Detect level from query for better matching (used in scoring, not filtering)
+            const detectedLevel = this._detectLevelFromQuery(query)
+            
             // Search in title, description, shortDescription if query provided
             // OPTIMIZED: Extract keywords instead of using full query
             if (query && query.trim()) {
-                const keywords = this._extractKeywords(query)
+                let keywords = this._extractKeywords(query)
+                
+                // ✅ THÊM: Expand keywords with category synonyms for better matching
+                keywords = this._expandCategoryKeywords(keywords)
                 
                 if (keywords.length > 0) {
                     // Search with each keyword (OR logic - course matches any keyword)
@@ -1136,6 +1242,9 @@ class KnowledgeBaseService {
                         { shortDescription: { contains: keyword, mode: 'insensitive' } },
                         { description: { contains: keyword, mode: 'insensitive' } },
                         { whatYouLearn: { contains: keyword, mode: 'insensitive' } },
+                        { category: { name: { contains: keyword, mode: 'insensitive' } } }, // ✅ THÊM: Category
+                        { courseTags: { some: { tag: { name: { contains: keyword, mode: 'insensitive' } } } } }, // ✅ THÊM: Tags
+                        { level: { contains: keyword, mode: 'insensitive' } }, // ✅ THÊM: Level
                     ])
                     
                     logger.debug(`Extracted keywords from query "${query}": ${keywords.join(', ')}`)
@@ -1147,6 +1256,9 @@ class KnowledgeBaseService {
                         { shortDescription: { contains: searchTerm, mode: 'insensitive' } },
                         { description: { contains: searchTerm, mode: 'insensitive' } },
                         { whatYouLearn: { contains: searchTerm, mode: 'insensitive' } },
+                        { category: { name: { contains: searchTerm, mode: 'insensitive' } } }, // ✅ THÊM: Category
+                        { courseTags: { some: { tag: { name: { contains: searchTerm, mode: 'insensitive' } } } } }, // ✅ THÊM: Tags
+                        { level: { contains: searchTerm, mode: 'insensitive' } }, // ✅ THÊM: Level
                     ]
                 }
             }
@@ -1198,15 +1310,33 @@ class KnowledgeBaseService {
                     },
                     publishedAt: true,
                     whatYouLearn: true,
+                    category: {              // ✅ THÊM: Category cho scoring
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                        },
+                    },
+                    courseTags: {            // ✅ THÊM: Tags cho scoring
+                        select: {
+                            tag: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
+                            },
+                        },
+                    },
                 },
             })
 
             // Deterministic ranking trên app layer (tăng độ ổn định, tránh phụ thuộc DB sort)
             const keywords =
                 query && query.trim() ? this._extractKeywords(query) : []
+            // ✅ THÊM: Use detected level for scoring boost
             const scored = courses.map((c) => ({
                 course: c,
-                score: this._scoreCourse(c, keywords),
+                score: this._scoreCourse(c, keywords, detectedLevel),
             }))
 
             const ranked = scored

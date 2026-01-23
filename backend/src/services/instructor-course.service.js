@@ -365,6 +365,14 @@ class InstructorCourseService {
                         },
                     },
                 },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true, 
+                    },
+                },
             },
         })
 
@@ -714,7 +722,7 @@ class InstructorCourseService {
             targetAudience !== undefined
 
         if (config.RAG_ENABLED !== false && embeddingFieldsChanged) {
-            // Get full course data for embedding
+            // Get full course data for embedding (include category, tags, level, price)
             const fullCourseData = await prisma.course.findUnique({
                 where: { id: courseId },
                 select: {
@@ -725,6 +733,25 @@ class InstructorCourseService {
                     whatYouLearn: true,
                     courseObjectives: true,
                     targetAudience: true,
+                    level: true,              // ✅ THÊM: Level
+                    price: true,              // ✅ THÊM: Price
+                    category: {               // ✅ THÊM: Category
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                        },
+                    },
+                    courseTags: {              // ✅ THÊM: Tags
+                        select: {
+                            tag: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
+                            },
+                        },
+                    },
                 },
             })
 

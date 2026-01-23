@@ -3,6 +3,7 @@ import { prisma } from '../config/database.config.js'
 import embeddingService from './embedding.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
+import redisCacheService from './redis-cache.service.js'
 
 class VectorSearchService {
     /**
@@ -19,8 +20,18 @@ class VectorSearchService {
         } = options
 
         try {
-            // 1. Generate embedding for query
-            const queryEmbedding = await embeddingService.generateEmbedding(query)
+            // ✅ THÊM: Try to get cached embedding first (performance optimization)
+            let queryEmbedding = await redisCacheService.getCachedQueryEmbedding(query)
+            
+            if (!queryEmbedding) {
+                // 1. Generate embedding for query if not cached
+                queryEmbedding = await embeddingService.generateEmbedding(query)
+                // Cache it for future use
+                await redisCacheService.cacheQueryEmbedding(query, queryEmbedding)
+            } else {
+                logger.debug(`Using cached embedding for query: "${query.substring(0, 50)}"`)
+            }
+            
             const dimensions = embeddingService.getDimensions()
 
             // 2. Convert to PostgreSQL array format
@@ -126,11 +137,13 @@ class VectorSearchService {
             ).default
 
             // Run both searches in parallel
+            // ✅ TỐI ƯU: Tăng limit để có đủ courses sau khi combine (fix issue: hybrid chỉ tìm được 4 courses)
+            const searchLimit = Math.max(limit * 3, 20) // Tăng từ 2x lên 3x để có đủ courses
             const [vectorResults, keywordResults] = await Promise.all([
-                this.searchCoursesByVector(query, { ...options, limit: limit * 2 }), // Get more for ranking
+                this.searchCoursesByVector(query, { ...options, limit: searchLimit }), // Get more for ranking
                 knowledgeBaseService.searchCoursesByQuery(query, {
                     published: false,
-                    limit: limit * 2,
+                    limit: searchLimit,
                 }),
             ])
 
@@ -139,12 +152,13 @@ class VectorSearchService {
             )
 
             // Combine and re-rank results
+            // ✅ TỐI ƯU: Tăng limit khi combine để có đủ courses (fix issue: hybrid chỉ tìm được 4 courses)
             const combined = this._combineResults(
                 vectorResults,
                 keywordResults,
                 vectorWeight,
                 keywordWeight,
-                limit
+                Math.max(limit, 8) // Đảm bảo có ít nhất 8 courses để chọn top limit
             )
 
             return combined

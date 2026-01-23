@@ -138,6 +138,26 @@ class EmbeddingService {
      * @returns {Promise<number[]>} Embedding vector
      */
     async generateCourseEmbedding(course) {
+        // Map level thành synonyms để semantic search tốt hơn
+        const levelSynonyms = {
+            'BEGINNER': 'cơ bản, mới bắt đầu, beginner, starter, người mới',
+            'INTERMEDIATE': 'trung cấp, intermediate, nâng cao cơ bản, có kinh nghiệm',
+            'ADVANCED': 'nâng cao, advanced, chuyên sâu, expert, cao cấp',
+        }
+        const levelText = course.level ? (levelSynonyms[course.level] || course.level) : ''
+
+        // Combine tags
+        const tagsText = course.courseTags?.map(ct => ct.tag?.name || ct.tag).filter(Boolean).join(', ') || ''
+
+        // Category info
+        const categoryName = course.category?.name || ''
+        const categoryDesc = course.category?.description || ''
+
+        // Price info (miễn phí/có phí)
+        const priceText = course.price && Number(course.price) > 0 
+            ? 'khóa học có phí, trả phí, paid course' 
+            : 'khóa học miễn phí, free course, không mất phí'
+
         // Combine relevant fields for embedding
         const text = [
             course.title || '',
@@ -146,6 +166,11 @@ class EmbeddingService {
             course.whatYouLearn || '',
             course.courseObjectives || '',
             course.targetAudience || '',
+            categoryName,                    // ✅ THÊM: Category name
+            categoryDesc,                   // ✅ THÊM: Category description
+            tagsText,                       // ✅ THÊM: Tags (comma-separated)
+            levelText,                      // ✅ THÊM: Level với synonyms
+            priceText,                      // ✅ THÊM: Price info (miễn phí/có phí)
         ]
             .filter(Boolean)
             .join('\n')

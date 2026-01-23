@@ -49,6 +49,7 @@ class RedisCacheService {
             ADVISOR_SEARCH: 'advisor:search:',
             ADVISOR_TOP_COURSES: 'advisor:top:',
             ADVISOR_KEYWORDS: 'advisor:keywords:',
+            QUERY_EMBEDDING: 'embedding:query:', // ✅ THÊM: Cache cho query embeddings
         }
 
         // Default TTL (Time To Live) in seconds
@@ -56,6 +57,7 @@ class RedisCacheService {
             ADVISOR_SEARCH: 5 * 60, // 5 minutes
             ADVISOR_TOP_COURSES: 15 * 60, // 15 minutes
             ADVISOR_KEYWORDS: 30 * 60, // 30 minutes
+            QUERY_EMBEDDING: 60 * 60, // ✅ THÊM: 1 hour (embeddings ít thay đổi)
         }
     }
 
@@ -238,6 +240,63 @@ class RedisCacheService {
             logger.debug(`Redis: Invalidated cache for ${type}: ${key}`)
         } catch (error) {
             logger.warn('Redis: Failed to invalidate cache', error.message)
+        }
+    }
+
+    /**
+     * Cache query embedding for faster vector search
+     * @param {string} query - User query
+     * @param {Array<number>} embedding - Embedding vector
+     * @returns {Promise<void>}
+     */
+    async cacheQueryEmbedding(query, embedding) {
+        if (!(await this.isAvailable())) {
+            return
+        }
+
+        try {
+            const key = this._getKey(
+                this.PREFIXES.QUERY_EMBEDDING,
+                this._hashQuery(query)
+            )
+            await this.client.setex(
+                key,
+                this.DEFAULT_TTL.QUERY_EMBEDDING,
+                JSON.stringify(embedding)
+            )
+            logger.debug(`Redis: Cached query embedding for: ${query.substring(0, 50)}`)
+        } catch (error) {
+            logger.warn('Redis: Failed to cache query embedding', error.message)
+        }
+    }
+
+    /**
+     * Get cached query embedding
+     * @param {string} query - User query
+     * @returns {Promise<Array<number>|null>} Cached embedding or null
+     */
+    async getCachedQueryEmbedding(query) {
+        if (!(await this.isAvailable())) {
+            return null
+        }
+
+        try {
+            const key = this._getKey(
+                this.PREFIXES.QUERY_EMBEDDING,
+                this._hashQuery(query)
+            )
+            const value = await this.client.get(key)
+
+            if (value) {
+                const embedding = JSON.parse(value)
+                logger.debug(`Redis: Cache hit for query embedding: ${query.substring(0, 50)}`)
+                return embedding
+            }
+
+            return null
+        } catch (error) {
+            logger.warn('Redis: Failed to get cached query embedding', error.message)
+            return null
         }
     }
 
