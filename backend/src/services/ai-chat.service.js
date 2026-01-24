@@ -1,6 +1,6 @@
 import { prisma } from '../config/database.config.js'
 import knowledgeBaseService from './knowledge-base.service.js'
-import ollamaService from './ollama.service.js'
+import llmService from './llm.service.js'
 import aiAdvisorService from './ai-advisor.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
@@ -257,22 +257,21 @@ class AIChatService {
             const responseStartTime = Date.now()
 
             try {
-                // Check if Ollama is available (for all modes including advisor)
+                // Check if LLM is available (for all modes including advisor)
                 const healthCheckStart = Date.now()
-                const isOllamaAvailable =
-                    ollamaService.enabled && (await ollamaService.checkHealth())
+                const isLLMAvailable = await llmService.checkHealth()
                 const healthCheckDuration = Date.now() - healthCheckStart
 
-                if (isOllamaAvailable) {
+                if (isLLMAvailable) {
                     try {
-                        // Set timeout for Ollama generation
+                        // Set timeout for LLM generation
                         const generationTimeout = 120000 // 120s
                         const timeoutPromise = new Promise((_, reject) => {
                             setTimeout(
                                 () =>
                                     reject(
                                         new Error(
-                                            'Thời gian tạo của Ollama đã hết hạn'
+                                            'Thời gian tạo của LLM đã hết hạn'
                                         )
                                     ),
                                 generationTimeout
@@ -282,7 +281,7 @@ class AIChatService {
                         // For advisor mode, use specialized generation
                         let generationPromise
                         if (mode === 'advisor') {
-                            // Advisor mode: fetch courses first, then use Ollama to generate smart response
+                            // Advisor mode: fetch courses first, then use LLM to generate smart response
                             const availableCourses =
                                 context.searchResults?.courses || []
                             generationPromise = aiAdvisorService.generateAdvisorResponse(
@@ -291,7 +290,7 @@ class AIChatService {
                                 conversationHistory
                             )
                         } else {
-                            // Other modes: use standard Ollama generation
+                            // Other modes: use standard LLM generation
                             generationPromise = this.generateOllamaResponse(
                                 messageText,
                                 conversationHistory,
@@ -318,7 +317,7 @@ class AIChatService {
                         // Log error with context
                         if (ollamaError.message?.includes('timeout')) {
                             logger.warn(
-                                `Thời gian tạo của Ollama đã hết hạn sau ${errorDuration}ms, trở lại mẫu trả lời`
+                                `Thời gian tạo của LLM đã hết hạn sau ${errorDuration}ms, trở lại mẫu trả lời`
                             )
                         } else {
                             logger.error(
@@ -337,9 +336,9 @@ class AIChatService {
                     }
                 } else {
                     const checkDuration = Date.now() - responseStartTime
-                    fallbackReason = 'Dịch vụ Ollama không khả dụng'
+                    fallbackReason = 'Dịch vụ LLM không khả dụng'
                     logger.warn(
-                        `Ollama không khả dụng (kiểm tra trong ${checkDuration}ms), trở lại mẫu trả lời`
+                        `LLM không khả dụng (kiểm tra trong ${checkDuration}ms), trở lại mẫu trả lời`
                     )
                     responseData = this.generateTemplateResponse(
                         context,
@@ -457,22 +456,21 @@ class AIChatService {
             let usedOllama = false
 
             try {
-                if (ollamaService.enabled) {
-                    const isOllamaAvailable = await ollamaService.checkHealth()
-                    if (isOllamaAvailable) {
-                        // Build system prompt
-                        const systemPrompt = ollamaService.buildSystemPrompt(
-                            context,
-                            mode
-                        )
+                const isLLMAvailable = await llmService.checkHealth()
+                if (isLLMAvailable) {
+                    // Build system prompt
+                    const systemPrompt = llmService.buildSystemPrompt(
+                        context,
+                        mode
+                    )
 
-                        // Stream response from Ollama
-                        try {
-                            for await (const chunk of ollamaService.generateResponseStream(
-                                messageText,
-                                conversationHistory,
-                                systemPrompt
-                            )) {
+                    // Stream response from LLM
+                    try {
+                        for await (const chunk of llmService.generateResponseStream(
+                            messageText,
+                            conversationHistory,
+                            systemPrompt
+                        )) {
                                 fullResponse += chunk
                                 onChunk({
                                     type: 'ai_chunk',
@@ -536,21 +534,20 @@ class AIChatService {
                         } catch (streamError) {
                             streamingError = streamError
                             logger.error(
-                                'Lỗi trong quá trình truyền dòng của Ollama:',
+                                'Lỗi trong quá trình truyền dòng của LLM:',
                                 streamError
                             )
                             // Continue to fallback
                         }
-                    }
 
-                    // Fallback to template if Ollama not available or streaming failed
+                    // Fallback to template if LLM not available or streaming failed
                     if (
-                        !isOllamaAvailable ||
+                        !isLLMAvailable ||
                         streamingError ||
                         !fullResponse.trim()
                     ) {
                         logger.warn(
-                            'Trở lại mẫu trả lời (Ollama không khả dụng hoặc truyền dòng thất bại)'
+                            'Trở lại mẫu trả lời (LLM không khả dụng hoặc truyền dòng thất bại)'
                         )
                         const templateResponse = this.generateTemplateResponse(
                             context,
@@ -574,7 +571,7 @@ class AIChatService {
                         }
                     }
                 } else {
-                    // Ollama disabled, use template
+                    // LLM disabled, use template
                     const templateResponse = this.generateTemplateResponse(
                         context,
                         messageText
@@ -641,7 +638,7 @@ class AIChatService {
     }
 
     /**
-     * Generate response using Ollama with knowledge base context
+     * Generate response using LLM with knowledge base context
      */
     async generateOllamaResponse(
         messageText,
@@ -651,10 +648,10 @@ class AIChatService {
     ) {
         try {
             // Build system prompt with knowledge base
-            const systemPrompt = ollamaService.buildSystemPrompt(context, mode)
+            const systemPrompt = llmService.buildSystemPrompt(context, mode)
 
-            // Generate response from Ollama
-            const aiResponse = await ollamaService.generateResponse(
+            // Generate response from LLM
+            const aiResponse = await llmService.generateResponse(
                 messageText,
                 conversationHistory,
                 systemPrompt

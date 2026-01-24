@@ -360,17 +360,17 @@ class AIController {
 
     /**
      * @route   GET /api/v1/ai/ollama/status
-     * @desc    Get Ollama service status and available models
+     * @desc    Get LLM service status and available models (backward compatible endpoint)
      * @access  Private
      */
     getOllamaStatus = asyncHandler(async (req, res) => {
-        const ollamaService = (await import('../services/ollama.service.js'))
+        const llmService = (await import('../services/llm.service.js'))
             .default
-        const status = await ollamaService.getStatus()
+        const status = await llmService.getStatus()
         return ApiResponse.success(
             res,
             status,
-            'Truy xuất trạng thái Ollama thành công'
+            'Truy xuất trạng thái LLM thành công'
         )
     })
 }

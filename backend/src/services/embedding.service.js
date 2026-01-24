@@ -1,51 +1,38 @@
 // src/services/embedding.service.js
+// LƯU Ý: Embedding service LUÔN LUÔN sử dụng Ollama, không phụ thuộc vào AI_PROVIDER
+// AI_PROVIDER chỉ ảnh hưởng đến LLM (chat/completion), không ảnh hưởng embedding
 import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
 
 class EmbeddingService {
     constructor() {
-        // Check if OpenAI is configured
-        if (config.OPENAI_API_KEY) {
-            // Dynamic import OpenAI to avoid errors if not installed
-            import('openai').then((module) => {
-                const OpenAI = module.default
-                this.openai = new OpenAI({
-                    apiKey: config.OPENAI_API_KEY,
-                })
-            }).catch((err) => {
-                logger.warn('OpenAI package not available, using Ollama only')
-            })
-            this.provider = 'openai'
-            this.model = config.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small'
-            this.dimensions = 1536 // text-embedding-3-small
-            logger.info(`Embedding service initialized with OpenAI: ${this.model}`)
-        }
-        // Check if Ollama is enabled
-        else if (config.OLLAMA_ENABLED) {
-            this.provider = 'ollama'
-            this.baseUrl = config.OLLAMA_BASE_URL || 'http://localhost:11434'
-            this.model = config.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text'
-            
-            // Map dimensions based on model
-            const dimensionMap = {
-                'nomic-embed-text': 768,
-                'mxbai-embed-large': 1024,
-                'all-minilm': 384,
-            }
-            this.dimensions = dimensionMap[this.model] || 768
-            
-            logger.info(
-                `Embedding service initialized with Ollama: model=${this.model}, dimensions=${this.dimensions}`
-            )
-        } else {
+        // Embedding LUÔN LUÔN dùng Ollama (không phụ thuộc vào AI_PROVIDER)
+        if (!config.OLLAMA_ENABLED) {
             throw new Error(
-                'No embedding provider configured. Set OPENAI_API_KEY or OLLAMA_ENABLED=true'
+                'Ollama must be enabled for embedding service. Set OLLAMA_ENABLED=true'
             )
         }
+
+        this.provider = 'ollama'
+        this.baseUrl = config.OLLAMA_BASE_URL || 'http://localhost:11434'
+        this.model = config.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text'
+        
+        // Map dimensions based on model
+        const dimensionMap = {
+            'nomic-embed-text': 768,
+            'mxbai-embed-large': 1024,
+            'all-minilm': 384,
+        }
+        this.dimensions = dimensionMap[this.model] || 768
+        
+        logger.info(
+            `Embedding service initialized with Ollama (always): model=${this.model}, dimensions=${this.dimensions}`
+        )
     }
 
     /**
      * Generate embedding for text
+     * LƯU Ý: Luôn sử dụng Ollama, không phụ thuộc vào AI_PROVIDER
      * @param {string} text - Text to embed
      * @returns {Promise<number[]>} Embedding vector
      */
@@ -55,31 +42,12 @@ class EmbeddingService {
         }
 
         try {
-            if (this.provider === 'openai') {
-                return await this._generateOpenAIEmbedding(text)
-            } else if (this.provider === 'ollama') {
-                return await this._generateOllamaEmbedding(text)
-            }
+            // Embedding luôn dùng Ollama
+            return await this._generateOllamaEmbedding(text)
         } catch (error) {
             logger.error('Error generating embedding:', error)
             throw error
         }
-    }
-
-    /**
-     * Generate OpenAI embedding
-     */
-    async _generateOpenAIEmbedding(text) {
-        if (!this.openai) {
-            throw new Error('OpenAI client not initialized')
-        }
-
-        const response = await this.openai.embeddings.create({
-            model: this.model,
-            input: text,
-            dimensions: this.dimensions,
-        })
-        return response.data[0].embedding
     }
 
     /**
@@ -185,11 +153,11 @@ class EmbeddingService {
     /**
      * Batch generate embeddings
      * @param {string[]} texts - Array of texts to embed
-     * @param {number} batchSize - Batch size (default: 10 for Ollama, 100 for OpenAI)
+     * @param {number} batchSize - Batch size (default: 10 for Ollama)
      * @returns {Promise<number[][]>} Array of embedding vectors
      */
     async generateBatchEmbeddings(texts, batchSize = null) {
-        const defaultBatchSize = this.provider === 'openai' ? 100 : 10
+        const defaultBatchSize = 10 // Ollama batch size
         const size = batchSize || defaultBatchSize
 
         const embeddings = []
@@ -200,8 +168,8 @@ class EmbeddingService {
             )
             embeddings.push(...batchEmbeddings)
 
-            // Rate limiting: wait between batches (especially for Ollama)
-            if (i + size < texts.length && this.provider === 'ollama') {
+            // Rate limiting: wait between batches for Ollama
+            if (i + size < texts.length) {
                 await new Promise((resolve) => setTimeout(resolve, 100)) // 100ms delay
             }
         }
@@ -226,10 +194,10 @@ class EmbeddingService {
 
     /**
      * Get provider name
-     * @returns {string} Provider name ('openai' or 'ollama')
+     * @returns {string} Provider name (always 'ollama')
      */
     getProvider() {
-        return this.provider
+        return this.provider // Always 'ollama'
     }
 }
 

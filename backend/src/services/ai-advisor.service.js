@@ -1,4 +1,4 @@
-import ollamaService from './ollama.service.js'
+import llmService from './llm.service.js'
 import logger from '../config/logger.config.js'
 
 class AIAdvisorService {
@@ -100,7 +100,19 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
                     prompt += `   - "${coursesForPrompt[1].title}"\n`
                     prompt += `   - Lý do ngắn gọn (1 câu)\n`
                     prompt += `4. Hỏi thêm nếu cần (tùy chọn)\n\n`
+                } else if (courseCount === 3) {
+                    prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
+                    prompt += `1. Xác nhận yêu cầu của người dùng (1 câu)\n`
+                    prompt += `2. Xuống dòng, giới thiệu khóa học phù hợp NHẤT:\n`
+                    prompt += `   - "${coursesForPrompt[0].title}"\n`
+                    prompt += `   - Lý do ngắn gọn tại sao phù hợp (1-2 câu)\n`
+                    prompt += `3. BẮT BUỘC: Bạn PHẢI nhắc đến đầy đủ 2 khóa học còn lại:\n`
+                    prompt += `   - "${coursesForPrompt[1].title}" - [lý do ngắn gọn, 1 câu]\n`
+                    prompt += `   - "${coursesForPrompt[2].title}" - [lý do ngắn gọn, 1 câu]\n`
+                    prompt += `   KHÔNG được bỏ sót bất kỳ khóa học nào trong 3 khóa học trên.\n`
+                    prompt += `4. Hỏi thêm nếu cần (tùy chọn)\n\n`
                 } else {
+                    // courseCount > 3 (shouldn't happen, but handle gracefully)
                     prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
                     prompt += `1. Xác nhận yêu cầu của người dùng (1 câu)\n`
                     prompt += `2. Xuống dòng, giới thiệu khóa học phù hợp NHẤT:\n`
@@ -121,6 +133,15 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
                 prompt += `  [Lý do ngắn gọn]\n\n`
                 prompt += `  Ngoài ra, bạn cũng có thể xem: [Tên khóa học khác]\n`
                 prompt += `  [Lý do ngắn gọn]"\n\n`
+                
+                // Thêm nhắc nhở đặc biệt cho courseCount = 3
+                if (courseCount === 3) {
+                    prompt += `⚠️ CẢNH BÁO QUAN TRỌNG:\n`
+                    prompt += `- Bạn PHẢI nhắc đến đầy đủ 3 khóa học trong danh sách trên\n`
+                    prompt += `- Nếu bạn chỉ nhắc đến 1 hoặc 2 khóa học, câu trả lời sẽ KHÔNG HỢP LỆ\n`
+                    prompt += `- BẮT BUỘC phải nhắc đến: "${coursesForPrompt[0].title}", "${coursesForPrompt[1].title}", và "${coursesForPrompt[2].title}"\n\n`
+                }
+                
                 prompt += `- Trả lời NGẮN GỌN, SÚC TÍCH, KHÔNG lặp lại thông tin\n`
                 prompt += `- Chỉ nhắc đến khóa học có trong danh sách trên. KHÔNG tạo ra khóa học mới.\n`
                 prompt += `- TUYỆT ĐỐI KHÔNG được nhắc đến số lượng khóa học trong câu trả lời.\n`
@@ -141,18 +162,18 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
                 prompt += `3. KHÔNG liệt kê khóa học trừ khi người dùng yêu cầu cụ thể`
             }
 
-            // Use Ollama to understand context and generate explanation
-            const contextResponse = await ollamaService.generateResponse(prompt)
+            // Use LLM to understand context and generate explanation
+            const contextResponse = await llmService.generateResponse(prompt)
             let advisorMessage = contextResponse
 
             // Post-process: Remove các câu mention số lượng khóa học
             advisorMessage = this._removeCourseCountMentions(advisorMessage)
             
-            // // Post-process: Làm sạch response - loại bỏ phần lặp lại và dính lẹo
-            // advisorMessage = this._cleanResponse(advisorMessage, coursesForPrompt)
+            // Post-process: Làm sạch response - loại bỏ phần lặp lại và dính lẹo
+            advisorMessage = this._cleanResponse(advisorMessage, coursesForPrompt)
             
-            // // Post-process: Format response để có cấu trúc rõ ràng, dễ đọc
-            // advisorMessage = this._formatResponse(advisorMessage, coursesForPrompt)
+            // Post-process: Format response để có cấu trúc rõ ràng, dễ đọc
+            advisorMessage = this._formatResponse(advisorMessage, coursesForPrompt)
 
             // Validation: Xác định khóa học nào thực sự được LLM nhắc đến
             // Để đảm bảo đồng bộ giữa số lượng LLM nói và số lượng hiển thị
@@ -161,8 +182,19 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
                 // Tìm các khóa học được LLM thực sự nhắc đến trong response
                 const mentionedCourses = this._extractMentionedCourses(advisorMessage, coursesForPrompt)
                 
-                if (mentionedCourses.length > 0) {
-                    // Nếu LLM đã nhắc đến khóa học cụ thể, chỉ hiển thị những khóa học đó
+                // Với strong intent, nếu LLM không nhắc đủ số lượng, fallback về hiển thị đủ courseCount
+                // Để đảm bảo user có đủ lựa chọn
+                if (mentionedCourses.length > 0 && mentionedCourses.length < courseCount && userIntent.intentStrength === 'strong') {
+                    // LLM không tuân thủ prompt (nhắc ít hơn courseCount)
+                    // Với strong intent, hiển thị đủ courseCount khóa học để user có đủ lựa chọn
+                    coursesToShow = coursesForPrompt.slice(0, courseCount)
+                    logger.warn(
+                        `[AI Advisor] LLM mentioned ${mentionedCourses.length} courses but expected ${courseCount}. ` +
+                        `Strong intent detected, showing top ${courseCount} courses instead. ` +
+                        `Query: "${query}"`
+                    )
+                } else if (mentionedCourses.length > 0) {
+                    // LLM đã nhắc đến khóa học cụ thể và đủ số lượng (hoặc medium/weak intent)
                     coursesToShow = mentionedCourses
                     logger.debug(
                         `[AI Advisor] LLM mentioned ${mentionedCourses.length} courses. ` +
@@ -828,8 +860,8 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
         if (intent.intentStrength === 'strong') {
             if (availableCount === 1) return 1
             if (availableCount === 2) return 2
-            // Nếu có nhiều, chỉ hiển thị 2-3 khóa học tốt nhất (ưu tiên 2)
-            return availableCount >= 3 ? 2 : availableCount
+            // Nếu có 3+ khóa học, hiển thị 3 khóa học tốt nhất
+            return Math.min(3, availableCount)
         }
 
         // Medium intent: User có thể muốn xem, nhưng không ép buộc
