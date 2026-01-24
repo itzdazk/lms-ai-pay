@@ -507,6 +507,13 @@ export function LessonPage() {
 
                 // Update selectedLesson with full lesson details (including content and transcriptJsonUrl)
                 if (lessonDetails && isMounted) {
+                    console.log('[LessonPage] Lesson details loaded:', {
+                        id: lessonDetails.id,
+                        title: lessonDetails.title,
+                        transcriptJsonUrl: lessonDetails.transcriptJsonUrl,
+                        transcriptUrl: lessonDetails.transcriptUrl,
+                        transcriptStatus: lessonDetails.transcriptStatus
+                    })
                     setSelectedLesson(lessonDetails)
                 }
 

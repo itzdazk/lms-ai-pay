@@ -179,18 +179,34 @@ app.get('/favicon.ico', (req, res) => {
     res.status(HTTP_STATUS.NO_CONTENT).end()
 })
 
-// Serve static files (uploads)
+// Serve static files (uploads) with CORS support
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// Middleware to handle CORS for static files (before express.static)
+app.use('/uploads', (req, res, next) => {
+    const origin = req.headers.origin
+    // Allow specific origins from config (for credentials requests)
+    if (origin && config.ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+        res.set('Access-Control-Allow-Origin', origin)
+        res.set('Access-Control-Allow-Credentials', 'true')
+    } else {
+        // Fallback: allow all origins (for non-credentials requests)
+        res.set('Access-Control-Allow-Origin', '*')
+    }
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    res.set('Access-Control-Allow-Headers', 'Content-Type')
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end()
+    }
+    next()
+})
+
 app.use(
     '/uploads',
-    express.static(path.join(__dirname, '../uploads'), {
-        setHeaders: (res, filePath) => {
-            res.set('Access-Control-Allow-Origin', '*')
-            res.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
-            res.set('Access-Control-Allow-Headers', 'Content-Type')
-        },
-    })
+    express.static(path.join(__dirname, '../uploads'))
 )
 
 // API routes
