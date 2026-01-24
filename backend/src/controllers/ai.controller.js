@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.config.js'
 import aiChatService from '../services/ai-chat.service.js'
 import knowledgeBaseService from '../services/knowledge-base.service.js'
+import aiAdvisorService from '../services/ai-advisor.service.js'
 import ApiResponse from '../utils/response.util.js'
 import { asyncHandler } from '../middlewares/error.middleware.js'
 import logger from '../config/logger.config.js'
@@ -89,6 +90,24 @@ class AIController {
             title,
             mode,
         })
+
+        // For advisor mode, include greeting message in response (without creating a message in DB)
+        if (mode === 'advisor') {
+            const greetingResponse = await aiAdvisorService.generateAdvisorResponse(
+                [], // No courses yet
+                '', // Empty query triggers greeting
+                [] // No conversation history
+            )
+            
+            return ApiResponse.created(
+                res,
+                {
+                    ...conversation,
+                    greetingMessage: greetingResponse,
+                },
+                'Tạo cuộc hội thoại thành công'
+            )
+        }
 
         return ApiResponse.created(
             res,
@@ -341,17 +360,17 @@ class AIController {
 
     /**
      * @route   GET /api/v1/ai/ollama/status
-     * @desc    Get Ollama service status and available models
+     * @desc    Get LLM service status and available models (backward compatible endpoint)
      * @access  Private
      */
     getOllamaStatus = asyncHandler(async (req, res) => {
-        const ollamaService = (await import('../services/ollama.service.js'))
+        const llmService = (await import('../services/llm.service.js'))
             .default
-        const status = await ollamaService.getStatus()
+        const status = await llmService.getStatus()
         return ApiResponse.success(
             res,
             status,
-            'Truy xuất trạng thái Ollama thành công'
+            'Truy xuất trạng thái LLM thành công'
         )
     })
 }

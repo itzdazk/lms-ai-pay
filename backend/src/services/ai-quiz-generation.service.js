@@ -1,5 +1,5 @@
 // src/services/ai-quiz-generation.service.js
-import ollamaService from './ollama.service.js'
+import llmService from './llm.service.js'
 import knowledgeBaseService from './knowledge-base.service.js'
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
@@ -307,7 +307,7 @@ Lưu ý:
     ) {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
-                return await ollamaService.generateResponse(
+                return await llmService.generateResponse(
                     prompt,
                     context,
                     systemPrompt

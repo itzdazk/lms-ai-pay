@@ -127,6 +127,10 @@ model Course {
   targetAudience       String?   @map("target_audience") @db.Text
   status               String    @default("draft") @db.VarChar(20)
   isFeatured           Boolean   @default(false) @map("is_featured")
+  // RAG: Embedding fields for vector search
+  embedding            Unsupported("vector(768)")? @map("embedding") // Vector embedding for semantic search
+  embeddingModel       String?   @map("embedding_model") @db.VarChar(50) // Model used for embedding
+  embeddingUpdatedAt   DateTime? @map("embedding_updated_at") @db.Timestamptz // Last embedding update time
   featuredAt           DateTime? @map("featured_at") @db.Timestamptz
   ratingAvg            Decimal   @default(0) @map("rating_avg") @db.Decimal(2, 1)
   ratingCount          Int       @default(0) @map("rating_count")

@@ -1,11 +1,10 @@
-// src/services/ai-chat.service.js
 import { prisma } from '../config/database.config.js'
 import knowledgeBaseService from './knowledge-base.service.js'
-import ollamaService from './ollama.service.js'
+import llmService from './llm.service.js'
+import aiAdvisorService from './ai-advisor.service.js'
 import logger from '../config/logger.config.js'
 import config from '../config/app.config.js'
 import { HTTP_STATUS, AI_INTERACTION_TYPES } from '../config/constants.js'
-
 class AIChatService {
     /**
      * Helper: Verify conversation access
@@ -147,15 +146,29 @@ class AIChatService {
 
             // Create an initial assistant greeting message so AI is the first sender
             try {
-                const greetingText = (() => {
-                    if (lesson) {
-                        return `Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp về bài học "${lesson.title}" và hỗ trợ học tập. Bạn cần hỗ trợ gì không?`
-                    }
-                    if (course) {
-                        return `Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp về khóa học "${course.title}" và hỗ trợ học tập. Bạn cần hỗ trợ gì không?`
-                    }
-                    return 'Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp thắc mắc, hỗ trợ học tập và tư vấn lộ trình. Bạn cần hỗ trợ gì không?'
-                })()
+                let greetingText
+                
+                // For advisor mode, use advisor service to get greeting
+                if (mode === 'advisor') {
+                    const aiAdvisorService = (await import('./ai-advisor.service.js')).default
+                    const greetingResponse = await aiAdvisorService.generateAdvisorResponse(
+                        [], // No courses yet
+                        '', // Empty query triggers greeting
+                        [] // No conversation history
+                    )
+                    greetingText = greetingResponse.text
+                } else {
+                    // For tutor/general mode, use default greeting
+                    greetingText = (() => {
+                        if (lesson) {
+                            return `Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp về bài học "${lesson.title}" và hỗ trợ học tập. Bạn cần hỗ trợ gì không?`
+                        }
+                        if (course) {
+                            return `Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp về khóa học "${course.title}" và hỗ trợ học tập. Bạn cần hỗ trợ gì không?`
+                        }
+                        return 'Xin chào! Tôi là Gia sư AI. Tôi có thể giúp bạn giải đáp thắc mắc, hỗ trợ học tập và tư vấn lộ trình. Bạn cần hỗ trợ gì không?'
+                    })()
+                }
 
                 await prisma.chatMessage.create({
                     data: {
@@ -244,22 +257,21 @@ class AIChatService {
             const responseStartTime = Date.now()
 
             try {
-                // Check if Ollama is available (for all modes including advisor)
+                // Check if LLM is available (for all modes including advisor)
                 const healthCheckStart = Date.now()
-                const isOllamaAvailable =
-                    ollamaService.enabled && (await ollamaService.checkHealth())
+                const isLLMAvailable = await llmService.checkHealth()
                 const healthCheckDuration = Date.now() - healthCheckStart
 
-                if (isOllamaAvailable) {
+                if (isLLMAvailable) {
                     try {
-                        // Set timeout for Ollama generation
+                        // Set timeout for LLM generation
                         const generationTimeout = 120000 // 120s
                         const timeoutPromise = new Promise((_, reject) => {
                             setTimeout(
                                 () =>
                                     reject(
                                         new Error(
-                                            'Thời gian tạo của Ollama đã hết hạn'
+                                            'Thời gian tạo của LLM đã hết hạn'
                                         )
                                     ),
                                 generationTimeout
@@ -269,15 +281,16 @@ class AIChatService {
                         // For advisor mode, use specialized generation
                         let generationPromise
                         if (mode === 'advisor') {
-                            // Advisor mode: fetch courses first, then use Ollama to generate smart response
+                            // Advisor mode: fetch courses first, then use LLM to generate smart response
                             const availableCourses =
                                 context.searchResults?.courses || []
-                            generationPromise = this.generateAdvisorResponse(
+                            generationPromise = aiAdvisorService.generateAdvisorResponse(
                                 availableCourses,
-                                messageText
+                                messageText,
+                                conversationHistory
                             )
                         } else {
-                            // Other modes: use standard Ollama generation
+                            // Other modes: use standard LLM generation
                             generationPromise = this.generateOllamaResponse(
                                 messageText,
                                 conversationHistory,
@@ -304,7 +317,7 @@ class AIChatService {
                         // Log error with context
                         if (ollamaError.message?.includes('timeout')) {
                             logger.warn(
-                                `Thời gian tạo của Ollama đã hết hạn sau ${errorDuration}ms, trở lại mẫu trả lời`
+                                `Thời gian tạo của LLM đã hết hạn sau ${errorDuration}ms, trở lại mẫu trả lời`
                             )
                         } else {
                             logger.error(
@@ -323,9 +336,9 @@ class AIChatService {
                     }
                 } else {
                     const checkDuration = Date.now() - responseStartTime
-                    fallbackReason = 'Dịch vụ Ollama không khả dụng'
+                    fallbackReason = 'Dịch vụ LLM không khả dụng'
                     logger.warn(
-                        `Ollama không khả dụng (kiểm tra trong ${checkDuration}ms), trở lại mẫu trả lời`
+                        `LLM không khả dụng (kiểm tra trong ${checkDuration}ms), trở lại mẫu trả lời`
                     )
                     responseData = this.generateTemplateResponse(
                         context,
@@ -443,22 +456,21 @@ class AIChatService {
             let usedOllama = false
 
             try {
-                if (ollamaService.enabled) {
-                    const isOllamaAvailable = await ollamaService.checkHealth()
-                    if (isOllamaAvailable) {
-                        // Build system prompt
-                        const systemPrompt = ollamaService.buildSystemPrompt(
-                            context,
-                            mode
-                        )
+                const isLLMAvailable = await llmService.checkHealth()
+                if (isLLMAvailable) {
+                    // Build system prompt
+                    const systemPrompt = llmService.buildSystemPrompt(
+                        context,
+                        mode
+                    )
 
-                        // Stream response from Ollama
-                        try {
-                            for await (const chunk of ollamaService.generateResponseStream(
-                                messageText,
-                                conversationHistory,
-                                systemPrompt
-                            )) {
+                    // Stream response from LLM
+                    try {
+                        for await (const chunk of llmService.generateResponseStream(
+                            messageText,
+                            conversationHistory,
+                            systemPrompt
+                        )) {
                                 fullResponse += chunk
                                 onChunk({
                                     type: 'ai_chunk',
@@ -522,21 +534,20 @@ class AIChatService {
                         } catch (streamError) {
                             streamingError = streamError
                             logger.error(
-                                'Lỗi trong quá trình truyền dòng của Ollama:',
+                                'Lỗi trong quá trình truyền dòng của LLM:',
                                 streamError
                             )
                             // Continue to fallback
                         }
-                    }
 
-                    // Fallback to template if Ollama not available or streaming failed
+                    // Fallback to template if LLM not available or streaming failed
                     if (
-                        !isOllamaAvailable ||
+                        !isLLMAvailable ||
                         streamingError ||
                         !fullResponse.trim()
                     ) {
                         logger.warn(
-                            'Trở lại mẫu trả lời (Ollama không khả dụng hoặc truyền dòng thất bại)'
+                            'Trở lại mẫu trả lời (LLM không khả dụng hoặc truyền dòng thất bại)'
                         )
                         const templateResponse = this.generateTemplateResponse(
                             context,
@@ -560,7 +571,7 @@ class AIChatService {
                         }
                     }
                 } else {
-                    // Ollama disabled, use template
+                    // LLM disabled, use template
                     const templateResponse = this.generateTemplateResponse(
                         context,
                         messageText
@@ -627,7 +638,7 @@ class AIChatService {
     }
 
     /**
-     * Generate response using Ollama with knowledge base context
+     * Generate response using LLM with knowledge base context
      */
     async generateOllamaResponse(
         messageText,
@@ -637,10 +648,10 @@ class AIChatService {
     ) {
         try {
             // Build system prompt with knowledge base
-            const systemPrompt = ollamaService.buildSystemPrompt(context, mode)
+            const systemPrompt = llmService.buildSystemPrompt(context, mode)
 
-            // Generate response from Ollama
-            const aiResponse = await ollamaService.generateResponse(
+            // Generate response from LLM
+            const aiResponse = await llmService.generateResponse(
                 messageText,
                 conversationHistory,
                 systemPrompt
@@ -695,7 +706,7 @@ class AIChatService {
                 })
             }
 
-            // Prefix clarity for lesson mode: always state which lesson/course
+            // Prefix clarity for course mode: always state which lesson/course
             let prefix = ''
             if (mode === 'course') {
                 const lessonTitle =
@@ -741,9 +752,10 @@ class AIChatService {
 
         // ADVISOR MODE: Recommend courses based on search results
         if (mode === 'advisor') {
-            return await this.generateAdvisorResponse(
+            return await aiAdvisorService.generateAdvisorResponse(
                 searchResults.courses,
-                query
+                query,
+                [] // conversationHistory not available in template fallback
             )
         }
 
@@ -789,291 +801,6 @@ class AIChatService {
         return this.generateNoResultResponse(query, userContext)
     }
 
-    /**
-     * Response cho advisor mode - sử dụng LLM để hiểu context nhưng chỉ gợi ý khóa học thực
-     */
-    async generateAdvisorResponse(courses, query, conversationHistory = []) {
-        // Check if query is greeting or learning-related
-        const isGreeting = this._isGreeting(query)
-
-        if (isGreeting) {
-            // For greetings, return welcome message
-            const text = `👋 Xin chào! Tôi là Trợ lý AI, sẵn sàng giúp bạn tìm khóa học lập trình phù hợp.
-
-🎯 Hãy cho tôi biết:
-- Bạn muốn học về lĩnh vực gì trong lập trình? (Web, Mobile, Data, AI, Game, v.v.)
-- Level hiện tại của bạn ra sao? (Cơ bản/Trung cấp/Nâng cao)
-- Bạn có bao nhiêu thời gian để học?
-
-Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt nhất! 💡`
-            return {
-                text,
-                sources: [],
-                suggestedActions: [],
-            }
-        }
-
-        // For learning-related queries, use LLM to understand context
-        // Then show real courses with intelligent explanation
-        try {
-            const availableCourses =
-                courses && courses.length > 0 ? courses : []
-
-            // Filter courses that are relevant to the user's intent
-            const relevantCourses = availableCourses.filter((course) =>
-                this._isCourseRelevant(query, course)
-            )
-
-            // Build a prompt that prevents hallucination and only uses relevant courses
-            const coursesForPrompt =
-                relevantCourses.length > 0 ? relevantCourses : []
-            const coursesList = coursesForPrompt
-                .map(
-                    (c, i) =>
-                        `${i + 1}. ${c.title} (${c.durationHours}h, ${c.totalLessons} bài học)`
-                )
-                .join('\n')
-
-            const prompt = `Bạn là trợ lý tư vấn khóa học lập trình. Người dùng nói: "${query}"
-
-Khóa học có sẵn (chỉ các khóa liên quan):
-${coursesList || 'Không có khóa học nào phù hợp'}
-
-Hãy:
-1. Xác nhận/hiểu yêu cầu của họ (ví dụ: "Bạn muốn học về game development")
-2. Giải thích khóa học nào phù hợp NHẤT với nhu cầu (hoặc tại sao không có khóa học phù hợp)
-3. Nếu không có khóa học đúng, hãy gợi ý khóa học có liên quan làm nền tảng
-4. Hỏi câu hỏi tiếp theo để hiểu rõ hơn
-
-Chỉ nhắc đến khóa học có trong danh sách. KHÔNG tạo ra khóa học mới.`
-
-            // Use Ollama to understand context and generate explanation
-            const contextResponse = await ollamaService.generateResponse(prompt)
-            let advisorMessage = contextResponse
-
-            // Include relevant courses only when we found matches
-            if (relevantCourses.length > 0) {
-                advisorMessage += `\n\nTìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
-            }
-
-            // Build sources from courses
-            const sources = relevantCourses.slice(0, 4).map((course) => ({
-                type: 'course',
-                courseId: course.id,
-                courseTitle: course.title,
-                courseSlug: course.slug,
-                level: course.level,
-                price: course.price,
-                discountPrice: course.discountPrice,
-                rating: course.ratingAvg,
-                ratingCount: course.ratingCount,
-                enrolledCount: course.enrolledCount,
-                duration: course.durationHours,
-                lessons: course.totalLessons,
-                description: course.shortDescription,
-                thumbnail: course.thumbnailUrl,
-                instructor: course.instructor,
-            }))
-
-            // If no relevant courses, add a follow-up prompt instead of empty list
-            if (relevantCourses.length === 0) {
-                advisorMessage += `\n\nHiện chưa có khóa học khớp với yêu cầu của bạn. Hãy cho tôi biết thêm: bạn muốn học ngôn ngữ nào (Python, JavaScript, v.v.) và mục tiêu cụ thể (AI, Data, Web, Game)?`
-            }
-
-            return { text: advisorMessage, sources }
-        } catch (error) {
-            // Smarter fallback when Ollama unavailable
-            const availableCourses =
-                courses && courses.length > 0 ? courses : []
-            const queryLower = query.toLowerCase()
-
-            let text = ''
-            let shouldShowCourses = true
-
-            // Detect user intent
-            if (
-                queryLower.includes('khác') ||
-                queryLower.includes('nào khác')
-            ) {
-                // User asking for other/different courses
-                if (availableCourses.length === 1) {
-                    text = `📚 Hiện tại chúng tôi chỉ có **1 khóa học**: JavaScript cơ bản.\n\n`
-                    text += `🎯 Bạn có thể:\n`
-                    text += `1. Đăng ký khóa học này để bắt đầu\n`
-                    text += `2. Cho tôi biết lĩnh vực bạn quan tâm (Web, Mobile, AI, Game, Data...)\n`
-                    text += `3. Chúng tôi sẽ thêm khóa học phù hợp sớm\n\n`
-                    text += `Bạn muốn học gì? 😊`
-                } else {
-                    text = `✨ Dưới đây là tất cả các khóa học có sẵn:\n\n`
-                }
-            } else if (
-                queryLower.includes('tư vấn') ||
-                queryLower.includes('gợi ý') ||
-                queryLower.includes('nên học gì')
-            ) {
-                // User asking for consultation/advice
-                text = `👨‍💼 Tôi sẵn sàng tư vấn! Để giúp bạn tốt hơn, hãy cho tôi biết:\n\n`
-                text += `🎯 **Câu hỏi để tôi hiểu rõ hơn:**\n`
-                text += `1. Bạn muốn học về lĩnh vực gì? (Web, Mobile, Backend, Data, AI, Game, v.v.)\n`
-                text += `2. Level hiện tại của bạn? (Beginner, Intermediate, Advanced)\n`
-                text += `3. Bạn có bao nhiêu thời gian để học mỗi tuần?\n`
-                text += `4. Mục tiêu học tập của bạn là gì? (Tìm việc, nâng cao kỹ năng, hobby...)\n\n`
-                text += `Sau đó tôi sẽ gợi ý khóa học phù hợp nhất! 💡`
-                shouldShowCourses = false
-            } else if (
-                queryLower.length < 5 ||
-                /^(ok|được|gì|vâng|okela|okie)$/i.test(queryLower)
-            ) {
-                // Too short or acknowledgment
-                text = `👋 Bạn muốn biết gì thêm? Tôi có thể giúp bạn:\n\n`
-                text += `- 🔍 Tìm khóa học theo lĩnh vực\n`
-                text += `- 📚 Gợi ý khóa học phù hợp với level của bạn\n`
-                text += `- ❓ Trả lời các câu hỏi về khóa học\n\n`
-                text += `Hãy nói cho tôi biết bạn muốn học gì! 😊`
-                shouldShowCourses = false
-            } else {
-                // General learning-related query
-                text = `✨ Bạn quan tâm đến: **${query}**\n\n`
-            }
-
-            // Lọc khóa học liên quan dựa trên intent
-            const relevantCourses = shouldShowCourses
-                ? availableCourses.filter((course) =>
-                      this._isCourseRelevant(query, course)
-                  )
-                : []
-
-            // Nếu không có khóa liên quan, đừng hiển thị danh sách
-            if (shouldShowCourses && relevantCourses.length === 0) {
-                text += `Hiện chưa có khóa học phù hợp với yêu cầu này. Hãy cho tôi biết lĩnh vực/ngôn ngữ bạn muốn học (AI, Python, Web, v.v.) để tôi gợi ý chính xác hơn!`
-            }
-
-            // Show courses if relevant
-            if (shouldShowCourses && relevantCourses.length > 0) {
-                text += `Tìm thấy ${relevantCourses.length} khóa học phù hợp. Xem danh sách bên dưới 👇`
-            }
-
-            if (shouldShowCourses) {
-                const sources = relevantCourses.slice(0, 4).map((course) => ({
-                    type: 'course',
-                    courseId: course.id,
-                    courseTitle: course.title,
-                    courseSlug: course.slug,
-                    level: course.level,
-                    price: course.price,
-                    discountPrice: course.discountPrice,
-                    rating: course.ratingAvg,
-                    ratingCount: course.ratingCount,
-                    enrolledCount: course.enrolledCount,
-                    duration: course.durationHours,
-                    lessons: course.totalLessons,
-                    description: course.shortDescription,
-                    thumbnail: course.thumbnailUrl,
-                    instructor: course.instructor,
-                }))
-
-                return { text, sources }
-            } else {
-                return { text, sources: [] }
-            }
-        }
-    }
-
-    /**
-     * Check if query is a greeting
-     */
-    _isGreeting(query) {
-        if (!query || query.trim().length === 0) return true
-        const greetings =
-            /^(xin chào|chào|hello|hi|halo|hey|xin chào bạn|chào bạn|chào em|xin kính chào|tình hình|sao|sao rồi|thế nào|khỏe không|bạn khỏe không|alo|ê|ơi)$/i
-        return greetings.test(query.trim())
-    }
-
-    /**
-     * Check if a course is relevant to the query
-     */
-    _isCourseRelevant(query, course) {
-        if (!query || query.trim().length === 0) return false
-
-        const haystack =
-            `${course.title || ''} ${course.shortDescription || ''} ${course.description || ''} ${course.whatYouLearn || ''}`.toLowerCase()
-
-        // Filter out generic Vietnamese stopwords so we only match on meaningful tech keywords
-        const stopwords = new Set([
-            'hoc',
-            'học',
-            'muon',
-            'muốn',
-            'toi',
-            'tôi',
-            'ban',
-            'bạn',
-            'lam',
-            'làm',
-            'viec',
-            'việc',
-            'can',
-            'cần',
-            'gi',
-            'gì',
-            'the',
-            'thế',
-            'nào',
-            'phu',
-            'phù',
-            'hop',
-            'hợp',
-            'de',
-            'để',
-            've',
-            'về',
-            'khoa',
-            'khóa',
-            'lop',
-            'lớp',
-            'co',
-            'có',
-            'trinh',
-            'trình',
-            'lap',
-            'lập',
-            'co',
-            'có',
-            'coi',
-            'xem',
-            'camon',
-            'cảm',
-            'cảm ơn',
-            'on',
-            'ơn',
-        ])
-
-        const allowShortKeywords = new Set([
-            'ai',
-            'js',
-            'go',
-            'c',
-            'c++',
-            'c#',
-            'ui',
-            'ux',
-            'sql',
-        ])
-
-        const keywords = query
-            .toLowerCase()
-            .split(/[^\p{L}\p{N}+#.]+/u)
-            .filter((w) => w.length > 0)
-            .filter(
-                (w) =>
-                    (w.length >= 3 || allowShortKeywords.has(w)) &&
-                    !stopwords.has(w)
-            )
-
-        if (keywords.length === 0) return false
-
-        return keywords.some((kw) => haystack.includes(kw))
-    }
     generateTranscriptResponse(transcripts, query) {
         const topResult = transcripts[0]
 

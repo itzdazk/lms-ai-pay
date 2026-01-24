@@ -59,18 +59,22 @@ export function CourseAdvisor({ onClose: _onClose }: CourseAdvisorProps) {
       });
 
       const convId = response.data?.data?.id;
+      const greetingMessage = response.data?.data?.greetingMessage;
+      
       if (convId) {
         setConversationId(convId);
         setHasStarted(true);
 
-        // Add welcome message from AI
+        // Use greeting message from backend if available, otherwise use fallback
+        const greeting = greetingMessage?.text || '👋 Xin chào! Tôi là Trợ lý AI, sẵn sàng giúp bạn tìm khóa học lập trình phù hợp.\n\n🎯 Hãy cho tôi biết:\n- Bạn muốn học về lĩnh vực gì trong lập trình? (Web, Mobile, Data, AI, Game, v.v.)\n- Level hiện tại của bạn ra sao? (Cơ bản/Trung cấp/Nâng cao)\n- Bạn có bao nhiêu thời gian để học?\n\nDựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt nhất! 💡';
+        
         setMessages([
           {
             id: Date.now(),
             role: 'assistant',
-            content: '👋 Xin chào! Tôi là Trợ lý AI, sẵn sàng giúp bạn tìm khóa học phù hợp nhất.\n\n🎯 Hãy cho tôi biết:\n- Bạn muốn học về lĩnh vực gì?\n- Level hiện tại của bạn ra sao?\n- Bạn có bao nhiêu thời gian để học?',
+            content: greeting,
             timestamp: new Date(),
-            sources: [],
+            sources: greetingMessage?.sources || [],
           },
         ]);
       }

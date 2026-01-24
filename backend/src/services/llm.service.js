@@ -1,399 +1,158 @@
-// src/services/ollama.service.js
+// src/services/llm.service.js
 import config from '../config/app.config.js'
 import logger from '../config/logger.config.js'
+import { OllamaProvider } from './providers/ollama.provider.js'
+import { OpenAIProvider } from './providers/openai.provider.js'
+import { GeminiProvider } from './providers/gemini.provider.js'
+import { ClaudeProvider } from './providers/claude.provider.js'
 
-class OllamaService {
-    /**
-     * Check if Ollama is available (with timeout and caching)
-     */
+/**
+ * LLM Service - Unified interface for multiple LLM providers
+ * Uses Factory Pattern to create and route to appropriate provider
+ */
+class LLMService {
     constructor() {
-        this.enabled = config.OLLAMA_ENABLED !== false
-        this.baseUrl = config.OLLAMA_BASE_URL || 'http://localhost:11434'
-        this.model = config.OLLAMA_MODEL || 'llama3.1:latest'
-        this.temperature = config.OLLAMA_TEMPERATURE || 0.7
-        this.maxTokens = config.OLLAMA_MAX_TOKENS || 2000
-        this.healthCheckCache = { isHealthy: null, lastCheck: 0 }
-        this.healthCheckCacheTTL = 30000 // 30 seconds
+        // Get provider name from config (default: 'ollama')
+        this.providerName = (config.AI_PROVIDER || 'ollama').toLowerCase()
+        this.provider = null
+        this._initializeProvider()
+    }
 
-        if (this.enabled) {
+    /**
+     * Initialize the provider based on config
+     */
+    _initializeProvider() {
+        try {
+            switch (this.providerName) {
+                case 'ollama':
+                    this.provider = new OllamaProvider({
+                        enabled: config.OLLAMA_ENABLED !== false,
+                        baseUrl: config.OLLAMA_BASE_URL || 'http://localhost:11434',
+                        model: config.OLLAMA_MODEL || 'llama3.1:latest',
+                        temperature: config.OLLAMA_TEMPERATURE || 0.7,
+                        maxTokens: config.OLLAMA_MAX_TOKENS || 2000,
+                    })
+                    break
+
+                case 'openai':
+                    this.provider = new OpenAIProvider({
+                        enabled: true, // OpenAI is enabled if API key is provided
+                        apiKey: config.OPENAI_API_KEY,
+                        baseUrl: 'https://api.openai.com/v1',
+                        model: config.OPENAI_MODEL || 'gpt-4o-mini',
+                        temperature: config.OPENAI_TEMPERATURE || 0.7,
+                        maxTokens: config.OPENAI_MAX_TOKENS || 2000,
+                    })
+                    break
+
+                case 'gemini':
+                    this.provider = new GeminiProvider({
+                        enabled: true, // Gemini is enabled if API key is provided
+                        apiKey: config.GEMINI_API_KEY,
+                        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+                        model: config.GEMINI_MODEL || 'gemini-1.5-flash',
+                        temperature: config.GEMINI_TEMPERATURE || 0.7,
+                        maxTokens: config.GEMINI_MAX_TOKENS || 2000,
+                    })
+                    break
+
+                case 'claude':
+                    this.provider = new ClaudeProvider({
+                        enabled: true, // Claude is enabled if API key is provided
+                        apiKey: config.ANTHROPIC_API_KEY,
+                        baseUrl: 'https://api.anthropic.com/v1',
+                        model: config.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022',
+                        temperature: config.ANTHROPIC_TEMPERATURE || 0.7,
+                        maxTokens: config.ANTHROPIC_MAX_TOKENS || 2000,
+                    })
+                    break
+
+                default:
+                    logger.warn(
+                        `Unknown provider: ${this.providerName}, falling back to ollama`
+                    )
+                    this.providerName = 'ollama'
+                    this.provider = new OllamaProvider({
+                        enabled: config.OLLAMA_ENABLED !== false,
+                        baseUrl: config.OLLAMA_BASE_URL || 'http://localhost:11434',
+                        model: config.OLLAMA_MODEL || 'llama3.1:latest',
+                        temperature: config.OLLAMA_TEMPERATURE || 0.7,
+                        maxTokens: config.OLLAMA_MAX_TOKENS || 2000,
+                    })
+            }
+
             logger.info(
-                `Ollama service initialized: ${this.baseUrl}, model: ${this.model}`
+                `LLM Service initialized with provider: ${this.providerName}`
             )
+        } catch (error) {
+            logger.error('Error initializing LLM provider:', error)
+            throw error
         }
     }
 
+    /**
+     * Get current provider instance
+     * @returns {BaseProvider} Current provider
+     */
+    getProvider() {
+        return this.provider
+    }
+
+    /**
+     * Get current provider name
+     * @returns {string} Provider name
+     */
+    getProviderName() {
+        return this.providerName
+    }
+
+    /**
+     * Check if LLM service is available
+     * @returns {Promise<boolean>}
+     */
     async checkHealth() {
-        try {
-            // Cache health check for 30 seconds
-            const now = Date.now()
-            if (
-                this.healthCheckCache.isHealthy !== null &&
-                now - this.healthCheckCache.lastCheck < this.healthCheckCacheTTL
-            ) {
-                return this.healthCheckCache.isHealthy
-            }
-
-            // Add timeout to prevent hanging
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 3000) // 3s timeout
-
-            const response = await fetch(`${this.baseUrl}/api/tags`, {
-                signal: controller.signal,
-            })
-
-            clearTimeout(timeoutId)
-
-            const isHealthy = response.ok
-            this.healthCheckCache = {
-                isHealthy,
-                lastCheck: now,
-            }
-
-            return isHealthy
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                logger.warn('Ollama health check timeout')
-            } else {
-                logger.warn('Ollama health check failed:', error.message)
-            }
-            this.healthCheckCache = {
-                isHealthy: false,
-                lastCheck: Date.now(),
-            }
+        if (!this.provider) {
             return false
         }
+        return await this.provider.checkHealth()
     }
 
     /**
-     * Generate response using Ollama chat API
+     * Generate response using current provider
      * @param {string} prompt - User message
      * @param {Array} context - Conversation context (messages history)
-     * @param {Object} systemPrompt - System prompt with knowledge base context
+     * @param {string|null} systemPrompt - System prompt with knowledge base context
      * @returns {Promise<string>} AI response
      */
     async generateResponse(prompt, context = [], systemPrompt = null) {
-        if (!this.enabled) {
-            throw new Error('Ollama đã bị vô hiệu hóa')
+        if (!this.provider) {
+            throw new Error('LLM provider chưa được khởi tạo')
         }
-
-        try {
-            // Build messages array
-            const messages = []
-
-            // Add system prompt if provided
-            if (systemPrompt) {
-                messages.push({
-                    role: 'system',
-                    content: systemPrompt,
-                })
-            }
-
-            // Add conversation history
-            context.forEach((msg) => {
-                messages.push({
-                    role: msg.senderType === 'user' ? 'user' : 'assistant',
-                    content: msg.message,
-                })
-            })
-
-            // Add current user message
-            messages.push({
-                role: 'user',
-                content: prompt,
-            })
-
-            // Call Ollama API with timeout
-            logger.debug(
-                `Calling Ollama API: ${this.baseUrl}/api/chat with model: ${this.model}`
-            )
-            const startTime = Date.now()
-
-            const controller = new AbortController()
-            // Increase timeout to 120s for complex queries (llama3.1 can be slow)
-            const timeoutId = setTimeout(() => controller.abort(), 120000) // 120s timeout for generation
-
-            try {
-                const response = await fetch(`${this.baseUrl}/api/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    signal: controller.signal,
-                    body: JSON.stringify({
-                        model: this.model,
-                        messages: messages,
-                        stream: false,
-                        options: {
-                            temperature: this.temperature,
-                            num_predict: this.maxTokens,
-                        },
-                    }),
-                })
-
-                clearTimeout(timeoutId)
-
-                const duration = Date.now() - startTime
-                logger.info(`Ollama API call completed in ${duration}ms`)
-
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    logger.error(
-                        `Ollama API error: ${response.status} - ${errorText}`
-                    )
-                    throw new Error(
-                        `Lỗi API Ollama: ${response.status} - ${errorText}`
-                    )
-                }
-
-                const data = await response.json()
-
-                if (!data.message || !data.message.content) {
-                    throw new Error('Phản hồi không hợp lệ từ API Ollama')
-                }
-
-                const totalDuration = Date.now() - startTime
-                logger.info(
-                    `Ollama response generated (${data.message.content.length} chars) in ${totalDuration}ms`
-                )
-
-                return data.message.content.trim()
-            } catch (error) {
-                clearTimeout(timeoutId)
-                const errorDuration = Date.now() - startTime
-                if (error.name === 'AbortError') {
-                    logger.error(
-                        `Ollama API timeout after ${errorDuration}ms (60s limit)`
-                    )
-                    throw new Error(
-                        `Hết thời gian chờ API Ollama - phản hồi mất quá nhiều thời gian (${errorDuration}ms)`
-                    )
-                }
-                logger.error(
-                    `Error generating Ollama response after ${errorDuration}ms:`,
-                    error.message,
-                    error.stack
-                )
-                throw error
-            }
-        } catch (error) {
-            logger.error('Error generating Ollama response:', error)
-            throw error
-        }
+        return await this.provider.generateResponse(prompt, context, systemPrompt)
     }
 
     /**
-     * Generate response with streaming (improved version)
+     * Generate response with streaming
+     * @param {string} prompt - User message
+     * @param {Array} context - Conversation context (messages history)
+     * @param {string|null} systemPrompt - System prompt with knowledge base context
+     * @returns {AsyncGenerator<string>} Streaming response chunks
      */
     async *generateResponseStream(prompt, context = [], systemPrompt = null) {
-        if (!this.enabled) {
-            throw new Error('Ollama đã bị vô hiệu hóa')
+        if (!this.provider) {
+            throw new Error('LLM provider chưa được khởi tạo')
         }
-
-        const startTime = Date.now()
-        let totalChunks = 0
-        let buffer = ''
-
-        try {
-            const messages = []
-
-            if (systemPrompt) {
-                messages.push({
-                    role: 'system',
-                    content: systemPrompt,
-                })
-            }
-
-            context.forEach((msg) => {
-                messages.push({
-                    role: msg.senderType === 'user' ? 'user' : 'assistant',
-                    content: msg.message,
-                })
-            })
-
-            messages.push({
-                role: 'user',
-                content: prompt,
-            })
-
-            logger.debug(
-                `Starting Ollama streaming: ${this.baseUrl}/api/chat with model: ${this.model}`
-            )
-
-            // Add timeout for streaming (longer than non-streaming)
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => {
-                controller.abort()
-                logger.warn('Ollama streaming timeout after 180s')
-            }, 180000) // 180s timeout for streaming
-
-            const response = await fetch(`${this.baseUrl}/api/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                signal: controller.signal,
-                body: JSON.stringify({
-                    model: this.model,
-                    messages: messages,
-                    stream: true,
-                    options: {
-                        temperature: this.temperature,
-                        num_predict: this.maxTokens,
-                    },
-                }),
-            })
-
-            clearTimeout(timeoutId)
-
-            if (!response.ok) {
-                const errorText = await response.text()
-                logger.error(
-                    `Ollama streaming API error: ${response.status} - ${errorText}`
-                )
-                throw new Error(
-                    `Lỗi API Ollama: ${response.status} - ${errorText}`
-                )
-            }
-
-            const reader = response.body.getReader()
-            const decoder = new TextDecoder()
-
-            try {
-                while (true) {
-                    const { done, value } = await reader.read()
-                    if (done) break
-
-                    // Decode chunk and add to buffer (handle partial JSON)
-                    buffer += decoder.decode(value, { stream: true })
-
-                    // Process complete lines
-                    const lines = buffer.split('\n')
-                    buffer = lines.pop() || '' // Keep incomplete line in buffer
-
-                    for (const line of lines) {
-                        const trimmedLine = line.trim()
-                        if (!trimmedLine) continue
-
-                        try {
-                            // Ollama streaming format: JSON per line
-                            const data = JSON.parse(trimmedLine)
-
-                            if (data.message && data.message.content) {
-                                const content = data.message.content
-                                totalChunks++
-                                yield content
-                            }
-
-                            // Check if done
-                            if (data.done === true) {
-                                const duration = Date.now() - startTime
-                                logger.info(
-                                    `Ollama streaming completed: ${totalChunks} chunks in ${duration}ms`
-                                )
-                                return
-                            }
-                        } catch (parseError) {
-                            // Skip invalid JSON lines (common in streaming)
-                            logger.debug(
-                                `Skipping invalid JSON line in stream: ${trimmedLine.substring(0, 50)}`
-                            )
-                        }
-                    }
-                }
-
-                // Process remaining buffer
-                if (buffer.trim()) {
-                    try {
-                        const data = JSON.parse(buffer.trim())
-                        if (data.message && data.message.content) {
-                            yield data.message.content
-                        }
-                    } catch (e) {
-                        // Ignore parse errors for remaining buffer
-                    }
-                }
-
-                const duration = Date.now() - startTime
-                logger.info(
-                    `Ollama streaming finished: ${totalChunks} chunks in ${duration}ms`
-                )
-            } finally {
-                reader.releaseLock()
-            }
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                const duration = Date.now() - startTime
-                logger.error(`Ollama streaming timeout after ${duration}ms`)
-                throw new Error(
-                    `Hết thời gian chờ Ollama streaming - phản hồi mất quá nhiều thời gian (${duration}ms)`
-                )
-            }
-            logger.error('Error in Ollama stream:', error)
-            throw error
-        }
+        yield* this.provider.generateResponseStream(prompt, context, systemPrompt)
     }
 
     /**
      * Build system prompt with knowledge base context
+     * This is shared across all providers (not provider-specific)
+     * @param {Object} context - Knowledge base context
+     * @param {string} mode - Mode: 'course' | 'general'
+     * @returns {string} System prompt
      */
     buildSystemPrompt(context, mode = 'course') {
-        // ADVISOR MODE: Interactive course recommendation (PROGRAMMING-ONLY PLATFORM)
-        if (mode === 'advisor') {
-            const { searchResults = {} } = context
-            const courses = searchResults.courses || []
-
-            // Build course catalog string
-            let courseCatalog = ''
-            if (courses.length > 0) {
-                courseCatalog += '\n\n=== CATALOG KHÓA HỌC HIỆN CÓ ===\n'
-                courses.slice(0, 8).forEach((course, idx) => {
-                    const price =
-                        course.price > 0
-                            ? `${Number(course.price).toLocaleString('vi-VN')}đ`
-                            : 'Miễn phí'
-                    const finalPrice = course.discountPrice
-                        ? `${Number(course.discountPrice).toLocaleString('vi-VN')}đ`
-                        : price
-                    const rating = course.ratingAvg
-                        ? `⭐ ${course.ratingAvg}/5 (${course.ratingCount} đánh giá)`
-                        : 'Chưa có đánh giá'
-                    courseCatalog += `\n${idx + 1}. **${course.title}** [${course.level || 'Beginner'}]\n`
-                    courseCatalog += `   📖 ${course.shortDescription || course.description || ''}\n`
-                    courseCatalog += `   💰 ${finalPrice} | ${rating} | 👥 ${course.enrolledCount} học viên | ${course.durationHours || 0}h | ${course.totalLessons || 0} bài\n`
-                })
-                courseCatalog +=
-                    '\n⚠️ CHỈ GỢI Ý CÁC KHÓA HỌC CÓ TRONG CATALOG TRÊN'
-            }
-
-            return `Bạn là AI Course Advisor cho nền tảng CHỈ CÓ các khóa học về LẬP TRÌNH.
-
-PHẠM VI BẮT BUỘC:
-- Chỉ hỗ trợ và đề xuất các lĩnh vực thuộc LẬP TRÌNH: Web (Frontend/Backend), Mobile, Data/AI/ML, DevOps/Cloud, Computer Science, DSA, Testing, Security, Game Dev, IoT, v.v.
-- KHÔNG được nhắc đến hoặc đề xuất các lĩnh vực ngoài lập trình. Nếu người dùng hỏi ngoài phạm vi, lịch sự hướng họ về các chủ đề lập trình gần nhất.
-
-NHIỆM VỤ CHÍNH:
-1) HỎI NGẮN GỌN để hiểu mục tiêu trong LẬP TRÌNH (2-3 câu hỏi).
-2) PHÂN TÍCH nhu cầu: nhánh lập trình, level, thời gian, mục tiêu cụ thể.
-3) GỢI Ý 2-4 KHÓA HỌC TỪ CATALOG với lý do rõ ràng (2-3 câu mỗi gợi ý).
-
-QUY TẮC HỘI THOẠI:
-- Hỏi 1-2 câu mỗi lượt; thân thiện, súc tích; dùng emoji phù hợp 🎯 📚 💡 ✨.
-- Ghi nhớ thông tin user; khi đủ dữ kiện (2-3 lượt), chủ động đề xuất.
-- Luôn bám sát phạm vi LẬP TRÌNH của nền tảng.
-
-KHI GỢI Ý KHÓA HỌC:
-- CHỈ đề xuất từ CATALOG KHÓA HỌC bên dưới.
-- Nếu không có khóa học phù hợp trong catalog, hỏi làm rõ thêm hoặc gợi ý lĩnh vực lập trình liên quan.
-- Format: "**[Tên khóa học]** — [Lý do ngắn gọn tại sao phù hợp]"
-- Đi kèm CTA rõ ràng để user xem/đăng ký khóa học đó.
-
-LƯU Ý:
-- Không bịa tên khóa học; chỉ dùng những cái từ CATALOG.
-- Ưu tiên khóa học có rating cao, enroll nhiều, hoặc phù hợp nhất với nhu cầu user.
-- Nếu user hỏi ngoài phạm vi, lịch sự điều hướng về chủ đề lập trình có liên quan.
-${courseCatalog}`
-        }
-
         if (mode === 'general') {
             return `Bạn là Gia sư AI chuyên về lập trình và công nghệ. Trả lời ngắn gọn, chính xác, và hữu ích bằng tiếng Việt.\n\nPHẠM VI HỖ TRỢ:\n- Các câu hỏi về lập trình, công nghệ phần mềm, AI/LLM, công cụ phát triển, hạ tầng hệ thống (ví dụ: Ollama, mô hình AI, API, cách hệ thống hoạt động).\n- Các câu hỏi chung về học tập trên nền tảng.\n\nHÀNH VI TRẢ LỜI:\n- Nếu câu hỏi THỰC SỰ không liên quan (không thuộc phạm vi trên), trả lời lịch sự: "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến lập trình, công nghệ và nội dung học tập trên nền tảng này."\n- Nếu câu hỏi là về công cụ/hệ thống (ví dụ: "Ollama là gì?"), hãy giải thích ngắn gọn và nêu cách hệ thống đang sử dụng công cụ đó.\n- Giữ câu trả lời ngắn gọn, ưu tiên ví dụ/giải pháp thực tế khi cần.`
         }
@@ -784,56 +543,22 @@ Nếu câu hỏi có thể liên quan đến nội dung khóa học cụ thể, 
     }
 
     /**
-     * Get list of available models from Ollama
-     * @returns {Promise<Array>} List of models
-     */
-    async getAvailableModels() {
-        try {
-            const response = await fetch(`${this.baseUrl}/api/tags`)
-            if (!response.ok) {
-                throw new Error(`Lỗi API Ollama: ${response.status}`)
-            }
-            const data = await response.json()
-            return data.models || []
-        } catch (error) {
-            logger.error('Error fetching Ollama models:', error)
-            throw error
-        }
-    }
-
-    /**
-     * Get Ollama service status and info
+     * Get LLM service status
      * @returns {Promise<Object>} Service status
      */
     async getStatus() {
-        try {
-            const isHealthy = await this.checkHealth()
-            const models = isHealthy ? await this.getAvailableModels() : []
-
+        if (!this.provider) {
             return {
-                enabled: this.enabled,
-                available: isHealthy,
-                baseUrl: this.baseUrl,
-                model: this.model,
-                temperature: this.temperature,
-                maxTokens: this.maxTokens,
-                models: models.map((m) => ({
-                    name: m.name || m.model,
-                    size: m.size,
-                    modifiedAt: m.modified_at,
-                })),
-            }
-        } catch (error) {
-            logger.error('Error getting Ollama status:', error)
-            return {
-                enabled: this.enabled,
+                provider: this.providerName,
+                enabled: false,
                 available: false,
-                baseUrl: this.baseUrl,
-                model: this.model,
-                error: error.message,
+                error: 'Provider chưa được khởi tạo',
             }
         }
+
+        return await this.provider.getStatus()
     }
 }
 
-export default new OllamaService()
+// Export singleton instance
+export default new LLMService()

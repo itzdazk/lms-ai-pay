@@ -94,9 +94,12 @@ const config = {
         'https://test-payment.momo.vn/v2/gateway/api/refund',
     MOMO_IP_WHITELIST: process.env.MOMO_IP_WHITELIST || '',
 
+    // AI - Provider Selection
+    AI_PROVIDER: process.env.AI_PROVIDER || 'ollama', // Options: 'ollama', 'openai', 'gemini', 'claude'
+
     // AI - OpenAI
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4',
+    OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     OPENAI_MAX_TOKENS: parseInt(process.env.OPENAI_MAX_TOKENS, 10) || 2000,
     OPENAI_TEMPERATURE: parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7,
 
@@ -106,6 +109,31 @@ const config = {
     OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.1:8b', // Use 8b model for faster response (recommended for local)
     OLLAMA_TEMPERATURE: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
     OLLAMA_MAX_TOKENS: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 1000, // Reduced to 1000 for faster response
+
+    // AI - Google Gemini
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+    GEMINI_MAX_TOKENS: parseInt(process.env.GEMINI_MAX_TOKENS, 10) || 2000,
+    GEMINI_TEMPERATURE: parseFloat(process.env.GEMINI_TEMPERATURE) || 0.7,
+
+    // AI - Anthropic Claude
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022',
+    ANTHROPIC_MAX_TOKENS: parseInt(process.env.ANTHROPIC_MAX_TOKENS, 10) || 2000,
+    ANTHROPIC_TEMPERATURE: parseFloat(process.env.ANTHROPIC_TEMPERATURE) || 0.7,
+
+    // AI - Ollama Embeddings (for RAG)
+    // LƯU Ý: Embedding LUÔN LUÔN sử dụng Ollama, không phụ thuộc vào AI_PROVIDER
+    // AI_PROVIDER chỉ ảnh hưởng đến LLM (chat/completion), không ảnh hưởng embedding
+    OLLAMA_EMBEDDING_MODEL: process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
+    
+    // RAG Configuration
+    RAG_ENABLED: process.env.RAG_ENABLED !== 'false',
+    RAG_HYBRID_SEARCH: process.env.RAG_HYBRID_SEARCH !== 'false', // Combine vector + keyword search
+    RAG_VECTOR_WEIGHT: parseFloat(process.env.RAG_VECTOR_WEIGHT) || 0.7,
+    RAG_KEYWORD_WEIGHT: parseFloat(process.env.RAG_KEYWORD_WEIGHT) || 0.3,
+    RAG_SIMILARITY_THRESHOLD: parseFloat(process.env.RAG_SIMILARITY_THRESHOLD) || 0.7,
+    RAG_USE_QUEUE: process.env.RAG_USE_QUEUE === 'true', // Use BullMQ queue for embedding generation (default: false, use fire-and-forget)
 
     // AI - Whisper (Local)
     WHISPER_ENABLED: process.env.WHISPER_ENABLED !== 'false',

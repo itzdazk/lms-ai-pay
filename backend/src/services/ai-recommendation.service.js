@@ -1,6 +1,6 @@
 // backend/src/services/ai-recommendation.service.js
 import { prisma } from '../config/database.config.js'
-import ollamaService from './ollama.service.js'
+import llmService from './llm.service.js'
 import { COURSE_STATUS, ENROLLMENT_STATUS } from '../config/constants.js'
 
 class AIRecommendationService {
@@ -33,28 +33,19 @@ class AIRecommendationService {
                 return []
             }
 
-            // 4. Generate recommendations using AI (Ollama)
+            // 4. Generate recommendations using AI (LLM)
             let recommendations = []
 
-            // Try using Ollama first
-            if (ollamaService.enabled) {
-                try {
-                    const isOllamaAvailable = await ollamaService.checkHealth()
-                    if (isOllamaAvailable) {
-                        recommendations = await this._generateAIRecommendations(
-                            userProfile,
-                            candidateCourses,
-                            limit
-                        )
-                    } else {
-                        recommendations =
-                            await this._generateRuleBasedRecommendations(
-                                userProfile,
-                                candidateCourses,
-                                limit
-                            )
-                    }
-                } catch (error) {
+            // Try using LLM first
+            try {
+                const isLLMAvailable = await llmService.checkHealth()
+                if (isLLMAvailable) {
+                    recommendations = await this._generateAIRecommendations(
+                        userProfile,
+                        candidateCourses,
+                        limit
+                    )
+                } else {
                     recommendations =
                         await this._generateRuleBasedRecommendations(
                             userProfile,
@@ -62,13 +53,13 @@ class AIRecommendationService {
                             limit
                         )
                 }
-            } else {
-                // Ollama disabled, use rule-based
-                recommendations = await this._generateRuleBasedRecommendations(
-                    userProfile,
-                    candidateCourses,
-                    limit
-                )
+            } catch (error) {
+                recommendations =
+                    await this._generateRuleBasedRecommendations(
+                        userProfile,
+                        candidateCourses,
+                        limit
+                    )
             }
 
             // 5. Save recommendations to database
@@ -155,13 +146,12 @@ class AIRecommendationService {
             // 3. Calculate similarity using AI or rule-based
             let similarCourses = []
 
-            if (ollamaService.enabled) {
-                try {
-                    const isOllamaAvailable = await ollamaService.checkHealth()
-                    if (isOllamaAvailable) {
-                        similarCourses = await this._calculateAISimilarity(
-                            targetCourse,
-                            candidateCourses,
+            try {
+                const isLLMAvailable = await llmService.checkHealth()
+                if (isLLMAvailable) {
+                    similarCourses = await this._calculateAISimilarity(
+                        targetCourse,
+                        candidateCourses,
                             limit
                         )
                     } else {
@@ -178,13 +168,6 @@ class AIRecommendationService {
                         limit
                     )
                 }
-            } else {
-                similarCourses = this._calculateRuleBasedSimilarity(
-                    targetCourse,
-                    candidateCourses,
-                    limit
-                )
-            }
             return similarCourses
         } catch (error) {
             throw error
@@ -424,8 +407,8 @@ class AIRecommendationService {
                 candidateCourses
             )
 
-            // Generate recommendations using Ollama
-            const response = await ollamaService.generateResponse(
+            // Generate recommendations using LLM
+            const response = await llmService.generateResponse(
                 prompt,
                 [],
                 null
@@ -649,7 +632,7 @@ Hãy gợi ý ít nhất 10 khóa học, sắp xếp theo score giảm dần.`
                 targetCourse,
                 candidateCourses
             )
-            const response = await ollamaService.generateResponse(
+            const response = await llmService.generateResponse(
                 prompt,
                 [],
                 null

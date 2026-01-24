@@ -1,10 +1,11 @@
-// src/services/knowledge-base.service.js
 import { prisma } from '../config/database.config.js'
 import TranscriptParser from '../utils/transcript-parser.util.js'
 import logger from '../config/logger.config.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
+import redisCacheService from './redis-cache.service.js'
+import config from '../config/app.config.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -118,10 +119,10 @@ class KnowledgeBaseService {
             if (lessonId) {
                 whereClause.id = lessonId
                 logger.debug(`Searching transcript for specific lessonId: ${lessonId}`)
-                // NOTE: Do NOT apply transcriptUrl constraint in lesson mode
+                // NOTE: Do NOT apply transcriptUrl constraint when searching specific lesson
                 // Allow finding lessons without transcripts so fallback logic can work
             } else {
-                // Only require transcript for non-lesson modes (course, user, general search)
+                // Only require transcript when not searching specific lesson (course, user, general search)
                 whereClause.transcriptUrl = { not: null }
                 
                 if (courseId) {
@@ -588,7 +589,7 @@ class KnowledgeBaseService {
 
             const enrolledCourseIds = enrolledCoursesData.map((e) => e.courseId).sort()
             
-            // In lesson mode ('course' + dynamicLessonId): use only dynamicLessonId
+            // In course mode with dynamicLessonId: use only dynamicLessonId for lesson-specific search
             // In general mode: no specific lesson target
             const targetLessonId = mode === 'course' ? dynamicLessonId : null
             const targetCourseId = conversation?.courseId || userContext.currentCourse?.id
@@ -598,10 +599,14 @@ class KnowledgeBaseService {
                 `mode: ${mode}, targetLessonId: ${targetLessonId}, targetCourseId: ${targetCourseId}`
             )
             
-            // Check cache for search results (key: query + mode + lessonId + courseIds)
-            const cacheKey = mode === 'course' && targetLessonId 
-                ? `${query.toLowerCase()}:lesson:${targetLessonId}`
-                : `${query.toLowerCase()}:general:${enrolledCourseIds.join(',')}`
+            // Check cache for search results (key: mode + normalized query + context)
+            const normalizedQuery = (query || '').toLowerCase().trim()
+            const cacheKey =
+                mode === 'advisor'
+                    ? `advisor:${normalizedQuery}`
+                    : mode === 'course' && targetLessonId
+                      ? `course:${normalizedQuery}:lesson:${targetLessonId}`
+                      : `general:${normalizedQuery}:${enrolledCourseIds.join(',')}`
             const cached = this.searchCache.get(cacheKey)
             if (cached && Date.now() - cached.timestamp < this.searchCacheMaxAge) {
                 logger.debug(`Using cached search results for query: ${query}`)
@@ -613,34 +618,117 @@ class KnowledgeBaseService {
             }
 
             // 2. Search strategy
-            // Short-circuit for lesson-specific mode: only search transcripts for the current lesson
+            // When in course mode with lessonId: only search transcripts for the current lesson
             let courses = []
             let lessons = []
             let transcripts = []
 
             if (mode === 'advisor') {
                 // Advisor mode: Search courses to provide real recommendations
-                // Fetch top courses, optionally filtered by query if user's intent is about courses
-                courses = await this.searchCoursesByQuery(query, {
-                    published: false, // Show all courses regardless of status for advisor recommendations
-                    limit: 10,
-                    orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
-                })
+                // RAG ENABLED: Use vector search (semantic) + keyword search (hybrid)
+                // FALLBACK: Use keyword search only if RAG disabled or unavailable
                 
-                // If search returned no results but user provided a query, try broader search
-                // (fetch all courses and let advisor recommend them)
-                if (courses.length === 0 && query && query.trim()) {
-                    logger.debug(`Advisor search returned 0 results for "${query}", fetching all courses as fallback`)
-                    courses = await this.searchCoursesByQuery('', {
-                        published: false,
-                        limit: 10,
-                        orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
-                    })
+                // Check if RAG is enabled
+                const useRAG = config.RAG_ENABLED !== false
+                let vectorSearchAvailable = false
+                
+                if (useRAG) {
+                    try {
+                        // Dynamic import to avoid circular dependency
+                        const vectorSearchService = (await import('./vector-search.service.js')).default
+                        vectorSearchAvailable = await vectorSearchService.isAvailable()
+                        
+                        if (vectorSearchAvailable) {
+                            // Try Redis cache first (faster than DB query)
+                            const cachedCourses = await redisCacheService.getCachedAdvisorSearch(query)
+                            if (cachedCourses) {
+                                courses = cachedCourses
+                                logger.debug(`Advisor (RAG): Using Redis cache for query: ${query.substring(0, 50)}`)
+                            } else {
+                                // Use hybrid search (vector + keyword) if enabled
+                                if (config.RAG_HYBRID_SEARCH !== false) {
+                                    logger.debug(`Advisor (RAG Hybrid): Searching with vector + keyword`)
+                                    courses = await vectorSearchService.hybridSearch(query, {
+                                        limit: 8,
+                                        published: false,
+                                    })
+                                } else {
+                                    // Pure vector search
+                                    logger.debug(`Advisor (RAG Vector): Searching with vector only`)
+                                    courses = await vectorSearchService.searchCoursesByVector(query, {
+                                        limit: 8,
+                                        status: 'PUBLISHED', // Use uppercase to match database
+                                    })
+                                }
+                                
+                                // Cache results in Redis (async, non-blocking)
+                                if (courses.length > 0) {
+                                    redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                                        logger.warn('Failed to cache advisor search in Redis', err.message)
+                                    })
+                                }
+                                
+                                // If no results, try fallback to keyword search
+                                if (courses.length === 0 && query && query.trim()) {
+                                    logger.debug(`Advisor (RAG): No vector results, falling back to keyword search`)
+                                    courses = await this.searchCoursesByQuery(query, {
+                                        published: false,
+                                        limit: 8,
+                                        orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                                    })
+                                }
+                            }
+                        } else {
+                            logger.warn('RAG enabled but vector search not available (pgvector not installed or no embeddings)')
+                        }
+                    } catch (error) {
+                        logger.error('Error in RAG search, falling back to keyword search:', error)
+                        vectorSearchAvailable = false
+                    }
+                }
+                
+                // Fallback to keyword search if RAG disabled or unavailable
+                if (!useRAG || !vectorSearchAvailable || courses.length === 0) {
+                    // Try Redis cache first (faster than DB query)
+                    const cachedCourses = await redisCacheService.getCachedAdvisorSearch(query)
+                    if (cachedCourses) {
+                        courses = cachedCourses
+                        logger.debug(`Advisor (Keyword): Using Redis cache for query: ${query.substring(0, 50)}`)
+                    } else {
+                        // Cache miss: query database with keyword search
+                        courses = await this.searchCoursesByQuery(query, {
+                            published: false, // Show all courses regardless of status for advisor recommendations
+                            limit: 8, // Optimized: 8 courses đủ để rank và chọn best 4 (giảm từ 20)
+                            orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                        })
+                        
+                        // Cache results in Redis (async, non-blocking)
+                        redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                            logger.warn('Failed to cache advisor search in Redis', err.message)
+                        })
+                        
+                        // If search returned no results but user provided a query, try broader search
+                        if (courses.length === 0 && query && query.trim()) {
+                            logger.debug(`Advisor search returned 0 results for "${query}", fetching top courses as fallback`)
+                            courses = await this.searchCoursesByQuery('', {
+                                published: false,
+                                limit: 8, // Optimized: giảm từ 20 xuống 8
+                                orderBy: ['ratingAvg', 'enrolledCount', 'publishedAt']
+                            })
+                            
+                            // Cache fallback results too
+                            if (courses.length > 0) {
+                                redisCacheService.cacheAdvisorSearch(query, courses).catch((err) => {
+                                    logger.warn('Failed to cache fallback search in Redis', err.message)
+                                })
+                            }
+                        }
+                    }
                 }
                 
                 lessons = []
                 transcripts = []
-                logger.debug(`Advisor mode: Found ${courses.length} courses for recommendations`)
+                logger.debug(`Advisor mode: Found ${courses.length} courses for recommendations (RAG: ${vectorSearchAvailable ? 'enabled' : 'disabled'})`)
             } else if (mode === 'course' && targetLessonId) {
                 // Restrict to the exact lesson's transcript; searchInTranscripts already
                 // falls back to lesson content/description/title if transcript is missing
@@ -941,6 +1029,185 @@ class KnowledgeBaseService {
     }
 
     /**
+     * Extract keywords from query (remove stopwords, keep meaningful tech keywords)
+     * @param {string} query - User query
+     * @returns {Array<string>} Extracted keywords
+     */
+    /**
+     * Expand category keywords with synonyms
+     * @param {string} query - User query
+     * @returns {Array<string>} Expanded keywords including synonyms
+     */
+    _expandCategoryKeywords(keywords) {
+        if (!keywords || keywords.length === 0) return keywords
+
+        const categorySynonyms = {
+            'web': ['web', 'lập trình web', 'web development', 'website', 'frontend', 'backend', 'full stack', 'fullstack'],
+            'mobile': ['mobile', 'di động', 'app', 'application', 'ios', 'android', 'flutter', 'react native'],
+            'data': ['data', 'dữ liệu', 'data science', 'big data', 'analytics', 'machine learning', 'ai'],
+            'ai': ['ai', 'artificial intelligence', 'trí tuệ nhân tạo', 'machine learning', 'deep learning', 'neural network'],
+            'game': ['game', 'trò chơi', 'gaming', 'unity', 'game development', 'game design'],
+            'cybersecurity': ['security', 'bảo mật', 'hacking', 'ethical hacking', 'penetration testing', 'cybersecurity'],
+        }
+
+        const expanded = [...keywords]
+        
+        for (const keyword of keywords) {
+            const keywordLower = keyword.toLowerCase()
+            for (const [category, synonyms] of Object.entries(categorySynonyms)) {
+                if (synonyms.some(syn => keywordLower.includes(syn) || syn.includes(keywordLower))) {
+                    // Add all synonyms for this category
+                    synonyms.forEach(syn => {
+                        if (!expanded.includes(syn) && syn.length >= 3) {
+                            expanded.push(syn)
+                        }
+                    })
+                    break
+                }
+            }
+        }
+
+        return expanded.length > keywords.length ? expanded : keywords
+    }
+
+    /**
+     * Detect course level from natural language query
+     * @param {string} query - User query
+     * @returns {string|null} Detected level (BEGINNER, INTERMEDIATE, ADVANCED) or null
+     */
+    _detectLevelFromQuery(query) {
+        if (!query || query.trim().length === 0) return null
+
+        const queryLower = query.toLowerCase()
+        
+        // Level keywords mapping
+        const levelKeywords = {
+            'BEGINNER': [
+                'mới bắt đầu', 'mới học', 'chưa biết', 'chưa học', 'chưa có kinh nghiệm',
+                'cơ bản', 'basic', 'beginner', 'starter', 'người mới',
+                'từ đầu', 'từ zero', 'zero to hero', 'nhập môn', 'khởi đầu'
+            ],
+            'INTERMEDIATE': [
+                'trung cấp', 'có kinh nghiệm', 'đã biết', 'đã học',
+                'intermediate', 'nâng cao cơ bản', 'cải thiện', 'improve',
+                'nâng cao kỹ năng', 'học thêm', 'mở rộng'
+            ],
+            'ADVANCED': [
+                'nâng cao', 'chuyên sâu', 'expert', 'advanced', 'pro',
+                'cao cấp', 'master', 'professional', 'deep dive',
+                'chuyên nghiệp', 'thành thạo'
+            ]
+        }
+
+        // Check for level keywords in query
+        for (const [level, keywords] of Object.entries(levelKeywords)) {
+            for (const keyword of keywords) {
+                if (queryLower.includes(keyword)) {
+                    logger.debug(`Detected level "${level}" from query: "${query}" (keyword: "${keyword}")`)
+                    return level
+                }
+            }
+        }
+
+        return null
+    }
+
+    _extractKeywords(query) {
+        if (!query || query.trim().length === 0) return []
+
+        const stopwords = new Set([
+            'hoc', 'học', 'muon', 'muốn', 'toi', 'tôi', 'ban', 'bạn',
+            'lam', 'làm', 'viec', 'việc', 'can', 'cần', 'gi', 'gì',
+            'the', 'thế', 'nào', 'phu', 'phù', 'hop', 'hợp',
+            'de', 'để', 've', 'về', 'khoa', 'khóa', 'lop', 'lớp',
+            'co', 'có', 'coi', 'xem', 'camon', 'cảm', 'cảm ơn', 'on', 'ơn',
+        ])
+
+        const allowShortKeywords = new Set([
+            'ai', 'js', 'go', 'c', 'c++', 'c#', 'ui', 'ux', 'sql',
+        ])
+
+        return query
+            .toLowerCase()
+            .split(/[^\p{L}\p{N}+#.]+/u)
+            .filter((w) => w.length > 0)
+            .filter(
+                (w) =>
+                    (w.length >= 3 || allowShortKeywords.has(w)) &&
+                    !stopwords.has(w)
+            )
+    }
+
+    /**
+     * Deterministic scoring cho khóa học dựa trên keyword match + tín hiệu chất lượng
+     * Không dùng LLM, chỉ rule-based để Advisor ổn định.
+     * @param {Object} course - Course object
+     * @param {Array} keywords - Extracted keywords from query
+     * @param {string|null} detectedLevel - Detected level from query (optional)
+     */
+    _scoreCourse(course, keywords = [], detectedLevel = null) {
+        // Include category, tags, level in scoring text
+        const tagsText = course.courseTags?.map(ct => ct.tag?.name || ct.tag).filter(Boolean).join(' ') || ''
+        const categoryName = course.category?.name || ''
+        
+        const text = [
+            course.title || '',
+            course.shortDescription || '',
+            course.description || '',
+            course.whatYouLearn || '',
+            categoryName,        // ✅ THÊM: Category
+            tagsText,           // ✅ THÊM: Tags
+            course.level || '', // ✅ THÊM: Level
+        ]
+            .join(' ')
+            .toLowerCase()
+
+        // Keyword hit: mỗi keyword trùng tăng điểm
+        const keywordHits =
+            keywords.length > 0
+                ? keywords.reduce(
+                      (acc, kw) => acc + (text.includes(kw) ? 1 : 0),
+                      0
+                  )
+                : 0
+
+        // ✅ THÊM: Level matching boost
+        let levelBoost = 0
+        if (detectedLevel && course.level === detectedLevel) {
+            levelBoost = 3.0 // Strong boost for level match
+            logger.debug(`Level match boost: course "${course.title}" (${course.level}) matches query level (${detectedLevel})`)
+        } else if (detectedLevel) {
+            // Small penalty for level mismatch (but not too harsh)
+            levelBoost = -0.5
+        }
+
+        // Chất lượng: rating và độ phổ biến
+        const ratingScore = course.ratingAvg
+            ? Number(course.ratingAvg) / 5
+            : 0
+        const popularityScore = Math.log(1 + (course.enrolledCount || 0)) / 10
+
+        // Độ mới: publishedAt gần hiện tại hơn → điểm cao hơn (simple decay)
+        let freshnessScore = 0
+        if (course.publishedAt) {
+            const days =
+                (Date.now() - new Date(course.publishedAt).getTime()) /
+                (1000 * 60 * 60 * 24)
+            // <=30 ngày: 1.0, 180 ngày: ~0.3, >365 ngày: ~0.1
+            freshnessScore = Math.max(0.1, Math.min(1, 30 / Math.max(30, days)))
+        }
+
+        // Trọng số đơn giản, có thể tinh chỉnh sau
+        return (
+            keywordHits * 2 + // ưu tiên khớp từ khóa
+            levelBoost +      // ✅ THÊM: Level matching boost/penalty
+            ratingScore * 1.5 +
+            popularityScore * 1.0 +
+            freshnessScore * 0.5
+        )
+    }
+
+    /**
      * Search courses by query (for advisor recommendations)
      * @param {string} query - Search query
      * @param {Object} options - Search options (published, active, limit, orderBy)
@@ -953,18 +1220,47 @@ class KnowledgeBaseService {
             // Build where clause
             const where = {}
             if (published) {
-                where.status = 'published'
+                where.status = 'PUBLISHED' // Use uppercase to match database
             }
 
+            // ✅ THÊM: Detect level from query for better matching (used in scoring, not filtering)
+            const detectedLevel = this._detectLevelFromQuery(query)
+            
             // Search in title, description, shortDescription if query provided
+            // OPTIMIZED: Extract keywords instead of using full query
             if (query && query.trim()) {
-                const searchTerm = query.toLowerCase().trim()
-                where.OR = [
-                    { title: { contains: searchTerm, mode: 'insensitive' } },
-                    { shortDescription: { contains: searchTerm, mode: 'insensitive' } },
-                    { description: { contains: searchTerm, mode: 'insensitive' } },
-                    { whatYouLearn: { contains: searchTerm, mode: 'insensitive' } },
-                ]
+                let keywords = this._extractKeywords(query)
+                
+                // ✅ THÊM: Expand keywords with category synonyms for better matching
+                keywords = this._expandCategoryKeywords(keywords)
+                
+                if (keywords.length > 0) {
+                    // Search with each keyword (OR logic - course matches any keyword)
+                    // This allows "Tôi muốn học Python" → extract "python" → match "Python Advanced"
+                    where.OR = keywords.flatMap(keyword => [
+                        { title: { contains: keyword, mode: 'insensitive' } },
+                        { shortDescription: { contains: keyword, mode: 'insensitive' } },
+                        { description: { contains: keyword, mode: 'insensitive' } },
+                        { whatYouLearn: { contains: keyword, mode: 'insensitive' } },
+                        { category: { name: { contains: keyword, mode: 'insensitive' } } }, // ✅ THÊM: Category
+                        { courseTags: { some: { tag: { name: { contains: keyword, mode: 'insensitive' } } } } }, // ✅ THÊM: Tags
+                        { level: { contains: keyword, mode: 'insensitive' } }, // ✅ THÊM: Level
+                    ])
+                    
+                    logger.debug(`Extracted keywords from query "${query}": ${keywords.join(', ')}`)
+                } else {
+                    // Fallback: use full query if no keywords extracted
+                    const searchTerm = query.toLowerCase().trim()
+                    where.OR = [
+                        { title: { contains: searchTerm, mode: 'insensitive' } },
+                        { shortDescription: { contains: searchTerm, mode: 'insensitive' } },
+                        { description: { contains: searchTerm, mode: 'insensitive' } },
+                        { whatYouLearn: { contains: searchTerm, mode: 'insensitive' } },
+                        { category: { name: { contains: searchTerm, mode: 'insensitive' } } }, // ✅ THÊM: Category
+                        { courseTags: { some: { tag: { name: { contains: searchTerm, mode: 'insensitive' } } } } }, // ✅ THÊM: Tags
+                        { level: { contains: searchTerm, mode: 'insensitive' } }, // ✅ THÊM: Level
+                    ]
+                }
             }
 
             logger.debug(`Searching courses with query="${query}", where=${JSON.stringify(where)}`)
@@ -989,7 +1285,7 @@ class KnowledgeBaseService {
             const courses = await prisma.course.findMany({
                 where,
                 orderBy: orderByClause,
-                take: limit,
+                take: Math.max(limit, 20), // lấy nhiều hơn một chút rồi sẽ tự rank/cắt
                 select: {
                     id: true,
                     title: true,
@@ -1012,14 +1308,54 @@ class KnowledgeBaseService {
                             avatarUrl: true,
                         },
                     },
+                    publishedAt: true,
+                    whatYouLearn: true,
+                    category: {              // ✅ THÊM: Category cho scoring
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                        },
+                    },
+                    courseTags: {            // ✅ THÊM: Tags cho scoring
+                        select: {
+                            tag: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
+                            },
+                        },
+                    },
                 },
             })
 
-            logger.info(`Advisor search: Found ${courses.length} courses for query="${query}"`)
-            if (courses.length > 0) {
-                logger.debug(`Top courses: ${courses.slice(0, 3).map(c => c.title).join(', ')}`)
+            // Deterministic ranking trên app layer (tăng độ ổn định, tránh phụ thuộc DB sort)
+            const keywords =
+                query && query.trim() ? this._extractKeywords(query) : []
+            // ✅ THÊM: Use detected level for scoring boost
+            const scored = courses.map((c) => ({
+                course: c,
+                score: this._scoreCourse(c, keywords, detectedLevel),
+            }))
+
+            const ranked = scored
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit)
+                .map((item) => item.course)
+
+            logger.info(
+                `Advisor search: Found ${courses.length} courses, ranked top=${ranked.length} for query="${query}"`
+            )
+            if (ranked.length > 0) {
+                logger.debug(
+                    `Top ranked: ${ranked
+                        .slice(0, 3)
+                        .map((c) => c.title)
+                        .join(', ')}`
+                )
             }
-            return courses
+            return ranked
         } catch (error) {
             logger.error('Error searching courses for advisor:', error)
             throw error
