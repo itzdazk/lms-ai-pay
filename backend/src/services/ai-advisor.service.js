@@ -38,25 +38,9 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             const availableCourses =
                 courses && courses.length > 0 ? courses : []
 
-            // OPTIMIZED: If courses were already filtered by searchCoursesByQuery (with keywords),
-            // we don't need to filter again. Only filter if query is empty or very generic.
-            // The searchCoursesByQuery now extracts keywords and searches properly, so courses
-            // returned are already relevant.
-            let relevantCourses = availableCourses
-            
-            // Only apply additional filtering if:
-            // 1. Query is empty/generic (no keywords extracted)
-            // 2. We want to further refine results
-            // For most cases, courses from searchCoursesByQuery are already relevant
-            if (query && query.trim() && availableCourses.length > 0) {
-                // Optional: Can still filter if we want stricter matching
-                // But usually not needed since searchCoursesByQuery already filters by keywords
-                // relevantCourses = availableCourses.filter((course) =>
-                //     this._isCourseRelevant(query, course)
-                // )
-                // For now, use all courses returned from search (already filtered by keywords)
-                relevantCourses = availableCourses
-            }
+            // Courses đã được filter bởi searchCoursesByQuery (với keywords),
+            // nên không cần filter lại. Sử dụng trực tiếp courses từ search.
+            const relevantCourses = availableCourses
 
             // Xác định số lượng khóa học cần hiển thị dựa trên intent và số lượng có sẵn
             const shouldShowCourses = userIntent.wantsToSeeCourses && relevantCourses.length > 0
@@ -76,76 +60,45 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
                 })
                 .join('\n')
 
-            // Xây dựng prompt linh động dựa trên intent
-            // QUAN TRỌNG: Prompt phải chỉ định rõ số lượng khóa học cần nhắc đến
             let prompt = `Bạn là trợ lý tư vấn khóa học lập trình thân thiện và súc tích. Người dùng nói: "${query}"\n\n`
 
             if (shouldShowCourses && coursesList) {
                 prompt += `Khóa học có sẵn (${courseCount} khóa học liên quan):\n${coursesList}\n\n`
                 
-                // Prompt linh động dựa trên số lượng khóa học
-                if (courseCount === 1) {
-                    prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
-                    prompt += `1. Xác nhận yêu cầu của người dùng (1 câu)\n`
-                    prompt += `2. Xuống dòng, giới thiệu khóa học: "${coursesForPrompt[0].title}"\n`
-                    prompt += `   - Giải thích ngắn gọn tại sao phù hợp (1-2 câu)\n`
-                    prompt += `3. Hỏi thêm nếu cần (tùy chọn)\n\n`
-                } else if (courseCount === 2) {
-                    prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
-                    prompt += `1. Xác nhận yêu cầu của người dùng (1 câu)\n`
-                    prompt += `2. Xuống dòng, giới thiệu khóa học phù hợp NHẤT:\n`
-                    prompt += `   - "${coursesForPrompt[0].title}"\n`
-                    prompt += `   - Lý do ngắn gọn tại sao phù hợp (1-2 câu)\n`
-                    prompt += `3. Nếu có khóa học thứ 2 cũng phù hợp, xuống dòng và nhắc đến:\n`
-                    prompt += `   - "${coursesForPrompt[1].title}"\n`
-                    prompt += `   - Lý do ngắn gọn (1 câu)\n`
-                    prompt += `4. Hỏi thêm nếu cần (tùy chọn)\n\n`
-                } else if (courseCount === 3) {
-                    prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
-                    prompt += `1. Xác nhận yêu cầu của người dùng (1 câu)\n`
-                    prompt += `2. Xuống dòng, giới thiệu khóa học phù hợp NHẤT:\n`
-                    prompt += `   - "${coursesForPrompt[0].title}"\n`
-                    prompt += `   - Lý do ngắn gọn tại sao phù hợp (1-2 câu)\n`
-                    prompt += `3. BẮT BUỘC: Bạn PHẢI nhắc đến đầy đủ 2 khóa học còn lại:\n`
-                    prompt += `   - "${coursesForPrompt[1].title}" - [lý do ngắn gọn, 1 câu]\n`
-                    prompt += `   - "${coursesForPrompt[2].title}" - [lý do ngắn gọn, 1 câu]\n`
-                    prompt += `   KHÔNG được bỏ sót bất kỳ khóa học nào trong 3 khóa học trên.\n`
+                // Template chung cho tất cả cases
+                prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
+                prompt += `1. Xác nhận yêu cầu của người dùng\n`
+                prompt += `2. Giới thiệu khóa học phù hợp NHẤT (xuống dòng tự nhiên để tách các phần):`
+                prompt += `   - "${coursesForPrompt[0].title}"\n`
+                prompt += `   - Lý do ngắn gọn tại sao phù hợp (2-3 câu)\n`
+                
+                // Chỉ thêm phần khóa học khác nếu có nhiều hơn 1
+                if (courseCount > 1) {
+                    if (courseCount === 2) {
+                        prompt += `3. Nếu có khóa học thứ 2 cũng phù hợp, xuống dòng tự nhiên và nhắc đến:\n`
+                        prompt += `   - "${coursesForPrompt[1].title}"\n`
+                        prompt += `   - Lý do ngắn gọn (2-3 câu)\n`
+                    } else {
+                        // courseCount >= 3
+                        prompt += `3. Nhắc đến ${courseCount === 3 ? 'đầy đủ 2 khóa học còn lại' : '1-2 khóa học khác cũng phù hợp'}:\n`
+                        for (let i = 1; i < Math.min(courseCount, 4); i++) {
+                            prompt += `   - "${coursesForPrompt[i].title}"\n`
+                            prompt += `   - Lý do ngắn gọn (2-3 câu)\n`
+                        }
+                        if (courseCount === 3) {
+                            prompt += `   (BẮT BUỘC phải nhắc đến đầy đủ cả 3 khóa học)\n`
+                        }
+                    }
                     prompt += `4. Hỏi thêm nếu cần (tùy chọn)\n\n`
                 } else {
-                    // courseCount > 3 (shouldn't happen, but handle gracefully)
-                    prompt += `Hãy trả lời NGẮN GỌN và CÓ CẤU TRÚC RÕ RÀNG:\n`
-                    prompt += `1. Xác nhận yêu cầu của người dùng (1 câu)\n`
-                    prompt += `2. Xuống dòng, giới thiệu khóa học phù hợp NHẤT:\n`
-                    prompt += `   - "${coursesForPrompt[0].title}"\n`
-                    prompt += `   - Lý do ngắn gọn tại sao phù hợp (1-2 câu)\n`
-                    prompt += `3. Nếu có khóa học khác cũng phù hợp, xuống dòng và nhắc đến 1-2 khóa học nữa:\n`
-                    prompt += `   - Tên khóa học\n`
-                    prompt += `   - Lý do ngắn gọn (1 câu mỗi khóa học)\n`
-                    prompt += `4. Hỏi thêm nếu cần (tùy chọn)\n\n`
+                    prompt += `3. Hỏi thêm nếu cần (tùy chọn)\n\n`
                 }
                 
-                prompt += `QUAN TRỌNG VỀ FORMAT:\n`
-                prompt += `- BẮT BUỘC: Sử dụng xuống dòng (\\n) để chia rõ các ý, KHÔNG viết thành một đoạn văn dài\n`
-                prompt += `- Mỗi khóa học nên được giới thiệu trên một dòng riêng hoặc có khoảng trắng rõ ràng\n`
-                prompt += `- Format ví dụ:\n`
-                prompt += `  "Tôi hiểu bạn muốn...\n\n`
-                prompt += `  Khóa học phù hợp nhất: [Tên khóa học]\n`
-                prompt += `  [Lý do ngắn gọn]\n\n`
-                prompt += `  Ngoài ra, bạn cũng có thể xem: [Tên khóa học khác]\n`
-                prompt += `  [Lý do ngắn gọn]"\n\n`
-                
-                // Thêm nhắc nhở đặc biệt cho courseCount = 3
-                if (courseCount === 3) {
-                    prompt += `⚠️ CẢNH BÁO QUAN TRỌNG:\n`
-                    prompt += `- Bạn PHẢI nhắc đến đầy đủ 3 khóa học trong danh sách trên\n`
-                    prompt += `- Nếu bạn chỉ nhắc đến 1 hoặc 2 khóa học, câu trả lời sẽ KHÔNG HỢP LỆ\n`
-                    prompt += `- BẮT BUỘC phải nhắc đến: "${coursesForPrompt[0].title}", "${coursesForPrompt[1].title}", và "${coursesForPrompt[2].title}"\n\n`
-                }
-                
+                prompt += `QUAN TRỌNG:\n`
+                prompt += `- Sử dụng xuống dòng tự nhiên để chia rõ các ý, KHÔNG viết thành một đoạn văn dài. Format response với line breaks để dễ đọc.\n`
                 prompt += `- Trả lời NGẮN GỌN, SÚC TÍCH, KHÔNG lặp lại thông tin\n`
                 prompt += `- Chỉ nhắc đến khóa học có trong danh sách trên. KHÔNG tạo ra khóa học mới.\n`
-                prompt += `- TUYỆT ĐỐI KHÔNG được nhắc đến số lượng khóa học trong câu trả lời.\n`
-                prompt += `- KHÔNG lặp lại tên khóa học nhiều lần. Chỉ nhắc đến tên khóa học 1 lần khi giới thiệu.\n`
+                prompt += `- KHÔNG nhắc đến số lượng khóa học trong câu trả lời (ví dụ: "2 khóa học", "3 khóa học")\n`
                 prompt += `- Hệ thống sẽ tự động hiển thị danh sách khóa học bên dưới, bạn chỉ cần giới thiệu ngắn gọn.`
             } else if (userIntent.wantsToSeeCourses && relevantCourses.length === 0) {
                 prompt += `Hiện không có khóa học phù hợp với yêu cầu của người dùng.\n\n`
@@ -164,82 +117,48 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
 
             // Use LLM to understand context and generate explanation
             const contextResponse = await llmService.generateResponse(prompt)
+            
+            // TODO: Test xem có cần post-processing không
+            // Tạm thời bỏ post-processing, tin tưởng model tự xử lý
+            // Nếu test thấy cần, uncomment _postProcessResponse() và các hàm liên quan
             let advisorMessage = contextResponse
-
-            // Post-process: Remove các câu mention số lượng khóa học
-            advisorMessage = this._removeCourseCountMentions(advisorMessage)
-            
-            // Post-process: Làm sạch response - loại bỏ phần lặp lại và dính lẹo
-            advisorMessage = this._cleanResponse(advisorMessage, coursesForPrompt)
-            
-            // Post-process: Format response để có cấu trúc rõ ràng, dễ đọc
-            advisorMessage = this._formatResponse(advisorMessage, coursesForPrompt)
+            // let advisorMessage = this._postProcessResponse(contextResponse, coursesForPrompt)
 
             // Validation: Xác định khóa học nào thực sự được LLM nhắc đến
-            // Để đảm bảo đồng bộ giữa số lượng LLM nói và số lượng hiển thị
+            // Đơn giản hóa logic: Ưu tiên mentioned courses, fallback về top courses nếu cần
             let coursesToShow = []
             if (shouldShowCourses && courseCount > 0 && coursesForPrompt.length > 0) {
-                // Tìm các khóa học được LLM thực sự nhắc đến trong response
                 const mentionedCourses = this._extractMentionedCourses(advisorMessage, coursesForPrompt)
                 
-                // Với strong intent, nếu LLM không nhắc đủ số lượng, fallback về hiển thị đủ courseCount
-                // Để đảm bảo user có đủ lựa chọn
-                if (mentionedCourses.length > 0 && mentionedCourses.length < courseCount && userIntent.intentStrength === 'strong') {
-                    // LLM không tuân thủ prompt (nhắc ít hơn courseCount)
-                    // Với strong intent, hiển thị đủ courseCount khóa học để user có đủ lựa chọn
-                    coursesToShow = coursesForPrompt.slice(0, courseCount)
-                    logger.warn(
-                        `[AI Advisor] LLM mentioned ${mentionedCourses.length} courses but expected ${courseCount}. ` +
-                        `Strong intent detected, showing top ${courseCount} courses instead. ` +
-                        `Query: "${query}"`
-                    )
-                } else if (mentionedCourses.length > 0) {
-                    // LLM đã nhắc đến khóa học cụ thể và đủ số lượng (hoặc medium/weak intent)
+                // Sử dụng mentioned courses nếu:
+                // 1. Có mentioned courses VÀ
+                // 2. (Đủ số lượng HOẶC không phải strong intent - không ép buộc)
+                const shouldUseMentioned = mentionedCourses.length > 0 && 
+                    (mentionedCourses.length >= courseCount || userIntent.intentStrength !== 'strong')
+                
+                if (shouldUseMentioned) {
                     coursesToShow = mentionedCourses
                     logger.debug(
-                        `[AI Advisor] LLM mentioned ${mentionedCourses.length} courses. ` +
-                        `Query: "${query}", Showing: ${mentionedCourses.length}`
+                        `[AI Advisor] Using ${mentionedCourses.length} mentioned courses. Query: "${query}"`
                     )
                 } else {
-                    // Nếu không tìm thấy khóa học nào được nhắc đến rõ ràng,
-                    // hiển thị các khóa học tốt nhất theo courseCount
+                    // Fallback: Hiển thị top courses theo courseCount
                     coursesToShow = coursesForPrompt.slice(0, courseCount)
-                    logger.debug(
-                        `[AI Advisor] No courses explicitly mentioned, showing top ${courseCount} courses. ` +
-                        `Query: "${query}"`
-                    )
+                    if (mentionedCourses.length > 0) {
+                        logger.warn(
+                            `[AI Advisor] LLM mentioned ${mentionedCourses.length} courses but expected ${courseCount}. ` +
+                            `Strong intent detected, showing top ${courseCount} courses instead. Query: "${query}"`
+                        )
+                    } else {
+                        logger.debug(
+                            `[AI Advisor] No courses explicitly mentioned, showing top ${courseCount} courses. Query: "${query}"`
+                        )
+                    }
                 }
             }
 
-            // Build sources from courses - chỉ hiển thị khóa học đã được xác định
-            let sources = shouldShowCourses && coursesToShow.length > 0
-                ? coursesToShow.map((course) => ({
-                    type: 'course',
-                    courseId: course.id,
-                    courseTitle: course.title,
-                    courseSlug: course.slug,
-                    level: course.level,
-                    price: course.price,
-                    discountPrice: course.discountPrice,
-                    rating: course.ratingAvg,
-                    ratingCount: course.ratingCount,
-                    enrolledCount: course.enrolledCount,
-                    duration: course.durationHours,
-                    durationLabel: this._formatDuration(course.durationHours),
-                    lessons: course.totalLessons,
-                    description: course.shortDescription,
-                    thumbnail: course.thumbnailUrl,
-                    instructor: course.instructor,
-                }))
-                : []
-
-            // Final validation: Đảm bảo sources không vượt quá 3
-            if (sources.length > 3) {
-                logger.warn(
-                    `[AI Advisor] Sources count (${sources.length}) exceeds maximum (3). Truncating to 3.`
-                )
-                sources = sources.slice(0, 3)
-            }
+            // Build sources from courses - tái sử dụng helper method
+            const sources = this._buildSourcesFromCourses(coursesToShow)
 
             // If no relevant courses and user wants to see courses, add a follow-up prompt
             if (userIntent.wantsToSeeCourses && relevantCourses.length === 0) {
@@ -323,35 +242,11 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
                 ? this._determineCourseCount(relevantCourses.length, userIntent)
                 : 0
 
-            // Build sources - chỉ khi cần hiển thị
-            let sources = shouldShowCourses && finalCourseCount > 0
-                ? relevantCourses.slice(0, finalCourseCount).map((course) => ({
-                    type: 'course',
-                    courseId: course.id,
-                    courseTitle: course.title,
-                    courseSlug: course.slug,
-                    level: course.level,
-                    price: course.price,
-                    discountPrice: course.discountPrice,
-                    rating: course.ratingAvg,
-                    ratingCount: course.ratingCount,
-                    enrolledCount: course.enrolledCount,
-                    duration: course.durationHours,
-                    durationLabel: this._formatDuration(course.durationHours),
-                    lessons: course.totalLessons,
-                    description: course.shortDescription,
-                    thumbnail: course.thumbnailUrl,
-                    instructor: course.instructor,
-                }))
+            // Build sources - tái sử dụng helper method
+            const coursesToShow = shouldShowCourses && finalCourseCount > 0
+                ? relevantCourses.slice(0, finalCourseCount)
                 : []
-
-            // Final validation: Đảm bảo sources không vượt quá 3
-            if (sources.length > 3) {
-                logger.warn(
-                    `[AI Advisor Fallback] Sources count (${sources.length}) exceeds maximum (3). Truncating to 3.`
-                )
-                sources = sources.slice(0, 3)
-            }
+            const sources = this._buildSourcesFromCourses(coursesToShow, 'fallback')
 
             return { text, sources }
         }
@@ -425,6 +320,47 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
     }
 
     /**
+     * Build sources array từ danh sách courses
+     * @param {Array} courses - Danh sách courses cần build sources
+     * @param {string} context - Context để log (optional, default: 'main')
+     * @returns {Array} Sources array (max 3 courses)
+     */
+    _buildSourcesFromCourses(courses, context = 'main') {
+        if (!courses || courses.length === 0) {
+            return []
+        }
+
+        let sources = courses.map((course) => ({
+            type: 'course',
+            courseId: course.id,
+            courseTitle: course.title,
+            courseSlug: course.slug,
+            level: course.level,
+            price: course.price,
+            discountPrice: course.discountPrice,
+            rating: course.ratingAvg,
+            ratingCount: course.ratingCount,
+            enrolledCount: course.enrolledCount,
+            duration: course.durationHours,
+            durationLabel: this._formatDuration(course.durationHours),
+            lessons: course.totalLessons,
+            description: course.shortDescription,
+            thumbnail: course.thumbnailUrl,
+            instructor: course.instructor,
+        }))
+
+        // Final validation: Đảm bảo sources không vượt quá 3
+        if (sources.length > 3) {
+            logger.warn(
+                `[AI Advisor ${context}] Sources count (${sources.length}) exceeds maximum (3). Truncating to 3.`
+            )
+            sources = sources.slice(0, 3)
+        }
+
+        return sources
+    }
+
+    /**
      * Trích xuất các khóa học thực sự được LLM nhắc đến trong response
      * @param {string} llmResponse - LLM response text
      * @param {Array} coursesInPrompt - Danh sách khóa học đã đưa vào prompt
@@ -436,7 +372,7 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
         }
 
         const mentionedCourses = []
-        const responseLower = llmResponse.toLowerCase()
+        const responseLower = llmResponse.toLowerCase() // Cache lowercase response
 
         // Tìm các khóa học được nhắc đến bằng cách so khớp tên khóa học
         // Ưu tiên khóa học xuất hiện sớm hơn trong response
@@ -444,10 +380,11 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             const courseTitle = course.title || ''
             if (!courseTitle) continue
 
+            const courseTitleLower = courseTitle.toLowerCase() // Cache lowercase title
+
             // Tìm tên khóa học trong response (có thể là tên đầy đủ hoặc một phần)
             // Sử dụng các từ khóa quan trọng trong tên khóa học để tìm
-            const titleWords = courseTitle
-                .toLowerCase()
+            const titleWords = courseTitleLower
                 .split(/[:\-–—]/) // Tách theo dấu hai chấm, gạch ngang
                 .map(w => w.trim())
                 .filter(w => w.length > 5) // Chỉ lấy các từ dài (từ khóa quan trọng)
@@ -478,370 +415,18 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
             }
         }
 
-        // Sắp xếp theo thứ tự xuất hiện trong response
+        // Sắp xếp theo thứ tự xuất hiện trong response (cache strings để tối ưu)
         mentionedCourses.sort((a, b) => {
-            const indexA = llmResponse.toLowerCase().indexOf((a.title || '').toLowerCase())
-            const indexB = llmResponse.toLowerCase().indexOf((b.title || '').toLowerCase())
+            const titleALower = (a.title || '').toLowerCase()
+            const titleBLower = (b.title || '').toLowerCase()
+            const indexA = responseLower.indexOf(titleALower)
+            const indexB = responseLower.indexOf(titleBLower)
             if (indexA === -1) return 1
             if (indexB === -1) return -1
             return indexA - indexB
         })
 
         return mentionedCourses
-    }
-
-    /**
-     * Parse LLM response để xác định số lượng khóa học LLM thực sự nhắc đến
-     * @param {string} llmResponse - LLM response text
-     * @param {Array} coursesInPrompt - Danh sách khóa học đã đưa vào prompt
-     * @returns {number} Số lượng khóa học được nhắc đến (0 nếu không parse được)
-     */
-    _extractMentionedCourseCount(llmResponse, coursesInPrompt) {
-        if (!llmResponse || !coursesInPrompt || coursesInPrompt.length === 0) {
-            return 0
-        }
-
-        // Tìm các pattern về số lượng khóa học trong response
-        // Ví dụ: "2 khóa học", "hai khóa học", "1. ...", "2. ..."
-        const numberPatterns = [
-            /(\d+)\s*(khóa học|course|khoa hoc)/i,
-            /(một|hai|ba|bốn|năm|sáu|one|two|three|four|five|six)\s*(khóa học|course|khoa hoc)/i,
-        ]
-
-        let mentionedCount = 0
-
-        // Tìm số lượng từ pattern
-        for (const pattern of numberPatterns) {
-            const match = llmResponse.match(pattern)
-            if (match) {
-                const numberText = match[1].toLowerCase()
-                const numberMap = {
-                    'một': 1, 'one': 1,
-                    'hai': 2, 'two': 2,
-                    'ba': 3, 'three': 3,
-                    'bốn': 4, 'four': 4,
-                    'năm': 5, 'five': 5,
-                    'sáu': 6, 'six': 6,
-                }
-                mentionedCount = numberMap[numberText] || parseInt(numberText, 10) || 0
-                break
-            }
-        }
-
-        // Nếu không tìm thấy từ pattern, đếm số lượng khóa học được liệt kê (1., 2., 3., ...)
-        if (mentionedCount === 0) {
-            const numberedListPattern = /^\d+\.\s+\*\*/gm
-            const matches = llmResponse.match(numberedListPattern)
-            if (matches) {
-                mentionedCount = matches.length
-            }
-        }
-
-        // Nếu vẫn không tìm thấy, đếm số lần xuất hiện tên khóa học trong response
-        if (mentionedCount === 0 && coursesInPrompt.length > 0) {
-            let foundCount = 0
-            for (const course of coursesInPrompt) {
-                // Kiểm tra xem tên khóa học có xuất hiện trong response không
-                const courseTitle = course.title || ''
-                if (courseTitle && llmResponse.includes(courseTitle)) {
-                    foundCount++
-                }
-            }
-            mentionedCount = foundCount
-        }
-
-        // Đảm bảo số lượng không vượt quá số lượng có trong prompt
-        return Math.min(mentionedCount, coursesInPrompt.length)
-    }
-
-    /**
-     * Remove các câu mention số lượng khóa học từ response
-     * @param {string} response - LLM response text
-     * @returns {string} Response đã được clean
-     */
-    _removeCourseCountMentions(response) {
-        if (!response) return response
-
-        // Các pattern cần remove - mở rộng để catch nhiều cách mention hơn
-        const patternsToRemove = [
-            // "Dưới đây là X khóa học"
-            /(Dưới đây|dưới đây|Đây là|đây là|Sau đây|sau đây)\s+(là\s+)?(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)[:.]?\s*/gi,
-            // "Tôi sẽ gợi ý X khóa học"
-            /(Tôi|tôi)\s+(sẽ|sẽ|gợi ý|đề xuất|giới thiệu)\s+(cho bạn\s+)?(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)[:.]?\s*/gi,
-            // "Có X khóa học phù hợp"
-            /(Có|có)\s+(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)\s+(phù hợp|tốt nhất|liên quan|sau đây)[:.]?\s*/gi,
-            // "Dựa trên danh sách, tôi sẽ gợi ý X khóa học"
-            /(Dựa trên|dựa trên)\s+(danh sách|danh sách trên),\s+(tôi|Tôi)\s+(sẽ|sẽ)\s+(gợi ý|đề xuất)\s+(cho bạn\s+)?(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)[:.]?\s*/gi,
-            // "X khóa học phù hợp nhất"
-            /^(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)\s+(phù hợp|tốt nhất|liên quan|sau đây)[:.]?\s*/gim,
-            // "Tôi gợi ý X khóa học" (không có "sẽ")
-            /(Tôi|tôi)\s+(gợi ý|đề xuất|giới thiệu)\s+(cho bạn\s+)?(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)[:.]?\s*/gi,
-            // "X khóa học sau đây"
-            /(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)\s+(sau đây|dưới đây|phù hợp|tốt nhất)[:.]?\s*/gi,
-            // "Bạn có thể xem X khóa học"
-            /(Bạn|bạn)\s+(có thể|có)\s+(xem|tham khảo)\s+(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)[:.]?\s*/gi,
-        ]
-
-        let cleanedResponse = response
-
-        // Remove từng pattern
-        for (const pattern of patternsToRemove) {
-            cleanedResponse = cleanedResponse.replace(pattern, '')
-        }
-
-        // Remove các câu chỉ chứa số lượng (ví dụ: "2 khóa học:" hoặc "3 khóa học phù hợp:")
-        cleanedResponse = cleanedResponse.replace(/^(\d+|một|hai|ba|bốn|năm|sáu)\s+(khóa học|course|khoa hoc)[:.]?\s*$/gim, '')
-
-        // Clean up multiple spaces và newlines
-        cleanedResponse = cleanedResponse
-            .replace(/\n\s*\n\s*\n/g, '\n\n') // Multiple newlines -> double newline
-            .replace(/^\s+|\s+$/gm, '') // Trim each line
-            .replace(/\s{2,}/g, ' ') // Multiple spaces -> single space
-            .trim()
-
-        return cleanedResponse
-    }
-
-    /**
-     * Làm sạch response - loại bỏ phần lặp lại, dính lẹo, và các câu không cần thiết
-     * @param {string} response - LLM response text
-     * @param {Array} coursesInPrompt - Danh sách khóa học đã đưa vào prompt
-     * @returns {string} Response đã được làm sạch
-     */
-    _cleanResponse(response, coursesInPrompt = []) {
-        if (!response) return response
-
-        let cleaned = response
-
-        // Loại bỏ các câu lặp lại về khóa học không liên quan
-        // Ví dụ: "Tuy nhiên, nếu bạn muốn tìm hiểu thêm về X, cũng có thể tham khảo khóa học Y"
-        // khi Y không phù hợp với query
-        const unrelatedPatterns = [
-            /Tuy nhiên,?\s+nếu\s+bạn\s+muốn\s+tìm\s+hiểu\s+thêm\s+về\s+[^,]+,\s+cũng\s+có\s+thể\s+tham\s+khảo\s+khóa\s+học\s+"[^"]+"[^.]*\./gi,
-            /Tuy nhiên,?\s+nếu\s+bạn\s+muốn\s+[^,]+,\s+cũng\s+có\s+thể\s+xem\s+xét\s+khóa\s+học\s+"[^"]+"[^.]*\./gi,
-            /Và\s+cuối\s+cùng,?\s+nếu\s+bạn\s+muốn\s+[^,]+,\s+cũng\s+có\s+thể\s+[^.]*\./gi,
-        ]
-
-        for (const pattern of unrelatedPatterns) {
-            cleaned = cleaned.replace(pattern, '')
-        }
-
-        // Loại bỏ các câu dài dòng, lặp lại thông tin
-        // Ví dụ: "Khóa học này sẽ cung cấp cho bạn kiến thức và kỹ năng cần thiết để..."
-        const verbosePatterns = [
-            /Khóa\s+học\s+này\s+sẽ\s+cung\s+cấp\s+cho\s+bạn\s+kiến\s+thức\s+và\s+kỹ\s+năng\s+cần\s+thiết\s+để[^.]*\./gi,
-            /Khóa\s+học\s+này\s+giúp\s+bạn\s+có\s+thể\s+tạo\s+ra[^.]*\./gi,
-        ]
-
-        for (const pattern of verbosePatterns) {
-            cleaned = cleaned.replace(pattern, '')
-        }
-
-        // Loại bỏ các câu hỏi lặp lại không cần thiết ở cuối
-        // Ví dụ: "Để hiểu rõ hơn về nhu cầu của bạn, có thể hỏi thêm câu hỏi: ..."
-        const redundantQuestionPatterns = [
-            /Để\s+hiểu\s+rõ\s+hơn\s+về\s+nhu\s+cầu\s+của\s+bạn,?\s+có\s+thể\s+hỏi\s+thêm\s+câu\s+hỏi[^.]*\./gi,
-            /Để\s+hiểu\s+rõ\s+hơn,?\s+có\s+thể\s+hỏi\s+thêm\s+câu\s+hỏi[^.]*\./gi,
-        ]
-
-        for (const pattern of redundantQuestionPatterns) {
-            cleaned = cleaned.replace(pattern, '')
-        }
-
-        // Loại bỏ các đoạn văn dài dòng, lặp lại cùng một ý
-        // Tách response thành các câu và loại bỏ câu lặp lại
-        const sentences = cleaned.split(/[.!?]\s+/).filter(s => s.trim().length > 0)
-        const uniqueSentences = []
-        const seenPhrases = new Set()
-
-        for (const sentence of sentences) {
-            const normalized = sentence.toLowerCase().trim()
-            // Kiểm tra xem câu này có quá giống với câu trước không
-            let isDuplicate = false
-            for (const seen of seenPhrases) {
-                // Nếu câu mới chứa > 70% nội dung của câu đã thấy, coi là duplicate
-                const similarity = this._calculateSimilarity(normalized, seen)
-                if (similarity > 0.7) {
-                    isDuplicate = true
-                    break
-                }
-            }
-
-            if (!isDuplicate && normalized.length > 10) {
-                uniqueSentences.push(sentence.trim())
-                seenPhrases.add(normalized)
-            }
-        }
-
-        cleaned = uniqueSentences.join('. ').trim()
-        if (cleaned && !cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
-            cleaned += '.'
-        }
-
-        // Clean up multiple spaces và newlines
-        cleaned = cleaned
-            .replace(/\n\s*\n\s*\n/g, '\n\n') // Multiple newlines -> double newline
-            .replace(/^\s+|\s+$/gm, '') // Trim each line
-            .replace(/\s{2,}/g, ' ') // Multiple spaces -> single space
-            .replace(/\.\s*\./g, '.') // Multiple dots -> single dot
-            .trim()
-
-        return cleaned
-    }
-
-    /**
-     * Format response để có cấu trúc rõ ràng, dễ đọc với line breaks
-     * @param {string} response - LLM response text
-     * @param {Array} coursesInPrompt - Danh sách khóa học đã đưa vào prompt
-     * @returns {string} Response đã được format
-     */
-    _formatResponse(response, coursesInPrompt = []) {
-        if (!response) return response
-
-        let formatted = response.trim()
-
-        // Nếu response đã có line breaks rõ ràng (nhiều hơn 2 line breaks), giữ nguyên
-        const lineBreakCount = (formatted.match(/\n\n/g) || []).length
-        if (lineBreakCount >= 2) {
-            // Đã có format tốt, chỉ cần clean up
-            return formatted
-                .replace(/\n{3,}/g, '\n\n') // Max 2 line breaks
-                .trim()
-        }
-
-        // Pattern 1: Tìm tên khóa học và thêm line break trước nó
-        for (const course of coursesInPrompt) {
-            const courseTitle = course.title || ''
-            if (!courseTitle) continue
-
-            // Tìm tên khóa học trong dấu ngoặc kép
-            const escapedTitle = this._escapeRegex(courseTitle)
-            const titlePattern = new RegExp(`(["'"])${escapedTitle}\\1`, 'gi')
-            
-            formatted = formatted.replace(titlePattern, (match, quote) => {
-                const matchIndex = formatted.indexOf(match)
-                const beforeMatch = formatted.substring(0, matchIndex).trim()
-                
-                // Nếu đã có line break trước đó, không thêm nữa
-                if (beforeMatch.endsWith('\n\n')) {
-                    return match
-                }
-                
-                // Tìm vị trí bắt đầu của câu chứa tên khóa học
-                // Thêm line break trước câu đó nếu câu trước đó đã kết thúc
-                const sentenceStart = beforeMatch.lastIndexOf('. ')
-                if (sentenceStart > 0 && beforeMatch.length - sentenceStart > 10) {
-                    // Có câu trước đó, thêm line break sau câu đó
-                    return `\n\n${match}`
-                } else if (beforeMatch.length > 30) {
-                    // Không có câu trước rõ ràng nhưng có đủ text, thêm line break
-                    return `\n\n${match}`
-                }
-                
-                return match
-            })
-        }
-
-        // Pattern 2: Thêm line break trước các từ khóa báo hiệu phần mới
-        const breakKeywords = [
-            { pattern: /\s+(Khóa học|khóa học)\s+(phù hợp|tốt nhất|liên quan|khác)/gi, replace: '\n\n$1 $2' },
-            { pattern: /\s+(Ngoài ra|Bên cạnh đó|Ngoài ra,|Bên cạnh đó,)/gi, replace: '\n\n$1' },
-            { pattern: /\s+(Tuy nhiên|Tuy nhiên,|Tuy vậy|Tuy vậy,)/gi, replace: '\n\n$1' },
-            { pattern: /\s+(Khóa học khác|khóa học khác)/gi, replace: '\n\n$1' },
-        ]
-
-        for (const { pattern, replace } of breakKeywords) {
-            formatted = formatted.replace(pattern, (match) => {
-                const matchIndex = formatted.indexOf(match)
-                const beforeMatch = formatted.substring(0, matchIndex).trim()
-                
-                // Chỉ thêm line break nếu chưa có và có đủ text trước đó
-                if (!beforeMatch.endsWith('\n\n') && beforeMatch.length > 20) {
-                    return replace
-                }
-                return match
-            })
-        }
-
-        // Pattern 3: Thêm line break sau câu đầu tiên (xác nhận yêu cầu) nếu response dài
-        if (!formatted.includes('\n\n') && formatted.length > 100) {
-            // Tìm câu đầu tiên (kết thúc bằng dấu chấm, chấm hỏi, chấm than)
-            const firstSentenceMatch = formatted.match(/^([^.!?]+[.!?])\s*/)
-            if (firstSentenceMatch) {
-                const firstSentence = firstSentenceMatch[1]
-                const rest = formatted.substring(firstSentence.length).trim()
-                if (rest.length > 30) {
-                    formatted = `${firstSentence}\n\n${rest}`
-                }
-            }
-        }
-
-        // Pattern 4: Format các câu có tên khóa học - thêm line break sau tên khóa học nếu có giải thích dài
-        for (const course of coursesInPrompt) {
-            const courseTitle = course.title || ''
-            if (!courseTitle) continue
-
-            const escapedTitle = this._escapeRegex(courseTitle)
-            // Tìm pattern: "Tên khóa học" + giải thích (không có line break giữa)
-            const pattern = new RegExp(`(["'"])${escapedTitle}\\1\\s+([^\\n]{30,})`, 'gi')
-            
-            formatted = formatted.replace(pattern, (match, quote, explanation) => {
-                // Nếu giải thích dài và không có line break, thêm line break
-                if (explanation.length > 30 && !explanation.includes('\n')) {
-                    return `${quote}${courseTitle}${quote}\n\n${explanation.trim()}`
-                }
-                return match
-            })
-        }
-
-        // Pattern 5: Thêm line break trước "Khóa học khác" hoặc các từ tương tự
-        formatted = formatted.replace(/\s+(Khóa học khác|khóa học khác|Ngoài ra|Bên cạnh đó)/gi, '\n\n$1')
-
-        // Pattern 6: Thêm line break sau dấu chấm nếu câu sau đó bắt đầu bằng tên khóa học hoặc từ khóa đặc biệt
-        // Ví dụ: "...thú vị.Khóa học khác..." -> "...thú vị.\n\nKhóa học khác..."
-        formatted = formatted.replace(/\.([^.!?\n]{0,5})(Khóa học|khóa học|Ngoài ra|Bên cạnh đó)/gi, '.\n\n$2')
-
-        // Clean up: Đảm bảo không có quá 2 line breaks liên tiếp
-        formatted = formatted
-            .replace(/\n{3,}/g, '\n\n') // Max 2 line breaks
-            .replace(/^\n+|\n+$/g, '') // Remove leading/trailing line breaks
-            .trim()
-
-        return formatted
-    }
-
-    /**
-     * Escape special regex characters
-     * @param {string} str - String to escape
-     * @returns {string} Escaped string
-     */
-    _escapeRegex(str) {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    }
-
-    /**
-     * Tính độ tương đồng giữa hai câu (đơn giản)
-     * @param {string} str1 - Câu 1
-     * @param {string} str2 - Câu 2
-     * @returns {number} Độ tương đồng (0-1)
-     */
-    _calculateSimilarity(str1, str2) {
-        if (!str1 || !str2) return 0
-        if (str1 === str2) return 1
-
-        // Đếm số từ chung
-        const words1 = new Set(str1.split(/\s+/))
-        const words2 = new Set(str2.split(/\s+/))
-        
-        let commonWords = 0
-        for (const word of words1) {
-            if (words2.has(word) && word.length > 2) {
-                commonWords++
-            }
-        }
-
-        const totalWords = Math.max(words1.size, words2.size)
-        return totalWords > 0 ? commonWords / totalWords : 0
     }
 
     /**
@@ -976,9 +561,11 @@ Dựa trên thông tin của bạn, tôi sẽ gợi ý những khóa học tốt
     }
 
     /**
-     * Định dạng thời lượng (durationHours lưu phút) thành chuỗi thân thiện
-     * - < 60 phút: "Xm"
-     * - >= 60 phút: "Xh Ym" (ẩn phút nếu 0)
+     * Định dạng thời lượng (durationMinutes tính bằng phút) thành chuỗi thân thiện
+     * - < 60 phút: "X phút"
+     * - >= 60 phút: "X giờ Y phút" (ẩn phút nếu 0)
+     * @param {number} durationMinutes - Thời lượng tính bằng phút
+     * @returns {string} Chuỗi thân thiện (ví dụ: "2 giờ 30 phút", "45 phút")
      */
     _formatDuration(durationMinutes) {
         if (!durationMinutes || Number.isNaN(Number(durationMinutes))) {
