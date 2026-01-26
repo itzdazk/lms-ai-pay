@@ -48,6 +48,7 @@ model User {
   userSessions        UserSession[]
   lessonNotes         LessonNote[]
   refundRequests      RefundRequest[]
+  couponUsages        CouponUsage[]
 
   @@index([email])
   @@index([userName])
@@ -287,6 +288,9 @@ model Order {
   transactionId  String?   @unique @map("transaction_id") @db.VarChar(255)
   refundAmount   Decimal   @default(0) @map("refund_amount") @db.Decimal(10, 2)
   refundedAt     DateTime? @map("refunded_at") @db.Timestamptz
+  appliedCouponCode String?  @map("applied_coupon_code") @db.VarChar(50)
+  couponDiscount    Decimal? @map("coupon_discount") @db.Decimal(10, 2)
+
   paidAt         DateTime? @map("paid_at") @db.Timestamptz
   billingAddress Json?     @map("billing_address")
   notes          String?   @db.Text
@@ -295,6 +299,7 @@ model Order {
 
   paymentTransactions PaymentTransaction[]
   refundRequests      RefundRequest[]
+  couponUsages        CouponUsage[]
 
   @@index([userId])
   @@index([courseId])
@@ -616,4 +621,53 @@ model SystemSetting {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("system_settings")
+}
+
+// =====================================================
+// 18. COUPONS
+// =====================================================
+model Coupon {
+  id                    Int           @id @default(autoincrement())
+  code                  String        @unique @db.VarChar(50)
+  type                  String        @db.VarChar(20) // PERCENT, FIXED, NEW_USER
+  value                 Decimal       @db.Decimal(10, 2)
+  maxDiscount           Decimal?      @map("max_discount") @db.Decimal(10, 2)
+  minOrderValue         Decimal?      @map("min_order_value") @db.Decimal(10, 2)
+  applicableCourseIds   Int[]         @default([]) @map("applicable_course_ids")
+  applicableCategoryIds Int[]         @default([]) @map("applicable_category_ids")
+  startDate             DateTime      @map("start_date") @db.Timestamptz
+  endDate               DateTime      @map("end_date") @db.Timestamptz
+  maxUses               Int?          @map("max_uses")
+  maxUsesPerUser        Int?          @map("max_uses_per_user")
+  usesCount             Int           @default(0) @map("uses_count")
+  active                Boolean       @default(true)
+  createdBy             Int           @map("created_by")
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  usages CouponUsage[]
+
+  @@index([code])
+  @@index([active])
+  @@index([startDate, endDate])
+  @@map("coupons")
+}
+
+// =====================================================
+// 19. COUPON USAGES
+// =====================================================
+model CouponUsage {
+  id            Int      @id @default(autoincrement())
+  couponId      Int      @map("coupon_id")
+  coupon        Coupon   @relation(fields: [couponId], references: [id])
+  userId        Int      @map("user_id")
+  user          User     @relation(fields: [userId], references: [id])
+  orderId       Int?     @map("order_id")
+  order         Order?   @relation(fields: [orderId], references: [id])
+  amountReduced Decimal  @map("amount_reduced") @db.Decimal(10, 2)
+  usedAt        DateTime @default(now()) @map("used_at") @db.Timestamptz
+
+  @@index([couponId])
+  @@index([userId])
+  @@map("coupon_usages")
 }

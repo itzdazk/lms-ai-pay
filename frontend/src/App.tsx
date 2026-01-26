@@ -26,237 +26,242 @@ const PageLoading = () => (
 const LoginPage = lazy(() =>
     import('./pages/LoginPage').then((module) => ({
         default: module.LoginPage,
-    }))
+    })),
 )
 const RegisterPage = lazy(() =>
     import('./pages/RegisterPage').then((module) => ({
         default: module.RegisterPage,
-    }))
+    })),
 )
 const ForgotPasswordPage = lazy(() =>
     import('./pages/ForgotPasswordPage').then((module) => ({
         default: module.ForgotPasswordPage,
-    }))
+    })),
 )
 const ResetPasswordPage = lazy(() =>
     import('./pages/ResetPasswordPage').then((module) => ({
         default: module.ResetPasswordPage,
-    }))
+    })),
 )
 const EmailVerificationPage = lazy(() =>
     import('./pages/EmailVerificationPage').then((module) => ({
         default: module.EmailVerificationPage,
-    }))
+    })),
 )
 
 // Public Pages - Lazy loaded
 const LandingPage = lazy(() =>
     import('./pages/LandingPage').then((module) => ({
         default: module.LandingPage,
-    }))
+    })),
 )
 const CoursesPage = lazy(() =>
     import('./pages/CoursesPage').then((module) => ({
         default: module.CoursesPage,
-    }))
+    })),
 )
 const CourseDetailPage = lazy(() =>
     import('./pages/CourseDetailPage').then((module) => ({
         default: module.CourseDetailPage,
-    }))
+    })),
 )
 const CoursePreviewPage = lazy(() =>
     import('./pages/CoursePreviewPage').then((module) => ({
         default: module.CoursePreviewPage,
-    }))
+    })),
 )
 const AboutPage = lazy(() =>
     import('./pages/AboutPage').then((module) => ({
         default: module.AboutPage,
-    }))
+    })),
 )
 
 // Student Pages - Lazy loaded
 const StudentDashboard = lazy(() =>
     import('./pages/StudentDashboard').then((module) => ({
         default: module.StudentDashboard,
-    }))
+    })),
 )
 const LessonPage = lazy(() =>
     import('./pages/LessonPage').then((module) => ({
         default: module.LessonPage,
-    }))
+    })),
 )
 const AIChatPage = lazy(() =>
     import('./pages/AIChatPage').then((module) => ({
         default: module.AIChatPage,
-    }))
+    })),
 )
 const PaymentCheckoutPage = lazy(() =>
     import('./pages/PaymentCheckoutPage').then((module) => ({
         default: module.PaymentCheckoutPage,
-    }))
+    })),
 )
 const PaymentResultPage = lazy(() =>
     import('./pages/PaymentResultPage').then((module) => ({
         default: module.PaymentResultPage,
-    }))
+    })),
 )
 const PaymentSuccessPage = lazy(() =>
     import('./pages/PaymentSuccessPage').then((module) => ({
         default: module.PaymentSuccessPage,
-    }))
+    })),
 )
 const PaymentFailurePage = lazy(() =>
     import('./pages/PaymentFailurePage').then((module) => ({
         default: module.PaymentFailurePage,
-    }))
+    })),
 )
 const QuizPage = lazy(() =>
-    import('./pages/QuizPage').then((module) => ({ default: module.QuizPage }))
+    import('./pages/QuizPage').then((module) => ({ default: module.QuizPage })),
 )
 const CertificatePage = lazy(() =>
     import('./pages/CertificatePage').then((module) => ({
         default: module.CertificatePage,
-    }))
+    })),
 )
 const CertificatesPage = lazy(() =>
     import('./pages/CertificatesPage').then((module) => ({
         default: module.CertificatesPage,
-    }))
+    })),
 )
 const ProfilePage = lazy(() =>
     import('./pages/ProfilePage').then((module) => ({
         default: module.ProfilePage,
-    }))
+    })),
 )
 const SettingsPage = lazy(() =>
     import('./pages/SettingsPage').then((module) => ({
         default: module.SettingsPage,
-    }))
+    })),
 )
 const EnrollmentDetailPage = lazy(() =>
     import('./pages/EnrollmentDetailPage').then((module) => ({
         default: module.EnrollmentDetailPage,
-    }))
+    })),
 )
 const OrderHistoryPage = lazy(() =>
     import('./pages/OrderHistoryPage').then((module) => ({
         default: module.OrderHistoryPage,
-    }))
+    })),
 )
 const OrderDetailPage = lazy(() =>
     import('./pages/OrderDetailPage').then((module) => ({
         default: module.OrderDetailPage,
-    }))
+    })),
 )
 const TransactionHistoryPage = lazy(() =>
     import('./pages/TransactionHistoryPage').then((module) => ({
         default: module.TransactionHistoryPage,
-    }))
+    })),
 )
 const NotificationsPage = lazy(() =>
     import('./pages/NotificationsPage').then((module) => ({
         default: module.NotificationsPage,
-    }))
+    })),
+)
+const PromotionsPage = lazy(() =>
+    import('./pages/PromotionsPage').then((module) => ({
+        default: module.default,
+    })),
 )
 
 // Instructor Pages - Lazy loaded
 const InstructorDashboard = lazy(() =>
     import('./pages/InstructorDashboard').then((module) => ({
         default: module.InstructorDashboard,
-    }))
+    })),
 )
 const CourseLayout = lazy(() =>
     import('./pages/instructor/CourseLayout').then((module) => ({
         default: module.CourseLayout,
-    }))
+    })),
 )
 const CourseCreatePage = lazy(() =>
     import('./pages/instructor/CourseCreatePage').then((module) => ({
         default: module.CourseCreatePage,
-    }))
+    })),
 )
 const CourseEditPage = lazy(() =>
     import('./pages/instructor/CourseEditPage').then((module) => ({
         default: module.CourseEditPage,
-    }))
+    })),
 )
 const CourseChaptersPage = lazy(() =>
     import('./pages/instructor/CourseChaptersPage').then((module) => ({
         default: module.CourseChaptersPage,
-    }))
+    })),
 )
 const InstructorOrdersPage = lazy(() =>
     import('./pages/instructor/InstructorOrdersPage').then((module) => ({
         default: module.InstructorOrdersPage,
-    }))
+    })),
 )
 const InstructorEnrollmentsPage = lazy(() =>
     import('./pages/instructor/InstructorEnrollmentsPage').then((module) => ({
         default: module.InstructorEnrollmentsPage,
-    }))
+    })),
 )
 const InstructorCoursesManagementPage = lazy(() =>
     import('./pages/instructor/InstructorCoursesManagementPage').then(
-        (module) => ({ default: module.InstructorCoursesManagementPage })
-    )
+        (module) => ({ default: module.InstructorCoursesManagementPage }),
+    ),
 )
 const QuizzesPage = lazy(() =>
     import('./pages/instructor/QuizzesPage').then((module) => ({
         default: module.QuizzesPage,
-    }))
+    })),
 )
 
 // Admin Pages - Lazy loaded
 const AdminDashboard = lazy(() =>
     import('./pages/AdminDashboard').then((module) => ({
         default: module.AdminDashboard,
-    }))
+    })),
 )
 const UsersPage = lazy(() =>
     import('./pages/admin/UsersPage').then((module) => ({
         default: module.UsersPage,
-    }))
+    })),
 )
 const AdminCoursesPage = lazy(() =>
     import('./pages/admin/CoursesPage').then((module) => ({
         default: module.CoursesPage,
-    }))
+    })),
 )
 const OrdersPage = lazy(() =>
     import('./pages/admin/OrdersPage').then((module) => ({
         default: module.OrdersPage,
-    }))
+    })),
 )
 const RefundsPage = lazy(() =>
     import('./pages/admin/RefundsPage').then((module) => ({
         default: module.RefundsPage,
-    }))
+    })),
 )
 
 // Error Pages - Lazy loaded
 const NotFoundPage = lazy(() =>
     import('./pages/NotFoundPage').then((module) => ({
         default: module.NotFoundPage,
-    }))
+    })),
 )
 const UnauthorizedPage = lazy(() =>
     import('./pages/UnauthorizedPage').then((module) => ({
         default: module.UnauthorizedPage,
-    }))
+    })),
 )
 const ForbiddenPage = lazy(() =>
     import('./pages/ForbiddenPage').then((module) => ({
         default: module.ForbiddenPage,
-    }))
+    })),
 )
 
 export default function App() {
     // Set page title and favicon from system config
     usePageTitle()
     useFavicon()
-    
+
     return (
         <Router>
             <ScrollToTop />
@@ -669,6 +674,18 @@ export default function App() {
                                                     fallback={<PageLoading />}
                                                 >
                                                     <NotificationsPage />
+                                                </Suspense>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path='/promotions'
+                                        element={
+                                            <ProtectedRoute>
+                                                <Suspense
+                                                    fallback={<PageLoading />}
+                                                >
+                                                    <PromotionsPage />
                                                 </Suspense>
                                             </ProtectedRoute>
                                         }

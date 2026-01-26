@@ -29,13 +29,15 @@ export function PaymentCheckoutPage() {
     const { slug } = useParams<{ slug: string }>()
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [isLoading, setIsLoading] = useState<boolean>(true)
-    const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>(
-        'vnpay'
-    )
+    const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>('momo')
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
     const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false)
+    const [finalPrice, setFinalPrice] = useState<number | null>(null)
+    const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
+        null,
+    )
     const [billing, setBilling] = useState({
         firstName: '',
         lastName: '',
@@ -76,7 +78,7 @@ export function PaymentCheckoutPage() {
                       originalPrice: course.originalPrice ?? course.price,
                   })
                 : null,
-        [course]
+        [course],
     )
 
     if (!slug) {
@@ -156,6 +158,7 @@ export function PaymentCheckoutPage() {
                     email: billing.email || undefined,
                     phone: billing.phone || undefined,
                 },
+                couponCode: appliedCouponCode || undefined,
             })
 
             const paymentUrl =
@@ -203,11 +206,46 @@ export function PaymentCheckoutPage() {
                                     value={paymentMethod}
                                     onValueChange={(value) =>
                                         setPaymentMethod(
-                                            value as 'vnpay' | 'momo'
+                                            value as 'momo' | 'vnpay',
                                         )
                                     }
                                 >
                                     <div className='space-y-3'>
+                                        <Label
+                                            htmlFor='momo'
+                                            className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                                                paymentMethod === 'momo'
+                                                    ? 'border-blue-600 bg-blue-600/20'
+                                                    : 'border-[#2D2D2D] hover:bg-[#1F1F1F]'
+                                            }`}
+                                        >
+                                            <RadioGroupItem
+                                                value='momo'
+                                                id='momo'
+                                            />
+                                            <div className='flex items-center gap-3 flex-1'>
+                                                <div className='w-12 h-12 bg-pink-600/20 rounded-lg flex items-center justify-center'>
+                                                    <img
+                                                        src={MomoLogo}
+                                                        alt='MoMo logo'
+                                                        className='w-10 h-10 object-contain'
+                                                    />
+                                                </div>
+                                                <div className='flex-1'>
+                                                    <p className='font-semibold text-white'>
+                                                        MoMo
+                                                    </p>
+                                                    <p className='text-sm text-gray-400'>
+                                                        Ví điện tử MoMo
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {paymentMethod === 'momo' && (
+                                                <Badge className='bg-blue-600'>
+                                                    Được chọn
+                                                </Badge>
+                                            )}
+                                        </Label>
                                         <Label
                                             htmlFor='vnpay'
                                             className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
@@ -239,42 +277,6 @@ export function PaymentCheckoutPage() {
                                                 </div>
                                             </div>
                                             {paymentMethod === 'vnpay' && (
-                                                <Badge className='bg-blue-600'>
-                                                    Được chọn
-                                                </Badge>
-                                            )}
-                                        </Label>
-
-                                        <Label
-                                            htmlFor='momo'
-                                            className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                                                paymentMethod === 'momo'
-                                                    ? 'border-blue-600 bg-blue-600/20'
-                                                    : 'border-[#2D2D2D] hover:bg-[#1F1F1F]'
-                                            }`}
-                                        >
-                                            <RadioGroupItem
-                                                value='momo'
-                                                id='momo'
-                                            />
-                                            <div className='flex items-center gap-3 flex-1'>
-                                                <div className='w-12 h-12 bg-pink-600/20 rounded-lg flex items-center justify-center'>
-                                                    <img
-                                                        src={MomoLogo}
-                                                        alt='MoMo logo'
-                                                        className='w-10 h-10 object-contain'
-                                                    />
-                                                </div>
-                                                <div className='flex-1'>
-                                                    <p className='font-semibold text-white'>
-                                                        MoMo
-                                                    </p>
-                                                    <p className='text-sm text-gray-400'>
-                                                        Ví điện tử MoMo
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {paymentMethod === 'momo' && (
                                                 <Badge className='bg-blue-600'>
                                                     Được chọn
                                                 </Badge>
@@ -403,7 +405,17 @@ export function PaymentCheckoutPage() {
                     </div>
 
                     <div className='lg:col-span-1 space-y-4'>
-                        <OrderSummary course={course} loading={isLoading} />
+                        <OrderSummary
+                            course={course}
+                            loading={isLoading}
+                            showCourseMeta={false}
+                            showCouponInput={false}
+                            onPriceChange={setFinalPrice}
+                            onCouponApplied={(couponCode) =>
+                                setAppliedCouponCode(couponCode)
+                            }
+                            onCouponRemoved={() => setAppliedCouponCode(null)}
+                        />
 
                         <Card className='bg-[#1A1A1A] border-[#2D2D2D]'>
                             <CardContent className='space-y-4 pt-6'>
@@ -423,7 +435,9 @@ export function PaymentCheckoutPage() {
                                         Tôi đồng ý với{' '}
                                         <button
                                             type='button'
-                                            onClick={() => setIsTermsDialogOpen(true)}
+                                            onClick={() =>
+                                                setIsTermsDialogOpen(true)
+                                            }
                                             className='text-blue-600 hover:underline cursor-pointer'
                                         >
                                             Điều khoản sử dụng
@@ -431,7 +445,9 @@ export function PaymentCheckoutPage() {
                                         và{' '}
                                         <button
                                             type='button'
-                                            onClick={() => setIsPrivacyDialogOpen(true)}
+                                            onClick={() =>
+                                                setIsPrivacyDialogOpen(true)
+                                            }
                                             className='text-blue-600 hover:underline cursor-pointer'
                                         >
                                             Chính sách bảo mật
@@ -455,9 +471,17 @@ export function PaymentCheckoutPage() {
                                     ) : (
                                         <>
                                             <CreditCard className='mr-2 h-4 w-4' />
-                                            {priceInfo
-                                                ? `Thanh toán ${priceInfo.displayPrice}`
-                                                : 'Thanh toán'}
+                                            {finalPrice !== null
+                                                ? `Thanh toán ${new Intl.NumberFormat(
+                                                      'vi-VN',
+                                                      {
+                                                          style: 'currency',
+                                                          currency: 'VND',
+                                                      },
+                                                  ).format(finalPrice)}`
+                                                : priceInfo
+                                                  ? `Thanh toán ${priceInfo.displayPrice}`
+                                                  : 'Thanh toán'}
                                         </>
                                     )}
                                 </DarkOutlineButton>

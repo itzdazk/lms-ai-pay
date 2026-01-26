@@ -10,6 +10,8 @@ import {
 } from '../config/constants.js'
 import notificationsService from './notifications.service.js'
 import emailService from './email.service.js'
+import couponService from './coupon.service.js'
+import logger from '../config/logger.config.js'
 
 class OrdersService {
     /**
@@ -55,14 +57,21 @@ class OrdersService {
      * @param {number} courseId - Course ID
      * @param {string} paymentGateway - Payment gateway (VNPay, MoMo)
      * @param {Object} billingAddress - Billing address (optional)
+     * @param {string} couponCode - Coupon code (optional)
      * @returns {Promise<Object>} Created order
      */
-    async createOrder(userId, courseId, paymentGateway, billingAddress = null) {
+    async createOrder(
+        userId,
+        courseId,
+        paymentGateway,
+        billingAddress = null,
+        couponCode = null,
+    ) {
         // Validate payment gateway
         const validGateways = Object.values(PAYMENT_GATEWAY)
         if (!validGateways.includes(paymentGateway)) {
             const error = new Error(
-                `Cổng thanh toán không hợp lệ. Phải là một trong các cổng: ${validGateways.join(', ')}`
+                `Cổng thanh toán không hợp lệ. Phải là một trong các cổng: ${validGateways.join(', ')}`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -94,12 +103,50 @@ class OrdersService {
 
         // Calculate prices
         const prices = this.calculatePrices(course)
-        const { originalPrice, discountAmount, finalPrice } = prices
+        let { originalPrice, discountAmount, finalPrice } = prices
+
+        // Apply coupon if provided
+        let couponDiscount = 0
+        let appliedCouponCode = null
+
+        if (couponCode) {
+            logger.info(`[Coupon] Attempting to apply coupon: ${couponCode}`)
+            logger.info(`[Coupon] Order total before coupon: ${finalPrice}`)
+
+            try {
+                // Validate coupon (returns coupon object directly)
+                // Note: This does not increment matches, usesCount or create usage record yet
+                const coupon = await couponService.validateCoupon(
+                    couponCode,
+                    userId,
+                    finalPrice,
+                    [courseId],
+                )
+
+                // Calculate discount
+                couponDiscount = couponService.calculateDiscount(
+                    coupon,
+                    finalPrice,
+                )
+
+                logger.info(`[Coupon] Calculated discount: ${couponDiscount}`)
+
+                // Update final price with coupon discount
+                finalPrice = Math.max(0, finalPrice - couponDiscount)
+                discountAmount = discountAmount + couponDiscount
+                appliedCouponCode = coupon.code
+            } catch (error) {
+                // If coupon validation fails, log error but continue order creation without coupon
+                logger.error('[Coupon] Validation error:', error.message)
+                logger.error('[Coupon] Stack:', error.stack)
+                // Don't throw error, just proceed without coupon
+            }
+        }
 
         // Check if course is paid (finalPrice > 0)
         if (finalPrice <= 0) {
             const error = new Error(
-                'Không thể tạo đơn hàng cho khóa học miễn phí. Vui lòng sử dụng đăng ký miễn phí thay vì đơn hàng.'
+                'Không thể tạo đơn hàng cho khóa học miễn phí. Vui lòng sử dụng đăng ký miễn phí thay vì đơn hàng.',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -155,44 +202,51 @@ class OrdersService {
         // Generate order code
         const orderCode = this.generateOrderCode()
 
-        // Create order
-        const order = await prisma.order.create({
-            data: {
-                userId,
-                courseId,
-                orderCode,
-                originalPrice,
-                discountAmount,
-                finalPrice,
-                paymentGateway,
-                paymentStatus: PAYMENT_STATUS.PENDING,
-                billingAddress: billingAddress || null,
-            },
-            include: {
-                course: {
-                    select: {
-                        id: true,
-                        title: true,
-                        slug: true,
-                        thumbnailUrl: true,
-                        price: true,
-                        discountPrice: true,
-                        instructor: {
-                            select: {
-                                id: true,
-                                fullName: true,
+        // Create order with coupon tracking (Lazy Increment: no usage record created yet)
+        const order = await prisma.$transaction(async (tx) => {
+            // Create order
+            const newOrder = await tx.order.create({
+                data: {
+                    userId,
+                    courseId,
+                    orderCode,
+                    originalPrice,
+                    discountAmount,
+                    finalPrice,
+                    paymentGateway,
+                    paymentStatus: PAYMENT_STATUS.PENDING,
+                    billingAddress: billingAddress || null,
+                    // ✅ NEW: Save coupon info for lazy increment
+                    appliedCouponCode: appliedCouponCode || null,
+                    couponDiscount: couponDiscount > 0 ? couponDiscount : 0,
+                },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            thumbnailUrl: true,
+                            price: true,
+                            discountPrice: true,
+                            instructor: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
                             },
                         },
                     },
-                },
-                user: {
-                    select: {
-                        id: true,
-                        fullName: true,
-                        email: true,
+                    user: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
                     },
                 },
-            },
+            })
+            return newOrder
         })
 
         return order
@@ -200,9 +254,17 @@ class OrdersService {
 
     /**
      * Get user's orders with filters and pagination
-     * @param {number} userId - User ID
-     * @param {Object} filters - Filters object
-     * @returns {Promise<Object>} Orders and total count
+     * @param {string} userId - User ID
+     * @param {object} filters - Filters
+     * @param {number} filters.page - Page number
+     * @param {number} filters.limit - Limit per page
+     * @param {string} filters.paymentStatus - Payment status
+     * @param {string} filters.paymentGateway - Payment gateway
+     * @param {string} filters.startDate - Start date
+     * @param {string} filters.endDate - End date
+     * @param {string} filters.sort - Sort order
+     * @param {string} filters.search - Search query
+     * @returns {Promise<object>} - User's orders
      */
     async getUserOrders(userId, filters = {}) {
         const {
@@ -341,9 +403,9 @@ class OrdersService {
 
     /**
      * Get order by ID
-     * @param {number} orderId - Order ID
-     * @param {number} userId - User ID (for authorization)
-     * @returns {Promise<Object>} Order
+     * @param {string} orderId - Order ID
+     * @param {string} userId - User ID
+     * @returns {Promise<object>} - Order
      */
     async getOrderById(orderId, userId) {
         const order = await prisma.order.findUnique({
@@ -390,8 +452,6 @@ class OrdersService {
             throw error
         }
 
-        // Check if order belongs to user (unless user is admin)
-        // Note: Add admin check if needed
         if (order.userId !== userId) {
             const error = new Error('Không có quyền truy cập vào đơn hàng này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
@@ -404,8 +464,8 @@ class OrdersService {
     /**
      * Get order by order code
      * @param {string} orderCode - Order code
-     * @param {number} userId - User ID (for authorization)
-     * @returns {Promise<Object>} Order
+     * @param {string} userId - User ID
+     * @returns {Promise<object>} - Order
      */
     async getOrderByCode(orderCode, userId) {
         const order = await prisma.order.findUnique({
@@ -452,8 +512,6 @@ class OrdersService {
             throw error
         }
 
-        // Check if order belongs to user (unless user is admin)
-        // Note: Add admin check if needed
         if (order.userId !== userId) {
             const error = new Error('Không có quyền truy cập vào đơn hàng này')
             error.statusCode = HTTP_STATUS.FORBIDDEN
@@ -465,11 +523,10 @@ class OrdersService {
 
     /**
      * Update order payment status to PAID
-     * This method will automatically enroll user in the course when payment is successful
-     * @param {number} orderId - Order ID
-     * @param {string} transactionId - Transaction ID from payment gateway
-     * @param {Object} paymentData - Additional payment data (optional)
-     * @returns {Promise<Object>} Updated order and enrollment
+     * @param {string} orderId - Order ID
+     * @param {string} transactionId - Transaction ID
+     * @param {object} paymentData - Payment data
+     * @returns {Promise<object>} - Updated order
      */
     async updateOrderToPaid(orderId, transactionId = null, paymentData = {}) {
         // Get current order
@@ -481,6 +538,8 @@ class OrdersService {
                 courseId: true,
                 paymentStatus: true,
                 transactionId: true,
+                appliedCouponCode: true,
+                couponDiscount: true,
             },
         })
 
@@ -516,7 +575,7 @@ class OrdersService {
         // Check if order is pending
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Không thể cập nhật trạng thái đơn hàng thành PAID. Trạng thái hiện tại: ${order.paymentStatus}`
+                `Không thể cập nhật trạng thái đơn hàng thành PAID. Trạng thái hiện tại: ${order.paymentStatus}`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -562,6 +621,28 @@ class OrdersService {
                 },
             })
 
+            // ✅ NEW: Apply coupon only when payment is successful
+            if (
+                updatedOrder.appliedCouponCode &&
+                Number(updatedOrder.couponDiscount) > 0
+            ) {
+                try {
+                    await couponService.applyCouponOnSuccess(
+                        updatedOrder.appliedCouponCode,
+                        updatedOrder.userId,
+                        updatedOrder.id,
+                        Number(updatedOrder.couponDiscount),
+                        tx,
+                    )
+                    logger.info(
+                        `✅ Coupon ${updatedOrder.appliedCouponCode} consumed for order ${updatedOrder.id}`,
+                    )
+                } catch (error) {
+                    logger.error(`Failed to apply coupon on success:`, error)
+                    // Log error but don't fail the payment success flow
+                }
+            }
+
             return updatedOrder
         })
 
@@ -586,7 +667,7 @@ class OrdersService {
             result.id,
             result.courseId,
             result.course.title,
-            result.finalPrice
+            result.finalPrice,
         )
 
         // Notify instructor about payment received
@@ -598,7 +679,7 @@ class OrdersService {
                     result.courseId,
                     result.course.title,
                     result.finalPrice,
-                    result.user.fullName
+                    result.user.fullName,
                 )
             }
         } catch (error) {
@@ -610,7 +691,7 @@ class OrdersService {
             await emailService.sendPaymentSuccessEmail(
                 result.user.email,
                 result.user.fullName,
-                result
+                result,
             )
         } catch (error) {
             // Log error but don't fail the payment process
@@ -624,10 +705,9 @@ class OrdersService {
 
     /**
      * Cancel order
-     * Only pending orders can be cancelled
-     * @param {number} orderId - Order ID
-     * @param {number} userId - User ID (for ownership verification)
-     * @returns {Promise<object>} Cancelled order
+     * @param {string} orderId - Order ID
+     * @param {string} userId - User ID
+     * @returns {Promise<object>} - Updated order
      */
     async cancelOrder(orderId, userId) {
         // 1. Fetch order với transactions
@@ -663,7 +743,7 @@ class OrdersService {
         // 2. Validate order status
         if (order.paymentStatus !== PAYMENT_STATUS.PENDING) {
             const error = new Error(
-                `Không thể hủy đơn hàng với trạng thái: ${order.paymentStatus}. Chỉ có đơn hàng PENDING mới có thể bị hủy.`
+                `Không thể hủy đơn hàng với trạng thái: ${order.paymentStatus}. Chỉ có đơn hàng PENDING mới có thể bị hủy.`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -680,13 +760,13 @@ class OrdersService {
 
         if (hasSuccessfulTransaction) {
             const error = new Error(
-                'Không thể hủy đơn hàng - thanh toán đã được xử lý thành công'
+                'Không thể hủy đơn hàng - thanh toán đã được xử lý thành công',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
         }
 
-        // 4. Cancel cả Order VÀ tất cả Transactions
+        // 4. Cancel cả Order VÀ tất cả Transactions (NO ROLLBACK NEEDED)
         const result = await prisma.$transaction(async (tx) => {
             // 4.1. Update all PENDING transactions → FAILED
             const updatedTransactionsCount =
@@ -706,7 +786,7 @@ class OrdersService {
                     },
                 })
 
-            // 4.2. Update Order → FAILED
+            // 4.3. Update Order → FAILED
             const cancelledOrder = await tx.order.update({
                 where: { id: orderId },
                 data: {
@@ -719,15 +799,6 @@ class OrdersService {
                             id: true,
                             title: true,
                         },
-                    },
-                    paymentTransactions: {
-                        where: {
-                            status: TRANSACTION_STATUS.FAILED,
-                        },
-                        orderBy: {
-                            updatedAt: 'desc',
-                        },
-                        take: 5, // Lấy 5 transaction gần nhất
                     },
                 },
             })
@@ -745,7 +816,7 @@ class OrdersService {
                     userId,
                     order.id,
                     order.courseId,
-                    order.course?.title || 'Unknown Course'
+                    order.course?.title || 'Unknown Course',
                 )
                 .catch((err) => {})
         })
