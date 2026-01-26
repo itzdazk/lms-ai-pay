@@ -29,9 +29,7 @@ export function PaymentCheckoutPage() {
     const { slug } = useParams<{ slug: string }>()
     const [course, setCourse] = useState<PublicCourse | null>(null)
     const [isLoading, setIsLoading] = useState<boolean>(true)
-    const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>(
-        'vnpay',
-    )
+    const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>('momo')
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
@@ -208,11 +206,46 @@ export function PaymentCheckoutPage() {
                                     value={paymentMethod}
                                     onValueChange={(value) =>
                                         setPaymentMethod(
-                                            value as 'vnpay' | 'momo',
+                                            value as 'momo' | 'vnpay',
                                         )
                                     }
                                 >
                                     <div className='space-y-3'>
+                                        <Label
+                                            htmlFor='momo'
+                                            className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                                                paymentMethod === 'momo'
+                                                    ? 'border-blue-600 bg-blue-600/20'
+                                                    : 'border-[#2D2D2D] hover:bg-[#1F1F1F]'
+                                            }`}
+                                        >
+                                            <RadioGroupItem
+                                                value='momo'
+                                                id='momo'
+                                            />
+                                            <div className='flex items-center gap-3 flex-1'>
+                                                <div className='w-12 h-12 bg-pink-600/20 rounded-lg flex items-center justify-center'>
+                                                    <img
+                                                        src={MomoLogo}
+                                                        alt='MoMo logo'
+                                                        className='w-10 h-10 object-contain'
+                                                    />
+                                                </div>
+                                                <div className='flex-1'>
+                                                    <p className='font-semibold text-white'>
+                                                        MoMo
+                                                    </p>
+                                                    <p className='text-sm text-gray-400'>
+                                                        Ví điện tử MoMo
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {paymentMethod === 'momo' && (
+                                                <Badge className='bg-blue-600'>
+                                                    Được chọn
+                                                </Badge>
+                                            )}
+                                        </Label>
                                         <Label
                                             htmlFor='vnpay'
                                             className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
@@ -244,42 +277,6 @@ export function PaymentCheckoutPage() {
                                                 </div>
                                             </div>
                                             {paymentMethod === 'vnpay' && (
-                                                <Badge className='bg-blue-600'>
-                                                    Được chọn
-                                                </Badge>
-                                            )}
-                                        </Label>
-
-                                        <Label
-                                            htmlFor='momo'
-                                            className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                                                paymentMethod === 'momo'
-                                                    ? 'border-blue-600 bg-blue-600/20'
-                                                    : 'border-[#2D2D2D] hover:bg-[#1F1F1F]'
-                                            }`}
-                                        >
-                                            <RadioGroupItem
-                                                value='momo'
-                                                id='momo'
-                                            />
-                                            <div className='flex items-center gap-3 flex-1'>
-                                                <div className='w-12 h-12 bg-pink-600/20 rounded-lg flex items-center justify-center'>
-                                                    <img
-                                                        src={MomoLogo}
-                                                        alt='MoMo logo'
-                                                        className='w-10 h-10 object-contain'
-                                                    />
-                                                </div>
-                                                <div className='flex-1'>
-                                                    <p className='font-semibold text-white'>
-                                                        MoMo
-                                                    </p>
-                                                    <p className='text-sm text-gray-400'>
-                                                        Ví điện tử MoMo
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {paymentMethod === 'momo' && (
                                                 <Badge className='bg-blue-600'>
                                                     Được chọn
                                                 </Badge>
