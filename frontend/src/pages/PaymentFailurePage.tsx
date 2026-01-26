@@ -51,7 +51,7 @@ const stripGatewaySuffix = (code?: string | null): string | undefined => {
  * Decode extraData from MoMo
  */
 const decodeExtraData = (
-    extraData: string | null
+    extraData: string | null,
 ): { orderCode?: string; orderId?: number } | null => {
     if (!extraData) return null
     try {
@@ -232,7 +232,7 @@ const parseErrorMessage = (params: URLSearchParams): string => {
  * Extract order information from URL params
  */
 const getOrderInfoFromParams = (
-    params: URLSearchParams
+    params: URLSearchParams,
 ): { orderCode?: string; orderId?: string } => {
     const extraData = params.get('extraData')
     const decoded = decodeExtraData(extraData)
@@ -328,13 +328,13 @@ export function PaymentFailurePage() {
                                     </span>
                                     <span className='text-sm font-medium text-white'>
                                         {translatePaymentStatus(
-                                            order.paymentStatus
+                                            order.paymentStatus,
                                         )}
                                     </span>
                                     <span className='text-xs text-gray-400'>
                                         Tổng:{' '}
                                         {order.finalPrice.toLocaleString(
-                                            'vi-VN'
+                                            'vi-VN',
                                         )}{' '}
                                         ₫
                                     </span>
@@ -371,13 +371,14 @@ export function PaymentFailurePage() {
                                 <div className='bg-[#1F1F1F] rounded-lg p-4 flex-1 min-h-0 overflow-y-auto'>
                                     <OrderSummary
                                         course={order.course || null}
+                                        order={order}
                                     />
                                     <div className='mt-3 pt-3 border-t border-[#2D2D2D] lg:hidden text-xs text-gray-300 space-y-1'>
                                         <p>Mã đơn: {order.orderCode}</p>
                                         <p>
                                             Trạng thái:{' '}
                                             {translatePaymentStatus(
-                                                order.paymentStatus
+                                                order.paymentStatus,
                                             )}
                                         </p>
                                     </div>
