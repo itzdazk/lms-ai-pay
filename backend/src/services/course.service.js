@@ -2,12 +2,198 @@
 import { prisma } from '../config/database.config.js'
 import { Prisma } from '@prisma/client'
 import { COURSE_STATUS, HTTP_STATUS } from '../config/constants.js'
+import logger from '../config/logger.config.js'
+import config from '../config/app.config.js'
+import redisCacheService from './redis-cache.service.js'
 
 class CourseService {
     /**
-     * Get courses with filters, search, sort and pagination
+     * Get courses with filters, search, sort and pagination (with semantic search support)
      */
     async getCourses(filters) {
+        const {
+            page,
+            limit,
+            search,
+            categoryId,
+            level,
+            minPrice,
+            maxPrice,
+            isFeatured,
+            instructorId,
+            sort,
+            tagId,
+            tagIds,
+        } = filters
+
+        const otherFilters = {
+            categoryId,
+            level,
+            minPrice,
+            maxPrice,
+            isFeatured,
+            instructorId,
+            sort,
+            tagId,
+            tagIds,
+        }
+
+        // Short queries (< 3 chars): use keyword search only (faster)
+        if (!search || search.trim().length < 3) {
+            return await this._keywordSearchCourses(filters)
+        }
+
+        // Long queries (>= 3 chars): try semantic search
+        const useRAG = config.RAG_ENABLED !== false
+        let vectorSearchAvailable = false
+
+        if (useRAG) {
+            try {
+                // Dynamic import to avoid circular dependency
+                const vectorSearchService = (
+                    await import('./vector-search.service.js')
+                ).default
+                vectorSearchAvailable = await vectorSearchService.isAvailable()
+
+                if (vectorSearchAvailable) {
+                    // Check Redis cache first (performance optimization)
+                    const cachedCourses = await redisCacheService.getCachedAdvisorSearch(
+                        search
+                    )
+
+                    let courses = []
+
+                    if (cachedCourses) {
+                        courses = cachedCourses
+                        logger.debug(
+                            `Course Search (RAG): Using Redis cache for query: ${search.substring(0, 50)}`
+                        )
+                    } else {
+                        // Use hybrid search (vector + keyword) if enabled
+                        if (config.RAG_HYBRID_SEARCH !== false) {
+                            logger.debug(
+                                `Course Search (RAG Hybrid): Searching with vector + keyword`
+                            )
+                            courses = await vectorSearchService.hybridSearch(
+                                search,
+                                {
+                                    limit: limit * 3, // Get more for filtering
+                                    threshold:
+                                        config.RAG_SIMILARITY_THRESHOLD || 0.7,
+                                }
+                            )
+                        } else {
+                            // Pure vector search
+                            logger.debug(
+                                `Course Search (RAG Vector): Searching with vector only`
+                            )
+                            courses = await vectorSearchService.searchCoursesByVector(
+                                search,
+                                {
+                                    limit: limit * 3,
+                                    status: 'PUBLISHED',
+                                }
+                            )
+                        }
+
+                        // Cache results in Redis (async, non-blocking)
+                        if (courses.length > 0) {
+                            redisCacheService
+                                .cacheAdvisorSearch(search, courses)
+                                .catch((err) => {
+                                    logger.warn(
+                                        'Failed to cache course search results in Redis',
+                                        err.message
+                                    )
+                                })
+                        }
+                    }
+
+                    // If no results, try fallback to keyword search
+                    if (courses.length === 0) {
+                        logger.debug(
+                            `Course Search (RAG): No vector results, falling back to keyword search`
+                        )
+                        return await this._keywordSearchCourses(filters)
+                    }
+
+                    // Apply other filters (category, level, price, tags, instructor)
+                    const filteredCourses = await this._applyFiltersToCourses(
+                        courses,
+                        otherFilters
+                    )
+
+                    // Sort courses
+                    const sortedCourses = this._sortCourses(
+                        filteredCourses,
+                        sort
+                    )
+
+                    // Paginate
+                    const skip = (page - 1) * limit
+                    const paginatedCourses = sortedCourses.slice(
+                        skip,
+                        skip + limit
+                    )
+
+                    // Load tags for courses if not present (vector search doesn't include tags)
+                    const courseIds = paginatedCourses.map((c) => c.id)
+                    const coursesWithTags = await prisma.course.findMany({
+                        where: { id: { in: courseIds } },
+                        select: {
+                            id: true,
+                            courseTags: {
+                                select: {
+                                    tag: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            slug: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    })
+
+                    const tagsMap = new Map()
+                    coursesWithTags.forEach((c) => {
+                        tagsMap.set(
+                            c.id,
+                            c.courseTags.map((ct) => ct.tag)
+                        )
+                    })
+
+                    // Format courses
+                    const formattedCourses = paginatedCourses.map((course) => ({
+                        ...course,
+                        tags: tagsMap.get(course.id) || course.tags || [],
+                        courseTags: undefined,
+                    }))
+
+                    return {
+                        courses: formattedCourses,
+                        total: sortedCourses.length,
+                    }
+                }
+            } catch (error) {
+                logger.warn(
+                    'Vector search failed, falling back to keyword search:',
+                    error.message
+                )
+                vectorSearchAvailable = false
+            }
+        }
+
+        // Fallback to keyword search if RAG disabled or unavailable
+        return await this._keywordSearchCourses(filters)
+    }
+
+    /**
+     * Keyword search courses (original implementation)
+     * @private
+     */
+    async _keywordSearchCourses(filters) {
         const {
             page,
             limit,
@@ -354,6 +540,139 @@ class CourseService {
             courses: coursesWithTags,
             total,
         }
+    }
+
+    /**
+     * Apply filters to vector search results
+     * @private
+     */
+    async _applyFiltersToCourses(courses, filters) {
+        let filtered = [...courses]
+
+        // Filter by category
+        if (filters.categoryId) {
+            const categoryId = parseInt(filters.categoryId)
+            filtered = filtered.filter(
+                (c) => c.categoryId === categoryId || c.category?.id === categoryId
+            )
+        }
+
+        // Filter by level
+        if (filters.level) {
+            filtered = filtered.filter((c) => c.level === filters.level)
+        }
+
+        // Filter by price range
+        if (filters.minPrice !== undefined) {
+            filtered = filtered.filter(
+                (c) => parseFloat(c.price || 0) >= parseFloat(filters.minPrice)
+            )
+        }
+        if (filters.maxPrice !== undefined) {
+            filtered = filtered.filter(
+                (c) => parseFloat(c.price || 0) <= parseFloat(filters.maxPrice)
+            )
+        }
+
+        // Filter by featured
+        if (filters.isFeatured !== undefined) {
+            const isFeatured = filters.isFeatured === 'true' || filters.isFeatured === true
+            filtered = filtered.filter((c) => c.isFeatured === isFeatured)
+        }
+
+        // Filter by instructor
+        if (filters.instructorId) {
+            const instructorId = parseInt(filters.instructorId)
+            filtered = filtered.filter(
+                (c) => c.instructorId === instructorId || c.instructor?.id === instructorId
+            )
+        }
+
+        // Filter by tags (requires DB query to check tag relationships)
+        if (filters.tagIds && filters.tagIds.length > 0) {
+            const tagIdsInt = filters.tagIds.map((id) => parseInt(id, 10))
+            const courseIds = filtered.map((c) => c.id)
+
+            // Query DB to check which courses have ALL specified tags (AND logic)
+            const coursesWithTags = await prisma.course.findMany({
+                where: {
+                    id: { in: courseIds },
+                    AND: tagIdsInt.map((tid) => ({
+                        courseTags: {
+                            some: {
+                                tagId: tid,
+                            },
+                        },
+                    })),
+                },
+                select: { id: true },
+            })
+
+            const validCourseIds = new Set(coursesWithTags.map((c) => c.id))
+            filtered = filtered.filter((c) => validCourseIds.has(c.id))
+        } else if (filters.tagId) {
+            const tagId = parseInt(filters.tagId)
+            const courseIds = filtered.map((c) => c.id)
+
+            const coursesWithTags = await prisma.course.findMany({
+                where: {
+                    id: { in: courseIds },
+                    courseTags: {
+                        some: {
+                            tagId: tagId,
+                        },
+                    },
+                },
+                select: { id: true },
+            })
+
+            const validCourseIds = new Set(coursesWithTags.map((c) => c.id))
+            filtered = filtered.filter((c) => validCourseIds.has(c.id))
+        }
+
+        return filtered
+    }
+
+    /**
+     * Sort courses
+     * @private
+     */
+    _sortCourses(courses, sort) {
+        const sorted = [...courses]
+
+        switch (sort) {
+            case 'popular':
+                sorted.sort(
+                    (a, b) => (b.enrolledCount || 0) - (a.enrolledCount || 0)
+                )
+                break
+            case 'rating':
+                sorted.sort(
+                    (a, b) =>
+                        parseFloat(b.ratingAvg || 0) -
+                        parseFloat(a.ratingAvg || 0)
+                )
+                break
+            case 'price_asc':
+                sorted.sort(
+                    (a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0)
+                )
+                break
+            case 'price_desc':
+                sorted.sort(
+                    (a, b) => parseFloat(b.price || 0) - parseFloat(a.price || 0)
+                )
+                break
+            case 'newest':
+            default:
+                sorted.sort((a, b) => {
+                    const dateA = new Date(a.publishedAt || a.createdAt || 0)
+                    const dateB = new Date(b.publishedAt || b.createdAt || 0)
+                    return dateB - dateA
+                })
+        }
+
+        return sorted
     }
 
     /**
