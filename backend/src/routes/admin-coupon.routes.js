@@ -20,6 +20,14 @@ router.use(authenticate)
 router.use(isAdmin)
 
 /**
+ * @route   GET /api/v1/admin/coupons/overview
+ * @desc    Get coupon overview metrics for dashboard
+ * @access  Private (Admin)
+ * @note    Must be defined before /:id route to avoid conflict
+ */
+router.get('/overview', adminCouponController.getCouponOverview)
+
+/**
  * @route   GET /api/v1/admin/coupons/:id/usages
  * @desc    Get coupon usage history
  * @access  Private (Admin)
