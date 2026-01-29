@@ -241,7 +241,11 @@ export function CourseRow({
                             </div>
                             <p className='text-sm text-gray-400 break-words whitespace-normal'>
                                 {course.totalLessons} bài •{' '}
-                                {formatDuration(course.durationHours / 60)}
+                                {formatDuration(
+                                    typeof course.durationHours === 'number'
+                                        ? course.durationHours
+                                        : Number(course.durationHours) || 0
+                                )}
                             </p>
                         </div>
                     </div>
