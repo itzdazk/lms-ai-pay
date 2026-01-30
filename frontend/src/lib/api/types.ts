@@ -1045,6 +1045,20 @@ export interface CouponUsageHistoryFilters {
 }
 
 // =====================================================
+// COUPON OVERVIEW METRICS (Admin Dashboard)
+// =====================================================
+export interface CouponOverviewMetrics {
+    total: number
+    active: number
+    scheduled: number
+    expired: number
+    disabled: number
+    totalDiscountGiven: number
+    totalUsages: number
+    ordersWithCoupons: number
+}
+
+// =====================================================
 // AVAILABLE COUPON TYPES (Student-facing)
 // =====================================================
 export interface AvailableCoupon {

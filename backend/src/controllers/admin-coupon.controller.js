@@ -169,6 +169,21 @@ class AdminCouponController {
             `Đã ${coupon.active ? 'kích hoạt' : 'vô hiệu hóa'} mã giảm giá thành công`,
         )
     })
+
+    /**
+     * @route   GET /api/v1/admin/coupons/overview
+     * @desc    Get coupon overview metrics for dashboard
+     * @access  Private (Admin)
+     */
+    getCouponOverview = asyncHandler(async (req, res) => {
+        const metrics = await couponService.getOverviewMetrics()
+
+        return ApiResponse.success(
+            res,
+            metrics,
+            'Lấy thống kê tổng quan mã giảm giá thành công',
+        )
+    })
 }
 
 export default new AdminCouponController()

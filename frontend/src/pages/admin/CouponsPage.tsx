@@ -11,6 +11,7 @@ import {
     CouponFilters as CouponFiltersComponent,
     CouponTable,
     CouponDialogs,
+    CouponDashboard,
 } from '../../components/admin/coupons'
 
 export function CouponsPage() {
@@ -419,8 +420,8 @@ export function CouponsPage() {
                     </p>
                 </div>
 
-                {/* Stats Cards */}
-                <CouponStats coupons={coupons} total={total} />
+                {/* Dashboard Metrics */}
+                <CouponDashboard />
 
                 {/* Filters */}
                 <CouponFiltersComponent

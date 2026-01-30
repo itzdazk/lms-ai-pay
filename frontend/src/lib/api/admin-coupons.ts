@@ -134,4 +134,32 @@ export const adminCouponsApi = {
         )
         return response.data.data
     },
+
+    /**
+     * Get coupon overview metrics for dashboard
+     */
+    async getCouponOverview(): Promise<{
+        total: number
+        active: number
+        scheduled: number
+        expired: number
+        disabled: number
+        totalDiscountGiven: number
+        totalUsages: number
+        ordersWithCoupons: number
+    }> {
+        const response = await apiClient.get<
+            ApiResponse<{
+                total: number
+                active: number
+                scheduled: number
+                expired: number
+                disabled: number
+                totalDiscountGiven: number
+                totalUsages: number
+                ordersWithCoupons: number
+            }>
+        >('/admin/coupons/overview')
+        return response.data.data
+    },
 }

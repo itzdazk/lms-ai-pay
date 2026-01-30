@@ -2,10 +2,21 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { couponsApi } from '../lib/api/coupons'
 import type { AvailableCoupon } from '../lib/api/types'
-import { Copy, Check, Clock, Users, Tag, ShoppingCart } from 'lucide-react'
+import {
+    Copy,
+    Check,
+    Clock,
+    Users,
+    Tag,
+    ShoppingCart,
+    Percent,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { DarkOutlineButton } from '../components/ui/buttons'
+import { Button } from '../components/ui/button'
 
-// Countdown Timer Component
+// Countdown Timer Component - Dark Theme
 const CountdownTimer: React.FC<{ endDate: string }> = ({ endDate }) => {
     const [timeLeft, setTimeLeft] = useState<{
         days: number
@@ -44,35 +55,37 @@ const CountdownTimer: React.FC<{ endDate: string }> = ({ endDate }) => {
         timeLeft.seconds === 0
     ) {
         return (
-            <div className='text-xs text-red-600 font-semibold'>Đã hết hạn</div>
+            <div className='text-xs text-red-400 font-semibold'>Đã hết hạn</div>
         )
     }
 
     return (
         <div className='flex items-center gap-2 text-xs font-mono'>
             {timeLeft.days > 0 && (
-                <div className='bg-blue-100 text-blue-700 px-2 py-1 rounded'>
+                <div className='bg-[#2D2D2D] text-blue-400 px-2 py-1 rounded'>
                     <span className='font-bold'>{timeLeft.days}</span>
-                    <span className='text-[10px] ml-0.5'>ngày</span>
+                    <span className='text-[10px] ml-0.5 text-gray-400'>
+                        ngày
+                    </span>
                 </div>
             )}
-            <div className='bg-blue-100 text-blue-700 px-2 py-1 rounded'>
+            <div className='bg-[#2D2D2D] text-blue-400 px-2 py-1 rounded'>
                 <span className='font-bold'>
                     {String(timeLeft.hours).padStart(2, '0')}
                 </span>
-                <span className='text-[10px] ml-0.5'>giờ</span>
+                <span className='text-[10px] ml-0.5 text-gray-400'>giờ</span>
             </div>
-            <div className='bg-blue-100 text-blue-700 px-2 py-1 rounded'>
+            <div className='bg-[#2D2D2D] text-blue-400 px-2 py-1 rounded'>
                 <span className='font-bold'>
                     {String(timeLeft.minutes).padStart(2, '0')}
                 </span>
-                <span className='text-[10px] ml-0.5'>phút</span>
+                <span className='text-[10px] ml-0.5 text-gray-400'>phút</span>
             </div>
-            <div className='bg-blue-100 text-blue-700 px-2 py-1 rounded'>
+            <div className='bg-[#2D2D2D] text-blue-400 px-2 py-1 rounded'>
                 <span className='font-bold'>
                     {String(timeLeft.seconds).padStart(2, '0')}
                 </span>
-                <span className='text-[10px] ml-0.5'>giây</span>
+                <span className='text-[10px] ml-0.5 text-gray-400'>giây</span>
             </div>
         </div>
     )
@@ -174,28 +187,46 @@ const PromotionsPage: React.FC = () => {
         navigate(`/courses?coupon=${code}`)
     }
 
+    // Loading State - Dark Theme
     if (loading && coupons.length === 0) {
         return (
-            <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50'>
-                <div className='container mx-auto px-4 py-8'>
-                    <div className='text-center mb-12'>
-                        <h1 className='text-4xl font-bold text-gray-800 mb-4'>
-                            Mã giảm giá HOT nhất
-                        </h1>
-                        <p className='text-gray-600'>
+            <div className='bg-background min-h-screen'>
+                {/* Header Section */}
+                <div className='bg-[#1A1A1A] border-b border-[#2d2d2d]'>
+                    <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                        <div className='flex items-center gap-3 mb-2'>
+                            <div className='flex h-12 w-12 items-center justify-center rounded-full bg-black border border-[#2D2D2D]'>
+                                <Percent className='h-6 w-6 text-blue-400' />
+                            </div>
+                            <div>
+                                <p className='text-sm text-gray-400 uppercase tracking-[0.25em]'>
+                                    Promotions
+                                </p>
+                                <h1 className='text-2xl md:text-3xl font-bold text-white'>
+                                    Mã giảm giá HOT nhất
+                                </h1>
+                            </div>
+                        </div>
+                        <p className='text-base text-gray-300 leading-relaxed ml-15'>
                             Đang tải danh sách khuyến mãi...
                         </p>
                     </div>
+                </div>
+                {/* Loading Skeleton */}
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8'>
                     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div
+                            <Card
                                 key={i}
-                                className='bg-white rounded-2xl shadow-lg p-6 animate-pulse'
+                                className='bg-[#1A1A1A] border-[#2D2D2D] animate-pulse'
                             >
-                                <div className='h-6 bg-gray-200 rounded w-3/4 mb-4'></div>
-                                <div className='h-4 bg-gray-200 rounded w-1/2 mb-2'></div>
-                                <div className='h-4 bg-gray-200 rounded w-2/3'></div>
-                            </div>
+                                <CardContent className='p-6'>
+                                    <div className='h-6 bg-[#2D2D2D] rounded w-3/4 mb-4'></div>
+                                    <div className='h-8 bg-[#2D2D2D] rounded w-1/2 mb-4'></div>
+                                    <div className='h-4 bg-[#2D2D2D] rounded w-2/3 mb-2'></div>
+                                    <div className='h-4 bg-[#2D2D2D] rounded w-1/2'></div>
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
                 </div>
@@ -204,38 +235,62 @@ const PromotionsPage: React.FC = () => {
     }
 
     return (
-        <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50'>
-            <div className='container mx-auto px-4 py-8'>
-                {/* Header */}
-                <div className='text-center mb-12'>
-                    <h1 className='text-4xl md:text-5xl font-bold text-black mb-4'>
-                        Mã giảm giá HOT nhất
-                    </h1>
-                    <p className='text-gray-600 text-lg'>
-                        Khám phá các ưu đãi hấp dẫn cho khóa học của bạn
-                    </p>
+        <div className='bg-background min-h-screen'>
+            {/* Header Section */}
+            <div className='bg-[#1A1A1A] border-b border-[#2d2d2d]'>
+                <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8 pb-10'>
+                    <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-6'>
+                        <div className='flex items-center gap-3'>
+                            <div className='flex h-12 w-12 items-center justify-center rounded-full bg-black border border-[#2D2D2D]'>
+                                <Percent className='h-6 w-6 text-blue-400' />
+                            </div>
+                            <div>
+                                <p className='text-sm text-gray-400 uppercase tracking-[0.25em]'>
+                                    Promotions
+                                </p>
+                                <h1 className='text-2xl md:text-3xl font-bold text-white'>
+                                    Mã giảm giá HOT nhất
+                                </h1>
+                                <p className='text-gray-400 mt-1'>
+                                    Khám phá các ưu đãi hấp dẫn cho khóa học của
+                                    bạn
+                                </p>
+                            </div>
+                        </div>
+                        {/* Stats */}
+                        <div className='flex gap-4'>
+                            <div className='bg-black rounded-xl p-4 border border-[#2D2D2D] min-w-[100px]'>
+                                <div className='text-2xl font-bold text-white'>
+                                    {total}
+                                </div>
+                                <div className='text-xs text-gray-400 mt-1'>
+                                    Mã khả dụng
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
+            {/* Main Content */}
+            <div className='container mx-auto px-4 md:px-6 lg:px-8 py-8'>
                 {/* Coupons Grid */}
                 {coupons.length === 0 ? (
-                    <div className='text-center py-16'>
-                        <div className='inline-flex items-center justify-center w-24 h-24 bg-gray-100 rounded-full mb-6'>
-                            <Tag className='w-12 h-12 text-gray-400' />
+                    <Card className='p-12 text-center bg-[#1A1A1A] border-[#2D2D2D]'>
+                        <div className='flex h-20 w-20 items-center justify-center rounded-full bg-black border border-[#2D2D2D] mx-auto mb-6'>
+                            <Tag className='h-10 w-10 text-gray-500' />
                         </div>
-                        <h3 className='text-2xl font-semibold text-gray-700 mb-2'>
+                        <h3 className='text-2xl font-semibold text-white mb-2'>
                             Chưa có mã giảm giá
                         </h3>
-                        <p className='text-gray-500 mb-8'>
+                        <p className='text-gray-400 mb-8'>
                             Hiện tại chưa có mã giảm giá nào khả dụng. Vui lòng
                             quay lại sau!
                         </p>
-                        <button
-                            onClick={() => navigate('/courses')}
-                            className='px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'
-                        >
+                        <DarkOutlineButton onClick={() => navigate('/courses')}>
                             Khám phá khóa học
-                        </button>
-                    </div>
+                        </DarkOutlineButton>
+                    </Card>
                 ) : (
                     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
                         {coupons.map((coupon) => {
@@ -243,28 +298,19 @@ const PromotionsPage: React.FC = () => {
                             const isCopied = copiedCode === coupon.code
 
                             return (
-                                <div
+                                <Card
                                     key={coupon.id}
-                                    className={`
-                                            group relative 
-                                            bg-white rounded-2xl shadow-lg 
-                                            hover:shadow-2xl transition-all duration-300 
-                                            overflow-hidden
-                                            flex flex-col             
-                                            min-h-[340px]               
-                                            `}
+                                    className='bg-[#1A1A1A] border-[#2D2D2D] hover:border-blue-500/40 transition-all duration-300 overflow-hidden flex flex-col min-h-[340px]'
                                 >
-                                    {/* Gradient Background */}
-                                    <div className='absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500'></div>
+                                    {/* Top accent border */}
+                                    <div className='h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700'></div>
 
-                                    <div className='p-6 flex flex-col flex-1'>
-                                        {' '}
-                                        {/* ← thêm flex-1 */}
+                                    <CardContent className='p-6 flex flex-col flex-1'>
                                         {/* Coupon Code */}
                                         <div className='flex items-center justify-between mb-4'>
                                             <div className='flex items-center space-x-2'>
-                                                <Tag className='text-blue-600 w-5 h-5' />
-                                                <span className='text-2xl font-bold text-gray-800'>
+                                                <Tag className='text-blue-400 w-5 h-5' />
+                                                <span className='text-xl font-bold text-white'>
                                                     {coupon.code}
                                                 </span>
                                             </div>
@@ -272,19 +318,20 @@ const PromotionsPage: React.FC = () => {
                                                 onClick={() =>
                                                     copyToClipboard(coupon.code)
                                                 }
-                                                className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
+                                                className='p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors'
                                                 title='Sao chép mã'
                                             >
                                                 {isCopied ? (
-                                                    <Check className='w-5 h-5 text-green-600' />
+                                                    <Check className='w-5 h-5 text-green-400' />
                                                 ) : (
-                                                    <Copy className='w-5 h-5 text-gray-600' />
+                                                    <Copy className='w-5 h-5 text-gray-400' />
                                                 )}
                                             </button>
                                         </div>
+
                                         {/* Discount Amount */}
                                         <div className='mb-4'>
-                                            <div className='text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'>
+                                            <div className='text-2xl font-bold text-blue-400'>
                                                 {formatDiscount(coupon)}
                                             </div>
                                             {coupon.type === 'PERCENT' &&
@@ -297,14 +344,16 @@ const PromotionsPage: React.FC = () => {
                                                     </p>
                                                 )}
                                         </div>
+
                                         {/* Applicable Info */}
-                                        <p className='text-sm text-gray-600 mb-4 line-clamp-2'>
+                                        <p className='text-sm text-gray-400 mb-4 line-clamp-2'>
                                             {getApplicableText(coupon)}
                                         </p>
-                                        {/* Min Order Value – nếu không có thì không render, không sao */}
+
+                                        {/* Min Order Value */}
                                         {coupon.minOrderValue && (
-                                            <div className='flex items-center text-sm text-gray-600 mb-3'>
-                                                <ShoppingCart className='w-4 h-4 mr-2' />
+                                            <div className='flex items-center text-sm text-gray-400 mb-3'>
+                                                <ShoppingCart className='w-4 h-4 mr-2 text-gray-500' />
                                                 <span>
                                                     Đơn tối thiểu:{' '}
                                                     {formatCurrency(
@@ -313,10 +362,11 @@ const PromotionsPage: React.FC = () => {
                                                 </span>
                                             </div>
                                         )}
+
                                         {/* Validity Period */}
                                         <div className='mb-3'>
-                                            <div className='flex items-center text-sm text-gray-600 mb-2'>
-                                                <Clock className='w-4 h-4 mr-2' />
+                                            <div className='flex items-center text-sm text-gray-400 mb-2'>
+                                                <Clock className='w-4 h-4 mr-2 text-gray-500' />
                                                 <span>
                                                     Hết hạn:{' '}
                                                     {formatDateTime(
@@ -331,34 +381,35 @@ const PromotionsPage: React.FC = () => {
                                                 />
                                             </div>
                                         </div>
-                                        {/* Usage Info – nếu không có thì không render */}
+
+                                        {/* Usage Info */}
                                         {remaining !== null && (
-                                            <div className='flex items-center text-sm text-gray-600 mb-4'>
-                                                <Users className='w-4 h-4 mr-2' />
+                                            <div className='flex items-center text-sm text-gray-400 mb-4'>
+                                                <Users className='w-4 h-4 mr-2 text-gray-500' />
                                                 <span>
                                                     Còn{' '}
-                                                    <b>
+                                                    <span className='text-white font-semibold'>
                                                         {coupon.maxUsesPerUser}
-                                                    </b>{' '}
+                                                    </span>{' '}
                                                     lượt sử dụng
                                                 </span>
                                             </div>
                                         )}
-                                        {/* Phần này sẽ bị đẩy xuống đáy nhờ mt-auto */}
+
+                                        {/* Action Button - pushed to bottom */}
                                         <div className='mt-auto pt-4'>
-                                            {' '}
-                                            {/* ← thêm mt-auto + padding nếu cần */}
-                                            <button
+                                            <Button
                                                 onClick={() =>
                                                     handleUseCoupon(coupon.code)
                                                 }
-                                                className='w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg'
+                                                variant='blue'
+                                                className='w-full'
                                             >
                                                 Sử dụng ngay
-                                            </button>
+                                            </Button>
                                         </div>
-                                    </div>
-                                </div>
+                                    </CardContent>
+                                </Card>
                             )
                         })}
                     </div>
@@ -366,24 +417,24 @@ const PromotionsPage: React.FC = () => {
 
                 {/* Pagination */}
                 {total > limit && (
-                    <div className='flex justify-center mt-12 space-x-2'>
-                        <button
+                    <div className='flex items-center justify-center gap-2 flex-wrap mt-8'>
+                        <DarkOutlineButton
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page === 1}
-                            className='px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                            size='sm'
                         >
                             Trước
-                        </button>
-                        <span className='px-4 py-2 bg-white border border-gray-300 rounded-lg'>
+                        </DarkOutlineButton>
+                        <span className='px-4 py-2 text-gray-400'>
                             Trang {page} / {Math.ceil(total / limit)}
                         </span>
-                        <button
+                        <DarkOutlineButton
                             onClick={() => setPage((p) => p + 1)}
                             disabled={page >= Math.ceil(total / limit)}
-                            className='px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                            size='sm'
                         >
                             Sau
-                        </button>
+                        </DarkOutlineButton>
                     </div>
                 )}
             </div>

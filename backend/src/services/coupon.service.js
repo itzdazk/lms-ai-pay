@@ -780,6 +780,78 @@ class CouponService {
 
         return updatedCoupon
     }
+
+    /**
+     * Get overview metrics for admin dashboard
+     * @returns {Promise<Object>} Dashboard metrics
+     */
+    async getOverviewMetrics() {
+        const now = new Date()
+
+        // Get all coupons with status calculation
+        const allCoupons = await prisma.coupon.findMany({
+            select: {
+                id: true,
+                active: true,
+                startDate: true,
+                endDate: true,
+                usesCount: true,
+                maxUses: true,
+                _count: {
+                    select: { usages: true },
+                },
+            },
+        })
+
+        // Calculate metrics
+        const total = allCoupons.length
+        let active = 0
+        let scheduled = 0
+        let expired = 0
+        let disabled = 0
+
+        allCoupons.forEach((coupon) => {
+            if (!coupon.active) {
+                disabled++
+            } else if (now < coupon.startDate) {
+                scheduled++
+            } else if (now > coupon.endDate) {
+                expired++
+            } else {
+                active++
+            }
+        })
+
+        // Total discount given
+        const discountStats = await prisma.couponUsage.aggregate({
+            _sum: { amountReduced: true },
+            _count: { id: true },
+        })
+
+        const totalDiscountGiven = parseFloat(
+            discountStats._sum.amountReduced || 0,
+        )
+        const totalUsages = discountStats._count.id
+
+        // Orders using coupons (distinct orders)
+        const ordersWithCoupons = await prisma.order.count({
+            where: {
+                appliedCouponCode: { not: null },
+                paymentStatus: PAYMENT_STATUS.PAID,
+            },
+        })
+
+        return {
+            total,
+            active,
+            scheduled,
+            expired,
+            disabled,
+            totalDiscountGiven,
+            totalUsages,
+            ordersWithCoupons,
+        }
+    }
 }
 
 export default new CouponService()
