@@ -166,12 +166,35 @@ export function LoginPage() {
     }
 
     const handleGoogleLogin = async () => {
+        // Optimistic UI Reset: Detect when window regains focus (popup closed)
+        let isCompleted = false
+        const handleFocus = () => {
+            setTimeout(() => {
+                if (!isCompleted) {
+                    setLoading(false)
+                }
+            }, 500)
+        }
+        window.addEventListener('focus', handleFocus)
+
         try {
             setLoading(true)
             await loginWithGoogle()
+            isCompleted = true
             toast.success('Đăng nhập Google thành công!')
             navigate('/dashboard', { replace: true })
         } catch (error: any) {
+            isCompleted = true
+            // Check for cancellation
+            if (
+                error?.code === 'auth/popup-closed-by-user' ||
+                error?.code === 'auth/cancelled-popup-request'
+            ) {
+                console.log('Google login cancelled by user')
+                setLoading(false)
+                return
+            }
+
             // Only show generic error if it's NOT the account-link error (already shown in Context)
             if (
                 error?.code !== 'auth/account-exists-with-different-credential'
@@ -180,17 +203,41 @@ export function LoginPage() {
             }
             console.error(error)
         } finally {
+            window.removeEventListener('focus', handleFocus)
             setLoading(false)
         }
     }
 
     const handleGithubLogin = async () => {
+        // Optimistic UI Reset: Detect when window regains focus (popup closed)
+        let isCompleted = false
+        const handleFocus = () => {
+            setTimeout(() => {
+                if (!isCompleted) {
+                    setLoading(false)
+                }
+            }, 500)
+        }
+        window.addEventListener('focus', handleFocus)
+
         try {
             setLoading(true)
             await loginWithGithub()
+            isCompleted = true
             toast.success('Đăng nhập GitHub thành công!')
             navigate('/dashboard', { replace: true })
         } catch (error: any) {
+            isCompleted = true
+            // Check for cancellation
+            if (
+                error?.code === 'auth/popup-closed-by-user' ||
+                error?.code === 'auth/cancelled-popup-request'
+            ) {
+                console.log('GitHub login cancelled by user')
+                setLoading(false)
+                return
+            }
+
             // Only show generic error if it's NOT the account-link error (already shown in Context)
             if (
                 error?.code !== 'auth/account-exists-with-different-credential'
@@ -199,6 +246,7 @@ export function LoginPage() {
             }
             console.error(error)
         } finally {
+            window.removeEventListener('focus', handleFocus)
             setLoading(false)
         }
     }

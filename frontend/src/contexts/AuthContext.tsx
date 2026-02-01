@@ -59,9 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!user) return
         // Refresh token mỗi 30 phút
-        const interval = setInterval(() => {
-            refreshAccessToken()
-        }, 30 * 60 * 1000)
+        const interval = setInterval(
+            () => {
+                refreshAccessToken()
+            },
+            30 * 60 * 1000,
+        )
 
         return () => clearInterval(interval)
     }, [user])
@@ -73,27 +76,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loginWithGoogle = async () => {
         try {
+            googleProvider.setCustomParameters({
+                prompt: 'select_account',
+            })
             const result = await signInWithPopup(auth, googleProvider)
             const idToken = await result.user.getIdToken()
             const { user } = await authApi.loginWithGoogle(idToken)
             setUser(user)
         } catch (error: any) {
-            if (error.code === 'auth/popup-closed-by-user') {
-                // User đóng popup, không cần hiển thị lỗi
-                return
-            }
-
-            if (error.code === 'auth/cancelled-popup-request') {
-                // Multiple popup requests, ignore
-                return
-            }
-
+            // Rethrow errors so the caller can handle them (e.g., stop loading state)
             throw error
         }
     }
 
     const loginWithGithub = async () => {
         try {
+            githubProvider.setCustomParameters({
+                prompt: 'select_account',
+            })
             const result = await signInWithPopup(auth, githubProvider)
             const idToken = await result.user.getIdToken()
             const { user } = await authApi.loginWithGithub(idToken)
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (email) {
                     const methods = await fetchSignInMethodsForEmail(
                         auth,
-                        email
+                        email,
                     )
                     const providerId = methods[0]
                     let providerName = 'Google'
@@ -121,12 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         {
                             description: `Vui lòng đăng nhập bằng ${providerName}.`,
                             duration: 8000,
-                        }
+                        },
                     )
-                    // Throw error to prevent caller from thinking login succeeded
-                    throw error
                 }
             }
+            // Rethrow all errors including cancellation
             throw error
         }
     }

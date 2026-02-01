@@ -14,13 +14,28 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { toast } from 'sonner'
-import { BookOpen, Loader2, Lock, Eye, EyeOff, Moon, Sun, AlertCircle } from 'lucide-react'
+import {
+    BookOpen,
+    Loader2,
+    Lock,
+    Eye,
+    EyeOff,
+    Moon,
+    Sun,
+    AlertCircle,
+} from 'lucide-react'
 import { LegalDialogs } from '../components/LegalDialogs'
 
 export function RegisterPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { register, loginWithGoogle, loginWithGithub, isAuthenticated, user } = useAuth()
+    const {
+        register,
+        loginWithGoogle,
+        loginWithGithub,
+        isAuthenticated,
+        user,
+    } = useAuth()
     const { theme, toggleTheme } = useTheme()
     const [formData, setFormData] = useState({
         userName: '',
@@ -97,7 +112,7 @@ export function RegisterPage() {
             const hasLowerCase = /[a-z]/.test(formData.password)
             const hasNumber = /[0-9]/.test(formData.password)
             const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(
-                formData.password
+                formData.password,
             )
 
             if (!hasUpperCase) {
@@ -160,7 +175,8 @@ export function RegisterPage() {
 
             // Show success message
             toast.success('Đăng ký thành công!', {
-                description: 'Vui lòng kiểm tra email để xác thực tài khoản của bạn trước khi đăng nhập.',
+                description:
+                    'Vui lòng kiểm tra email để xác thực tài khoản của bạn trước khi đăng nhập.',
                 duration: 6000,
             })
 
@@ -208,29 +224,75 @@ export function RegisterPage() {
     }
 
     const handleGoogleLogin = async () => {
+        // Optimistic UI Reset: Detect when window regains focus (popup closed)
+        let isCompleted = false
+        const handleFocus = () => {
+            setTimeout(() => {
+                if (!isCompleted) {
+                    setIsLoading(false)
+                }
+            }, 500)
+        }
+        window.addEventListener('focus', handleFocus)
+
         try {
             setIsLoading(true)
             await loginWithGoogle()
+            isCompleted = true
             toast.success('Đăng nhập Google thành công!')
             navigate('/dashboard', { replace: true })
-        } catch (error) {
+        } catch (error: any) {
+            isCompleted = true
+            // Check for cancellation
+            if (
+                error?.code === 'auth/popup-closed-by-user' ||
+                error?.code === 'auth/cancelled-popup-request'
+            ) {
+                console.log('Google login cancelled by user')
+                setIsLoading(false)
+                return
+            }
             toast.error('Đăng nhập Google thất bại')
             console.error(error)
         } finally {
+            window.removeEventListener('focus', handleFocus)
             setIsLoading(false)
         }
     }
 
     const handleGithubLogin = async () => {
+        // Optimistic UI Reset: Detect when window regains focus (popup closed)
+        let isCompleted = false
+        const handleFocus = () => {
+            setTimeout(() => {
+                if (!isCompleted) {
+                    setIsLoading(false)
+                }
+            }, 500)
+        }
+        window.addEventListener('focus', handleFocus)
+
         try {
             setIsLoading(true)
             await loginWithGithub()
+            isCompleted = true
             toast.success('Đăng nhập GitHub thành công!')
             navigate('/dashboard', { replace: true })
-        } catch (error) {
+        } catch (error: any) {
+            isCompleted = true
+            // Check for cancellation
+            if (
+                error?.code === 'auth/popup-closed-by-user' ||
+                error?.code === 'auth/cancelled-popup-request'
+            ) {
+                console.log('GitHub login cancelled by user')
+                setIsLoading(false)
+                return
+            }
             toast.error('Đăng nhập GitHub thất bại')
             console.error(error)
         } finally {
+            window.removeEventListener('focus', handleFocus)
             setIsLoading(false)
         }
     }
@@ -276,7 +338,11 @@ export function RegisterPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit} className='space-y-4' noValidate>
+                        <form
+                            onSubmit={handleSubmit}
+                            className='space-y-4'
+                            noValidate
+                        >
                             <div className='space-y-2'>
                                 <Label
                                     htmlFor='userName'
@@ -296,7 +362,10 @@ export function RegisterPage() {
                                         })
                                         // Clear error when user starts typing
                                         if (errors.userName) {
-                                            setErrors({ ...errors, userName: undefined })
+                                            setErrors({
+                                                ...errors,
+                                                userName: undefined,
+                                            })
                                         }
                                     }}
                                     className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
@@ -330,7 +399,10 @@ export function RegisterPage() {
                                         })
                                         // Clear error when user starts typing
                                         if (errors.fullName) {
-                                            setErrors({ ...errors, fullName: undefined })
+                                            setErrors({
+                                                ...errors,
+                                                fullName: undefined,
+                                            })
                                         }
                                     }}
                                     className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
@@ -361,7 +433,10 @@ export function RegisterPage() {
                                         })
                                         // Clear error when user starts typing
                                         if (errors.email) {
-                                            setErrors({ ...errors, email: undefined })
+                                            setErrors({
+                                                ...errors,
+                                                email: undefined,
+                                            })
                                         }
                                     }}
                                     className={`bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
@@ -399,7 +474,10 @@ export function RegisterPage() {
                                             })
                                             // Clear error when user starts typing
                                             if (errors.password) {
-                                                setErrors({ ...errors, password: undefined })
+                                                setErrors({
+                                                    ...errors,
+                                                    password: undefined,
+                                                })
                                             }
                                         }}
                                         className={`pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
@@ -461,7 +539,10 @@ export function RegisterPage() {
                                             })
                                             // Clear error when user starts typing
                                             if (errors.confirmPassword) {
-                                                setErrors({ ...errors, confirmPassword: undefined })
+                                                setErrors({
+                                                    ...errors,
+                                                    confirmPassword: undefined,
+                                                })
                                             }
                                         }}
                                         className={`pl-10 pr-10 bg-[#1F1F1F] border-[#2D2D2D] text-white placeholder:text-gray-500 ${
@@ -474,7 +555,7 @@ export function RegisterPage() {
                                         type='button'
                                         onClick={() =>
                                             setShowConfirmPassword(
-                                                !showConfirmPassword
+                                                !showConfirmPassword,
                                             )
                                         }
                                         className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white'
@@ -515,7 +596,9 @@ export function RegisterPage() {
                                     Tôi đồng ý với{' '}
                                     <button
                                         type='button'
-                                        onClick={() => setIsTermsDialogOpen(true)}
+                                        onClick={() =>
+                                            setIsTermsDialogOpen(true)
+                                        }
                                         className=' text-blue-600 hover:underline cursor-pointer'
                                     >
                                         Điều khoản sử dụng
@@ -523,7 +606,9 @@ export function RegisterPage() {
                                     và{' '}
                                     <button
                                         type='button'
-                                        onClick={() => setIsPrivacyDialogOpen(true)}
+                                        onClick={() =>
+                                            setIsPrivacyDialogOpen(true)
+                                        }
                                         className='text-blue-600 hover:underline cursor-pointer'
                                     >
                                         Chính sách bảo mật
