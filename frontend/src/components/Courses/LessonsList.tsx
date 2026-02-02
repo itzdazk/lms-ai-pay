@@ -34,12 +34,16 @@ export function LessonsList({
         ? totalDuration / 60
         : lessons.reduce(
               (acc, lesson) => acc + (lesson.videoDuration || 0),
-              0
+              0,
           ) / 60
 
-    const totalLessonsCount = chapters.length > 0
-        ? chapters.reduce((acc, chapter) => acc + (chapter.lessonsCount || 0), 0)
-        : lessons.length
+    const totalLessonsCount =
+        chapters.length > 0
+            ? chapters.reduce(
+                  (acc, chapter) => acc + (chapter.lessonsCount || 0),
+                  0,
+              )
+            : lessons.length
 
     // If we have chapters, display them grouped by chapter
     if (chapters.length > 0) {
@@ -50,7 +54,8 @@ export function LessonsList({
                         Nội dung khóa học
                     </h3>
                     <div className='text-sm text-gray-400'>
-                        {chapters.length} chương • {totalLessonsCount} bài học • {formatDuration(totalHours)}
+                        {chapters.length} chương • {totalLessonsCount} bài học •{' '}
+                        {formatDuration(totalHours)}
                     </div>
                 </div>
 
@@ -67,11 +72,11 @@ export function LessonsList({
                             >
                                 <AccordionTrigger className='px-4 hover:no-underline hover:bg-[#1F1F1F] rounded-t-lg'>
                                     <div className='flex items-center justify-between w-full pr-4'>
-                                        <div className='flex items-center gap-3'>
+                                        <div className='flex items-center gap-3 flex-1 min-w-0'>
                                             <div className='h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0'>
                                                 <BookOpen className='h-4 w-4 text-blue-400' />
                                             </div>
-                                            <div className='text-left'>
+                                            <div className='text-left flex-1 min-w-0'>
                                                 <span className='text-white font-medium block'>
                                                     {chapter.title}
                                                 </span>
@@ -82,7 +87,7 @@ export function LessonsList({
                                                 )}
                                             </div>
                                         </div>
-                                        <span className='text-sm text-gray-400'>
+                                        <span className='text-sm text-gray-400 flex-shrink-0 ml-4'>
                                             {chapterLessons.length} bài
                                         </span>
                                     </div>
@@ -169,7 +174,7 @@ interface LessonItemProps {
 function LessonItem({ lesson, index, isEnrolled }: LessonItemProps) {
     const canAccess = lesson.isPreview || isEnrolled
     const duration = lesson.videoDuration
-        ? `${lesson.videoDuration} phút`
+        ? `${Math.round(lesson.videoDuration / 60)} phút`
         : null
 
     return (

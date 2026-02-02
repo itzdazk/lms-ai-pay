@@ -71,7 +71,7 @@ export function CourseDetailPage() {
                 // Lấy danh sách chapters với lessons
                 const chaptersData = await chaptersApi.getChaptersByCourse(
                     courseId,
-                    true
+                    true,
                 )
                 setChapters(chaptersData || [])
 
@@ -80,15 +80,14 @@ export function CourseDetailPage() {
                 setLessons(lessonsData.lessons || [])
 
                 // Lấy thông tin giảng viên
-                const instructorData = await coursesApi.getCourseInstructor(
-                    courseId
-                )
+                const instructorData =
+                    await coursesApi.getCourseInstructor(courseId)
                 setInstructor(instructorData)
             } catch (error: any) {
                 console.error('Error fetching course:', error)
                 toast.error(
                     error?.response?.data?.message ||
-                        'Không thể tải thông tin khóa học'
+                        'Không thể tải thông tin khóa học',
                 )
             } finally {
                 setIsLoading(false)
@@ -353,7 +352,7 @@ export function CourseDetailPage() {
                                                         {lessons.length} bài học
                                                         •{' '}
                                                         {formatDuration(
-                                                            course.durationHours
+                                                            course.durationHours,
                                                         )}
                                                     </CardDescription>
                                                 </div>
@@ -392,7 +391,7 @@ export function CourseDetailPage() {
                                                     <div className='text-5xl mb-2 text-white font-bold'>
                                                         {Number(
                                                             course.ratingAvg ||
-                                                                0
+                                                                0,
                                                         ).toFixed(1)}
                                                     </div>
                                                     <div className='flex gap-1 mb-2 justify-center'>
@@ -402,7 +401,7 @@ export function CourseDetailPage() {
                                                                     key={i}
                                                                     className='h-5 w-5 fill-yellow-400 text-yellow-400'
                                                                 />
-                                                            )
+                                                            ),
                                                         )}
                                                     </div>
                                                     <p className='text-sm text-gray-400'>
@@ -427,9 +426,9 @@ export function CourseDetailPage() {
                                                                         5
                                                                             ? 80
                                                                             : star ===
-                                                                              4
-                                                                            ? 15
-                                                                            : 5
+                                                                                4
+                                                                              ? 15
+                                                                              : 5
                                                                     }
                                                                     className='flex-1'
                                                                 />
@@ -437,12 +436,12 @@ export function CourseDetailPage() {
                                                                     {star === 5
                                                                         ? '80%'
                                                                         : star ===
-                                                                          4
-                                                                        ? '15%'
-                                                                        : '5%'}
+                                                                            4
+                                                                          ? '15%'
+                                                                          : '5%'}
                                                                 </span>
                                                             </div>
-                                                        )
+                                                        ),
                                                     )}
                                                 </div>
                                             </div>
