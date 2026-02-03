@@ -15,7 +15,7 @@ const checkLessonExists = async (req, res, next) => {
         if (!courseId || !lessonId) {
             return ApiResponse.badRequest(
                 res,
-                'Yêu cầu mã khóa học và mã bài học'
+                'Yêu cầu mã khóa học và mã bài học',
             )
         }
 
@@ -35,7 +35,7 @@ const checkLessonExists = async (req, res, next) => {
         if (lesson.courseId !== courseId) {
             return ApiResponse.badRequest(
                 res,
-                'Bài học không thuộc về khóa học này'
+                'Bài học không thuộc về khóa học này',
             )
         }
 
@@ -46,7 +46,7 @@ const checkLessonExists = async (req, res, next) => {
         return ApiResponse.error(
             res,
             'Lỗi kiểm tra bài học',
-            HTTP_STATUS.INTERNAL_SERVER_ERROR
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
         )
     }
 }
@@ -54,6 +54,7 @@ const checkLessonExists = async (req, res, next) => {
 /**
  * Middleware: Only allow access to lesson if previous lesson is completed
  * Assumes lessons have lessonOrder and chapterId fields
+ * - Admins and course instructors bypass this check
  * - If lesson is first in course, allow
  * - Else, check previous lesson in order (same chapter or previous chapter)
  *   and require user's progress.isCompleted = true
@@ -61,14 +62,16 @@ const checkLessonExists = async (req, res, next) => {
 const restrictLessonAccess = async (req, res, next) => {
     try {
         const userId = req.user?.id
+        const userRole = req.user?.role
         const lessonId = parseInt(req.params.id)
         if (!userId || !lessonId) {
             return ApiResponse.badRequest(
                 res,
-                'Yêu cầu mã người dùng và mã bài học'
+                'Yêu cầu mã người dùng và mã bài học',
             )
         }
-        // Get current lesson info
+
+        // Get current lesson info with course instructor
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
             select: {
@@ -76,9 +79,24 @@ const restrictLessonAccess = async (req, res, next) => {
                 courseId: true,
                 chapterId: true,
                 lessonOrder: true,
+                course: {
+                    select: {
+                        instructorId: true,
+                    },
+                },
             },
         })
         if (!lesson) return ApiResponse.notFound(res, 'Không tìm thấy bài học')
+
+        // Admin and course instructor bypass sequential access restriction
+        const isAdmin = userRole === 'ADMIN'
+        // Ensure consistent type comparison
+        const isCourseInstructor =
+            String(lesson.course?.instructorId) === String(userId)
+        if (isAdmin || isCourseInstructor) {
+            return next()
+        }
+
         // Find previous lesson in course order
         const prevLesson = await prisma.lesson.findFirst({
             where: {
@@ -96,6 +114,7 @@ const restrictLessonAccess = async (req, res, next) => {
             orderBy: [{ chapterId: 'desc' }, { lessonOrder: 'desc' }],
         })
         if (!prevLesson) return next() // First lesson, allow
+
         // Check progress of previous lesson (phải hoàn thành cả bài học và quiz nếu có)
         const progress = await prisma.progress.findFirst({
             where: {
@@ -109,7 +128,7 @@ const restrictLessonAccess = async (req, res, next) => {
             return ApiResponse.error(
                 res,
                 'Bạn cần hoàn thành bài học và câu hỏi trước để truy cập bài học này.',
-                HTTP_STATUS.FORBIDDEN
+                HTTP_STATUS.FORBIDDEN,
             )
         }
         next()
@@ -117,7 +136,7 @@ const restrictLessonAccess = async (req, res, next) => {
         return ApiResponse.error(
             res,
             'Lỗi kiểm tra truy cập bài học',
-            HTTP_STATUS.INTERNAL_SERVER_ERROR
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
         )
     }
 }

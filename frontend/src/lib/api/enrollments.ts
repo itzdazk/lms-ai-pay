@@ -33,7 +33,9 @@ export interface EnrollmentCheckResponse {
     message: string
     data: {
         isEnrolled: boolean
-        enrollment?: Enrollment
+        isActive: boolean
+        enrollment?: Enrollment | null
+        accessReason?: 'admin' | 'instructor' | 'enrolled' | null
     }
 }
 
@@ -75,7 +77,7 @@ export const enrollmentsApi = {
      * Get all enrollments with filters
      */
     async getEnrollments(
-        filters?: EnrollmentFilters
+        filters?: EnrollmentFilters,
     ): Promise<PaginatedApiResponse<EnrollmentWithCourse>> {
         const params = new URLSearchParams()
         if (filters?.page) params.append('page', filters.page.toString())
@@ -94,7 +96,7 @@ export const enrollmentsApi = {
      * Get active enrollments
      */
     async getActiveEnrollments(
-        limit = 10
+        limit = 10,
     ): Promise<ApiResponse<EnrollmentWithCourse[]>> {
         const response = await apiClient.get<
             ApiResponse<EnrollmentWithCourse[]>
@@ -107,7 +109,7 @@ export const enrollmentsApi = {
      */
     async getCompletedEnrollments(
         page = 1,
-        limit = 20
+        limit = 20,
     ): Promise<PaginatedApiResponse<EnrollmentWithCourse>> {
         const response = await apiClient.get<
             PaginatedApiResponse<EnrollmentWithCourse>
@@ -119,10 +121,10 @@ export const enrollmentsApi = {
      * Get enrollment by ID
      */
     async getEnrollmentById(
-        id: number
+        id: number,
     ): Promise<ApiResponse<EnrollmentWithCourse>> {
         const response = await apiClient.get<ApiResponse<EnrollmentWithCourse>>(
-            `/enrollments/${id}`
+            `/enrollments/${id}`,
         )
         return response.data
     },
@@ -132,7 +134,7 @@ export const enrollmentsApi = {
      */
     async checkEnrollment(courseId: number): Promise<EnrollmentCheckResponse> {
         const response = await apiClient.get<EnrollmentCheckResponse>(
-            `/enrollments/check/${courseId}`
+            `/enrollments/check/${courseId}`,
         )
         return response.data
     },
@@ -141,7 +143,7 @@ export const enrollmentsApi = {
      * Create enrollment (free course) or create order (paid course)
      */
     async createEnrollment(
-        request: CreateEnrollmentRequest
+        request: CreateEnrollmentRequest,
     ): Promise<ApiResponse<CreateEnrollmentResponse>> {
         const response = await apiClient.post<
             ApiResponse<CreateEnrollmentResponse>

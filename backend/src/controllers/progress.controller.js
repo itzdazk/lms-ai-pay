@@ -14,12 +14,12 @@ class ProgressController {
         const userId = req.user.id
         const result = await progressService.getCourseLessonProgressList(
             userId,
-            parseInt(courseId)
+            parseInt(courseId),
         )
         return ApiResponse.success(
             res,
             result,
-            'Truy xuất danh sách tiến độ bài học của khóa học thành công'
+            'Truy xuất danh sách tiến độ bài học của khóa học thành công',
         )
     })
     /**
@@ -32,13 +32,13 @@ class ProgressController {
 
         const progress = await progressService.getCourseProgress(
             userId,
-            parseInt(courseId)
+            parseInt(courseId),
         )
 
         return ApiResponse.success(
             res,
             progress,
-            'Truy xuất tiến độ khóa học thành công'
+            'Truy xuất tiến độ khóa học thành công',
         )
     })
 
@@ -49,16 +49,18 @@ class ProgressController {
     getLessonProgress = asyncHandler(async (req, res) => {
         const { lessonId } = req.params
         const userId = req.user.id
+        const userRole = req.user.role // Added role
 
         const progress = await progressService.getLessonProgress(
             userId,
-            parseInt(lessonId)
+            parseInt(lessonId),
+            userRole, // Pass role
         )
 
         return ApiResponse.success(
             res,
             progress,
-            'Truy xuất tiến độ bài học thành công'
+            'Truy xuất tiến độ bài học thành công',
         )
     })
 
@@ -69,16 +71,18 @@ class ProgressController {
     startLesson = asyncHandler(async (req, res) => {
         const { lessonId } = req.params
         const userId = req.user.id
+        const userRole = req.user.role // Added role
 
         const result = await progressService.startLesson(
             userId,
-            parseInt(lessonId)
+            parseInt(lessonId),
+            userRole, // Pass role
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Bắt đầu học bài học thành công'
+            'Bắt đầu học bài học thành công',
         )
     })
 
@@ -150,7 +154,8 @@ class ProgressController {
         const result = await progressService.updateProgress(
             userId,
             parseInt(lessonId),
-            { position, watchDuration }
+            { position, watchDuration },
+            req.user.role, // Pass role
         )
 
         return ApiResponse.success(res, result, 'Cập nhật tiến độ thành công')
@@ -163,16 +168,18 @@ class ProgressController {
     getResumePosition = asyncHandler(async (req, res) => {
         const { lessonId } = req.params
         const userId = req.user.id
+        const userRole = req.user.role // Added role
 
         const result = await progressService.getResumePosition(
             userId,
-            parseInt(lessonId)
+            parseInt(lessonId),
+            userRole, // Pass role
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Truy xuất vị trí tiếp tục học thành công'
+            'Truy xuất vị trí tiếp tục học thành công',
         )
     })
 
@@ -189,7 +196,7 @@ class ProgressController {
         return ApiResponse.success(
             res,
             lessons,
-            'Truy xuất danh sách bài học đang xem thành công'
+            'Truy xuất danh sách bài học đang xem thành công',
         )
     })
 
@@ -203,13 +210,13 @@ class ProgressController {
 
         const activities = await progressService.getRecentActivities(
             userId,
-            limit
+            limit,
         )
 
         return ApiResponse.success(
             res,
             activities,
-            'Truy xuất hoạt động gần đây thành công'
+            'Truy xuất hoạt động gần đây thành công',
         )
     })
 
@@ -223,13 +230,13 @@ class ProgressController {
         // Get continue watching
         const continueWatching = await progressService.getContinueWatching(
             userId,
-            5
+            5,
         )
 
         // Get recent activities
         const recentActivities = await progressService.getRecentActivities(
             userId,
-            10
+            10,
         )
 
         // Get all enrollments with progress
@@ -300,7 +307,7 @@ class ProgressController {
                 recentActivities,
                 activeCourses: enrollments,
             },
-            'Truy xuất tiến độ dashboard thành công'
+            'Truy xuất tiến độ dashboard thành công',
         )
     })
 }

@@ -25,7 +25,7 @@ const authenticate = async (req, res, next) => {
         if (!token) {
             return ApiResponse.unauthorized(
                 res,
-                'Không có token nào được cung cấp.'
+                'Không có token nào được cung cấp.',
             )
         }
 
@@ -60,7 +60,7 @@ const authenticate = async (req, res, next) => {
         if (user.status !== USER_STATUS.ACTIVE) {
             return ApiResponse.forbidden(
                 res,
-                'Tài khoản của bạn không hoạt động'
+                'Tài khoản của bạn không hoạt động',
             )
         }
 
@@ -68,7 +68,7 @@ const authenticate = async (req, res, next) => {
         if (decoded.tokenVersion !== user.tokenVersion) {
             return ApiResponse.unauthorized(
                 res,
-                'Token đã bị hết hạn. Vui lòng đăng nhập lại.'
+                'Token đã bị hết hạn. Vui lòng đăng nhập lại.',
             )
         }
 
@@ -87,21 +87,21 @@ const authenticate = async (req, res, next) => {
             if (!session) {
                 return ApiResponse.unauthorized(
                     res,
-                    'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.'
+                    'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.',
                 )
             }
 
             if (!session.isActive) {
                 return ApiResponse.unauthorized(
                     res,
-                    'Phiên đăng nhập đã bị đăng xuất. Vui lòng đăng nhập lại.'
+                    'Phiên đăng nhập đã bị đăng xuất. Vui lòng đăng nhập lại.',
                 )
             }
 
             if (session.userId !== user.id) {
                 return ApiResponse.unauthorized(
                     res,
-                    'Phiên đăng nhập không thuộc về người dùng này.'
+                    'Phiên đăng nhập không thuộc về người dùng này.',
                 )
             }
 
@@ -113,7 +113,7 @@ const authenticate = async (req, res, next) => {
                 })
                 return ApiResponse.unauthorized(
                     res,
-                    'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+                    'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
                 )
             }
 
@@ -191,7 +191,7 @@ const requireEmailVerification = (req, res, next) => {
     if (!req.user.emailVerified) {
         return ApiResponse.forbidden(
             res,
-            'Vui lòng xác thực địa chỉ email của bạn để truy cập tài nguyên này.'
+            'Vui lòng xác thực địa chỉ email của bạn để truy cập tài nguyên này.',
         )
     }
     next()

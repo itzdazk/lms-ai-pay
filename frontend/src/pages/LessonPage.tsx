@@ -88,15 +88,18 @@ export function LessonPage() {
     const handleSeek = (time: number) => {
         debouncedUpdateProgressOnSeek(time)
     }
-    
+
     // Handle backward với update progress
-    const handleBackwardWithUpdate = (currentTime: number, watchedDuration: number) => {
+    const handleBackwardWithUpdate = (
+        currentTime: number,
+        watchedDuration: number,
+    ) => {
         // Luôn gửi update với vị trí hiện tại trước khi backward
         // để cập nhật lastPosition (và watchDuration nếu currentTime > watchedDuration)
         console.log('[Progress] handleBackwardWithUpdate called:', {
             currentTime,
             watchedDuration,
-            isCurrentLessonCompleted
+            isCurrentLessonCompleted,
         })
         debouncedUpdateProgressOnSeek(currentTime, true) // allowWhenCompleted = true
     }
@@ -120,7 +123,7 @@ export function LessonPage() {
     const [showAIChatSidebar, setShowAIChatSidebar] = useState(false)
     const [videoUrl, setVideoUrl] = useState<string>('')
     const [subtitleUrl, setSubtitleUrl] = useState<string | undefined>(
-        undefined
+        undefined,
     )
     const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
     const [lessonNotes, setLessonNotes] = useState<string>('')
@@ -132,7 +135,9 @@ export function LessonPage() {
         >
     >({})
     const [progressUpdateKey, setProgressUpdateKey] = useState(0) // Force re-render when progress updates
-    const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>({})
+    const [lessonQuizzes, setLessonQuizzes] = useState<Record<number, Quiz[]>>(
+        {},
+    )
     const [loading, setLoading] = useState(true)
     const [lessonNotFound, setLessonNotFound] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
@@ -172,7 +177,7 @@ export function LessonPage() {
         }
 
         const foundChapter = chapters.find((chapter) =>
-            chapter.lessons?.some((l) => l.id === selectedLesson.id)
+            chapter.lessons?.some((l) => l.id === selectedLesson.id),
         )
 
         return {
@@ -189,7 +194,7 @@ export function LessonPage() {
                 title: ch.title,
                 lessonIds: ch.lessons?.map((l) => l.id) || [],
             })),
-        [chapters]
+        [chapters],
     )
 
     // Save referrer when entering lesson page for the first time (when courseSlug changes)
@@ -245,36 +250,55 @@ export function LessonPage() {
                 // Load course by slug first
                 const courseData = await coursesApi.getCourseBySlug(courseSlug)
                 const loadedCourseId = courseData.id
-                
-                if (!isMounted) return
-                
-                setCourseId(loadedCourseId)
-                const chaptersData = await chaptersApi.getChaptersByCourse(
-                    loadedCourseId,
-                    true
-                )
-                const lessonsData = await lessonsApi.getCourseLessons(
-                    loadedCourseId
-                )
-                
-                if (!isMounted) return
-                
-                setCourse(courseData)
-                setChapters(chaptersData || [])
-                setLessons(lessonsData.lessons || [])
 
-                // Check enrollment
+                if (!isMounted) return
+
+                setCourseId(loadedCourseId)
+                setCourse(courseData)
+
+                // Check enrollment/access immediately after course load
+                // unrelated to chapters/lessons loading failure
                 try {
-                    const enrollments = await coursesApi.getEnrollments()
-                    const userEnrollment = enrollments.find(
-                        (e) =>
-                            e.courseId === loadedCourseId &&
-                            e.userId === Number(user?.id)
-                    )
-                    setEnrollment(userEnrollment || null)
+                    const { enrollmentsApi } =
+                        await import('../lib/api/enrollments')
+                    const checkResult =
+                        await enrollmentsApi.checkEnrollment(loadedCourseId)
+                    if (checkResult.data.isEnrolled) {
+                        // User has access (enrolled, instructor, or admin)
+                        setEnrollment(
+                            checkResult.data.enrollment ||
+                                ({
+                                    id: 0,
+                                    userId: Number(user?.id),
+                                    courseId: loadedCourseId,
+                                    status: 'active',
+                                    progressPercentage: 0,
+                                    enrolledAt: new Date().toISOString(),
+                                } as any),
+                        )
+                    } else {
+                        setEnrollment(null)
+                    }
                 } catch (error) {
                     setEnrollment(null)
                 }
+
+                // Load chapters and lessons
+                let chaptersData: any[] = []
+                let lessonsData: any = { lessons: [] }
+
+                try {
+                    chaptersData = await chaptersApi.getChaptersByCourse(
+                        loadedCourseId,
+                        true,
+                    )
+                    lessonsData =
+                        await lessonsApi.getCourseLessons(loadedCourseId)
+
+                    if (!isMounted) return
+                    setChapters(chaptersData || [])
+                    setLessons(lessonsData.lessons || [])
+                } catch (err) {}
 
                 // Fetch progress and quizzes in parallel for all lessons
                 const allLessons: Lesson[] = []
@@ -291,22 +315,31 @@ export function LessonPage() {
                 if (allLessons.length > 0) {
                     try {
                         // Fetch progress and all quizzes in parallel
-                        const [progressList, ...quizResults] = await Promise.all([
-                            progressApi.getCourseLessonProgressList(loadedCourseId),
-                            ...allLessons.map(lesson => 
-                                quizzesApi.getQuizzesByLesson(lesson.id.toString())
-                                    .catch(() => [])
-                            )
-                        ])
+                        const [progressList, ...quizResults] =
+                            await Promise.all([
+                                progressApi.getCourseLessonProgressList(
+                                    loadedCourseId,
+                                ),
+                                ...allLessons.map((lesson) =>
+                                    quizzesApi
+                                        .getQuizzesByLesson(
+                                            lesson.id.toString(),
+                                        )
+                                        .catch(() => []),
+                                ),
+                            ])
 
                         if (!isMounted) return
 
                         // Set progress
-                        const progressMap: Record<number, {
-                            lessonId: number
-                            isCompleted: boolean
-                            quizCompleted: boolean
-                        }> = {}
+                        const progressMap: Record<
+                            number,
+                            {
+                                lessonId: number
+                                isCompleted: boolean
+                                quizCompleted: boolean
+                            }
+                        > = {}
                         const completedIds: number[] = []
                         progressList.forEach((p) => {
                             progressMap[p.lessonId] = {
@@ -344,7 +377,7 @@ export function LessonPage() {
                     const quizData = quizHook.quiz
                     if (quizData && quizData.lessonId) {
                         const lesson = lessonsData.lessons.find(
-                            (l) => String(l.id) === String(quizData.lessonId)
+                            (l) => String(l.id) === String(quizData.lessonId),
                         )
                         if (lesson) setSelectedLesson(lesson)
                     }
@@ -357,7 +390,7 @@ export function LessonPage() {
                 if (lessonSlug) {
                     for (const chapter of chaptersData) {
                         const lesson = chapter.lessons?.find(
-                            (l) => l.slug === lessonSlug
+                            (l) => l.slug === lessonSlug,
                         )
                         if (lesson) {
                             initialLesson = lesson
@@ -367,14 +400,14 @@ export function LessonPage() {
                     if (!initialLesson) {
                         initialLesson =
                             lessonsData.lessons.find(
-                                (l) => l.slug === lessonSlug
+                                (l) => l.slug === lessonSlug,
                             ) || null
                     }
                     if (!initialLesson) {
                         try {
                             initialLesson = await lessonsApi.getLessonBySlug(
                                 courseSlug,
-                                lessonSlug
+                                lessonSlug,
                             )
                         } catch (error) {
                             setLessonNotFound(true)
@@ -412,9 +445,9 @@ export function LessonPage() {
                 }
             }
         }
-        
+
         loadData()
-        
+
         return () => {
             isMounted = false
             abortController.abort()
@@ -438,7 +471,7 @@ export function LessonPage() {
     // Load video and transcript when lesson changes
     useEffect(() => {
         let isMounted = true
-        
+
         const loadLessonData = async () => {
             if (!selectedLesson) return
 
@@ -484,21 +517,20 @@ export function LessonPage() {
                     }),
                 ])
                 videoData = videoResult
-                
+
                 if (!isMounted) return
-                
+
                 if (videoError) {
                     setVideoUrl('')
-                    // Bỏ toast error
-                    // toast.error(
-                    //     'Bạn cần hoàn thành bài học trước đó để tiếp tục này.'
-                    // )
-                    navigate(-1) // Quay lại trang trước nếu bài học bị khóa
+                    navigate(-1) // Disable auto-navigate for debugging
                 } else {
-                    const hlsCompleted = (videoData.hlsStatus || '').toLowerCase() === 'completed'
-                    const preferredUrl = hlsCompleted && videoData.hlsUrl
-                        ? videoData.hlsUrl
-                        : videoData.videoUrl
+                    const hlsCompleted =
+                        (videoData.hlsStatus || '').toLowerCase() ===
+                        'completed'
+                    const preferredUrl =
+                        hlsCompleted && videoData.hlsUrl
+                            ? videoData.hlsUrl
+                            : videoData.videoUrl
 
                     console.log('[LessonPage] Video data:', videoData)
                     console.log('[LessonPage] Preferred URL:', preferredUrl)
@@ -512,7 +544,7 @@ export function LessonPage() {
                         title: lessonDetails.title,
                         transcriptJsonUrl: lessonDetails.transcriptJsonUrl,
                         transcriptUrl: lessonDetails.transcriptUrl,
-                        transcriptStatus: lessonDetails.transcriptStatus
+                        transcriptStatus: lessonDetails.transcriptStatus,
                     })
                     setSelectedLesson(lessonDetails)
                 }
@@ -563,7 +595,7 @@ export function LessonPage() {
                                             segment.text ||
                                             segment.content ||
                                             '',
-                                    })
+                                    }),
                                 )
                             }
 
@@ -591,18 +623,16 @@ export function LessonPage() {
                 if (enrollment && isMounted) {
                     try {
                         const progress = await progressApi.getLessonProgress(
-                            selectedLesson.id
+                            selectedLesson.id,
                         )
                         if (isMounted) {
                             const unlocked = progress?.isCompleted === true
-                            setInitialVideoTime(unlocked ? 0 : progress.lastPosition || 0)
+                            setInitialVideoTime(
+                                unlocked ? 0 : progress.lastPosition || 0,
+                            )
                             setWatchedDuration(progress.watchDuration || 0)
                             // Log watchedDuration từ backend
                             // eslint-disable-next-line no-console
-                            console.log(
-                                '[LessonPage] watchedDuration từ backend:',
-                                progress.watchDuration
-                            )
                         }
                     } catch (error) {
                         // Ignore progress errors
@@ -614,7 +644,7 @@ export function LessonPage() {
                     try {
                         // setNotesLoading(true); // removed unused
                         const noteData = await lessonNotesApi.getLessonNote(
-                            selectedLesson.id
+                            selectedLesson.id,
                         )
                         if (isMounted) {
                             setLessonNotes(noteData.note?.content || '')
@@ -639,7 +669,7 @@ export function LessonPage() {
         }
 
         loadLessonData()
-        
+
         return () => {
             isMounted = false
         }
@@ -658,7 +688,7 @@ export function LessonPage() {
             window.history.pushState(
                 {},
                 '',
-                `/courses/${courseSlug}/lessons/${lesson.slug}`
+                `/courses/${courseSlug}/lessons/${lesson.slug}`,
             )
         }
     }
@@ -672,7 +702,7 @@ export function LessonPage() {
         try {
             if (quiz.lessonId) {
                 const targetLesson = lessons.find(
-                    (l) => String(l.id) === String(quiz.lessonId)
+                    (l) => String(l.id) === String(quiz.lessonId),
                 )
                 if (targetLesson) {
                     setSelectedLesson(targetLesson)
@@ -681,7 +711,7 @@ export function LessonPage() {
                         window.history.pushState(
                             {},
                             '',
-                            `${basePath}?quiz=${quiz.id}`
+                            `${basePath}?quiz=${quiz.id}`,
                         )
                     }
                 } else if (courseSlug && selectedLesson?.slug) {
@@ -690,7 +720,7 @@ export function LessonPage() {
                     window.history.pushState(
                         {},
                         '',
-                        `${basePath}?quiz=${quiz.id}`
+                        `${basePath}?quiz=${quiz.id}`,
                     )
                 }
             } else if (courseSlug && selectedLesson?.slug) {
@@ -758,7 +788,7 @@ export function LessonPage() {
                     const updatedProgress =
                         await progressApi.updateLessonProgress(
                             selectedLesson.id,
-                            payload
+                            payload,
                         )
                     if (typeof updatedProgress?.watchDuration === 'number') {
                         setWatchedDuration(updatedProgress.watchDuration)
@@ -785,14 +815,20 @@ export function LessonPage() {
             hasSelectedLesson: !!selectedLesson,
             hasEnrollment: !!enrollment,
             isCurrentLessonCompleted,
-            willUpdate: !!(selectedLesson && enrollment && !isCurrentLessonCompleted)
+            willUpdate: !!(
+                selectedLesson &&
+                enrollment &&
+                !isCurrentLessonCompleted
+            ),
         })
         if (selectedLesson && enrollment && !isCurrentLessonCompleted) {
             // Check rate limit on client side (10 seconds matching backend)
             const now = Date.now()
             const PAUSE_UPDATE_INTERVAL = 10000 // 10 seconds
             if (now - lastPauseUpdateRef.current < PAUSE_UPDATE_INTERVAL) {
-                console.log('[Progress] Skip pause update - rate limited (client side)')
+                console.log(
+                    '[Progress] Skip pause update - rate limited (client side)',
+                )
                 return
             }
 
@@ -808,7 +844,7 @@ export function LessonPage() {
                 })
                 const updatedProgress = await progressApi.updateLessonProgress(
                     selectedLesson.id,
-                    payload
+                    payload,
                 )
                 lastPauseUpdateRef.current = now
                 if (typeof updatedProgress?.watchDuration === 'number') {
@@ -828,7 +864,9 @@ export function LessonPage() {
             } catch (err: any) {
                 // Handle rate limit error from server
                 if (err?.response?.status === 429) {
-                    console.log('[Progress] Pause update rate limited by server')
+                    console.log(
+                        '[Progress] Pause update rate limited by server',
+                    )
                     // Update last update time to prevent immediate retry
                     lastPauseUpdateRef.current = now
                 }
@@ -840,7 +878,7 @@ export function LessonPage() {
         console.log('[Progress] handlePause called:', {
             isCurrentLessonCompleted,
             hasSelectedLesson: !!selectedLesson,
-            hasEnrollment: !!enrollment
+            hasEnrollment: !!enrollment,
         })
         isPlayingRef.current = false
         if (progressSaveIntervalRef.current) {
@@ -855,7 +893,7 @@ export function LessonPage() {
         try {
             const enrollments = await coursesApi.getEnrollments()
             const updated = enrollments.find(
-                (e) => e.courseId === courseId && e.userId === Number(user?.id)
+                (e) => e.courseId === courseId && e.userId === Number(user?.id),
             )
             if (updated) setEnrollment(updated)
         } catch (err) {
@@ -867,9 +905,8 @@ export function LessonPage() {
     const refreshLessonQuizProgress = async () => {
         if (!courseId) return
         try {
-            const progressList = await progressApi.getCourseLessonProgressList(
-                courseId
-            )
+            const progressList =
+                await progressApi.getCourseLessonProgressList(courseId)
             const progressMap: Record<
                 number,
                 {
@@ -911,7 +948,7 @@ export function LessonPage() {
                 }
                 const updatedProgress = await progressApi.updateLessonProgress(
                     selectedLesson.id,
-                    payload
+                    payload,
                 )
                 if (typeof updatedProgress?.watchDuration === 'number') {
                     setWatchedDuration(updatedProgress.watchDuration)
@@ -942,8 +979,11 @@ export function LessonPage() {
         async (seekTime: number, allowWhenCompleted = false) => {
             // Cho phép update khi backward từ vị trí vượt mốc (allowWhenCompleted = true)
             // hoặc khi chưa completed (!isCurrentLessonCompleted)
-            if (selectedLesson && enrollment && 
-                (allowWhenCompleted || !isCurrentLessonCompleted)) {
+            if (
+                selectedLesson &&
+                enrollment &&
+                (allowWhenCompleted || !isCurrentLessonCompleted)
+            ) {
                 try {
                     const payload: any = {
                         position: seekTime,
@@ -957,7 +997,7 @@ export function LessonPage() {
                     const updatedProgress =
                         await progressApi.updateLessonProgress(
                             selectedLesson.id,
-                            payload
+                            payload,
                         )
                     if (typeof updatedProgress?.watchDuration === 'number') {
                         setWatchedDuration(updatedProgress.watchDuration)
@@ -980,13 +1020,13 @@ export function LessonPage() {
                             .includes('rate limit')
                     ) {
                         toast.warning(
-                            'Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.'
+                            'Bạn thao tác quá nhanh, vui lòng chờ một chút rồi thử lại.',
                         )
                     }
                 }
             }
         },
-        1500
+        1500,
     )
 
     const handleTranscriptTimeClick = (time: number) => {
@@ -1051,14 +1091,14 @@ export function LessonPage() {
             // Currently viewing a quiz
             currentIndex = items.findIndex(
                 (item) =>
-                    item.type === 'quiz' && item.quiz.id === currentQuiz.id
+                    item.type === 'quiz' && item.quiz.id === currentQuiz.id,
             )
         } else if (selectedLesson) {
             // Currently viewing a lesson
             currentIndex = items.findIndex(
                 (item) =>
                     item.type === 'lesson' &&
-                    item.lesson.id === selectedLesson.id
+                    item.lesson.id === selectedLesson.id,
             )
         }
 
@@ -1093,14 +1133,14 @@ export function LessonPage() {
         if (showQuiz && currentQuiz) {
             currentIndex = items.findIndex(
                 (item) =>
-                    item.type === 'quiz' && item.quiz.id === currentQuiz.id
+                    item.type === 'quiz' && item.quiz.id === currentQuiz.id,
             )
             currentType = 'quiz'
         } else if (selectedLesson) {
             currentIndex = items.findIndex(
                 (item) =>
                     item.type === 'lesson' &&
-                    item.lesson.id === selectedLesson.id
+                    item.lesson.id === selectedLesson.id,
             )
             currentType = 'lesson'
         }
@@ -1469,7 +1509,7 @@ export function LessonPage() {
                                                                   .split(' ')
                                                                   .map(
                                                                       (n) =>
-                                                                          n[0]
+                                                                          n[0],
                                                                   )
                                                                   .join('')
                                                                   .toUpperCase()
@@ -1493,18 +1533,18 @@ export function LessonPage() {
                                                                 'ADMIN'
                                                                     ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
                                                                     : user.role ===
-                                                                      'INSTRUCTOR'
-                                                                    ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
-                                                                    : 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                                        'INSTRUCTOR'
+                                                                      ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                                                                      : 'bg-green-600/20 text-green-400 border-green-500/30'
                                                             }`}
                                                         >
                                                             {user.role ===
                                                             'ADMIN'
                                                                 ? 'Quản trị viên'
                                                                 : user.role ===
-                                                                  'INSTRUCTOR'
-                                                                ? 'Giảng viên'
-                                                                : 'Học viên'}
+                                                                    'INSTRUCTOR'
+                                                                  ? 'Giảng viên'
+                                                                  : 'Học viên'}
                                                         </Badge>
                                                     </div>
                                                 </div>
@@ -1547,7 +1587,7 @@ export function LessonPage() {
                                                 try {
                                                     await logout()
                                                     toast.success(
-                                                        'Đăng xuất thành công!'
+                                                        'Đăng xuất thành công!',
                                                     )
                                                     navigate('/')
                                                 } catch (error) {
@@ -1625,7 +1665,7 @@ export function LessonPage() {
                                                     try {
                                                         const progressList =
                                                             await progressApi.getCourseLessonProgressList(
-                                                                courseId
+                                                                courseId,
                                                             )
                                                         const progressMap: Record<
                                                             number,
@@ -1647,19 +1687,19 @@ export function LessonPage() {
                                                                     quizCompleted:
                                                                         p.quizCompleted,
                                                                 }
-                                                            }
+                                                            },
                                                         )
                                                         setLessonQuizProgress(
-                                                            progressMap
+                                                            progressMap,
                                                         )
                                                         setProgressUpdateKey(
-                                                            (prev) => prev + 1
+                                                            (prev) => prev + 1,
                                                         ) // Force LessonList re-render
                                                     } catch (err) {
                                                         // eslint-disable-next-line no-console
                                                         console.error(
                                                             'Failed to refresh progress after quiz submission:',
-                                                            err
+                                                            err,
                                                         )
                                                     }
                                                 }
@@ -1765,15 +1805,24 @@ export function LessonPage() {
                                                         Trong bài học này bạn sẽ
                                                         học:
                                                     </h3>
-                                                    {selectedLesson?.content && selectedLesson.content.trim() ? (
-                                                        <div className='text-muted-foreground whitespace-pre-wrap' dangerouslySetInnerHTML={{ __html: selectedLesson.content }} />
+                                                    {selectedLesson?.content &&
+                                                    selectedLesson.content.trim() ? (
+                                                        <div
+                                                            className='text-muted-foreground whitespace-pre-wrap'
+                                                            dangerouslySetInnerHTML={{
+                                                                __html: selectedLesson.content,
+                                                            }}
+                                                        />
                                                     ) : selectedLesson?.description ? (
                                                         <p className='text-muted-foreground'>
-                                                            {selectedLesson.description}
+                                                            {
+                                                                selectedLesson.description
+                                                            }
                                                         </p>
                                                     ) : (
                                                         <p className='text-muted-foreground'>
-                                                            Chưa có nội dung mô tả cho bài học này.
+                                                            Chưa có nội dung mô
+                                                            tả cho bài học này.
                                                         </p>
                                                     )}
                                                 </div>
@@ -1970,7 +2019,7 @@ export function LessonPage() {
                                                 (item) =>
                                                     item.type === 'lesson' &&
                                                     item.lesson.id ===
-                                                        selectedLesson.id
+                                                        selectedLesson.id,
                                             )
                                             const lessonNumber =
                                                 lessonIndex !== -1
@@ -2045,7 +2094,7 @@ export function LessonPage() {
                             allLessons.push(...lessons)
                         }
                         const lesson = allLessons.find(
-                            (l) => l.id === lessonInfo.id
+                            (l) => l.id === lessonInfo.id,
                         )
                         if (lesson) {
                             handleLessonSelect(lesson)

@@ -1,8 +1,12 @@
-// src/services/progress.service.js
 import { prisma } from '../config/database.config.js'
 import logger from '../config/logger.config.js'
-import { HTTP_STATUS, ENROLLMENT_STATUS } from '../config/constants.js'
+import {
+    HTTP_STATUS,
+    ENROLLMENT_STATUS,
+    USER_ROLES,
+} from '../config/constants.js' // Added USER_ROLES
 import config from '../config/app.config.js'
+
 import notificationsService from './notifications.service.js'
 
 class ProgressService {
@@ -97,7 +101,7 @@ class ProgressService {
 
         const totalLessons = enrollment.course.lessons.length
         const completedLessons = progressRecords.filter(
-            (p) => p.isCompleted
+            (p) => p.isCompleted,
         ).length
 
         // Calculate progress percentage
@@ -110,7 +114,7 @@ class ProgressService {
         // Get lessons with progress
         const lessonsWithProgress = enrollment.course.lessons.map((lesson) => {
             const progress = progressRecords.find(
-                (p) => p.lessonId === lesson.id
+                (p) => p.lessonId === lesson.id,
             )
             return {
                 ...lesson,
@@ -162,7 +166,7 @@ class ProgressService {
     /**
      * Get lesson progress for a user
      */
-    async getLessonProgress(userId, lessonId) {
+    async getLessonProgress(userId, lessonId, userRole = null) {
         // Get lesson with course info
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
@@ -177,21 +181,32 @@ class ProgressService {
             throw error
         }
 
-        // Check if user is enrolled (not DROPPED)
-        const enrollment = await prisma.enrollment.findFirst({
-            where: {
-                userId,
-                courseId: lesson.courseId,
-                status: {
-                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
-                },
-            },
-        })
+        // --- BYPASS CHECK FOR ADMIN/INSTRUCTOR ---
+        const isAdmin = userRole === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            userRole === USER_ROLES.INSTRUCTOR &&
+            String(lesson.course.instructorId) === String(userId)
 
-        if (!enrollment) {
-            const error = new Error('Bạn chưa đăng ký vào khóa học này')
-            error.statusCode = HTTP_STATUS.FORBIDDEN
-            throw error
+        if (!isAdmin && !isCourseInstructor) {
+            // Check if user is enrolled (not DROPPED)
+            const enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    userId,
+                    courseId: lesson.courseId,
+                    status: {
+                        in: [
+                            ENROLLMENT_STATUS.ACTIVE,
+                            ENROLLMENT_STATUS.COMPLETED,
+                        ],
+                    },
+                },
+            })
+
+            if (!enrollment) {
+                const error = new Error('Bạn chưa đăng ký vào khóa học này')
+                error.statusCode = HTTP_STATUS.FORBIDDEN
+                throw error
+            }
         }
 
         // Get progress record
@@ -236,7 +251,7 @@ class ProgressService {
      * Start learning a lesson
      * Creates progress record if not exists, increments attempts count
      */
-    async startLesson(userId, lessonId) {
+    async startLesson(userId, lessonId, userRole = null) {
         // Get lesson with course info
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
@@ -251,40 +266,55 @@ class ProgressService {
             throw error
         }
 
-        // Check if user is enrolled (not DROPPED)
-        const enrollment = await prisma.enrollment.findFirst({
-            where: {
-                userId,
-                courseId: lesson.courseId,
-                status: {
-                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
-                },
-            },
-        })
+        // --- BYPASS CHECK FOR ADMIN/INSTRUCTOR ---
+        const isAdmin = userRole === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            userRole === USER_ROLES.INSTRUCTOR &&
+            String(lesson.course.instructorId) === String(userId)
 
-        if (!enrollment) {
-            const error = new Error('Bạn chưa đăng ký vào khóa học này')
-            error.statusCode = HTTP_STATUS.FORBIDDEN
-            throw error
+        let enrollment = null
+
+        if (!isAdmin && !isCourseInstructor) {
+            // Check if user is enrolled (not DROPPED)
+            enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    userId,
+                    courseId: lesson.courseId,
+                    status: {
+                        in: [
+                            ENROLLMENT_STATUS.ACTIVE,
+                            ENROLLMENT_STATUS.COMPLETED,
+                        ],
+                    },
+                },
+            })
+
+            if (!enrollment) {
+                const error = new Error('Bạn chưa đăng ký vào khóa học này')
+                error.statusCode = HTTP_STATUS.FORBIDDEN
+                throw error
+            }
         }
 
-        // Update enrollment startedAt if not set
-        if (!enrollment.startedAt) {
-            await prisma.enrollment.update({
-                where: { id: enrollment.id },
-                data: {
-                    startedAt: new Date(),
-                    lastAccessedAt: new Date(),
-                },
-            })
-        } else {
-            // Update lastAccessedAt
-            await prisma.enrollment.update({
-                where: { id: enrollment.id },
-                data: {
-                    lastAccessedAt: new Date(),
-                },
-            })
+        // Update enrollment startedAt if not set (only if enrollment exists)
+        if (enrollment) {
+            if (!enrollment.startedAt) {
+                await prisma.enrollment.update({
+                    where: { id: enrollment.id },
+                    data: {
+                        startedAt: new Date(),
+                        lastAccessedAt: new Date(),
+                    },
+                })
+            } else {
+                // Update lastAccessedAt
+                await prisma.enrollment.update({
+                    where: { id: enrollment.id },
+                    data: {
+                        lastAccessedAt: new Date(),
+                    },
+                })
+            }
         }
 
         // Get or create progress record
@@ -322,7 +352,7 @@ class ProgressService {
     /**
      * Update lesson progress (video position, watch duration)
      */
-    async updateProgress(userId, lessonId, data) {
+    async updateProgress(userId, lessonId, data, userRole = null) {
         const { position } = data
 
         // Get lesson
@@ -336,21 +366,54 @@ class ProgressService {
             throw error
         }
 
-        // Check if user is enrolled (not DROPPED)
-        const enrollment = await prisma.enrollment.findFirst({
-            where: {
-                userId,
-                courseId: lesson.courseId,
-                status: {
-                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
-                },
-            },
+        // --- BYPASS CHECK FOR ADMIN/INSTRUCTOR ---
+        const isAdmin = userRole === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            userRole === USER_ROLES.INSTRUCTOR && String(lesson.courseId) // Need to query course to be sure, but lesson usually has courseId.
+        // Wait, lesson object only has courseId? Yes. We need instructorId.
+        // Let's query lesson with course.
+
+        let shouldCheckEnrollment = true
+        let enrollment = null
+
+        // Need to fetch course to check instructorId logic properly if we rely on it.
+        // Or simply check enrollment first. If enrollment exists, we are good.
+        // If not, AND we are instructor, we bypass.
+
+        // Re-fetch lesson with course info to be safe about instructor check
+        const lessonWithCourse = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            include: { course: true },
         })
 
-        if (!enrollment) {
-            const error = new Error('Bạn chưa đăng ký vào khóa học này')
-            error.statusCode = HTTP_STATUS.FORBIDDEN
-            throw error
+        if (
+            userRole === USER_ROLES.ADMIN ||
+            (userRole === USER_ROLES.INSTRUCTOR &&
+                String(lessonWithCourse.course.instructorId) === String(userId))
+        ) {
+            shouldCheckEnrollment = false
+        }
+
+        if (shouldCheckEnrollment) {
+            // Check if user is enrolled (not DROPPED)
+            enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    userId,
+                    courseId: lesson.courseId,
+                    status: {
+                        in: [
+                            ENROLLMENT_STATUS.ACTIVE,
+                            ENROLLMENT_STATUS.COMPLETED,
+                        ],
+                    },
+                },
+            })
+
+            if (!enrollment) {
+                const error = new Error('Bạn chưa đăng ký vào khóa học này')
+                error.statusCode = HTTP_STATUS.FORBIDDEN
+                throw error
+            }
         }
 
         // Lấy progress hiện tại (nếu có)
@@ -370,7 +433,7 @@ class ProgressService {
             if (currentProgress && currentProgress.updatedAt) {
                 const now = Date.now()
                 const lastUpdated = new Date(
-                    currentProgress.updatedAt
+                    currentProgress.updatedAt,
                 ).getTime()
                 const deltaTime = (now - lastUpdated) / 1000 // giây
                 const deltaLearned =
@@ -378,7 +441,7 @@ class ProgressService {
                 const ALLOWED_ERROR = 3 // sai số nhỏ (giây)
                 if (deltaLearned > deltaTime + ALLOWED_ERROR) {
                     logger.warn(
-                        `Anti-cheat: User ${userId} tried to update lesson ${lessonId} with deltaLearned=${deltaLearned}s > deltaTime=${deltaTime}s (allowed error ${ALLOWED_ERROR}s). Request ignored.`
+                        `Anti-cheat: User ${userId} tried to update lesson ${lessonId} with deltaLearned=${deltaLearned}s > deltaTime=${deltaTime}s (allowed error ${ALLOWED_ERROR}s). Request ignored.`,
                     )
                     return currentProgress // Bỏ qua request gian lận
                 }
@@ -445,12 +508,14 @@ class ProgressService {
         }
 
         // Update enrollment lastAccessedAt
-        await prisma.enrollment.update({
-            where: { id: enrollment.id },
-            data: {
-                lastAccessedAt: new Date(),
-            },
-        })
+        if (enrollment) {
+            await prisma.enrollment.update({
+                where: { id: enrollment.id },
+                data: {
+                    lastAccessedAt: new Date(),
+                },
+            })
+        }
 
         return {
             progress: {
@@ -465,10 +530,13 @@ class ProgressService {
     /**
      * Get resume position for a lesson
      */
-    async getResumePosition(userId, lessonId) {
+    async getResumePosition(userId, lessonId, userRole = null) {
         // Get lesson
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
+            include: {
+                course: true,
+            },
         })
 
         if (!lesson) {
@@ -477,21 +545,32 @@ class ProgressService {
             throw error
         }
 
-        // Check if user is enrolled (not DROPPED)
-        const enrollment = await prisma.enrollment.findFirst({
-            where: {
-                userId,
-                courseId: lesson.courseId,
-                status: {
-                    in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED],
-                },
-            },
-        })
+        // --- BYPASS CHECK FOR ADMIN/INSTRUCTOR ---
+        const isAdmin = userRole === USER_ROLES.ADMIN
+        const isCourseInstructor =
+            userRole === USER_ROLES.INSTRUCTOR &&
+            String(lesson.course.instructorId) === String(userId)
 
-        if (!enrollment) {
-            const error = new Error('Bạn chưa đăng ký vào khóa học này')
-            error.statusCode = HTTP_STATUS.FORBIDDEN
-            throw error
+        if (!isAdmin && !isCourseInstructor) {
+            // Check if user is enrolled (not DROPPED)
+            const enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    userId,
+                    courseId: lesson.courseId,
+                    status: {
+                        in: [
+                            ENROLLMENT_STATUS.ACTIVE,
+                            ENROLLMENT_STATUS.COMPLETED,
+                        ],
+                    },
+                },
+            })
+
+            if (!enrollment) {
+                const error = new Error('Bạn chưa đăng ký vào khóa học này')
+                error.statusCode = HTTP_STATUS.FORBIDDEN
+                throw error
+            }
         }
 
         // Get progress record
@@ -575,7 +654,7 @@ class ProgressService {
             await notificationsService.notifyCourseCompleted(
                 userId,
                 courseId,
-                enrollment.course.title
+                enrollment.course.title,
             )
 
             // Notify instructor about student completing course
@@ -591,12 +670,12 @@ class ProgressService {
                         courseId,
                         enrollment.course.title,
                         student.fullName,
-                        userId
+                        userId,
                     )
                 }
             } catch (error) {
                 logger.error(
-                    `Failed to notify instructor about course completion: ${error.message}`
+                    `Failed to notify instructor about course completion: ${error.message}`,
                 )
                 // Don't fail progress update if notification fails
             }
@@ -608,7 +687,7 @@ class ProgressService {
         })
 
         logger.info(
-            `Updated course progress for user ${userId}, course ${courseId}: ${progressPercentage}%`
+            `Updated course progress for user ${userId}, course ${courseId}: ${progressPercentage}%`,
         )
         // --- Update course completionRate after enrollment completed ---
         if (updateData.status === ENROLLMENT_STATUS.COMPLETED) {
@@ -622,7 +701,7 @@ class ProgressService {
             const completionRate =
                 totalEnrollments > 0
                     ? Math.round(
-                          (completedEnrollments / totalEnrollments) * 10000
+                          (completedEnrollments / totalEnrollments) * 10000,
                       ) / 100
                     : 0
             await prisma.course.update({
@@ -630,7 +709,7 @@ class ProgressService {
                 data: { completionRate },
             })
             logger.info(
-                `Updated course completionRate for course ${courseId}: ${completionRate}%`
+                `Updated course completionRate for course ${courseId}: ${completionRate}%`,
             )
         }
     }
@@ -748,7 +827,7 @@ class ProgressService {
                 (s) =>
                     typeof s.start === 'number' &&
                     typeof s.end === 'number' &&
-                    s.end > s.start
+                    s.end > s.start,
             )
             .sort((a, b) => a.start - b.start)
         const merged = []
@@ -768,7 +847,7 @@ class ProgressService {
         // Calculate total watched time
         const totalWatched = merged.reduce(
             (sum, seg) => sum + (seg.end - seg.start),
-            0
+            0,
         )
         // Completion: watched >= threshold * videoDuration
         const isCompleted = totalWatched >= videoDuration * threshold

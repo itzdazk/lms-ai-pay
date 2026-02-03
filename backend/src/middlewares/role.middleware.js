@@ -19,7 +19,7 @@ const authorize = (...allowedRoles) => {
         if (!allowedRoles.includes(req.user.role)) {
             return ApiResponse.forbidden(
                 res,
-                'Bạn không có quyền truy cập tài nguyên này.'
+                'Bạn không có quyền truy cập tài nguyên này.',
             )
         }
 
@@ -43,7 +43,7 @@ const isInstructor = authorize(USER_ROLES.INSTRUCTOR, USER_ROLES.ADMIN)
 const isStudent = authorize(
     USER_ROLES.STUDENT,
     USER_ROLES.INSTRUCTOR,
-    USER_ROLES.ADMIN
+    USER_ROLES.ADMIN,
 )
 
 /**
@@ -69,7 +69,7 @@ const isOwnerOrAdmin = (getUserId) => {
 
         return ApiResponse.forbidden(
             res,
-            'Bạn không có quyền truy cập tài nguyên này.'
+            'Bạn không có quyền truy cập tài nguyên này.',
         )
     }
 }
@@ -103,7 +103,7 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
 
         return ApiResponse.forbidden(
             res,
-            'Bạn không có quyền quản lý khóa học này.'
+            'Bạn không có quyền quản lý khóa học này.',
         )
     } catch (error) {
         return ApiResponse.error(res, 'Lỗi kiểm tra quyền truy cập khóa học')
@@ -120,7 +120,7 @@ const isCourseInstructorOrAdmin = async (req, res, next) => {
 const isEnrolledOrInstructorOrAdmin = (
     lessonIdParam = 'id',
     courseSlugParam = null,
-    lessonSlugParam = null
+    lessonSlugParam = null,
 ) => {
     return async (req, res, next) => {
         try {
@@ -138,7 +138,7 @@ const isEnrolledOrInstructorOrAdmin = (
                 if (!courseSlug || !lessonSlug) {
                     return ApiResponse.badRequest(
                         res,
-                        'Yêu cầu slug khóa học và slug bài học'
+                        'Yêu cầu slug khóa học và slug bài học',
                     )
                 }
 
@@ -193,7 +193,7 @@ const isEnrolledOrInstructorOrAdmin = (
             } else {
                 return ApiResponse.badRequest(
                     res,
-                    'Yêu cầu mã bài học hoặc slug khóa học và slug bài học'
+                    'Yêu cầu mã bài học hoặc slug khóa học và slug bài học',
                 )
             }
 
@@ -202,8 +202,9 @@ const isEnrolledOrInstructorOrAdmin = (
             }
 
             const isAdmin = req.user.role === USER_ROLES.ADMIN
+            // Ensure both IDs are treated as numbers/strings consistently, just in case
             const isCourseInstructor =
-                req.user.id === lesson.course.instructorId
+                String(req.user.id) === String(lesson.course.instructorId)
 
             // Admin and course instructor have full access
             if (isAdmin || isCourseInstructor) {
@@ -227,7 +228,7 @@ const isEnrolledOrInstructorOrAdmin = (
             if (!enrollment) {
                 return ApiResponse.forbidden(
                     res,
-                    'Bạn không có quyền truy cập bài học này.'
+                    'Bạn không có quyền truy cập bài học này.',
                 )
             }
 

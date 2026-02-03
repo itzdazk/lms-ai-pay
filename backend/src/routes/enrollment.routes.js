@@ -27,7 +27,7 @@ router.use(authenticate)
 router.get(
     '/active',
     getActiveEnrollmentsValidator,
-    enrollmentController.getActiveEnrollments
+    enrollmentController.getActiveEnrollments,
 )
 
 /**
@@ -40,7 +40,7 @@ router.get(
 router.get(
     '/completed',
     getCompletedEnrollmentsValidator,
-    enrollmentController.getCompletedEnrollments
+    enrollmentController.getCompletedEnrollments,
 )
 
 /**
@@ -52,7 +52,7 @@ router.get(
 router.get(
     '/check/:courseId',
     checkEnrollmentValidator,
-    enrollmentController.checkEnrollment
+    enrollmentController.checkEnrollment,
 )
 
 /**
@@ -71,7 +71,7 @@ router.get('/', getEnrollmentsValidator, enrollmentController.getEnrollments)
 router.get(
     '/:id',
     getEnrollmentByIdValidator,
-    enrollmentController.getEnrollmentById
+    enrollmentController.getEnrollmentById,
 )
 
 /**

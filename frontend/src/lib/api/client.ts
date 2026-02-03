@@ -15,7 +15,7 @@ export const getServerBaseUrl = () => {
 
 // Convert URL to use relative path in development (via Vite proxy) or absolute in production
 export const getAbsoluteUrl = (
-    relativeUrl: string | null | undefined
+    relativeUrl: string | null | undefined,
 ): string => {
     if (!relativeUrl) return ''
     // If already absolute URL
@@ -30,7 +30,7 @@ export const getAbsoluteUrl = (
                 const url = new URL(relativeUrl)
                 const serverBaseUrl = getServerBaseUrl()
                 const serverUrl = new URL(serverBaseUrl)
-                
+
                 // Check if URL is from our backend server
                 if (url.origin === serverUrl.origin) {
                     // Convert backend URL to relative path for Vite proxy
@@ -71,7 +71,7 @@ apiClient.interceptors.request.use(
     },
     (error) => {
         return Promise.reject(error)
-    }
+    },
 )
 
 // Response interceptor - Handle errors globally
@@ -83,7 +83,7 @@ apiClient.interceptors.response.use(
         error: AxiosError<{
             message?: string
             error?: string | { message?: string; code?: string }
-        }>
+        }>,
     ) => {
         // Handle network errors
         if (!error.response) {
@@ -239,7 +239,7 @@ apiClient.interceptors.response.use(
                     // For other requests, session has expired
                     localStorage.removeItem('user')
                     toast.error(
-                        'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+                        'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
                     )
                     // Avoid redirect loop - redirect to unauthorized page
                     if (
@@ -296,7 +296,7 @@ apiClient.interceptors.response.use(
         }
 
         return Promise.reject(error)
-    }
+    },
 )
 
 export default apiClient

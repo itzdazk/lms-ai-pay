@@ -23,7 +23,7 @@ class EnrollmentController {
 
         const result = await enrollmentService.getUserEnrollments(
             userId,
-            filters
+            filters,
         )
 
         return ApiResponse.paginated(
@@ -34,7 +34,7 @@ class EnrollmentController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Truy xuất danh sách ghi danh thành công'
+            'Truy xuất danh sách ghi danh thành công',
         )
     })
 
@@ -54,13 +54,13 @@ class EnrollmentController {
 
         const enrollment = await enrollmentService.getEnrollmentById(
             enrollmentId,
-            userId
+            userId,
         )
 
         return ApiResponse.success(
             res,
             enrollment,
-            'Truy xuất chi tiết ghi danh thành công'
+            'Truy xuất chi tiết ghi danh thành công',
         )
     })
 
@@ -76,13 +76,13 @@ class EnrollmentController {
 
         const enrollments = await enrollmentService.getActiveEnrollments(
             userId,
-            limitNum
+            limitNum,
         )
 
         return ApiResponse.success(
             res,
             enrollments,
-            'Truy xuất danh sách ghi danh thành công'
+            'Truy xuất danh sách ghi danh thành công',
         )
     })
 
@@ -102,7 +102,7 @@ class EnrollmentController {
 
         const result = await enrollmentService.getCompletedEnrollments(
             userId,
-            filters
+            filters,
         )
 
         return ApiResponse.paginated(
@@ -113,7 +113,7 @@ class EnrollmentController {
                 limit: filters.limit,
                 total: result.total,
             },
-            'Truy xuất danh sách ghi danh thành công'
+            'Truy xuất danh sách ghi danh thành công',
         )
     })
 
@@ -135,7 +135,7 @@ class EnrollmentController {
             userId,
             parseInt(courseId),
             paymentGateway || null,
-            billingAddress || null
+            billingAddress || null,
         )
 
         // If course is FREE, return success with enrollment
@@ -143,7 +143,7 @@ class EnrollmentController {
             return ApiResponse.created(
                 res,
                 result.enrollment,
-                'Đã ghi danh thành công'
+                'Đã ghi danh thành công',
             )
         }
 
@@ -152,17 +152,18 @@ class EnrollmentController {
             res,
             result.order,
             result.message ||
-                'Đã tạo đơn hàng thành công. Vui lòng tiến hành thanh toán.'
+                'Đã tạo đơn hàng thành công. Vui lòng tiến hành thanh toán.',
         )
     })
 
     /**
      * @route   GET /api/v1/enrollments/check/:courseId
-     * @desc    Check if user is enrolled in a course
+     * @desc    Check if user has access to a course (enrolled, instructor, or admin)
      * @access  Private (Student/Instructor/Admin)
      */
     checkEnrollment = asyncHandler(async (req, res) => {
         const userId = req.user.id
+        const userRole = req.user.role
         const { courseId } = req.params
         const courseIdNum = parseInt(courseId)
 
@@ -172,13 +173,14 @@ class EnrollmentController {
 
         const result = await enrollmentService.checkEnrollment(
             userId,
-            courseIdNum
+            courseIdNum,
+            userRole,
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Truy xuất trạng thái ghi danh thành công'
+            'Truy xuất trạng thái truy cập khóa học thành công',
         )
     })
 }

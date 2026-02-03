@@ -370,7 +370,7 @@ class InstructorCourseService {
                         id: true,
                         name: true,
                         slug: true,
-                        description: true, 
+                        description: true,
                     },
                 },
             },
@@ -379,12 +379,14 @@ class InstructorCourseService {
         // Auto-generate embedding for RAG (async, non-blocking)
         // Only generate if RAG is enabled and course has content
         if (config.RAG_ENABLED !== false) {
-            this._generateCourseEmbeddingAsync(course.id, course).catch((err) => {
-                logger.warn(
-                    `Failed to generate embedding for course ${course.id}:`,
-                    err.message
-                )
-            })
+            this._generateCourseEmbeddingAsync(course.id, course).catch(
+                (err) => {
+                    logger.warn(
+                        `Failed to generate embedding for course ${course.id}:`,
+                        err.message,
+                    )
+                },
+            )
         }
 
         // Format response
@@ -402,25 +404,30 @@ class InstructorCourseService {
      * 2. Queue mode: Use BullMQ queue for better reliability and monitoring
      * @private
      */
-    async _generateCourseEmbeddingAsync(courseId, courseData, useQueue = false) {
+    async _generateCourseEmbeddingAsync(
+        courseId,
+        courseData,
+        useQueue = false,
+    ) {
         try {
             // Option 1: Use BullMQ Queue (recommended for production)
             if (useQueue && config.RAG_USE_QUEUE !== false) {
                 try {
-                    const { enqueueEmbeddingJob } = await import('../queues/embedding.queue.js')
+                    const { enqueueEmbeddingJob } =
+                        await import('../queues/embedding.queue.js')
                     const job = await enqueueEmbeddingJob({
                         courseId,
                         courseData,
                         priority: 'normal',
                     })
                     logger.info(
-                        `[Embedding] Queued embedding job ${job.id} for course ${courseId}`
+                        `[Embedding] Queued embedding job ${job.id} for course ${courseId}`,
                     )
                     return
                 } catch (queueError) {
                     logger.warn(
                         `Failed to queue embedding job, falling back to direct generation:`,
-                        queueError.message
+                        queueError.message,
                     )
                     // Fall through to direct generation
                 }
@@ -428,7 +435,8 @@ class InstructorCourseService {
 
             // Option 2: Fire-and-forget (simple, direct)
             // Dynamic import to avoid circular dependency
-            const embeddingService = (await import('./embedding.service.js')).default
+            const embeddingService = (await import('./embedding.service.js'))
+                .default
 
             // Check if course has enough content to embed
             const hasContent =
@@ -438,7 +446,9 @@ class InstructorCourseService {
                 courseData.whatYouLearn
 
             if (!hasContent) {
-                logger.debug(`Course ${courseId} has no content, skipping embedding`)
+                logger.debug(
+                    `Course ${courseId} has no content, skipping embedding`,
+                )
                 return
             }
 
@@ -461,15 +471,23 @@ class InstructorCourseService {
                         WHERE id = ${courseId}
                     `
 
-                    logger.info(`✅ Generated embedding for course ${courseId}: ${courseData.title}`)
+                    logger.info(
+                        `✅ Generated embedding for course ${courseId}: ${courseData.title}`,
+                    )
                 })
                 .catch((error) => {
                     // Don't throw - this is async and shouldn't block course creation
-                    logger.error(`Error generating embedding for course ${courseId}:`, error.message)
+                    logger.error(
+                        `Error generating embedding for course ${courseId}:`,
+                        error.message,
+                    )
                 })
         } catch (error) {
             // Don't throw - this is async and shouldn't block course creation
-            logger.error(`Error in embedding generation setup for course ${courseId}:`, error.message)
+            logger.error(
+                `Error in embedding generation setup for course ${courseId}:`,
+                error.message,
+            )
         }
     }
 
@@ -547,7 +565,7 @@ class InstructorCourseService {
             if (thumbnailUrl === null && oldThumbnailUrl) {
                 const oldPath = path.join(
                     process.cwd(),
-                    oldThumbnailUrl.replace(/^\//, '')
+                    oldThumbnailUrl.replace(/^\//, ''),
                 )
                 if (fs.existsSync(oldPath)) {
                     try {
@@ -564,7 +582,7 @@ class InstructorCourseService {
             if (videoPreviewUrl === null && oldVideoPreviewUrl) {
                 const oldPath = path.join(
                     process.cwd(),
-                    oldVideoPreviewUrl.replace(/^\//, '')
+                    oldVideoPreviewUrl.replace(/^\//, ''),
                 )
                 if (fs.existsSync(oldPath)) {
                     try {
@@ -733,16 +751,18 @@ class InstructorCourseService {
                     whatYouLearn: true,
                     courseObjectives: true,
                     targetAudience: true,
-                    level: true,              // ✅ THÊM: Level
-                    price: true,              // ✅ THÊM: Price
-                    category: {               // ✅ THÊM: Category
+                    level: true, // ✅ THÊM: Level
+                    price: true, // ✅ THÊM: Price
+                    category: {
+                        // ✅ THÊM: Category
                         select: {
                             id: true,
                             name: true,
                             description: true,
                         },
                     },
-                    courseTags: {              // ✅ THÊM: Tags
+                    courseTags: {
+                        // ✅ THÊM: Tags
                         select: {
                             tag: {
                                 select: {
@@ -756,10 +776,13 @@ class InstructorCourseService {
             })
 
             if (fullCourseData) {
-                this._generateCourseEmbeddingAsync(courseId, fullCourseData).catch((err) => {
+                this._generateCourseEmbeddingAsync(
+                    courseId,
+                    fullCourseData,
+                ).catch((err) => {
                     logger.warn(
                         `Failed to regenerate embedding for course ${courseId}:`,
-                        err.message
+                        err.message,
                     )
                 })
             }
@@ -811,7 +834,7 @@ class InstructorCourseService {
         // Check if course has enrollments
         if (course._count.enrollments > 0) {
             const error = new Error(
-                'Không thể xóa khóa học đã có người đăng ký. Vui lòng lưu trữ khóa học thay vì xóa.'
+                'Không thể xóa khóa học đã có người đăng ký. Vui lòng lưu trữ khóa học thay vì xóa.',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -878,7 +901,7 @@ class InstructorCourseService {
         if (status === COURSE_STATUS.PUBLISHED) {
             if (course._count.lessons === 0) {
                 const error = new Error(
-                    'Không thể xuất bản khóa học mà không có bài giảng nào được xuất bản'
+                    'Không thể xuất bản khóa học mà không có bài giảng nào được xuất bản',
                 )
                 error.statusCode = HTTP_STATUS.BAD_REQUEST
                 throw error
@@ -924,7 +947,7 @@ class InstructorCourseService {
                     await notificationsService.notifyAdminsCoursePendingApproval(
                         courseId,
                         course.title,
-                        instructor.fullName
+                        instructor.fullName,
                     )
                 }
             } catch (error) {
@@ -1019,7 +1042,7 @@ class InstructorCourseService {
         instructorId,
         file,
         userRole = USER_ROLES.INSTRUCTOR,
-        isAdmin = false
+        isAdmin = false,
     ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1113,7 +1136,7 @@ class InstructorCourseService {
         if (course.thumbnailUrl) {
             const oldPath = path.join(
                 process.cwd(),
-                course.thumbnailUrl.replace(/^\//, '')
+                course.thumbnailUrl.replace(/^\//, ''),
             )
             if (fs.existsSync(oldPath)) {
                 fs.unlinkSync(oldPath)
@@ -1135,7 +1158,7 @@ class InstructorCourseService {
         instructorId,
         file,
         userRole = USER_ROLES.INSTRUCTOR,
-        isAdmin = false
+        isAdmin = false,
     ) {
         const course = await prisma.course.findUnique({
             where: { id: courseId },
@@ -1254,12 +1277,12 @@ class InstructorCourseService {
 
         // Filter out tags that already exist
         const newTagIds = tagIds.filter(
-            (tagId) => !existingTagIds.includes(parseInt(tagId))
+            (tagId) => !existingTagIds.includes(parseInt(tagId)),
         )
 
         if (newTagIds.length === 0) {
             const error = new Error(
-                'Tất cả các thẻ đã được liên kết với khóa học này'
+                'Tất cả các thẻ đã được liên kết với khóa học này',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error

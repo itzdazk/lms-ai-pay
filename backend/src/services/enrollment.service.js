@@ -5,6 +5,7 @@ import {
     COURSE_STATUS,
     PAYMENT_STATUS,
     HTTP_STATUS,
+    USER_ROLES,
 } from '../config/constants.js'
 import ordersService from './orders.service.js'
 import notificationsService from './notifications.service.js'
@@ -302,7 +303,7 @@ class EnrollmentService {
         userId,
         courseId,
         paymentGateway = null,
-        billingAddress = null
+        billingAddress = null,
     ) {
         // Check if course exists and is published
         const course = await prisma.course.findUnique({
@@ -403,7 +404,7 @@ class EnrollmentService {
             await notificationsService.notifyEnrollmentSuccess(
                 userId,
                 courseId,
-                course.title
+                course.title,
             )
 
             // Notify instructor about new enrollment
@@ -418,7 +419,7 @@ class EnrollmentService {
                         courseId,
                         course.title,
                         student.fullName,
-                        userId
+                        userId,
                     )
                 }
             } catch (error) {
@@ -439,7 +440,7 @@ class EnrollmentService {
                         course.title,
                         course.instructor.fullName,
                         false, // isPaid = false for free course
-                        null
+                        null,
                     )
                 }
             } catch (error) {
@@ -460,7 +461,7 @@ class EnrollmentService {
                         {
                             ...course,
                             instructor: course.instructor,
-                        }
+                        },
                     )
                 }
             } catch (error) {}
@@ -474,7 +475,7 @@ class EnrollmentService {
         // If course is PAID, create order automatically
         if (!paymentGateway) {
             const error = new Error(
-                'Cổng thanh toán là bắt buộc đối với các khóa học có phí. Vui lòng cung cấp cổng thanh toán (VNPay hoặc MoMo).'
+                'Cổng thanh toán là bắt buộc đối với các khóa học có phí. Vui lòng cung cấp cổng thanh toán (VNPay hoặc MoMo).',
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -485,7 +486,7 @@ class EnrollmentService {
             userId,
             courseId,
             paymentGateway,
-            billingAddress
+            billingAddress,
         )
 
         return {
@@ -542,7 +543,7 @@ class EnrollmentService {
         }
         if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
             const error = new Error(
-                `Không thể đăng ký từ đơn hàng chưa thanh toán. Trạng thái: ${order.paymentStatus}`
+                `Không thể đăng ký từ đơn hàng chưa thanh toán. Trạng thái: ${order.paymentStatus}`,
             )
             error.statusCode = HTTP_STATUS.BAD_REQUEST
             throw error
@@ -611,7 +612,7 @@ class EnrollmentService {
             .notifyEnrollmentSuccess(
                 order.userId,
                 order.courseId,
-                order.course.title
+                order.course.title,
             )
             .catch((err) => {})
 
@@ -628,7 +629,7 @@ class EnrollmentService {
                         order.courseId,
                         order.course.title,
                         student.fullName,
-                        order.userId
+                        order.userId,
                     )
                 }
             } catch (error) {}
@@ -649,7 +650,7 @@ class EnrollmentService {
                         order.course.title,
                         order.course.instructor.fullName,
                         true, // isPaid = true
-                        order.finalPrice
+                        order.finalPrice,
                     )
                 }
             } catch (error) {}
@@ -670,7 +671,7 @@ class EnrollmentService {
                         {
                             ...order.course,
                             instructor: order.course.instructor,
-                        }
+                        },
                     )
                 }
             } catch (error) {
@@ -682,12 +683,40 @@ class EnrollmentService {
     }
 
     /**
-     * Check if user is enrolled in a course
+     * Check if user has access to a course (enrolled, instructor, or admin)
      * @param {number} userId - User ID
      * @param {number} courseId - Course ID
+     * @param {string} userRole - User's role (optional, for role-based access)
      * @returns {Promise<object>}
      */
-    async checkEnrollment(userId, courseId) {
+    async checkEnrollment(userId, courseId, userRole = null) {
+        // Admin has access to all courses
+        if (userRole === USER_ROLES.ADMIN) {
+            return {
+                isEnrolled: true,
+                isActive: true,
+                enrollment: null,
+                accessReason: 'admin',
+            }
+        }
+
+        // Instructor has access to their own courses
+        if (userRole === USER_ROLES.INSTRUCTOR) {
+            const course = await prisma.course.findUnique({
+                where: { id: courseId },
+                select: { instructorId: true },
+            })
+            if (course && course.instructorId === userId) {
+                return {
+                    isEnrolled: true,
+                    isActive: true,
+                    enrollment: null,
+                    accessReason: 'instructor',
+                }
+            }
+        }
+
+        // Regular enrollment check for students (or instructor not owning the course)
         const enrollment = await prisma.enrollment.findUnique({
             where: {
                 userId_courseId: {
@@ -712,6 +741,7 @@ class EnrollmentService {
             isEnrolled,
             isActive,
             enrollment: enrollment || null,
+            accessReason: isEnrolled ? 'enrolled' : null,
         }
     }
 }

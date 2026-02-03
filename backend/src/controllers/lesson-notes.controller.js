@@ -11,16 +11,18 @@ class LessonNotesController {
     getLessonNote = asyncHandler(async (req, res) => {
         const { lessonId } = req.params
         const userId = req.user.id
+        const userRole = req.user.role // Added role
 
         const result = await lessonNotesService.getLessonNote(
             userId,
-            parseInt(lessonId)
+            parseInt(lessonId),
+            userRole, // Pass role
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Truy xuất ghi chú bài học thành công'
+            'Truy xuất ghi chú bài học thành công',
         )
     })
 
@@ -32,17 +34,19 @@ class LessonNotesController {
         const { lessonId } = req.params
         const userId = req.user.id
         const { content } = req.body
+        const userRole = req.user.role // Added role
 
         const result = await lessonNotesService.upsertLessonNote(
             userId,
             parseInt(lessonId),
-            content
+            content,
+            userRole, // Pass role
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Lưu ghi chú bài học thành công'
+            'Lưu ghi chú bài học thành công',
         )
     })
 
@@ -53,16 +57,18 @@ class LessonNotesController {
     deleteLessonNote = asyncHandler(async (req, res) => {
         const { lessonId } = req.params
         const userId = req.user.id
+        const userRole = req.user.role // Added role
 
         const result = await lessonNotesService.deleteLessonNote(
             userId,
-            parseInt(lessonId)
+            parseInt(lessonId),
+            userRole, // Pass role
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Xoá ghi chú bài học thành công'
+            'Xoá ghi chú bài học thành công',
         )
     })
 
@@ -73,16 +79,18 @@ class LessonNotesController {
     getCourseNotes = asyncHandler(async (req, res) => {
         const { courseId } = req.params
         const userId = req.user.id
+        const userRole = req.user.role
 
         const result = await lessonNotesService.getCourseNotes(
             userId,
-            parseInt(courseId)
+            parseInt(courseId),
+            userRole,
         )
 
         return ApiResponse.success(
             res,
             result,
-            'Truy xuất ghi chú bài học thành công'
+            'Truy xuất ghi chú bài học thành công',
         )
     })
 }
